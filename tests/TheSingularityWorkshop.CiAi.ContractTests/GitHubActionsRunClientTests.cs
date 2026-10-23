@@ -74,7 +74,21 @@ internal static class GitHubActionsRunClientTests
             Assert(!malformedRepositoryWasSent, "invalid repository must be rejected before HTTP");
         }
 
-        Console.WriteLine("PASS: 6 GitHub Actions client integration checks.");
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+            Task.FromResult(JsonResponse(successfulRun.Replace("\"html_url\": \"https://github.com/TrentBest/SimpleDemos/actions/runs/42\"", "\"html_url\": \"not-a-url\""))))))
+        {
+            await ThrowsAsync<InvalidDataException>(() =>
+                new GitHubActionsRunClient(client).GetRunAsync("TrentBest/SimpleDemos", 42));
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+            Task.FromResult(JsonResponse(successfulRun.Replace("\"updated_at\": \"2026-10-23T21:00:00Z\"", "\"updated_at\": \"not-a-timestamp\""))))))
+        {
+            await ThrowsAsync<InvalidDataException>(() =>
+                new GitHubActionsRunClient(client).GetRunAsync("TrentBest/SimpleDemos", 42));
+        }
+
+        Console.WriteLine("PASS: 8 GitHub Actions client integration checks.");
     }
 
     private static HttpResponseMessage JsonResponse(string json) => new(HttpStatusCode.OK)
