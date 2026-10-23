@@ -40,5 +40,5 @@ jobs:
           test -f "$symbols"
           unzip -l "$package" | grep -E '[[:space:]]README\.md
 
-          unzip -p "$package" '*.nuspec' | grep -F '<id>TheSingularityWorkshop.CiAi</id>'
-          unzip -p "$package" '*.nuspec' | grep -F '<version>0.1.0-alpha.1</version>'
+          unzip -p "$package" "*.nuspec" | grep -F "<id>TheSingularityWorkshop.CiAi</id>"
+          unzip -p "$package" "*.nuspec" | grep -F "<version>0.1.0-alpha.1</version>"
