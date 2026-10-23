@@ -29,7 +29,7 @@ Replace the example run ID with a real run ID from the target repository's Actio
 dotnet run --project tests/TheSingularityWorkshop.CiAi.ContractTests
 ```
 
-The tests use a fake HTTP endpoint to check snapshot validation, repository/run identity checks, and safe handling of an unknown future conclusion. They require no API key or network call.
+The tests use a fake HTTP endpoint to check snapshot validation, repository/run identity checks, and safe handling of an unknown future conclusion. They require no API key or network call. The cross-repository [SimpleDemos proof](https://github.com/TrentBest/SimpleDemos/actions/runs/40028749226) also fetched a real completed GitHub Actions run and printed its authoritative status, conclusion, commit, and evidence URL.
 
 ## Safety boundary
 
@@ -37,5 +37,5 @@ An LLM may interpret a request and explain evidence. It does not decide whether 
 
 ## Status
 
-- **Implementation readiness: 20%** — validated typed run contract, read-only GitHub Actions REST client, offline contract tests, and an observe-run console sample.
+- **Implementation readiness: 25%** — validated typed run contract, read-only GitHub Actions REST client, offline contract tests, observe-run console sample, and a successful live provider-ingestion demonstration from SimpleDemos.
 - **Not yet implemented:** HeadlessAi invocation from CiAi, ProtocolAi vocabulary integration, permissioned operations, and live end-to-end CI demonstration.
