@@ -29,6 +29,7 @@ Check("unknown provider conclusion is not treated as success", () =>
     Assert(!run.IsSuccessful, "unknown conclusion was treated as success");
 });
 Console.WriteLine($"PASS: {passed} CiAi contract checks.");
+await GitHubActionsRunClientTests.RunAsync();
 
 void Check(string name, Action action)
 {
