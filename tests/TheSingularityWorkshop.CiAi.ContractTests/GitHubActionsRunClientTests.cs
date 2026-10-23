@@ -107,7 +107,25 @@ internal static class GitHubActionsRunClientTests
             Assert(!run.IsSuccessful, "failed provider run was treated as success");
         }
 
-        Console.WriteLine("PASS: 10 GitHub Actions client integration checks.");
+        using (var client = new HttpClient(new StubHandler((request, _) =>
+        {
+            Assert(request.Headers.Authorization?.Scheme == "Bearer", "token authentication scheme must be Bearer");
+            Assert(request.Headers.Authorization?.Parameter == "test-token", "configured token was not forwarded");
+            Assert(request.Headers.Contains("X-GitHub-Api-Version"), "GitHub API version must be explicit");
+            return Task.FromResult(JsonResponse(successfulRun));
+        })))
+        {
+            await new GitHubActionsRunClient(client, "test-token").GetRunAsync("TrentBest/SimpleDemos", 42);
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.Forbidden)))))
+        {
+            await ThrowsAsync<HttpRequestException>(() =>
+                new GitHubActionsRunClient(client).GetRunAsync("TrentBest/SimpleDemos", 42));
+        }
+
+        Console.WriteLine("PASS: 12 GitHub Actions client integration checks.");
     }
 
     private static HttpResponseMessage JsonResponse(string json) => new(HttpStatusCode.OK)
