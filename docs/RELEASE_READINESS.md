@@ -21,12 +21,12 @@
 - Unknown future provider conclusions remain explicitly unknown and cannot be successful.
 - Offline contract tests and a console observation sample.
 - MIT license, package metadata, embedded README, symbol-package settings, pinned GitHub Actions workflow.
-- CI now builds, runs offline contract checks, and packs the NuGet candidate.
+- CI builds, runs offline contract checks, packs the NuGet candidate, and validates the packed artifact.
 
 ## Must pass before publication
 
-- [ ] CI build, offline tests, and package pack all succeed on the exact candidate SHA.
-- [ ] Inspect the produced `.nupkg` and `.snupkg` contents, package metadata, and embedded README.
+- [x] Build, offline contract checks, pack, and packed-artifact validation passed on commit `f207fc028a79a19305c7296a9e930c06b64ad40d` in [workflow run 40040017424](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/40040017424). Re-run on the exact final candidate SHA after any further changes.
+- [ ] Inspect the produced `.nupkg` and `.snupkg` contents, package metadata, and embedded README beyond automated CI assertions.
 - [ ] Review README and public API claims against actual implementation.
 - [ ] Confirm package ID and version are intended and not already published.
 - [ ] Review NuGet account/credential setup and release permissions outside source control.
