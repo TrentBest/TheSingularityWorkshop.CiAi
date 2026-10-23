@@ -2,7 +2,7 @@ name: CiAi Contract Verification
 
 on:
   push:
-    branches: [development, main]
+    branches: [development, master]
   pull_request:
     branches: [development, main]
   workflow_dispatch:
@@ -28,3 +28,5 @@ jobs:
         run: dotnet build CiAi.slnx --configuration Release --no-restore
       - name: Run contract checks
         run: dotnet run --project tests/TheSingularityWorkshop.CiAi.ContractTests --configuration Release --no-build
+      - name: Pack NuGet package
+        run: dotnet pack src/TheSingularityWorkshop.CiAi/TheSingularityWorkshop.CiAi.csproj --configuration Release --no-build --output artifacts/packages
