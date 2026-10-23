@@ -27,6 +27,18 @@ Check("evidence must identify the exact requested run", () =>
 {
     Throws<ArgumentException>(() => NewRun(url: new Uri("https://github.com/TrentBest/SimpleDemos/actions/runs/43")));
 });
+Check("commit SHA must be a full 40-character hexadecimal identifier", () =>
+{
+    Throws<ArgumentException>(() => NewRun(headSha: "abcdef0123456789"));
+});
+Check("evidence URLs reject query strings and fragments", () =>
+{
+    Throws<ArgumentException>(() => NewRun(url: new Uri("https://github.com/TrentBest/SimpleDemos/actions/runs/42?redirect=elsewhere")));
+});
+Check("repository names reject path and URL syntax", () =>
+{
+    Throws<ArgumentException>(() => NewRun(repository: "TrentBest/../Other"));
+});
 Check("unknown provider conclusion is not treated as success", () =>
 {
     var run = NewRun(conclusion: CiRunConclusion.Unknown);
@@ -47,8 +59,9 @@ static CiRunSnapshot NewRun(
     long runId = 42,
     CiRunStatus status = CiRunStatus.Completed,
     CiRunConclusion conclusion = CiRunConclusion.Success,
-    Uri? url = null) =>
-    new(repository, runId, "CiAi contract smoke test", "abcdef0123456789",
+    Uri? url = null,
+    string headSha = "abcdef0123456789abcdef0123456789abcdef01") =>
+    new(repository, runId, "CiAi contract smoke test", headSha,
         status, conclusion, url ?? new Uri("https://github.com/TrentBest/SimpleDemos/actions/runs/42"),
         DateTimeOffset.Parse("2026-10-23T21:00:00Z"));
 
