@@ -24,8 +24,10 @@ public sealed class GitHubActionsRunClient
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(repository);
         var parts = repository.Split('/');
-        if (parts.Length != 2 || parts.Any(string.IsNullOrWhiteSpace))
-            throw new ArgumentException("Repository must use the owner/repository form.", nameof(repository));
+        if (parts.Length != 2 || parts.Any(part => part.Length == 0 ||
+            part is "." or ".." ||
+            part.Any(character => !(char.IsAsciiLetterOrDigit(character) || character is '-' or '_' or '.'))))
+            throw new ArgumentException("Repository must use canonical owner/repository identifiers.", nameof(repository));
         if (runId <= 0)
             throw new ArgumentOutOfRangeException(nameof(runId));
 
