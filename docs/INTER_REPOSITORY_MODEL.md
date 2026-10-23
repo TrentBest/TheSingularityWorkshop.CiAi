@@ -17,11 +17,14 @@ The Cogs now have independent, offline-tested contract slices on their own `deve
 | [CogD policy](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogD/tree/development) | ProtocolAi-backed operation vocabulary and deterministic prototype policy | 20% |
 | [CogE projection](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogE/tree/development) | Presentation-neutral graph projection; no GUI or live CI reads | 20% |
 
-Latest checked offline CI evidence for the new contract slices:
-- [CogB request contract](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogB/actions/runs/40037366200) — passed.
+Latest checked offline CI evidence for the contract slices:
+- [CogA catalog grammar regression tests](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogA/actions/runs/40040606499) — passed on `f288fe951aed6de9e609c0042a6360bcd529c61d`.
+- [CogB request grammar regression tests](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogB/actions/runs/40040614627) — passed on `762c5f1bec5d5137b9313d071550bb699d50196d`.
 - [CogC result contract](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogC/actions/runs/40037652342) — passed.
 - [CogD policy contract](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogD/actions/runs/40037965079) — passed after pinning to the ProtocolAi package version actually available on NuGet.
 - [CogE topology projection](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogE/actions/runs/40037901319) — passed.
+
+CogA and CogB now share the same canonical numeric version grammar: exactly three ASCII-numeric components, no leading zeroes except the component `0`, major component greater than zero, and no artificial integer-width limit. These runs prove each side's offline regression checks pass; they do not prove runtime integration.
 
 The parent integration remains the critical gap: reconcile CogA's catalog vocabulary with CogD/ProtocolAi; connect CogB request identity to CogC results; verify claims against the authoritative GitHub run API in CiAi; then feed only reconciled evidence into CogE. A URL-shaped claim or a successful transport receipt is never enough to establish target success. The GUI remains a separate workstream.
 
@@ -29,7 +32,7 @@ The parent integration remains the critical gap: reconcile CogA's catalog vocabu
 
 Source inspection confirms that the Cogs are individually testable contracts, not yet one enforced runtime contract. The parent integration must resolve these specific seams before describing the compatibility matrix as verified:
 
-- **Version semantics differ by layer.** CogA's catalog accepts a declaration when its contract version has the same major version as the capability definition. CogB validates a three-part version syntactically, while CogC requires the result version to exactly equal the coordinator's expected version. Keep catalog compatibility (whether a consumer may accept a provider) separate from wire-contract identity (which must match exactly for one request/result exchange); do not use a major-version match to validate a response.
+- **Version semantics differ by layer.** CogA and CogB now share canonical syntax validation for three-part numeric versions (ASCII digits, no leading zeroes except the component `0`, major greater than zero, and no fixed-width integer ceiling). CogA's catalog separately accepts a declaration when its contract version has the same major version as the capability definition, while CogC requires the result version to exactly equal the coordinator's expected version. Keep catalog compatibility (whether a consumer may accept a provider) separate from wire-contract identity (which must match exactly for one request/result exchange); do not use a major-version match to validate a response.
 - **Operation vocabulary has two owners today.** CogD defines `observe.status`, `test.noop`, and `publish.package` through ProtocolAi. CogB accepts a caller-supplied operation allowlist. CiAi must derive or validate that allowlist from the trusted policy/catalog contract, rather than independently configuring two lists that can drift.
 - **Evidence validation is not authoritative verification.** CogC checks claimed success fields and the shape of a GitHub run URL, but it does not fetch the run or prove that the run's repository, run ID, head SHA, and conclusion match the request. Only CiAi's provider client can establish those facts; a structurally valid callback remains an unverified claim until reconciled against the provider.
 - **Policy is a decision, not an execution boundary by itself.** CogD's prototype denies `publish.package` even with its approval flag. Preserve that denial; the host must independently authorize any future mutating operation. Do not enable publishing as part of the alpha integration.
