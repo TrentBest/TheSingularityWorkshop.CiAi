@@ -25,6 +25,20 @@ Latest checked offline CI evidence for the new contract slices:
 
 The parent integration remains the critical gap: reconcile CogA's catalog vocabulary with CogD/ProtocolAi; connect CogB request identity to CogC results; verify claims against the authoritative GitHub run API in CiAi; then feed only reconciled evidence into CogE. A URL-shaped claim or a successful transport receipt is never enough to establish target success. The GUI remains a separate workstream.
 
+## Static integration audit — 2026-10-23
+
+Source inspection confirms that the Cogs are individually testable contracts, not yet one enforced runtime contract. The parent integration must resolve these specific seams before describing the compatibility matrix as verified:
+
+- **Version semantics differ by layer.** CogA's catalog accepts a declaration when its contract version has the same major version as the capability definition. CogB validates a three-part version syntactically, while CogC requires the result version to exactly equal the coordinator's expected version. Keep catalog compatibility (whether a consumer may accept a provider) separate from wire-contract identity (which must match exactly for one request/result exchange); do not use a major-version match to validate a response.
+- **Operation vocabulary has two owners today.** CogD defines `observe.status`, `test.noop`, and `publish.package` through ProtocolAi. CogB accepts a caller-supplied operation allowlist. CiAi must derive or validate that allowlist from the trusted policy/catalog contract, rather than independently configuring two lists that can drift.
+- **Evidence validation is not authoritative verification.** CogC checks claimed success fields and the shape of a GitHub run URL, but it does not fetch the run or prove that the run's repository, run ID, head SHA, and conclusion match the request. Only CiAi's provider client can establish those facts; a structurally valid callback remains an unverified claim until reconciled against the provider.
+- **Policy is a decision, not an execution boundary by itself.** CogD's prototype denies `publish.package` even with its approval flag. Preserve that denial; the host must independently authorize any future mutating operation. Do not enable publishing as part of the alpha integration.
+- **Repository identity rules should be centralized.** CogA and CogB currently contain similar local owner/repository parsers. Add shared contract tests (or one parent-owned canonical validator) so malformed identities and case handling cannot diverge between catalog, request, result, and GitHub observation.
+
+### Required integration proof
+
+The first vertical slice should remain read-only: take a catalog declaration, resolve a permitted `observe.status` request, fetch a real GitHub Actions run through the CiAi provider client, construct a result from the returned snapshot, and validate exact request/result identity. Include negative tests for wrong target repository, request/correlation/idempotency ID, contract version, run ID, SHA, evidence URL, unknown conclusion, and failed run. Do not call this a cross-repository dispatch proof; it is a read-only reconciliation proof. Live dispatch remains a separate, approval-gated phase.
+
 ## Repository capabilities
 - **Provider:** publishes a versioned capability, artifact, package, manifest, or contract.
 - **Consumer:** declares a capability and accepted version/range.
