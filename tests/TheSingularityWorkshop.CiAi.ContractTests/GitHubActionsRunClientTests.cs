@@ -10,7 +10,7 @@ internal static class GitHubActionsRunClientTests
         {
           "id": 42,
           "name": "Build",
-          "head_sha": "abcdef0123456789",
+          "head_sha": "abcdef0123456789abcdef0123456789abcdef01",
           "status": "completed",
           "conclusion": "success",
           "html_url": "https://github.com/TrentBest/SimpleDemos/actions/runs/42",
