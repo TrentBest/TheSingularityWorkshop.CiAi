@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/TheSingularityWorkshop.CiAi/TheSingularityWorkshop.CiAi.csproj" />
+  <Project Path="tests/TheSingularityWorkshop.CiAi.ContractTests/TheSingularityWorkshop.CiAi.ContractTests.csproj" />
+</Solution>
