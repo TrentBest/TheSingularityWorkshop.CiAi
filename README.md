@@ -46,9 +46,9 @@ The current client validates the returned repository and run ID, maps unknown pr
 
 ## 04 — Release status
 
-**Implementation readiness: 30%. Package candidate: 0.1.0-alpha.1.**
+**Implementation readiness: 30%. Package preparation: 70%. Candidate: 0.1.0-alpha.1.**
 
-The read-only run contract, GitHub Actions client, offline tests, console sample, MIT license, and NuGet metadata are present. The package still needs a green build/test/pack run on the exact candidate commit and owner review before publication.
+The latest verified candidate commit, `f207fc028a79a19305c7296a9e930c06b64ad40d`, passed the [CiAi Contract Verification workflow](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/40040017424), including build, offline contract checks, NuGet packing, and packed-artifact validation. Re-run CI on the exact final candidate SHA after any further changes. Owner review and explicit publication approval remain required.
 
 Not yet implemented: HeadlessAi invocation from CiAi, ProtocolAi vocabulary integration, host permission policy, live cross-repository request/result round trip, and durable idempotency/history. Those are explicitly outside this read-only alpha package's claims.
 
