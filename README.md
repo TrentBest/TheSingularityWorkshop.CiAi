@@ -1,41 +1,55 @@
 # The Singularity Workshop CiAi
 
-**CiAi exposes CI to AI. It is not an AI-powered CI runner.** The lowercase `i` is intentional: these are capabilities and facts for an LLM to use.
+**CiAi exposes CI to AI. It is not an AI-powered CI runner.** The lowercase `i` is intentional: CiAi supplies bounded capabilities and verified facts that an LLM can use.
 
-CiAi is the application-owned boundary between continuous-integration systems and an LLM. CI providers remain the authority for run state and evidence. CiAi converts provider data into bounded contracts, exposes only explicitly permitted operations, and returns evidence that can be inspected by people or models.
+CiAi is the application-owned boundary between continuous-integration systems and an LLM. CI providers remain authoritative for run state and evidence. CiAi normalizes provider data into typed contracts; model output does not grant permissions or turn arbitrary text into executable commands.
 
-## Architecture
+## 01 — See it in a minute
 
-- **CI provider** — source of truth for repositories, workflow runs, commit SHAs, conclusions, and run URLs.
-- **CiAi** — validates and normalizes CI facts, defines the supported intent/action boundary, and rejects unsupported or unauthorized requests.
-- **HeadlessAi** — sends normalized input to a configured endpoint through an explicit adapter. It removes a hard dependency on one provider SDK; it does not remove the need for a configured endpoint.
-- **ProtocolAi** — maps application-owned vocabulary to integer identities and validates protocol payloads. Unknown values can remain literals; they are never silently promoted into executable commands.
-- **FSM_API** — optional lifecycle coordination where explicit state transitions help. It is not the CI transport, persistence layer, or distributed scheduler.
-- **SimpleDemos** — a place for a small, inspectable end-to-end demonstration.
+Requires the .NET 8 SDK.
 
-## Observe a real GitHub Actions run
-
-The read-only client fetches the requested run directly from GitHub and validates the returned repository and run ID before constructing a typed snapshot.
+Observe a real GitHub Actions run:
 
 ```bash
-dotnet run --project samples/TheSingularityWorkshop.CiAi.ObserveRun -- TrentBest/TheSingularityWorkshop.CiAi 40027841199
+dotnet run --project samples/TheSingularityWorkshop.CiAi.ObserveRun -- TrentBest/TheSingularityWorkshop.CiAi 40038677343
 ```
 
-Replace the example run ID with a real run ID from the target repository's Actions page. Public repositories can be queried without a token; set `CIAI_GITHUB_TOKEN` when the target requires authentication. The client only performs a GET and never retries, cancels, publishes, or deploys anything.
+Replace the example with a run ID that exists in the target repository. Public repositories can be queried without a token; set `CIAI_GITHUB_TOKEN` only when the target requires authentication. The client performs GET only.
 
-## Verify the contracts offline
+Run offline contract checks and pack the library:
 
 ```bash
-dotnet run --project tests/TheSingularityWorkshop.CiAi.ContractTests
+dotnet run --project tests/TheSingularityWorkshop.CiAi.ContractTests --configuration Release
+dotnet pack src/TheSingularityWorkshop.CiAi/TheSingularityWorkshop.CiAi.csproj --configuration Release
 ```
 
-The tests use a fake HTTP endpoint to check snapshot validation, repository/run identity checks, and safe handling of an unknown future conclusion. They require no API key or network call. The cross-repository [SimpleDemos proof](https://github.com/TrentBest/SimpleDemos/actions/runs/40028749226) also fetched a real completed GitHub Actions run and printed its authoritative status, conclusion, commit, and evidence URL.
+## 02 — Package
 
-## Safety boundary
+- Package ID: `TheSingularityWorkshop.CiAi`
+- Current candidate: `0.1.0-alpha.1`
+- Target framework: `.NET 8`
+- Dependencies: none in the core library
+- License: MIT
 
-An LLM may interpret a request and explain evidence. It does not decide whether a run succeeded, which repository a request targets, or whether an operation is authorized. Every action must be validated by host code against trusted CI data and an explicit permission policy. The current client is read-only. No secrets, retries, cancellations, publishing, or deployments are enabled.
+The package candidate is configured with repository metadata, release notes, symbols, and this README embedded in the NuGet package. CI builds, runs offline checks, and packs the library. A passing pack job is not a NuGet publication.
 
-## Status
+## 03 — Architecture and trust boundary
 
-- **Implementation readiness: 25%** — validated typed run contract, read-only GitHub Actions REST client, offline contract tests, observe-run console sample, and a successful live provider-ingestion demonstration from SimpleDemos.
-- **Not yet implemented:** HeadlessAi invocation from CiAi, ProtocolAi vocabulary integration, permissioned operations, and live end-to-end CI demonstration.
+- **CI provider:** source of truth for repository identity, workflow run state, commit SHA, conclusion, and run evidence.
+- **CiAi:** validates and normalizes CI facts; the current GitHub Actions client is read-only.
+- **HeadlessAi:** provider-neutral HTTP/LLM integration is a future CiAi integration, not yet called by this package.
+- **ProtocolAi:** controlled vocabulary integration is not yet wired into CiAi.
+- **FSM_API:** optional lifecycle coordination; not CI transport, persistence, or a distributed scheduler.
+- **SimpleDemos:** contains a separate live provider-ingestion proof; it does not prove an end-to-end LLM-driven CiAi workflow.
+
+The current client validates the returned repository and run ID, maps unknown provider conclusions to an explicit `Unknown` value, and never treats an unknown conclusion as success. It does not dispatch work, cancel runs, publish packages, or deploy applications.
+
+## 04 — Release status
+
+**Implementation readiness: 30%. Package candidate: 0.1.0-alpha.1.**
+
+The read-only run contract, GitHub Actions client, offline tests, console sample, MIT license, and NuGet metadata are present. The package still needs a green build/test/pack run on the exact candidate commit and owner review before publication.
+
+Not yet implemented: HeadlessAi invocation from CiAi, ProtocolAi vocabulary integration, host permission policy, live cross-repository request/result round trip, and durable idempotency/history. Those are explicitly outside this read-only alpha package's claims.
+
+See [release readiness](docs/RELEASE_READINESS.md) and the [inter-repository model](docs/INTER_REPOSITORY_MODEL.md).
