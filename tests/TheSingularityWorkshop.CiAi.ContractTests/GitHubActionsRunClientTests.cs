@@ -48,7 +48,33 @@ internal static class GitHubActionsRunClientTests
             Assert(!run.IsSuccessful, "unknown provider value was treated as success");
         }
 
-        Console.WriteLine("PASS: 3 GitHub Actions client integration checks.");
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+            Task.FromResult(JsonResponse(successfulRun.Replace("\"id\": 42", "\"id\": 43"))))))
+        {
+            await ThrowsAsync<InvalidDataException>(() =>
+                new GitHubActionsRunClient(client).GetRunAsync("TrentBest/SimpleDemos", 42));
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+            Task.FromResult(JsonResponse(successfulRun.Replace("\"head_sha\": \"abcdef0123456789abcdef0123456789abcdef01\"", "\"head_sha\": \"abcdef0123456789\""))))))
+        {
+            await ThrowsAsync<ArgumentException>(() =>
+                new GitHubActionsRunClient(client).GetRunAsync("TrentBest/SimpleDemos", 42));
+        }
+
+        var malformedRepositoryWasSent = false;
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+        {
+            malformedRepositoryWasSent = true;
+            return Task.FromResult(JsonResponse(successfulRun));
+        })))
+        {
+            await ThrowsAsync<ArgumentException>(() =>
+                new GitHubActionsRunClient(client).GetRunAsync("TrentBest/../Other", 42));
+            Assert(!malformedRepositoryWasSent, "invalid repository must be rejected before HTTP");
+        }
+
+        Console.WriteLine("PASS: 6 GitHub Actions client integration checks.");
     }
 
     private static HttpResponseMessage JsonResponse(string json) => new(HttpStatusCode.OK)
