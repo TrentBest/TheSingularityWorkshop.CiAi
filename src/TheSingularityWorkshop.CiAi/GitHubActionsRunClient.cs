@@ -56,6 +56,14 @@ public sealed class GitHubActionsRunClient
 
         var status = ParseStatus(RequiredString(root, "status"));
         var conclusion = ParseConclusion(root);
+        var evidenceUrlText = RequiredString(root, "html_url");
+        if (!Uri.TryCreate(evidenceUrlText, UriKind.Absolute, out var evidenceUrl))
+            throw new InvalidDataException("GitHub workflow run contains an invalid evidence URL.");
+        var updatedAtText = RequiredString(root, "updated_at");
+        if (!DateTimeOffset.TryParse(updatedAtText, System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.AssumeUniversal, out var updatedAt))
+            throw new InvalidDataException("GitHub workflow run contains an invalid updated_at timestamp.");
+
         return new CiRunSnapshot(
             returnedRepository,
             returnedId,
@@ -63,8 +71,8 @@ public sealed class GitHubActionsRunClient
             RequiredString(root, "head_sha"),
             status,
             conclusion,
-            new Uri(RequiredString(root, "html_url"), UriKind.Absolute),
-            DateTimeOffset.Parse(RequiredString(root, "updated_at"), System.Globalization.CultureInfo.InvariantCulture));
+            evidenceUrl,
+            updatedAt);
     }
 
     private static string RequiredString(JsonElement root, string property)
