@@ -4,6 +4,27 @@
 
 A repository is a node in a typed, directed network. It declares what it provides, consumes, requests, or receives notification about. GitHub remains authoritative for repository identity, commit SHA, workflow state, permissions, and run evidence. "Connected" alone is not enough.
 
+
+## Implementation checkpoint — 2026-10-23
+
+The Cogs now have independent, offline-tested contract slices on their own `development` branches. They are **not yet wired together**, and none of these contract prototypes enables live cross-repository dispatch.
+
+| Component | Current tested slice | Readiness |
+|---|---|---:|
+| [CogA catalog](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogA/tree/development) | Typed repository/capability catalog and offline structural validation | 40% |
+| [CogB request](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogB/tree/development) | Bounded outbound request envelope, target/operation allowlists, transport interface | 20% |
+| [CogC result](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogC/tree/development) | Correlation checks and structural validation of claimed run evidence | 20% |
+| [CogD policy](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogD/tree/development) | ProtocolAi-backed operation vocabulary and deterministic prototype policy | 20% |
+| [CogE projection](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogE/tree/development) | Presentation-neutral graph projection; no GUI or live CI reads | 20% |
+
+Latest checked offline CI evidence for the new contract slices:
+- [CogB request contract](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogB/actions/runs/40037366200) — passed.
+- [CogC result contract](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogC/actions/runs/40037652342) — passed.
+- [CogD policy contract](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogD/actions/runs/40037965079) — passed after pinning to the ProtocolAi package version actually available on NuGet.
+- [CogE topology projection](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogE/actions/runs/40037901319) — passed.
+
+The parent integration remains the critical gap: reconcile CogA's catalog vocabulary with CogD/ProtocolAi; connect CogB request identity to CogC results; verify claims against the authoritative GitHub run API in CiAi; then feed only reconciled evidence into CogE. A URL-shaped claim or a successful transport receipt is never enough to establish target success. The GUI remains a separate workstream.
+
 ## Repository capabilities
 - **Provider:** publishes a versioned capability, artifact, package, manifest, or contract.
 - **Consumer:** declares a capability and accepted version/range.
