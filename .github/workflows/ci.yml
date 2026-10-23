@@ -30,3 +30,15 @@ jobs:
         run: dotnet run --project tests/TheSingularityWorkshop.CiAi.ContractTests --configuration Release --no-build
       - name: Pack NuGet package
         run: dotnet pack src/TheSingularityWorkshop.CiAi/TheSingularityWorkshop.CiAi.csproj --configuration Release --no-build --output artifacts/packages
+      - name: Validate packed artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="artifacts/packages/TheSingularityWorkshop.CiAi.0.1.0-alpha.1.nupkg"
+          symbols="artifacts/packages/TheSingularityWorkshop.CiAi.0.1.0-alpha.1.snupkg"
+          test -f "$package"
+          test -f "$symbols"
+          unzip -l "$package" | grep -E '[[:space:]]README\.md
+
+          unzip -p "$package" '*.nuspec' | grep -F '<id>TheSingularityWorkshop.CiAi</id>'
+          unzip -p "$package" '*.nuspec' | grep -F '<version>0.1.0-alpha.1</version>'
