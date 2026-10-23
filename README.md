@@ -13,23 +13,29 @@ CiAi is the application-owned boundary between continuous-integration systems an
 - **FSM_API** — optional lifecycle coordination where explicit state transitions help. It is not the CI transport, persistence layer, or distributed scheduler.
 - **SimpleDemos** — a place for a small, inspectable end-to-end demonstration.
 
-## First proof
+## Observe a real GitHub Actions run
 
-The first milestone establishes a typed, validated CI-run contract and a deterministic smoke test without requiring API keys or making network calls. It intentionally does not claim that live GitHub ingestion or LLM interaction is already implemented.
+The read-only client fetches the requested run directly from GitHub and validates the returned repository and run ID before constructing a typed snapshot.
 
-Run:
+```bash
+dotnet run --project samples/TheSingularityWorkshop.CiAi.ObserveRun -- TrentBest/SimpleDemos 40027387611
+```
+
+Replace the example run ID with a real run ID from the target repository's Actions page. Public repositories can be queried without a token; set `CIAI_GITHUB_TOKEN` when the target requires authentication. The client only performs a GET and never retries, cancels, publishes, or deploys anything.
+
+## Verify the contracts offline
 
 ```bash
 dotnet run --project tests/TheSingularityWorkshop.CiAi.ContractTests
 ```
 
-The smoke test checks valid snapshots, rejects invalid identity/evidence, and confirms unknown provider states remain explicitly unknown.
+The tests use a fake HTTP endpoint to check snapshot validation, repository/run identity checks, and safe handling of an unknown future conclusion. They require no API key or network call.
 
 ## Safety boundary
 
-An LLM may interpret a request and explain evidence. It does not decide whether a run succeeded, which repository a request targets, or whether an operation is authorized. Every action must be validated by host code against trusted CI data and an explicit permission policy. The first milestone is read-only. No secrets, retries, cancellations, publishing, or deployments are enabled.
+An LLM may interpret a request and explain evidence. It does not decide whether a run succeeded, which repository a request targets, or whether an operation is authorized. Every action must be validated by host code against trusted CI data and an explicit permission policy. The current client is read-only. No secrets, retries, cancellations, publishing, or deployments are enabled.
 
 ## Status
 
-- **Implementation readiness: 10%** — repository purpose, boundaries, typed CI-run contract, and offline smoke-test foundation.
-- **Not yet implemented:** live GitHub API ingestion, HeadlessAi invocation, ProtocolAi vocabulary integration, permissioned operations, and live end-to-end verification.
+- **Implementation readiness: 20%** — validated typed run contract, read-only GitHub Actions REST client, offline contract tests, and an observe-run console sample.
+- **Not yet implemented:** HeadlessAi invocation from CiAi, ProtocolAi vocabulary integration, permissioned operations, and live end-to-end CI demonstration.
