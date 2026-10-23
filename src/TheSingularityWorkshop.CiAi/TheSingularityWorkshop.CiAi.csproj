@@ -7,5 +7,23 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
+
+    <PackageId>TheSingularityWorkshop.CiAi</PackageId>
+    <Version>0.1.0-alpha.1</Version>
+    <PackageVersion>$(Version)</PackageVersion>
+    <Authors>The Singularity Workshop</Authors>
+    <Description>Provider-neutral, read-only CI workflow evidence contracts and GitHub Actions observation client.</Description>
+    <PackageTags>ci;github-actions;workflow;automation;contracts</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/TrentBest/TheSingularityWorkshop.CiAi</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/TrentBest/TheSingularityWorkshop.CiAi</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReleaseNotes>Initial alpha package for validated, read-only CI run observations. No dispatch, publishing, or deployment operations.</PackageReleaseNotes>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="\" Link="README.md" />
+  </ItemGroup>
 </Project>
