@@ -88,7 +88,26 @@ internal static class GitHubActionsRunClientTests
                 new GitHubActionsRunClient(client).GetRunAsync("TrentBest/SimpleDemos", 42));
         }
 
-        Console.WriteLine("PASS: 8 GitHub Actions client integration checks.");
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+            Task.FromResult(JsonResponse(successfulRun.Replace(
+                "\"html_url\": \"https://github.com/TrentBest/SimpleDemos/actions/runs/42\"",
+                "\"html_url\": \"https://github.com/other/repository/actions/runs/42\""))))))
+        {
+            await ThrowsAsync<ArgumentException>(() =>
+                new GitHubActionsRunClient(client).GetRunAsync("TrentBest/SimpleDemos", 42));
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+            Task.FromResult(JsonResponse(successfulRun.Replace(
+                "\"conclusion\": \"success\"",
+                "\"conclusion\": \"failure\""))))))
+        {
+            var run = await new GitHubActionsRunClient(client).GetRunAsync("TrentBest/SimpleDemos", 42);
+            Assert(run.Conclusion == CiRunConclusion.Failure, "failed provider conclusion was not preserved");
+            Assert(!run.IsSuccessful, "failed provider run was treated as success");
+        }
+
+        Console.WriteLine("PASS: 10 GitHub Actions client integration checks.");
     }
 
     private static HttpResponseMessage JsonResponse(string json) => new(HttpStatusCode.OK)
