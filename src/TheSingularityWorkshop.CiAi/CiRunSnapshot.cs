@@ -18,15 +18,16 @@ public sealed record CiRunSnapshot
         ArgumentException.ThrowIfNullOrWhiteSpace(headSha);
         ArgumentNullException.ThrowIfNull(evidenceUrl);
 
-        var repositoryParts = repository.Split('/');
-        if (repositoryParts.Length != 2 || repositoryParts.Any(string.IsNullOrWhiteSpace))
-            throw new ArgumentException("Repository must use the owner/repository form.", nameof(repository));
+        if (!IsValidRepository(repository))
+            throw new ArgumentException("Repository must use canonical owner/repository identifiers.", nameof(repository));
         if (runId <= 0)
             throw new ArgumentOutOfRangeException(nameof(runId), "Run ID must be positive.");
-        if (headSha.Length < 7 || headSha.Any(c => !Uri.IsHexDigit(c)))
-            throw new ArgumentException("Head SHA must be a hexadecimal commit identifier.", nameof(headSha));
+        if (headSha.Length != 40 || headSha.Any(c => !Uri.IsHexDigit(c)))
+            throw new ArgumentException("Head SHA must be a full 40-character hexadecimal Git commit identifier.", nameof(headSha));
         var expectedEvidencePath = $"/{repository}/actions/runs/{runId}";
-        if (evidenceUrl.Scheme != Uri.UriSchemeHttps ||
+        if (evidenceUrl.Scheme != Uri.UriSchemeHttps || !evidenceUrl.IsDefaultPort ||
+            !string.IsNullOrEmpty(evidenceUrl.UserInfo) || !string.IsNullOrEmpty(evidenceUrl.Query) ||
+            !string.IsNullOrEmpty(evidenceUrl.Fragment) ||
             !string.Equals(evidenceUrl.Host, "github.com", StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(evidenceUrl.AbsolutePath, expectedEvidencePath, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("Evidence URL must identify this exact GitHub Actions run over HTTPS.", nameof(evidenceUrl));
@@ -57,6 +58,15 @@ public sealed record CiRunSnapshot
     public CiRunConclusion Conclusion { get; }
     public Uri EvidenceUrl { get; }
     public DateTimeOffset UpdatedAt { get; }
+
+    private static bool IsValidRepository(string repository)
+    {
+        var parts = repository.Split('/');
+        return parts.Length == 2 &&
+            parts.All(part => part.Length > 0 &&
+                part.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_' or '.') &&
+                part is not "." and not "..");
+    }
 
     /// <summary>Stable identity suitable for deduplicating repeated observations of this run.</summary>
     public string Identity => $"{Repository}#{RunId}";
