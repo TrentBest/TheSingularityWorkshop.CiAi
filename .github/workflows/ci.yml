@@ -38,7 +38,6 @@ jobs:
           symbols="artifacts/packages/TheSingularityWorkshop.CiAi.0.1.0-alpha.1.snupkg"
           test -f "$package"
           test -f "$symbols"
-          unzip -l "$package" | grep -E '[[:space:]]README\.md
-
+          unzip -Z1 "$package" | grep -Fx "README.md"
           unzip -p "$package" "*.nuspec" | grep -F "<id>TheSingularityWorkshop.CiAi</id>"
           unzip -p "$package" "*.nuspec" | grep -F "<version>0.1.0-alpha.1</version>"
