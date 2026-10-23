@@ -25,10 +25,11 @@ public sealed record CiRunSnapshot
             throw new ArgumentOutOfRangeException(nameof(runId), "Run ID must be positive.");
         if (headSha.Length < 7 || headSha.Any(c => !Uri.IsHexDigit(c)))
             throw new ArgumentException("Head SHA must be a hexadecimal commit identifier.", nameof(headSha));
+        var expectedEvidencePath = $"/{Repository}/actions/runs/{runId}";
         if (evidenceUrl.Scheme != Uri.UriSchemeHttps ||
             !string.Equals(evidenceUrl.Host, "github.com", StringComparison.OrdinalIgnoreCase) ||
-            !evidenceUrl.AbsolutePath.Contains("/actions/runs/", StringComparison.Ordinal))
-            throw new ArgumentException("Evidence URL must identify a GitHub Actions run over HTTPS.", nameof(evidenceUrl));
+            !string.Equals(evidenceUrl.AbsolutePath, expectedEvidencePath, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Evidence URL must identify this exact GitHub Actions run over HTTPS.", nameof(evidenceUrl));
         if (!Enum.IsDefined(status))
             throw new ArgumentOutOfRangeException(nameof(status));
         if (!Enum.IsDefined(conclusion))

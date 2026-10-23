@@ -23,6 +23,10 @@ Check("evidence must be an HTTPS GitHub Actions run URL", () =>
 {
     Throws<ArgumentException>(() => NewRun(url: new Uri("https://example.com/run/42")));
 });
+Check("evidence must identify the exact requested run", () =>
+{
+    Throws<ArgumentException>(() => NewRun(url: new Uri("https://github.com/TrentBest/SimpleDemos/actions/runs/43")));
+});
 Check("unknown provider conclusion is not treated as success", () =>
 {
     var run = NewRun(conclusion: CiRunConclusion.Unknown);

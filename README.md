@@ -18,7 +18,7 @@ CiAi is the application-owned boundary between continuous-integration systems an
 The read-only client fetches the requested run directly from GitHub and validates the returned repository and run ID before constructing a typed snapshot.
 
 ```bash
-dotnet run --project samples/TheSingularityWorkshop.CiAi.ObserveRun -- TrentBest/SimpleDemos 40027387611
+dotnet run --project samples/TheSingularityWorkshop.CiAi.ObserveRun -- TrentBest/TheSingularityWorkshop.CiAi 40027841199
 ```
 
 Replace the example run ID with a real run ID from the target repository's Actions page. Public repositories can be queried without a token; set `CIAI_GITHUB_TOKEN` when the target requires authentication. The client only performs a GET and never retries, cancels, publishes, or deploys anything.
