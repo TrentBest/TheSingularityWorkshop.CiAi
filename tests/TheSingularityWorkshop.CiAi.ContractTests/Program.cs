@@ -44,6 +44,39 @@ Check("unknown provider conclusion is not treated as success", () =>
     var run = NewRun(conclusion: CiRunConclusion.Unknown);
     Assert(!run.IsSuccessful, "unknown conclusion was treated as success");
 });
+
+Check("evidence verifier accepts exact successful observation", () =>
+{
+    var errors = CiRunEvidenceVerifier.VerifySuccessfulRun(
+        NewRun(), "TrentBest/SimpleDemos", 42, "abcdef0123456789abcdef0123456789abcdef01");
+    Assert(errors.Count == 0, "exact successful run should reconcile");
+});
+Check("evidence verifier rejects a different target repository", () =>
+{
+    var errors = CiRunEvidenceVerifier.VerifySuccessfulRun(
+        NewRun(), "TrentBest/OtherRepo", 42, "abcdef0123456789abcdef0123456789abcdef01");
+    Assert(errors.Contains("repository.mismatch"), "wrong repository was not rejected");
+});
+Check("evidence verifier rejects a different run ID", () =>
+{
+    var errors = CiRunEvidenceVerifier.VerifySuccessfulRun(
+        NewRun(), "TrentBest/SimpleDemos", 43, "abcdef0123456789abcdef0123456789abcdef01");
+    Assert(errors.Contains("runId.mismatch"), "wrong run ID was not rejected");
+});
+Check("evidence verifier rejects a different commit SHA", () =>
+{
+    var errors = CiRunEvidenceVerifier.VerifySuccessfulRun(
+        NewRun(), "TrentBest/SimpleDemos", 42, "123456789abcdef0123456789abcdef012345678");
+    Assert(errors.Contains("headSha.mismatch"), "wrong commit SHA was not rejected");
+});
+Check("evidence verifier rejects a failed run", () =>
+{
+    var errors = CiRunEvidenceVerifier.VerifySuccessfulRun(
+        NewRun(conclusion: CiRunConclusion.Failure), "TrentBest/SimpleDemos", 42,
+        "abcdef0123456789abcdef0123456789abcdef01");
+    Assert(errors.Contains("run.not-successful"), "failed run was not rejected");
+});
+
 Console.WriteLine($"PASS: {passed} CiAi contract checks.");
 await GitHubActionsRunClientTests.RunAsync();
 
