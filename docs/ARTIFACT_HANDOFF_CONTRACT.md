@@ -1,6 +1,6 @@
 # Capability Artifact Handoff Contract
 
-**Status:** typed contract slice implemented; end-to-end handoff remains unimplemented.  
+**Status:** typed contracts and local payload-integrity verification implemented; end-to-end handoff remains unimplemented.  
 **Design owner:** CiAi defines the cross-provider lifecycle; each capability owns its output semantics.
 
 ## Purpose
@@ -110,9 +110,9 @@ Keep the first proof deliberately small and non-destructive:
 
 1. Define typed C# contracts for a ready notice, artifact manifest, and receipt acknowledgement.
 2. Add offline tests for required fields, malformed identities/digests, expiry, mismatched request/artifact IDs, duplicate acknowledgements, and state transitions.
-3. Use a test fixture artifact with a known digest; client code retrieves and verifies it from a controlled test location.
-4. Demonstrate that an invalid digest is rejected and that no cleanup happens merely because a notice was sent.
-5. Demonstrate that a valid acknowledgement marks an artifact eligible for cleanup but a separate retention decision controls reclamation.
+3. [x] Verify supplied payload bytes against manifest size and SHA-256, with a configurable maximum size and stable rejection codes.
+4. [x] Test valid fixture bytes, digest mismatch, size mismatch, caller-specified size limit, and invalid limit.
+5. Demonstrate that no cleanup happens merely because a notice was sent; a valid acknowledgement only makes a payload eligible for separate policy review.
 6. Do not add live webhooks, repository dispatch, broad credentials, or publishing/deployment permissions in this first slice.
 
-**Current implementation status:** `ArtifactManifest`, `ArtifactReadyNotice`, and `ArtifactReceiptAcknowledgement` are implemented as dependency-free typed contracts with offline validation checks. They validate metadata shape and selected invariants; they do not authenticate the provider, retrieve or hash payload bytes, persist/deduplicate receipts, verify authoritative run evidence, or reclaim storage. The existing CiAi alpha remains read-only with respect to GitHub Actions and has no live handoff transport.
+**Current implementation status:** `ArtifactManifest`, `ArtifactReadyNotice`, and `ArtifactReceiptAcknowledgement` are implemented as dependency-free typed contracts. `ArtifactPayloadVerifier` now verifies caller-supplied bytes against manifest size and SHA-256, and offline checks cover matching bytes plus digest, size, and limit failures. This verifier does not retrieve bytes and cannot enforce streaming limits before the caller allocates its buffer. Provider authentication, durable receipt deduplication, authoritative run evidence correlation, live handoff transport, and storage reclamation remain unimplemented. The existing CiAi alpha remains read-only with respect to GitHub Actions.
