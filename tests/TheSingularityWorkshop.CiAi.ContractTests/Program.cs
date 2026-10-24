@@ -120,6 +120,26 @@ Check("rejected local validation blocks retention eligibility", () =>
         localValidation: ArtifactLocalValidationOutcome.Rejected);
     Assert(!receipt.MakesPayloadEligibleForRetentionReview, "rejected artifact became eligible for cleanup review");
 });
+Check("artifact manifest rejects missing digest instead of throwing null reference", () =>
+{
+    Throws<ArgumentException>(() => NewManifest(digest: null!));
+});
+Check("receipt reconciles with its exact manifest", () =>
+{
+    var receipt = NewAcknowledgement();
+    Assert(receipt.VerifyAgainst(NewManifest()).Count == 0, "matching receipt should reconcile");
+});
+Check("receipt rejects mismatched artifact version and digest", () =>
+{
+    var receipt = NewAcknowledgement();
+    var errors = receipt.VerifyAgainst(NewManifest(digest: new string('b', 64)));
+    Assert(errors.Contains("digest.mismatch"), "wrong digest was not rejected");
+});
+Check("receipt rejects a missing manifest", () =>
+{
+    Assert(NewAcknowledgement().VerifyAgainst(null).Contains("manifest.required"),
+        "missing manifest was not reported");
+});
 Check("receipt is correlated to an exact artifact version and digest", () =>
 {
     var receipt = NewAcknowledgement();
