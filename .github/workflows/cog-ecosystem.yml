@@ -5,6 +5,10 @@ on:
     paths:
       - "integration/**"
       - "src/**"
+      - "tests/**"
+      - "Directory.Build.props"
+      - "Directory.Build.targets"
+      - "global.json"
       - "docs/COGS_VS_CAPABILITIES.md"
       - ".github/workflows/cog-ecosystem.yml"
   pull_request:
@@ -12,6 +16,10 @@ on:
     paths:
       - "integration/**"
       - "src/**"
+      - "tests/**"
+      - "Directory.Build.props"
+      - "Directory.Build.targets"
+      - "global.json"
       - "docs/COGS_VS_CAPABILITIES.md"
       - ".github/workflows/cog-ecosystem.yml"
   workflow_dispatch:
