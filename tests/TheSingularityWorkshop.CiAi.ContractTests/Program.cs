@@ -395,6 +395,55 @@ Check("skipped release evidence cannot make a category pass", () =>
         "skipped publication was treated as passing");
 });
 
+Check("commit observation Markdown preserves incompleteness and exact identity", () =>
+{
+    const string observation = """
+    {
+      "schema": "ciai.commit-observation.v1",
+      "reportType": "read-only-workflow-observation",
+      "repository": "TrentBest/SimpleDemos",
+      "headSha": "abcdef0123456789abcdef0123456789abcdef01",
+      "retrievedAtUtc": "2026-10-24T06:00:00+00:00",
+      "discovery": { "PagesRead": 1, "TotalCount": 0, "IsTruncated": false, "returnedRuns": 0 },
+      "complete": false,
+      "note": "observation only",
+      "runs": []
+    }
+    """;
+    var markdown = CommitObservationMarkdownRenderer.Render(observation);
+    Assert(markdown.Contains("`TrentBest/SimpleDemos`", StringComparison.Ordinal),
+        "observation Markdown omitted repository identity");
+    Assert(markdown.Contains("`abcdef0123456789abcdef0123456789abcdef01`", StringComparison.Ordinal),
+        "observation Markdown omitted full candidate SHA");
+    Assert(markdown.Contains("Observation complete:** no", StringComparison.Ordinal),
+        "incomplete observation was not shown as incomplete");
+    Assert(markdown.Contains("No matching workflow runs were observed.", StringComparison.Ordinal),
+        "empty observation was not explained");
+    Assert(markdown.Contains("does not certify release readiness", StringComparison.Ordinal),
+        "observation report failed to distinguish evidence from release certification");
+});
+Check("commit observation Markdown rejects unsupported schema and unsafe evidence URLs", () =>
+{
+    Throws<InvalidDataException>(() => CommitObservationMarkdownRenderer.Render("{\"schema\":\"other\"}"));
+    const string unsafeObservation = """
+    {
+      "schema": "ciai.commit-observation.v1",
+      "repository": "TrentBest/SimpleDemos",
+      "headSha": "abcdef0123456789abcdef0123456789abcdef01",
+      "retrievedAtUtc": "2026-10-24T06:00:00+00:00",
+      "discovery": { "PagesRead": 1, "TotalCount": 1, "IsTruncated": false, "returnedRuns": 1 },
+      "complete": true,
+      "runs": [{
+        "run": { "WorkflowName": "verify.yml", "RunId": 42, "RunAttempt": 1, "Event": "push",
+          "normalizedStatus": "completed", "normalizedConclusion": "success",
+          "WorkflowPath": ".github/workflows/verify.yml", "evidenceUrl": "https://example.com/forged" },
+        "jobs": [], "jobsComplete": true
+      }]
+    }
+    """;
+    Throws<InvalidDataException>(() => CommitObservationMarkdownRenderer.Render(unsafeObservation));
+});
+
 Check("Markdown release report is deterministic and includes exact candidate identity", () =>
 {
     var report = ReleaseEvidenceReport.Aggregate("TrentBest/SimpleDemos",
