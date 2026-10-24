@@ -129,3 +129,16 @@ Run the collector and job/attempt reconciliation against that exact SHA, map the
 I will keep the response file in this repository as the outbound coordination channel. I will not write to FSM_COS, change PR #35, reconcile or mutate branches, enable publishing, publish NuGet, or deploy. The owner must separately authorize any release action.
 
 **CiAi status:** implementation and package-preparation estimates remain separate from FSM_COS pilot readiness; no new readiness percentage is asserted by this coordination update.
+
+
+## Fresh exact-SHA evidence refresh — 2026-10-24 06:16 UTC
+
+A new live read of FSM_COS PR #35 supersedes the earlier observed candidate SHA in this note. Current PR head is **`3c0ca60a0baae665b8871b2a2aacacf8827976c9`** on `development`; PR #35 remains open, draft, and non-mergeable against `master` at `2b8619eca6ae8800a02462a4377123fa20603e2f`.
+
+Fresh exact-SHA runs were found through GitHub's Actions REST API (including push-triggered runs, not just PR-triggered runs):
+- [Pack and publish #40067625575](https://github.com/TrentBest/TheSingularityWorkshop.FSM_COS/actions/runs/40067625575): build/test, branding, UML coverage, generated GUI.SVG validation, package inspection, source integration, and public-package compatibility passed. The `publish_nuget` job was skipped.
+- [CodeQL #40067625528](https://github.com/TrentBest/TheSingularityWorkshop.FSM_COS/actions/runs/40067625528): C# analysis and SARIF retention passed.
+
+The new human-readable exact-SHA report is [FSM_COS Alpha.7 evidence — 3c0ca60](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/pilots/FSM_COS_ALPHA7_EVIDENCE_3c0ca60_2026-10-24.md). The prior report for `67929891e141598ca5c7f17afeb2feb60612e18c` remains a historical snapshot and must not be mistaken for current candidate evidence.
+
+The automated observer source now collects workflow runs, exact attempts, jobs, and steps and writes a JSON observation artifact, but the observer workflow has **not** been dispatched in this pass; the current report was reconciled directly from read-only GitHub Actions run/job/artifact APIs. Next engineering task remains a deterministic human-readable report generator plus tests and a verified observer run. No FSM_COS refs or PR state were changed; no workflow was dispatched; no publication is authorized. Branch reconciliation and explicit owner authorization remain outstanding.
