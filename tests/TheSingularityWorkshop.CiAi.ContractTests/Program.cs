@@ -398,6 +398,7 @@ Check("skipped release evidence cannot make a category pass", () =>
 Console.WriteLine($"PASS: {passed} CiAi contract checks.");
 await GitHubActionsRunClientTests.RunAsync();
 await GitHubActionsWorkflowRunCollectorTests.RunAsync();
+await GitHubActionsWorkflowJobCollectorTests.RunAsync();
 
 void Check(string name, Action action)
 {
