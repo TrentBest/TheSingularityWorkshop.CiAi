@@ -19,6 +19,8 @@
 - Shared bounded canonical repository identity validation used by both the HTTP client and snapshot model; rejects malformed path segments and overlong components before network access.
 - Regression test for overlong repository identities; current client suite contains 13 offline integration checks.
 - Repository identity class companion and read-only observation UML/use-case documentation.
+- `CiRunEvidenceVerifier` reconciles a provider-fetched snapshot against coordinator-owned expected repository, run ID, and commit SHA; it rejects mismatches, incomplete runs, and non-success conclusions.
+- Offline regression checks cover exact reconciliation plus wrong repository, run ID, SHA, and failed-run rejection. See the [verifier class companion](../src/TheSingularityWorkshop.CiAi/CiRunEvidenceVerifier.md) and [UML/use case](UML/CiRunEvidenceVerifierUML.md).
 - Full 40-character hexadecimal commit SHA validation.
 - Exact HTTPS GitHub Actions evidence path validation; rejects query strings, fragments, non-default ports, and user-info.
 - Unknown future provider conclusions remain explicitly unknown and cannot be successful.
@@ -28,7 +30,8 @@
 
 ## Must pass before publication
 
-- [x] Build, offline contract checks, pack, and packed-artifact validation passed on commit `f207fc028a79a19305c7296a9e930c06b64ad40d` in [workflow run 40040017424](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/40040017424). Re-run on the exact final candidate SHA after any further changes.
+- [x] Earlier build, offline contract checks, pack, and packed-artifact validation passed on commit `f207fc028a79a19305c7296a9e930c06b64ad40d` in [workflow run 40040017424](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/40040017424).
+- [ ] Re-run and verify build, offline checks, pack, and packed-artifact validation on the latest commit containing evidence reconciliation before treating this as a current release candidate.
 - [ ] Inspect the produced `.nupkg` and `.snupkg` contents, package metadata, and embedded README beyond automated CI assertions.
 - [ ] Review README and public API claims against actual implementation.
 - [ ] Confirm package ID and version are intended and not already published.
@@ -37,7 +40,7 @@
 
 ## Deliberately not claimed
 
-This alpha is a read-only CI observation library. HeadlessAi invocation, ProtocolAi vocabulary integration, host authorization, cross-repository dispatch, persistent idempotency/history, and a complete request/result round trip are not implemented in CiAi. No publish or deploy action is exposed by this library.
+This alpha is a read-only CI observation library. The evidence verifier now reconciles expected identity against one provider-fetched snapshot, but this is not yet a complete catalog-to-request-to-result vertical proof. HeadlessAi invocation, ProtocolAi vocabulary integration, host authorization, cross-repository dispatch, persistent idempotency/history, and a complete request/result round trip are not implemented in CiAi. No publish or deploy action is exposed by this library.
 
 ## Release gate
 
