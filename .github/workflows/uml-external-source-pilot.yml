@@ -1,0 +1,118 @@
+name: UML external-source pilot
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - development
+    paths:
+      - ".github/workflows/uml-external-source-pilot.yml"
+      - "docs/UML_CAPABILITY_PILOT.md"
+
+permissions:
+  contents: read
+
+jobs:
+  cog-a-syntax-model:
+    name: Generate deterministic UML model from pinned external source
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout CiAi orchestration repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          path: orchestration
+
+      - name: Checkout pinned GUI UML generator
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: TrentBest/TheSingularityWorkshop.GUI
+          ref: 99e6c77caf03150ecfd8348390b3e10d50c35ff6
+          path: generator
+
+      - name: Checkout pinned CogA consumer source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: TrentBest/TheSingularityWorkshop.CiAi.CogA
+          ref: 4aa667587818fcf948e85ed5153d65c0a61ba0c1
+          path: coga
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Generate syntax-only structural model and SVG
+        working-directory: generator
+        env:
+          COGA_REVISION: 4aa667587818fcf948e85ed5153d65c0a61ba0c1
+        run: |
+          set -euo pipefail
+          dotnet run --project samples/SourceUmlGenerator/SourceUmlGenerator.csproj \
+            --configuration Release -- \
+            ../coga/src/TheSingularityWorkshop.CiAi.CogA/CapabilityCatalog.cs \
+            ../orchestration/artifacts/coga-capability-catalog.source-structure.svg \
+            --verify \
+            --model-json ../orchestration/artifacts/coga-capability-catalog.uml-model.json \
+            --repository TrentBest/TheSingularityWorkshop.CiAi.CogA \
+            --revision "$COGA_REVISION" \
+            --project src/TheSingularityWorkshop.CiAi.CogA/TheSingularityWorkshop.CiAi.CogA.csproj
+
+      - name: Verify external source provenance and deterministic artifact shape
+        working-directory: orchestration
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          root = Path("artifacts")
+          model_path = root / "coga-capability-catalog.uml-model.json"
+          svg_path = root / "coga-capability-catalog.source-structure.svg"
+          model = json.loads(model_path.read_text(encoding="utf-8"))
+          provenance = model["provenance"]
+          assert model["schemaVersion"] == "1.0", model.get("schemaVersion")
+          assert provenance["repository"] == "TrentBest/TheSingularityWorkshop.CiAi.CogA", provenance
+          assert provenance["sourceRevision"] == "4aa667587818fcf948e85ed5153d65c0a61ba0c1", provenance
+          assert provenance["projectPath"] == "src/TheSingularityWorkshop.CiAi.CogA/TheSingularityWorkshop.CiAi.CogA.csproj", provenance
+          assert provenance["analysisMode"] == "syntax-only", provenance
+          assert model["types"], "expected source-derived type declarations"
+          assert svg_path.is_file(), "missing generated SVG"
+          ET.parse(svg_path)
+          manifest = {
+              "schemaVersion": "1",
+              "capability": {"id": "uml.structure.syntax-only", "version": "1"},
+              "source": {
+                  "repository": provenance["repository"],
+                  "revision": provenance["sourceRevision"],
+                  "project": provenance["projectPath"],
+                  "file": "src/TheSingularityWorkshop.CiAi.CogA/CapabilityCatalog.cs",
+              },
+              "generator": {
+                  "repository": "TrentBest/TheSingularityWorkshop.GUI",
+                  "revision": "99e6c77caf03150ecfd8348390b3e10d50c35ff6",
+                  "entryPoint": "samples/SourceUmlGenerator/SourceUmlGenerator.csproj",
+                  "analysisMode": provenance["analysisMode"],
+              },
+              "outputs": {
+                  model_path.name: hashlib.sha256(model_path.read_bytes()).hexdigest(),
+                  svg_path.name: hashlib.sha256(svg_path.read_bytes()).hexdigest(),
+              },
+              "limitations": [
+                  "This pilot analyzes one pinned C# source file in syntax-only mode.",
+                  "It does not establish whole-project semantic analysis, compiler-resolved relationships, or a reusable released workflow.",
+              ],
+          }
+          (root / "provenance-manifest.json").write_text(
+              json.dumps(manifest, indent=2, sort_keys=True) + "\\n", encoding="utf-8"
+          )
+          print(f"Validated {len(model['types'])} types; wrote provenance manifest.")
+          PY
+
+      - name: Upload pilot outputs
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: uml-coga-external-source-pilot
+          path: orchestration/artifacts/
+          if-no-files-found: error
