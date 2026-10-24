@@ -52,4 +52,4 @@ The latest verified candidate commit, `f207fc028a79a19305c7296a9e930c06b64ad40d`
 
 Not yet implemented: HeadlessAi invocation from CiAi, ProtocolAi vocabulary integration, host permission policy, live cross-repository request/result round trip, and durable idempotency/history. Those are explicitly outside this read-only alpha package's claims.
 
-See [release readiness](docs/RELEASE_READINESS.md) and the [inter-repository model](docs/INTER_REPOSITORY_MODEL.md).
+See [release readiness](docs/RELEASE_READINESS.md), the [inter-repository model](docs/INTER_REPOSITORY_MODEL.md), the [capability repository architecture](docs/CAPABILITY_REPOSITORIES.md), the [ecosystem CI integration roadmap](docs/ECOSYSTEM_CI_INTEGRATION_ROADMAP.md), and the [repository-specific integration samples](docs/Samples/README.md).
