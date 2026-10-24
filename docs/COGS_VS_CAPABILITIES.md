@@ -26,12 +26,14 @@ These are candidates, not a commitment to create a separate repository for every
 
 1. CogA identifies a declared capability and its contract.
 2. CogD evaluates the requested operation and target.
-3. CogB creates a bounded request with stable identity and pinned inputs.
-4. A trusted execution host invokes the capability.
-5. CogC correlates and structurally validates the response.
-6. The parent coordinator checks authoritative CI state and artifact provenance.
-7. CogE presents only validated facts, labelling partial or unknown information.
-8. Consumer CI and maintainers decide whether to accept the output.
+3. CogB creates or records a bounded request with stable identity and pinned inputs.
+4. The capability completes work in its own environment and publishes an immutable, versioned artifact.
+5. The provider sends a ready notice containing an artifact reference and integrity/provenance metadata—not the payload itself.
+6. Client CiAi authenticates and pulls the artifact read-only into the client's security boundary, then verifies identity, digest, contract, and provenance.
+7. CogC correlates the artifact and acknowledgement with the request; the parent coordinator verifies authoritative provider CI facts where applicable.
+8. CogE presents verified lifecycle facts, distinguishing published, notified, retrieved, hash-verified, locally validated, accepted, and unknown/failed states.
+9. Client CiAi sends a courtesy acknowledgement after retrieval and integrity verification. Provider retention policy—not the acknowledgement alone—determines when temporary payloads can be reclaimed.
+10. Consumer CI and maintainers decide whether to accept the output.
 
 This is a target architecture. The current CiAi alpha provides read-only GitHub Actions observation and normalization; it does not yet execute this lifecycle.
 
@@ -45,7 +47,10 @@ Before creating a separate UML repository, audit the existing GUI source-derived
 
 - Pin provider code and dependencies to immutable revisions.
 - Start in read-only, non-blocking mode.
-- Never treat a request acknowledgement as proof of execution or success.
+- Never treat a ready notice or transport acknowledgement as proof of execution, integrity, or acceptance.
+- Prefer provider-published immutable artifacts that client CiAi pulls into its own trust boundary; do not grant provider write access to the client repository.
+- Verify content hashes and provenance before local use. A retrieval acknowledgement is distinct from local validation and acceptance.
+- Make notifications and acknowledgements authenticated, retry-safe, and idempotent; apply explicit expiry/retention rules before reclaiming temporary storage.
 - Keep generated, validated, accepted, and merged as distinct states.
 - Capture source SHA, dependency SHAs, provider version, run/attempt, and artifact hashes.
 - Treat repository source and generated artifacts as untrusted input.
@@ -54,6 +59,6 @@ Before creating a separate UML repository, audit the existing GUI source-derived
 
 ## Design rule
 
-**Cogs coordinate; capabilities do domain work; provider CI supplies execution evidence; the consumer decides acceptance.**
+**Cogs coordinate; capabilities do domain work; providers publish immutable artifacts; client CiAi pulls and verifies within its own security boundary; the consumer decides acceptance.**
 
 Keep the control plane small and generic. Add capability providers behind stable contracts rather than adding a new Cog for every new feature. Before remote dispatch, reconcile the CogA–CogE contracts, verify provider runs authoritatively, and test correlation, replay handling, permissions, and failure semantics.
