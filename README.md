@@ -48,6 +48,8 @@ The current client validates the returned repository and run ID, maps unknown pr
 
 - [Read-only CI observation UML and use case](docs/UML/CiRunObservationUML.md)
 - [RepositoryIdentity class companion](src/TheSingularityWorkshop.CiAi/RepositoryIdentity.md)
+- [CiRunEvidenceVerifier class companion](src/TheSingularityWorkshop.CiAi/CiRunEvidenceVerifier.md)
+- [Evidence reconciliation UML and use case](docs/UML/CiRunEvidenceVerifierUML.md)
 
 ## 05 — Release status
 
