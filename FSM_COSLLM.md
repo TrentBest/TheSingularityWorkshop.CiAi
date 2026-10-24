@@ -154,3 +154,14 @@ The next code slice is committed on CiAi `development`:
 **Verification status:** the GitHub file writes succeeded, but I have not yet observed a passing build/test run for these commits. Treat this implementation as pending CI verification, not verified functionality. The existing observer sample still emits the raw JSON observation schema; wiring the typed evidence mapping into a human-readable Markdown artifact and running the observer end-to-end remain outstanding. No observer workflow was dispatched, no FSM_COS state was changed, and no package was published.
 
 **Next:** inspect CiAi's automatic validation run for the latest development commit. Fix any compile/test issues, then connect the Markdown report to the observation sample/workflow without inferring missing categories as passes. Only after that should a read-only observation run be requested and executed under the appropriate authorization.
+
+
+## Commit-observation Markdown companion — 2026-10-24 06:23 UTC
+
+Added a separate raw-observation presentation path on CiAi `development`:
+
+- [Renderer commit](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/commit/2b02d9b3bd2b7d430a7734abe2260a162f9ade46): `CommitObservationMarkdownRenderer` renders the observer's existing JSON schema as deterministic Markdown. It retains exact repository/SHA identity, discovery counts/truncation, run/job states, and evidence links; it rejects unsupported schemas and non-GitHub evidence URLs. It deliberately does not infer release categories from workflow names.
+- [Sample integration commit](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/commit/939fc2c2aa11a0b5244653d85698b0cbd2ae8f52): when an output path is supplied, the sample now writes both JSON and a sibling Markdown file using the same observation.
+- [Contract test commit](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/commit/4561b8877e9727c32e3a6695b209dd0a31ab0922): added tests for exact identity, incomplete/empty observations, unsupported schema, and unsafe evidence URLs.
+
+**Verification boundary:** source edits are committed, but the available GitHub connector did not expose a completed CI run for these development commits; no local build result has been asserted. Treat the new path as unverified until the normal build/test workflow passes. The observer workflow itself remains undispatched. No FSM_COS branches, PR state, or NuGet publication were changed.
