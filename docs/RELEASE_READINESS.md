@@ -58,3 +58,14 @@ This alpha remains read-only with respect to CI-provider operations. Typed hando
 ## Release gate
 
 A green CI run proves that the exact candidate builds, passes its offline tests, and can be packed; independent artifact inspection checks the package produced by that run. Neither authorizes publishing nor proves an end-to-end LLM workflow. Re-run CI and inspect the newly produced artifact after any source or workflow change. The remaining gates are public-package/version confirmation, external NuGet credential and permission review, API/README owner review, and explicit owner approval.
+
+
+## Exact-SHA workflow collector and first FSM_COS report — 2026-10-24
+
+- Added GitHubActionsWorkflowRunCollector: read-only GET-based discovery using explicit repository + full SHA, bounded to 1–10 pages and 1–100 rows/page, with independent per-row repository/SHA validation and explicit truncation state. Run attempt, workflow path, event, PR numbers, raw status/conclusion, timestamp, and evidence URL are retained. It does not collapse attempts or mutate provider state.
+- Added six offline collector checks for query identity, run-attempt/workflow/PR retention, wrong repository, wrong SHA, invalid attempt, page-cap truncation, and invalid request bounds.
+- [Contract verification passed](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/40063755622) on commit be145b1275492fc3478a2fbcf62c724774788b16. [Cross-Cog workflow also passed](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/40063755601) on that commit. These are CiAi validation results, not evidence of FSM_COS readiness.
+- First live report: [FSM_COS Alpha.7 evidence pilot](pilots/FSM_COS_ALPHA7_EVIDENCE_2026-10-24.md), targeting PR #35 candidate dcea776f40f507f1d95a6e184f475e57853d2baa. Package workflow failed at Markdown branding preflight; CodeQL, public-package compatibility, and source integration passed; build/test and package inspection were skipped; publication was skipped as intended; owner authorization remains missing.
+- The collector currently discovers workflow runs only. The first report's job-level inspection and category mapping are manually reconciled from GitHub's authoritative job API; automated job pagination/attempt reconciliation and report generation remain outstanding.
+
+Readiness estimates remain the last documented **42% implementation / 70% package preparation** until a full re-audit is completed. The new collector is a material increment, but the live end-to-end report path is not yet fully automated. NuGet publication remains unapproved and must not be triggered.
