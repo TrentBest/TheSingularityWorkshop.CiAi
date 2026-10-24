@@ -92,13 +92,22 @@ internal static class GitHubActionsWorkflowJobCollectorTests
                 2 => Job(1201, 42, 2),
                 _ => throw new InvalidOperationException("Collector requested more than two pages.")
             };
-            return Task.FromResult(JsonResponse($"{{\"total_count\":2,\"jobs\":[{job}]}}"));
+            return Task.FromResult(JsonResponse($"{{\\"total_count\\":2,\\"jobs\\":[{job}]}}"));
         })))
+        {
+            var result = await new GitHubActionsWorkflowJobCollector(client)
+                .GetJobsForAttemptAsync("TrentBest/SimpleDemos", 42, 2, maxPages: 3, perPage: 1);
+            Assert(pageRequests == 2 && result.PagesRead == 2 && result.TotalCount == 2 && !result.IsTruncated,
+                "collector did not retrieve all pages");
+            Assert(result.Jobs.Select(x => x.JobId).SequenceEqual(new long[] { 1201, 1202 }),
+                "multi-page jobs were not stably ordered");
+        }
+
         using (var client = new HttpClient(new StubHandler((request, _) =>
         {
             var page = int.Parse(ParseQueryValue(request.RequestUri!.Query, "page"));
-            var jobs = page == 1 ? Job(1201, 42, 2) : Job(1202, 42, 2);
-            return Task.FromResult(JsonResponse($"{{\"total_count\":2,\"jobs\":[{jobs}]}}"));
+            var job = page == 1 ? Job(1201, 42, 2) : Job(1202, 42, 2);
+            return Task.FromResult(JsonResponse($"{{\\"total_count\\":2,\\"jobs\\":[{job}]}}"));
         })))
         {
             var result = await new GitHubActionsWorkflowJobCollector(client)
