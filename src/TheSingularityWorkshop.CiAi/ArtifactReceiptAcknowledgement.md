@@ -23,4 +23,4 @@ Captures client-reported retrieval and integrity outcomes for one exact artifact
 
 ## Retention boundary
 
-The eligibility property is only a signal for a separate retention-policy decision. It does not delete payloads. Durable artifacts, rejected artifacts, audit holds, other consumers, expiry rules, and provider storage confirmation must be handled by a later retention coordinator. A stable deduplication key is provided as contract data; durable duplicate suppression is not implemented in this type.
+The eligibility property is only a signal for a separate retention-policy decision. It does not delete payloads. Durable artifacts, rejected artifacts, audit holds, other consumers, expiry rules, and provider storage confirmation must be handled by a later retention coordinator. The `VerifyAgainst` method returns stable mismatch codes for request ID, artifact ID/version, digest, and client identity, allowing the coordinator to reject a receipt for the wrong artifact. A stable deduplication key is provided as contract data; durable duplicate suppression is not implemented in this type.
