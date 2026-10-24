@@ -61,7 +61,7 @@ The current client validates the returned repository and run ID, maps unknown pr
 
 ## 05 — Release status
 
-**Implementation readiness: 38% (last recorded estimate). Package preparation: 70%. Candidate: 0.1.0-alpha.1.**
+**Implementation readiness: 42%. Package preparation: 70%. Candidate: 0.1.0-alpha.1.**
 
 Release evidence is candidate-specific: use the latest successful [CiAi Contract Verification workflow](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/workflows/ci.yml) for the exact source commit under review. The workflow builds, runs offline contract checks, packs both NuGet and symbol packages, validates package metadata and embedded README, and uploads the artifacts for inspection. A green workflow and inspected package are not publication approval; owner review and explicit publication approval remain required.
 
