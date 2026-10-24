@@ -142,3 +142,15 @@ Fresh exact-SHA runs were found through GitHub's Actions REST API (including pus
 The new human-readable exact-SHA report is [FSM_COS Alpha.7 evidence — 3c0ca60](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/pilots/FSM_COS_ALPHA7_EVIDENCE_3c0ca60_2026-10-24.md). The prior report for `67929891e141598ca5c7f17afeb2feb60612e18c` remains a historical snapshot and must not be mistaken for current candidate evidence.
 
 The automated observer source now collects workflow runs, exact attempts, jobs, and steps and writes a JSON observation artifact, but the observer workflow has **not** been dispatched in this pass; the current report was reconciled directly from read-only GitHub Actions run/job/artifact APIs. Next engineering task remains a deterministic human-readable report generator plus tests and a verified observer run. No FSM_COS refs or PR state were changed; no workflow was dispatched; no publication is authorized. Branch reconciliation and explicit owner authorization remain outstanding.
+
+
+## Markdown report generator implementation — 2026-10-24 06:20 UTC
+
+The next code slice is committed on CiAi `development`:
+
+- [Markdown renderer commit](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/commit/450a568965eafeb9662f4c7ff992cd48a413c82c): added `ReleaseEvidenceMarkdownRenderer`, a deterministic renderer for an already-aggregated exact-SHA report. It orders categories and records deterministically, includes raw status/conclusion and evidence links, escapes Markdown table delimiters in diagnostics, and explicitly states that evidence is not release authorization.
+- [Renderer contract tests commit](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/commit/1678036c92029efdaceb4bcffc6113b706363301): added checks for stable output, exact repository/SHA identity, missing/skipped gate visibility, the authorization disclaimer, and table-safe diagnostics.
+
+**Verification status:** the GitHub file writes succeeded, but I have not yet observed a passing build/test run for these commits. Treat this implementation as pending CI verification, not verified functionality. The existing observer sample still emits the raw JSON observation schema; wiring the typed evidence mapping into a human-readable Markdown artifact and running the observer end-to-end remain outstanding. No observer workflow was dispatched, no FSM_COS state was changed, and no package was published.
+
+**Next:** inspect CiAi's automatic validation run for the latest development commit. Fix any compile/test issues, then connect the Markdown report to the observation sample/workflow without inferring missing categories as passes. Only after that should a read-only observation run be requested and executed under the appropriate authorization.
