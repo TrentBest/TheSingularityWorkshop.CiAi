@@ -195,3 +195,13 @@ The first cross-repository implementation task is tracked in [GUI issue #46: Exp
 The current GUI workflow invokes `samples/SourceUmlGenerator` with GUI-owned project paths and project references to GUI Core and GUI.SVG. It already supports project-semantic models and provenance, but it is not yet a generic external-consumer entry point. The correct next step is to extract or expose the smallest renderer-neutral structural capability and prove it against a non-GUI project. Do not copy the GUI generator into CiAi, and do not advertise the proposed YAML as executable until that proof and a pinned reusable entry point exist.
 
 The first proof should use pinned CogA source and a pinned generator revision. It must produce a deterministic structural artifact and provenance manifest without invoking an LLM. AI semantic enrichment should be added only as a separate, optional stage after the structural boundary is stable. If the generator cannot yet accept an external project without GUI references, record that as the blocker rather than faking a successful CogA generation.
+
+
+## External-source pilot workflow (first bounded proof)
+
+The initial runnable experiment is now defined in [`.github/workflows/uml-external-source-pilot.yml`](../.github/workflows/uml-external-source-pilot.yml). It checks out the GUI generator and CogA at full commit SHAs, feeds CogA's `CapabilityCatalog.cs` into the generator's syntax-only mode, checks the model's source provenance and SVG structure, computes SHA-256 hashes for both outputs, and uploads the artifacts with a provenance manifest. It uses no LLM credentials and does not execute the analyzed source.
+
+**Scope is intentionally limited:** this is a pinned external-*source-file* proof, not whole-project semantic UML. The existing generator project still references GUI Core and GUI.SVG; the external source is only parsed in syntax-only mode. A passing run will establish that this entry point can produce a provenance-bearing artifact for a non-GUI source file, but it will not satisfy the final reusable, renderer-neutral capability contract. The next acceptance step remains external-project semantic analysis after the generator boundary is extracted by the GUI owner.
+
+Generator pin: `99e6c77caf03150ecfd8348390b3e10d50c35ff6`.
+CogA source pin: `4aa667587818fcf948e85ed5153d65c0a61ba0c1`.
