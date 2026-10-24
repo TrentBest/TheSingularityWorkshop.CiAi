@@ -23,9 +23,10 @@
 | NuGet package contents and metadata | PASS | `build-and-test`, steps 21–23 |
 | Complete development-source integration | PASS | `source-integration`: source graph restore/build, consumer verification, and tests all succeeded |
 | Public NuGet dependency compatibility | PASS | `public-package-compatibility`: public-feed restore, dependency audit, build, consumer verification, tests, pack, package inspection, and artifact upload succeeded |
-| CodeQL/security workflow | NOT VERIFIED HERE | The inspected workflow run includes runtime assembly security analyzers. This report does not establish a separate CodeQL workflow result for this SHA. |
+| CodeQL/security workflow | NOT VERIFIED HERE | The inspected workflow run includes runtime assembly security analyzers. Combined status returned no status checks, and the connector's commit-workflow query only returns PR-triggered runs; neither establishes a separate CodeQL result for this SHA. |
 | NuGet publication | WITHHELD / SKIPPED | The `publish_nuget` job was skipped. No publication authorization is implied. |
-| Branch reconciliation | NOT VERIFIED | This report does not establish current `development`/ `master` ancestry or PR merge readiness. |
+| Branch inventory | VERIFIED: TWO BRANCHES | Read-only branch listing returned exactly `development` and `master`. No branch was changed or deleted. |
+| Branch reconciliation / merge readiness | DIVERGED; OWNER DECISION REQUIRED | Compare of `master` to candidate `67929891...`: status `diverged`; candidate is 1,070 commits ahead and 51 behind. Merge base: `e9c9968b9cdbec0478e77d9f89b4e74a0e404d3d`. Current `master` base ref resolved to `43892fde0703f27146dd81ea33dd8ce4a9ad53b2`. PR [#35](https://github.com/TrentBest/TheSingularityWorkshop.FSM_COS/pull/35) remains open, draft, and non-mergeable. Its body still cites older branch heads and must be refreshed by the repository owner; do not treat those older SHAs as current. |
 | Owner release authorization | NOT PROVIDED | Explicit approval remains a separate gate. |
 
 ## Artifacts from the exact candidate run
@@ -43,6 +44,6 @@ All listed artifacts report the same candidate SHA and run ID.
 
 The exact-SHA Pack and publish workflow is green for build/test, development-source integration, public-package compatibility, and package inspection. The previous Markdown branding preflight blocker is resolved on this candidate.
 
-This is a substantial CI milestone, but **not a release authorization**. Before calling Alpha.7 fully release-ready, independently verify a separate CodeQL/security workflow for this SHA if required by the repository's release policy, inspect live branch/PR ancestry and reconciliation state, and obtain explicit owner approval. Do not infer success from missing or skipped evidence.
+This is a substantial CI milestone, but **not a release authorization**. Remaining gates are: obtain direct CodeQL workflow evidence for this exact SHA (or explicitly record policy-based disposition), reconcile and preserve useful master-only work under the existing ledger, refresh PR #35's stale branch metadata, and obtain explicit owner approval. Do not routine-merge the divergent histories, force-reset either branch, or delete branches to tidy the list. Do not infer success from missing or skipped evidence.
 
 No FSM_COS files or workflows were changed or triggered by this report. No merge, branch deletion, or NuGet publication was performed.
