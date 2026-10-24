@@ -37,6 +37,7 @@
 - MIT license, package metadata, embedded README, symbol-package settings, pinned GitHub Actions workflow.
 - CI builds, runs offline contract checks, packs the NuGet candidate, and validates the packed artifact.
 - Standalone CogA–CogE slices now have independent contract suites and package-candidate packing checks. The [cross-Cog integration workflow](../.github/workflows/cog-ecosystem.yml) checks out each Cog at a pinned commit and proves catalog lookup → default-deny policy decision → bounded idempotent request → result correlation → parent payload/receipt verification → lifecycle projection.
+- The [external-source UML pilot workflow](../.github/workflows/uml-external-source-pilot.yml) successfully generated and validated a syntax-only structural model and SVG from CogA at pinned source revisions in [run 40059565443](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/40059565443), [run 40059572421](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/40059572421), and [run 40059675484](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/40059675484). The artifact includes source provenance and output hashes. This is a bounded external-source pilot, not yet a reusable renderer-neutral UML package, multi-project semantic analysis, or AI-generated use-case capability; no LLM is invoked.
 
 ## Must pass before publication
 
