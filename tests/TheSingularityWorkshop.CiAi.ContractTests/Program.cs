@@ -184,7 +184,7 @@ Check("payload verifier rejects a negative maximum size", () =>
     Throws<ArgumentOutOfRangeException>(() => ArtifactPayloadVerifier.Verify(NewManifest(), Array.Empty<byte>(), -1));
 });
 
-Check("bounded stream reader verifies exact payload without taking stream ownership", async () =>
+await CheckAsync("bounded stream reader verifies exact payload without taking stream ownership", async () =>
 {
     var payload = Enumerable.Range(0, 128).Select(i => (byte)i).ToArray();
     var stream = new MemoryStream(payload);
@@ -193,7 +193,7 @@ Check("bounded stream reader verifies exact payload without taking stream owners
     Assert(result.Payload.HasValue && result.Payload.Value.Span.SequenceEqual(payload), "verified payload bytes differ");
     Assert(stream.CanRead, "reader unexpectedly disposed caller-owned stream");
 });
-Check("bounded stream reader stops and rejects data beyond configured maximum", async () =>
+await CheckAsync("bounded stream reader stops and rejects data beyond configured maximum", async () =>
 {
     var payload = new byte[1024];
     var result = await ArtifactPayloadReader.ReadAndVerifyAsync(
@@ -202,7 +202,7 @@ Check("bounded stream reader stops and rejects data beyond configured maximum", 
         "oversized stream was not rejected at the read boundary");
     Assert(!result.Payload.HasValue, "rejected payload bytes were exposed");
 });
-Check("bounded stream reader reports short streams as size mismatch", async () =>
+await CheckAsync("bounded stream reader reports short streams as size mismatch", async () =>
 {
     var payload = new byte[128];
     var result = await ArtifactPayloadReader.ReadAndVerifyAsync(
@@ -210,7 +210,7 @@ Check("bounded stream reader reports short streams as size mismatch", async () =
     Assert(!result.Verification.IsVerified && result.Verification.FailureCode == "payload.size-mismatch",
         "short stream was not rejected");
 });
-Check("bounded stream reader validates arguments before reading", async () =>
+await CheckAsync("bounded stream reader validates arguments before reading", async () =>
 {
     await ThrowsAsync<ArgumentOutOfRangeException>(() =>
         ArtifactPayloadReader.ReadAndVerifyAsync(new MemoryStream(), NewManifest(), maximumPayloadBytes: -1));
@@ -224,6 +224,20 @@ void Check(string name, Action action)
     action();
     passed++;
     Console.WriteLine($"PASS {passed}: {name}");
+}
+
+async Task CheckAsync(string name, Func<Task> action)
+{
+    await action();
+    passed++;
+    Console.WriteLine($"PASS {passed}: {name}");
+}
+
+static async Task ThrowsAsync<TException>(Func<Task> action) where TException : Exception
+{
+    try { await action(); }
+    catch (TException) { return; }
+    throw new InvalidOperationException($"Expected {typeof(TException).Name}.");
 }
 
 static CiRunSnapshot NewRun(
