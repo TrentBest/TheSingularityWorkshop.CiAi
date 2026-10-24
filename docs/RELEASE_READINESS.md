@@ -14,6 +14,7 @@
 ## Implemented
 
 - Typed, provider-neutral `CiRunSnapshot` and finite status/conclusion vocabulary.
+- Typed `ReleaseEvidenceRecord` and `ReleaseEvidenceReport` now model normalized evidence states while retaining raw provider status/conclusion, exact repository+SHA identity, run/attempt/workflow/job, PR, diagnostics, retrieval timestamp, artifact name/digest scope, and direct-verification flag. The aggregator rejects mixed repository/SHA collections, keeps absent categories `Missing`, and never treats skipped or unverified evidence as passing. Seven new offline contract checks cover these invariants. This is the aggregation model only; automatic multi-workflow discovery, pagination/rerun reconciliation, and the FSM_COS alpha.7 live read-only report are still outstanding.
 - Read-only GitHub Actions REST client with request cancellation support.
 - Returned repository and run-ID correlation.
 - Shared bounded canonical repository identity validation used by both the HTTP client and snapshot model; rejects malformed path segments and overlong components before network access.
