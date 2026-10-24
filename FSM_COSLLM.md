@@ -88,3 +88,19 @@ A first substantial source slice is now committed to CiAi development:
 The model supports the first release-gate report but does **not** yet fetch workflow collections, paginate, reconcile rerun attempts, inspect jobs/steps, or produce a live FSM_COS alpha.7 report. CI is configured to run on `src/**` and `tests/**` changes, but the new commit's result must be inspected before treating this as verified.
 
 Next vertical slice: extend the read-only GitHub provider client with a bounded workflow-run collection query and normalize each returned run into these records; then produce a report artifact for an explicitly supplied FSM_COS repository+SHA. Do not dispatch workflows or mutate FSM_COS. Before selecting the candidate, re-fetch the live PR #35 head and identify required checks from observed workflow files/runs.
+
+
+## Collector implementation and first live report — 2026-10-24
+
+CiAi development now contains a bounded read-only GitHubActionsWorkflowRunCollector that queries GitHub Actions by explicit canonical repository + full SHA, independently verifies each returned row, preserves workflow path/run attempt/event/PR association, and flags pagination truncation. Six offline collector contract checks were added. [Contract verification passed on be145b1275492fc3478a2fbcf62c724774788b16](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/40063755622).
+
+First live report: [FSM_COS Alpha.7 evidence pilot](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/pilots/FSM_COS_ALPHA7_EVIDENCE_2026-10-24.md).
+
+Target is PR #35 candidate dcea776f40f507f1d95a6e184f475e57853d2baa. Exact-SHA observations:
+- Package workflow run 40063471672: failed because the Markdown branding preflight rejects CiAiLLM.md and FiAiLLM.md; .NET build/test and package inspection steps were skipped.
+- Public-package compatibility and source integration jobs passed.
+- CodeQL run 40063471652 passed.
+- publish_nuget was skipped as intended.
+- Branch reconciliation remains unverified because live branch metadata and PR base metadata report different master SHAs; owner authorization remains missing.
+
+Important scope note: this is the first live pilot report, not yet an automatically generated report. The collector currently discovers runs; job collection/category mapping in the report was reconciled manually from GitHub's job API. Next work is automated job/attempt collection and deterministic report generation. No FSM_COS refs, files, PR metadata, workflow state, or NuGet packages were modified by this pilot. Keep PR #35 draft and publication gated.
