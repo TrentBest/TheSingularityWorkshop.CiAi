@@ -59,14 +59,7 @@ public sealed record CiRunSnapshot
     public Uri EvidenceUrl { get; }
     public DateTimeOffset UpdatedAt { get; }
 
-    private static bool IsValidRepository(string repository)
-    {
-        var parts = repository.Split('/');
-        return parts.Length == 2 &&
-            parts.All(part => part.Length > 0 &&
-                part.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_' or '.') &&
-                part is not "." and not "..");
-    }
+    private static bool IsValidRepository(string repository) => RepositoryIdentity.IsValid(repository);
 
     /// <summary>Stable identity suitable for deduplicating repeated observations of this run.</summary>
     public string Identity => $"{Repository}#{RunId}";
