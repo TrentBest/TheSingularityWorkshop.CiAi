@@ -1,6 +1,12 @@
 name: UML external-source pilot
 
 on:
+  push:
+    branches:
+      - development
+    paths:
+      - ".github/workflows/uml-external-source-pilot.yml"
+      - "docs/UML_CAPABILITY_PILOT.md"
   workflow_dispatch:
   pull_request:
     branches:
