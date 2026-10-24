@@ -344,6 +344,57 @@ Check("retrieval destination policy constructor rejects empty and malformed allo
     Throws<ArgumentException>(() => new ArtifactRetrievalDestinationPolicy(new[] { "127.0.0.1" }));
 });
 
+
+Check("release evidence preserves raw facts and normalizes artifact digest", () =>
+{
+    var record = NewReleaseEvidence();
+    Assert(record.ArtifactDigest == new string('a', 64), "artifact digest was not normalized");
+    Assert(record.RawStatus == "completed" && record.RawConclusion == "success",
+        "raw provider status/conclusion were not preserved");
+});
+Check("release evidence rejects an unverified pass", () =>
+{
+    Throws<ArgumentException>(() => NewReleaseEvidence(directlyVerified: false));
+});
+Check("release evidence requires an explicit digest scope", () =>
+{
+    Throws<ArgumentException>(() => NewReleaseEvidence(artifactDigestScope: null));
+});
+Check("release evidence report passes only complete exact-SHA requirements", () =>
+{
+    var report = ReleaseEvidenceReport.Aggregate("TrentBest/SimpleDemos",
+        "abcdef0123456789abcdef0123456789abcdef01",
+        new[] { ReleaseEvidenceCategory.BuildAndTests, ReleaseEvidenceCategory.Security },
+        new[] { NewReleaseEvidence(), NewReleaseEvidence(category: ReleaseEvidenceCategory.Security) });
+    Assert(report.IsPassing, "fully verified required evidence did not pass");
+});
+Check("release evidence report marks absent requirement missing", () =>
+{
+    var report = ReleaseEvidenceReport.Aggregate("TrentBest/SimpleDemos",
+        "abcdef0123456789abcdef0123456789abcdef01",
+        new[] { ReleaseEvidenceCategory.BuildAndTests, ReleaseEvidenceCategory.Security },
+        new[] { NewReleaseEvidence() });
+    Assert(!report.IsPassing && report.Categories[ReleaseEvidenceCategory.Security] == ReleaseEvidenceState.Missing,
+        "missing security evidence was not kept non-passing");
+});
+Check("release evidence report rejects mixing another candidate SHA", () =>
+{
+    Throws<ArgumentException>(() => ReleaseEvidenceReport.Aggregate("TrentBest/SimpleDemos",
+        "abcdef0123456789abcdef0123456789abcdef01",
+        new[] { ReleaseEvidenceCategory.BuildAndTests },
+        new[] { NewReleaseEvidence(headSha: "123456789abcdef0123456789abcdef012345678") }));
+});
+Check("skipped release evidence cannot make a category pass", () =>
+{
+    var report = ReleaseEvidenceReport.Aggregate("TrentBest/SimpleDemos",
+        "abcdef0123456789abcdef0123456789abcdef01",
+        new[] { ReleaseEvidenceCategory.PublicationGate },
+        new[] { NewReleaseEvidence(category: ReleaseEvidenceCategory.PublicationGate,
+            state: ReleaseEvidenceState.Skipped, rawStatus: "completed", rawConclusion: "skipped") });
+    Assert(!report.IsPassing && report.Categories[ReleaseEvidenceCategory.PublicationGate] == ReleaseEvidenceState.Skipped,
+        "skipped publication was treated as passing");
+});
+
 Console.WriteLine($"PASS: {passed} CiAi contract checks.");
 await GitHubActionsRunClientTests.RunAsync();
 
@@ -367,6 +418,24 @@ static async Task ThrowsAsync<TException>(Func<Task> action) where TException : 
     catch (TException) { return; }
     throw new InvalidOperationException($"Expected {typeof(TException).Name}.");
 }
+
+
+static ReleaseEvidenceRecord NewReleaseEvidence(
+    string repository = "TrentBest/SimpleDemos",
+    string headSha = "abcdef0123456789abcdef0123456789abcdef01",
+    ReleaseEvidenceCategory category = ReleaseEvidenceCategory.BuildAndTests,
+    ReleaseEvidenceState state = ReleaseEvidenceState.Passed,
+    string rawStatus = "completed",
+    string rawConclusion = "success",
+    bool directlyVerified = true,
+    string? artifactDigestScope = "downloaded-nupkg-bytes") =>
+    new(repository, headSha, category, state, rawStatus, rawConclusion,
+        DateTimeOffset.Parse("2026-10-24T04:00:00Z"),
+        new Uri("https://github.com/TrentBest/SimpleDemos/actions/runs/42"),
+        runId: 42, runAttempt: 1, workflowIdentity: "contract-verification.yml",
+        jobIdentity: "contract", diagnostic: null, artifactName: "candidate.nupkg",
+        artifactDigest: new string('a', 64), artifactDigestScope: artifactDigestScope,
+        directlyVerified: directlyVerified);
 
 static CiRunSnapshot NewRun(
     string repository = "TrentBest/SimpleDemos",
