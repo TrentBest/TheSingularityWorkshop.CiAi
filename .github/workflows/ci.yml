@@ -3,8 +3,30 @@ name: CiAi Contract Verification
 on:
   push:
     branches: [development, master]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "samples/**"
+      - "README.md"
+      - "CiAi.slnx"
+      - "Directory.Build.*"
+      - "global.json"
+      - "NuGet.config"
+      - ".config/**"
+      - ".github/workflows/ci.yml"
   pull_request:
     branches: [development, master]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "samples/**"
+      - "README.md"
+      - "CiAi.slnx"
+      - "Directory.Build.*"
+      - "global.json"
+      - "NuGet.config"
+      - ".config/**"
+      - ".github/workflows/ci.yml"
   workflow_dispatch:
 
 permissions:
