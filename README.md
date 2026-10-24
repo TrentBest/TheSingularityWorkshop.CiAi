@@ -46,6 +46,8 @@ The current client validates the returned repository and run ID, maps unknown pr
 
 ## 04 — Source-derived contract documentation
 
+- [UML capability feasibility pilot](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/UML_CAPABILITY_PILOT.md)
+
 - [Read-only CI observation UML and use case](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/UML/CiRunObservationUML.md)
 - [RepositoryIdentity class companion](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/src/TheSingularityWorkshop.CiAi/RepositoryIdentity.md)
 - [CiRunEvidenceVerifier class companion](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/src/TheSingularityWorkshop.CiAi/CiRunEvidenceVerifier.md)
