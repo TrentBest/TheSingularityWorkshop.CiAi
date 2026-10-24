@@ -21,7 +21,7 @@ public sealed class ArtifactRetrievalDestinationPolicy
         _allowedHosts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var host in allowedHosts)
         {
-            if (string.IsNullOrWhiteSpace(host) || host.Length > 253 || host.EndsWith('.', StringComparison.Ordinal) ||
+            if (string.IsNullOrWhiteSpace(host) || host.Length > 253 || host.EndsWith(".", StringComparison.Ordinal) ||
                 Uri.CheckHostName(host) != UriHostNameType.Dns || host.Any(char.IsControl) || host.Contains('/') || host.Contains('@'))
                 throw new ArgumentException("Allowed hosts must be DNS hostnames without paths, credentials, or trailing dots.", nameof(allowedHosts));
             _allowedHosts.Add(new UriBuilder(Uri.UriSchemeHttps, host).Uri.IdnHost);
@@ -42,7 +42,7 @@ public sealed class ArtifactRetrievalDestinationPolicy
         if (!destination.IsDefaultPort) errors.Add("retrieval.port-not-allowed");
         if (IPAddress.TryParse(destination.Host, out _)) errors.Add("retrieval.ip-literal-rejected");
         var host = destination.IdnHost;
-        if (host.EndsWith('.', StringComparison.Ordinal) || !_allowedHosts.Contains(host))
+        if (host.EndsWith(".", StringComparison.Ordinal) || !_allowedHosts.Contains(host))
             errors.Add("retrieval.host-not-allowed");
         if (expiresAt <= now) errors.Add("retrieval.expired");
         return errors;
