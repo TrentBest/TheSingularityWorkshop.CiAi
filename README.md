@@ -46,25 +46,25 @@ The current client validates the returned repository and run ID, maps unknown pr
 
 ## 04 — Source-derived contract documentation
 
-- [Read-only CI observation UML and use case](docs/UML/CiRunObservationUML.md)
-- [RepositoryIdentity class companion](src/TheSingularityWorkshop.CiAi/RepositoryIdentity.md)
-- [CiRunEvidenceVerifier class companion](src/TheSingularityWorkshop.CiAi/CiRunEvidenceVerifier.md)
-- [Evidence reconciliation UML and use case](docs/UML/CiRunEvidenceVerifierUML.md)
-- [Artifact handoff contract types and use case](docs/UML/ArtifactHandoffContractsUML.md)
-- [Artifact handoff contract](docs/ARTIFACT_HANDOFF_CONTRACT.md)
-- [ArtifactManifest class companion](src/TheSingularityWorkshop.CiAi/ArtifactManifest.md)
-- [ArtifactReadyNotice class companion](src/TheSingularityWorkshop.CiAi/ArtifactReadyNotice.md)
-- [ArtifactReceiptAcknowledgement class companion](src/TheSingularityWorkshop.CiAi/ArtifactReceiptAcknowledgement.md)
-- [Bounded artifact stream reader class companion](src/TheSingularityWorkshop.CiAi/ArtifactPayloadReader.md)
-- [Durable receipt ledger class companion](src/TheSingularityWorkshop.CiAi/FileArtifactReceiptLedger.md)
-- [Durable receipt ledger UML and use case](docs/UML/FileArtifactReceiptLedgerUML.md)
+- [Read-only CI observation UML and use case](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/UML/CiRunObservationUML.md)
+- [RepositoryIdentity class companion](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/src/TheSingularityWorkshop.CiAi/RepositoryIdentity.md)
+- [CiRunEvidenceVerifier class companion](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/src/TheSingularityWorkshop.CiAi/CiRunEvidenceVerifier.md)
+- [Evidence reconciliation UML and use case](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/UML/CiRunEvidenceVerifierUML.md)
+- [Artifact handoff contract types and use case](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/UML/ArtifactHandoffContractsUML.md)
+- [Artifact handoff contract](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/ARTIFACT_HANDOFF_CONTRACT.md)
+- [ArtifactManifest class companion](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/src/TheSingularityWorkshop.CiAi/ArtifactManifest.md)
+- [ArtifactReadyNotice class companion](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/src/TheSingularityWorkshop.CiAi/ArtifactReadyNotice.md)
+- [ArtifactReceiptAcknowledgement class companion](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/src/TheSingularityWorkshop.CiAi/ArtifactReceiptAcknowledgement.md)
+- [Bounded artifact stream reader class companion](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/src/TheSingularityWorkshop.CiAi/ArtifactPayloadReader.md)
+- [Durable receipt ledger class companion](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/src/TheSingularityWorkshop.CiAi/FileArtifactReceiptLedger.md)
+- [Durable receipt ledger UML and use case](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/UML/FileArtifactReceiptLedgerUML.md)
 
 ## 05 — Release status
 
 **Implementation readiness: 38% (last recorded estimate). Package preparation: 70%. Candidate: 0.1.0-alpha.1.**
 
-The older baseline commit `f207fc028a79a19305c7296a9e930c06b64ad40d` passed the [CiAi Contract Verification workflow](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/40040017424). Subsequent payload-handoff changes are still being validated; only a green workflow on the exact final candidate SHA qualifies as current release evidence. Owner review and explicit publication approval remain required.
+Release evidence is candidate-specific: use the latest successful [CiAi Contract Verification workflow](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/workflows/ci.yml) for the exact source commit under review. The workflow builds, runs offline contract checks, packs both NuGet and symbol packages, validates package metadata and embedded README, and uploads the artifacts for inspection. A green workflow and inspected package are not publication approval; owner review and explicit publication approval remain required.
 
 The artifact handoff has typed manifest, ready-notice, and receipt-acknowledgement contracts, bounded caller-supplied stream reading, SHA-256 verification, provider repository/run/source-revision receipt correlation, and a dependency-free file-backed receipt ledger that suppresses exact retries and rejects conflicting reuse of a deduplication key. The stream reader does not fetch the manifest URI or authenticate a provider, and the ledger does not authorize cleanup. Not yet implemented: HeadlessAi invocation from CiAi, ProtocolAi vocabulary integration, host permission policy, live cross-repository request/result round trip, provider-authenticated URI retrieval, durable request-level idempotency/history, and retention/reclamation.
 
-See [release readiness](docs/RELEASE_READINESS.md), the [inter-repository model](docs/INTER_REPOSITORY_MODEL.md), the [capability repository architecture](docs/CAPABILITY_REPOSITORIES.md), the [pull-based artifact handoff contract](docs/ARTIFACT_HANDOFF_CONTRACT.md), the [Cogs-versus-capabilities model](docs/COGS_VS_CAPABILITIES.md), the [ecosystem CI integration roadmap](docs/ECOSYSTEM_CI_INTEGRATION_ROADMAP.md), and the [repository-specific integration samples](docs/Samples/README.md).
+See [release readiness](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/RELEASE_READINESS.md), the [inter-repository model](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/INTER_REPOSITORY_MODEL.md), the [capability repository architecture](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/CAPABILITY_REPOSITORIES.md), the [pull-based artifact handoff contract](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/ARTIFACT_HANDOFF_CONTRACT.md), the [Cogs-versus-capabilities model](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/COGS_VS_CAPABILITIES.md), the [ecosystem CI integration roadmap](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/ECOSYSTEM_CI_INTEGRATION_ROADMAP.md), and the [repository-specific integration samples](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/Samples/README.md).
