@@ -31,7 +31,7 @@
 - Five payload-verifier checks cover valid bytes, digest mismatch, size mismatch, maximum-size rejection, and invalid maximum size. `ArtifactPayloadReader` adds bounded stream reads, cancellation, short-stream rejection, and no ownership transfer for caller streams.
 - Receipt evidence now reconciles provider repository, provider run ID, and source revision as well as request/artifact/version/digest/client identity.
 - `FileArtifactReceiptLedger` persists receipt records, suppresses exact retries across ledger reopen, rejects conflicting reuse of a deduplication key, and refuses receipts whose manifest provenance does not match. Its file write is flushed to disk and cross-process writers are serialized by an exclusive lock file; it does not perform provider cleanup.
-- Contract-test count is being re-verified on the current source candidate; the latest green run on an earlier commit is not evidence for this newer tree.
+- The current contract suite has 46 offline CiAi contract checks plus 13 GitHub Actions client integration checks. Confirm those counts on the exact candidate workflow run; a green run on an earlier commit is not evidence for a newer tree.
 - Source companion docs and UML/use-case diagram for the three handoff contracts.
 - MIT license, package metadata, embedded README, symbol-package settings, pinned GitHub Actions workflow.
 - CI builds, runs offline contract checks, packs the NuGet candidate, and validates the packed artifact.
@@ -39,8 +39,8 @@
 ## Must pass before publication
 
 - [x] Baseline build, offline contract checks, pack, and packed-artifact validation passed on commit `f207fc028a79a19305c7296a9e930c06b64ad40d` in [workflow run 40040017424](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/40040017424).
-- [ ] Verify build, expanded offline checks, pack, and packed-artifact validation on the exact current source candidate before treating it as a release candidate.
-- [ ] Inspect the produced `.nupkg` and `.snupkg` contents, package metadata, and embedded README beyond automated CI assertions.
+- [x] The exact source candidate passed build, expanded offline checks, pack, packed-artifact validation, and package-artifact upload in the [CiAi Contract Verification workflow](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/workflows/ci.yml). Re-run and confirm the exact SHA after any source or workflow changes.
+- [x] Independently inspected the generated `.nupkg` and `.snupkg`, package contents, nuspec metadata, embedded README links, and SHA-256 hashes. The workflow uploads the pair as the `ciai-package-candidate` artifact for repeatable inspection.
 - [ ] Review README and public API claims against actual implementation.
 - [ ] Confirm package ID and version are intended and not already published.
 - [ ] Review NuGet account/credential setup and release permissions outside source control.
@@ -52,4 +52,4 @@ This alpha remains read-only with respect to CI-provider operations. Typed hando
 
 ## Release gate
 
-A green CI run proves that the candidate builds, passes its offline tests, and can be packed. It does not authorize publishing and does not prove an end-to-end LLM workflow. Do not publish until the checklist is reviewed and the owner explicitly approves.
+A green CI run proves that the exact candidate builds, passes its offline tests, and can be packed; independent artifact inspection checks the package produced by that run. Neither authorizes publishing nor proves an end-to-end LLM workflow. Re-run CI and inspect the newly produced artifact after any source or workflow change. The remaining gates are public-package/version confirmation, external NuGet credential and permission review, API/README owner review, and explicit owner approval.
