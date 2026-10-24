@@ -126,7 +126,11 @@ try
     if (outputPath is not null)
     {
         await File.WriteAllTextAsync(outputPath, json + Environment.NewLine);
-        Console.Error.WriteLine($"Report written to: {Path.GetFullPath(outputPath)}");
+        var markdownPath = Path.ChangeExtension(outputPath, ".md");
+        var markdown = CommitObservationMarkdownRenderer.Render(json);
+        await File.WriteAllTextAsync(markdownPath, markdown + Environment.NewLine);
+        Console.Error.WriteLine($"JSON report written to: {Path.GetFullPath(outputPath)}");
+        Console.Error.WriteLine($"Markdown report written to: {Path.GetFullPath(markdownPath)}");
     }
 
     // Incomplete discovery is not a pass. A complete observation is still not a release approval.
