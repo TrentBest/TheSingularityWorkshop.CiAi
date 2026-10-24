@@ -15,7 +15,10 @@ public sealed record ArtifactReceiptAcknowledgement
         bool retrieved,
         bool integrityVerified,
         DateTimeOffset acknowledgedAt,
-        ArtifactLocalValidationOutcome localValidation = ArtifactLocalValidationOutcome.NotRun)
+        ArtifactLocalValidationOutcome localValidation = ArtifactLocalValidationOutcome.NotRun,
+        string? providerRepository = null,
+        long? providerRunId = null,
+        string? sourceSha = null)
     {
         if (contractVersion != ArtifactReadyNotice.SupportedContractVersion)
             throw new ArgumentOutOfRangeException(nameof(contractVersion), "Unsupported handoff contract version.");
@@ -32,6 +35,12 @@ public sealed record ArtifactReceiptAcknowledgement
             throw new ArgumentException("Integrity cannot be verified before retrieval.", nameof(integrityVerified));
         if (!Enum.IsDefined(localValidation))
             throw new ArgumentOutOfRangeException(nameof(localValidation));
+        if (providerRepository is not null && !RepositoryIdentity.IsValid(providerRepository))
+            throw new ArgumentException("Provider repository must be canonical owner/repository identity.", nameof(providerRepository));
+        if (providerRunId is <= 0)
+            throw new ArgumentOutOfRangeException(nameof(providerRunId));
+        if (sourceSha is not null && (sourceSha.Length != 40 || !sourceSha.All(Uri.IsHexDigit)))
+            throw new ArgumentException("Source SHA must be a full 40-character hexadecimal commit identifier.", nameof(sourceSha));
 
         ContractVersion = contractVersion;
         AcknowledgementId = acknowledgementId;
@@ -45,6 +54,9 @@ public sealed record ArtifactReceiptAcknowledgement
         IntegrityVerified = integrityVerified;
         AcknowledgedAt = acknowledgedAt;
         LocalValidation = localValidation;
+        ProviderRepository = providerRepository;
+        ProviderRunId = providerRunId;
+        SourceSha = sourceSha?.ToLowerInvariant();
     }
 
     public int ContractVersion { get; }
@@ -59,6 +71,9 @@ public sealed record ArtifactReceiptAcknowledgement
     public bool IntegrityVerified { get; }
     public DateTimeOffset AcknowledgedAt { get; }
     public ArtifactLocalValidationOutcome LocalValidation { get; }
+    public string? ProviderRepository { get; }
+    public long? ProviderRunId { get; }
+    public string? SourceSha { get; }
 
     /// <summary>Reconciles this receipt with the exact provider-published manifest.</summary>
     public IReadOnlyList<string> VerifyAgainst(ArtifactManifest? manifest)
@@ -77,6 +92,18 @@ public sealed record ArtifactReceiptAcknowledgement
             errors.Add("digest.mismatch");
         if (!string.Equals(ClientIdentity, manifest.ClientIdentity, StringComparison.Ordinal))
             errors.Add("clientIdentity.mismatch");
+        if (ProviderRepository is null)
+            errors.Add("providerRepository.required");
+        else if (!string.Equals(ProviderRepository, manifest.ProviderRepository, StringComparison.Ordinal))
+            errors.Add("providerRepository.mismatch");
+        if (SourceSha is null)
+            errors.Add("sourceSha.required");
+        else if (!string.Equals(SourceSha, manifest.SourceSha, StringComparison.OrdinalIgnoreCase))
+            errors.Add("sourceSha.mismatch");
+        if (manifest.ProviderRunId is not null && ProviderRunId is null)
+            errors.Add("providerRunId.required");
+        else if (ProviderRunId != manifest.ProviderRunId)
+            errors.Add("providerRunId.mismatch");
         return errors;
     }
 
