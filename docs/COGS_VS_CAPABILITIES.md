@@ -1,6 +1,6 @@
 # Cogs and Capability Providers
 
-**Status:** first standalone CogA–CogE slices are implemented with offline contract checks; parent-coordinator integration remains incomplete.
+**Status:** first standalone CogA–CogE slices and a pinned in-process vertical contract proof are implemented; remote handoff and runtime orchestration remain incomplete.
 
 CiAi needs two kinds of modularity.
 
@@ -24,7 +24,7 @@ These responsibilities concern identity, policy, correlation, evidence, and pres
 | CogD | Exact-match, time-bounded, default-deny policy rules | No authenticated identity source or durable policy store | [Repository](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogD), [CI](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogD/actions) |
 | CogE | Timestamped lifecycle facts; ordered projection; identity and contradiction diagnostics | No durable event ingestion or live reporting UI | [Repository](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogE), [CI](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogE/actions) |
 
-These are intentionally small, dependency-free first slices. Their separate CI checks prove only their own build and offline contract suite. They do **not** prove cross-Cog interoperability, remote retrieval, authenticated handoff, or an end-to-end capability lifecycle. The next integration slice must map these standalone contracts to the parent CiAi contracts and exercise one vertical request-to-result path.
+These are intentionally small, dependency-free first slices. Their separate CI checks prove each package's build, offline contract suite, and package-candidate creation. The [pinned cross-Cog integration workflow](../.github/workflows/cog-ecosystem.yml) additionally proves the in-process mapping across all five cogs and the parent CiAi artifact contracts. Neither level proves remote retrieval, authenticated notification/acknowledgement, provider-run verification, or end-to-end network orchestration.
 
 The parent CiAi coordinator must connect the contracts and verify provider-owned facts. Passing isolated Cog tests does not prove the end-to-end lifecycle.
 
