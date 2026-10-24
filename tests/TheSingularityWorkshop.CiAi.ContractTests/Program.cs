@@ -148,6 +148,35 @@ Check("receipt is correlated to an exact artifact version and digest", () =>
         receipt.ArtifactVersion == "v1" && receipt.Digest == new string('a', 64),
         "receipt correlation fields were not preserved");
 });
+Check("receipt reconciles exact provider repository, run, and source revision", () =>
+{
+    var receipt = NewAcknowledgement();
+    Assert(receipt.VerifyAgainst(NewManifest()).Count == 0, "matching provider provenance should reconcile");
+});
+Check("receipt rejects provider repository mismatch", () =>
+{
+    var errors = NewAcknowledgement().VerifyAgainst(NewManifest(providerRepository: "Other/Provider"));
+    Assert(errors.Contains("providerRepository.mismatch"), "wrong provider repository was not rejected");
+});
+Check("receipt rejects provider run mismatch", () =>
+{
+    var errors = NewAcknowledgement().VerifyAgainst(NewManifest(providerRunId: 18));
+    Assert(errors.Contains("providerRunId.mismatch"), "wrong provider run was not rejected");
+});
+Check("receipt rejects source revision mismatch", () =>
+{
+    var errors = NewAcknowledgement().VerifyAgainst(NewManifest(sourceSha: "123456789abcdef0123456789abcdef012345678"));
+    Assert(errors.Contains("sourceSha.mismatch"), "wrong source revision was not rejected");
+});
+Check("receipt cannot reconcile provider run without provenance", () =>
+{
+    var receipt = new ArtifactReceiptAcknowledgement(1, "ack-1", "request-1:artifact-1:v1",
+        "request-1", "artifact-1", "v1", new string('a', 64), "client-ci", true, true,
+        DateTimeOffset.Parse("2026-10-24T00:10:00Z"));
+    var errors = receipt.VerifyAgainst(NewManifest());
+    Assert(errors.Contains("providerRepository.required") && errors.Contains("providerRunId.required") &&
+        errors.Contains("sourceSha.required"), "missing provider provenance was not rejected");
+});
 
 Check("payload verifier accepts bytes matching manifest size and SHA-256", () =>
 {
@@ -254,15 +283,18 @@ static CiRunSnapshot NewRun(
 static ArtifactManifest NewManifest(
     string digest = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     Uri? uri = null,
-    DateTimeOffset? expiresAt = null) =>
-    new("request-1", "operation-1", "idempotency-1", "TrentBest/SimpleDemos",
+    DateTimeOffset? expiresAt = null,
+    string providerRepository = "TrentBest/SimpleDemos",
+    long? providerRunId = 17,
+    string sourceSha = "abcdef0123456789abcdef0123456789abcdef01") =>
+    new("request-1", "operation-1", "idempotency-1", providerRepository,
         "uml.generate", "1.0.0", "abcdef0123456789abcdef0123456789abcdef01",
-        "artifact-1", "v1", "abcdef0123456789abcdef0123456789abcdef01",
+        "artifact-1", "v1", sourceSha,
         "SHA-256", digest, "application/json", 128,
         uri ?? new Uri("https://provider.example/artifacts/artifact-1"),
         DateTimeOffset.Parse("2026-10-24T00:00:00Z"),
         expiresAt ?? DateTimeOffset.Parse("2026-10-24T01:00:00Z"),
-        "temporary", "client-ci", 17);
+        "temporary", "client-ci", providerRunId);
 
 static ArtifactManifest NewManifestForPayload(byte[] payload) =>
     new("request-1", "operation-1", "idempotency-1", "TrentBest/SimpleDemos",
@@ -280,7 +312,9 @@ static ArtifactReceiptAcknowledgement NewAcknowledgement(
     ArtifactLocalValidationOutcome localValidation = ArtifactLocalValidationOutcome.NotRun) =>
     new(1, "ack-1", "request-1:artifact-1:v1", "request-1", "artifact-1", "v1",
         new string('a', 64), "client-ci", retrieved, integrityVerified,
-        DateTimeOffset.Parse("2026-10-24T00:10:00Z"), localValidation);
+        DateTimeOffset.Parse("2026-10-24T00:10:00Z"), localValidation,
+        providerRepository: "TrentBest/SimpleDemos", providerRunId: 17,
+        sourceSha: "abcdef0123456789abcdef0123456789abcdef01");
 
 static void Assert(bool condition, string message)
 {
