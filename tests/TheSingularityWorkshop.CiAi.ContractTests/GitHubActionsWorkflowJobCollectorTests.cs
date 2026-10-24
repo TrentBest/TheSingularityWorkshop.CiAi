@@ -110,12 +110,23 @@ internal static class GitHubActionsWorkflowJobCollectorTests
 
         using (var client = new HttpClient(new StubHandler((request, _) =>
         {
+            // Simulate a provider pagination defect: the same job appears on both pages.
             var job = Job(1201, 42, 2);
             return Task.FromResult(JsonResponse($"{{\"total_count\":2,\"jobs\":[{job}]}}"));
         })))
         {
-            await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowJobCollector(client)
-                .GetJobsForAttemptAsync("TrentBest/SimpleDemos", 42, 2, maxPages: 2, perPage: 1));
+            var rejectedDuplicate = false;
+            try
+            {
+                await new GitHubActionsWorkflowJobCollector(client)
+                    .GetJobsForAttemptAsync("TrentBest/SimpleDemos", 42, 2, maxPages: 2, perPage: 1);
+            }
+            catch (InvalidDataException ex) when (ex.Message.Contains("duplicate job ID 1201", StringComparison.Ordinal))
+            {
+                rejectedDuplicate = true;
+            }
+
+            Assert(rejectedDuplicate, "collector must reject duplicate job IDs across pages");
         }
 
         await ThrowsAsync<ArgumentOutOfRangeException>(() =>
