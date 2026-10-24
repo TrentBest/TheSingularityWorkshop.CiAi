@@ -58,6 +58,11 @@ var manifest = new ArtifactManifest(request.RequestId, request.OperationId, requ
     provider, request.CapabilityId, request.CapabilityVersion, descriptor.ImplementationRevision,
     "artifact-1", "v1", sourceSha, "SHA-256", outputDigest, "application/octet-stream", output.Length,
     new Uri("https://provider.example/artifacts/artifact-1"), now, now.AddHours(1), "temporary", client, 42);
+var notice = new ArtifactReadyNotice(1, "notice-1", client, manifest, now.AddMinutes(1));
+Assert(ReferenceEquals(notice.Manifest, manifest) && notice.RecipientIdentity == client,
+    "parent CiAi rejected the intended recipient or changed the manifest reference");
+Pass("Parent CiAi binds the ready notice to the intended client and manifest");
+
 var verification = ArtifactPayloadVerifier.Verify(manifest, output, request.MaximumOutputBytes);
 Assert(verification.IsVerified, "parent CiAi rejected matching artifact bytes");
 var receipt = new ArtifactReceiptAcknowledgement(1, "ack-1", "request-1:artifact-1:v1",
