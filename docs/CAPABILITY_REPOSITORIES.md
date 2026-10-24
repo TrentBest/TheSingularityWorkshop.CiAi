@@ -25,6 +25,8 @@ CiAi should coordinate capability invocation; it need not itself contain every c
 
 ## What could a UML capability look like?
 
+The feasibility audit and smallest proof plan are tracked in [UML Capability Feasibility Pilot](UML_CAPABILITY_PILOT.md). The GUI repository already has a Roslyn-based prototype; the remaining question is how to extract a stable, reusable, provenance-preserving capability rather than duplicate its diagram engine.
+
 UML is a reasonable working concept, not yet a recommendation to create a repository before the contract is understood. A first capability could consume a pinned source revision and explicit target selection, then return:
 
 - a source-derived class/relationship model or equivalent intermediate representation;
