@@ -1,0 +1,67 @@
+name: Observe Release Candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: Canonical owner/repository for the candidate
+        required: true
+        type: string
+        default: TrentBest/TheSingularityWorkshop.FSM_COS
+      commit_sha:
+        description: Exact full 40-character candidate commit SHA
+        required: true
+        type: string
+        default: 67929891e141598ca5c7f17afeb2feb60612e18c
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: observe-release-candidate-${{ inputs.repository }}-${{ inputs.commit_sha }}
+  cancel-in-progress: false
+
+jobs:
+  observe:
+    name: Observe exact candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: development
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          dotnet-version: 8.0.x
+      - name: Validate candidate identity
+        shell: bash
+        env:
+          TARGET_REPOSITORY: ${{ inputs.repository }}
+          TARGET_SHA: ${{ inputs.commit_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]
+          [[ "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+      - name: Restore observer
+        run: dotnet restore samples/TheSingularityWorkshop.CiAi.ObserveRun/TheSingularityWorkshop.CiAi.ObserveRun.csproj
+      - name: Build observer
+        run: dotnet build samples/TheSingularityWorkshop.CiAi.ObserveRun/TheSingularityWorkshop.CiAi.ObserveRun.csproj --configuration Release --no-restore
+      - name: Observe candidate workflow runs, attempts, jobs, and steps
+        shell: bash
+        env:
+          TARGET_REPOSITORY: ${{ inputs.repository }}
+          TARGET_SHA: ${{ inputs.commit_sha }}
+          CIAI_GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          dotnet run --project samples/TheSingularityWorkshop.CiAi.ObserveRun --configuration Release --no-build -- "$TARGET_REPOSITORY" "$TARGET_SHA" artifacts/commit-observation.json
+      - name: Upload raw observation report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ciai-release-candidate-observation
+          path: artifacts/commit-observation.json
+          if-no-files-found: warn
+          retention-days: 14
