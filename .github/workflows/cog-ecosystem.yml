@@ -1,0 +1,69 @@
+name: Cog Ecosystem Integration
+on:
+  push:
+    branches: [development, master]
+    paths:
+      - "integration/**"
+      - "src/**"
+      - "docs/COGS_VS_CAPABILITIES.md"
+      - ".github/workflows/cog-ecosystem.yml"
+  pull_request:
+    branches: [development, master]
+    paths:
+      - "integration/**"
+      - "src/**"
+      - "docs/COGS_VS_CAPABILITIES.md"
+      - ".github/workflows/cog-ecosystem.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  vertical-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout CiAi
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          path: CiAi
+      - name: Checkout CogA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: TrentBest/TheSingularityWorkshop.CiAi.CogA
+          ref: 4aa667587818fcf948e85ed5153d65c0a61ba0c1
+          path: CogA
+      - name: Checkout CogB
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: TrentBest/TheSingularityWorkshop.CiAi.CogB
+          ref: 8bb2326910537b69bb50c124483ae0b3864e0d8a
+          path: CogB
+      - name: Checkout CogC
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: TrentBest/TheSingularityWorkshop.CiAi.CogC
+          ref: df427f5132fe47ee544e95cd9db5b1d43c503f8d
+          path: CogC
+      - name: Checkout CogD
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: TrentBest/TheSingularityWorkshop.CiAi.CogD
+          ref: b052c08abf7e4764c5804bd2a8934d25188d6ba7
+          path: CogD
+      - name: Checkout CogE
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: TrentBest/TheSingularityWorkshop.CiAi.CogE
+          ref: 52596bd2ea15194873e228f2c3cc7ed0cfd4b12c
+          path: CogE
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore integration checks
+        working-directory: CiAi
+        run: dotnet restore integration/CogEcosystem.ContractTests/CogEcosystem.ContractTests.csproj
+      - name: Build integration checks
+        working-directory: CiAi
+        run: dotnet build integration/CogEcosystem.ContractTests/CogEcosystem.ContractTests.csproj --configuration Release --no-restore
+      - name: Run vertical contract proof
+        working-directory: CiAi
+        run: dotnet run --project integration/CogEcosystem.ContractTests --configuration Release --no-build

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/TheSingularityWorkshop.CiAi/TheSingularityWorkshop.CiAi.csproj" />
+    <ProjectReference Include="../../../CogA/src/TheSingularityWorkshop.CiAi.CogA/TheSingularityWorkshop.CiAi.CogA.csproj" />
+    <ProjectReference Include="../../../CogB/src/TheSingularityWorkshop.CiAi.CogB/TheSingularityWorkshop.CiAi.CogB.csproj" />
+    <ProjectReference Include="../../../CogC/src/TheSingularityWorkshop.CiAi.CogC/TheSingularityWorkshop.CiAi.CogC.csproj" />
+    <ProjectReference Include="../../../CogD/src/TheSingularityWorkshop.CiAi.CogD/TheSingularityWorkshop.CiAi.CogD.csproj" />
+    <ProjectReference Include="../../../CogE/src/TheSingularityWorkshop.CiAi.CogE/TheSingularityWorkshop.CiAi.CogE.csproj" />
+  </ItemGroup>
+</Project>
