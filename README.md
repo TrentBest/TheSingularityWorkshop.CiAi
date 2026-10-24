@@ -50,13 +50,18 @@ The current client validates the returned repository and run ID, maps unknown pr
 - [RepositoryIdentity class companion](src/TheSingularityWorkshop.CiAi/RepositoryIdentity.md)
 - [CiRunEvidenceVerifier class companion](src/TheSingularityWorkshop.CiAi/CiRunEvidenceVerifier.md)
 - [Evidence reconciliation UML and use case](docs/UML/CiRunEvidenceVerifierUML.md)
+- [Artifact handoff contract types and use case](docs/UML/ArtifactHandoffContractsUML.md)
+- [Artifact handoff contract](docs/ARTIFACT_HANDOFF_CONTRACT.md)
+- [ArtifactManifest class companion](src/TheSingularityWorkshop.CiAi/ArtifactManifest.md)
+- [ArtifactReadyNotice class companion](src/TheSingularityWorkshop.CiAi/ArtifactReadyNotice.md)
+- [ArtifactReceiptAcknowledgement class companion](src/TheSingularityWorkshop.CiAi/ArtifactReceiptAcknowledgement.md)
 
 ## 05 — Release status
 
-**Implementation readiness: 30%. Package preparation: 70%. Candidate: 0.1.0-alpha.1.**
+**Implementation readiness: 35%. Package preparation: 70%. Candidate: 0.1.0-alpha.1.**
 
 The latest verified candidate commit, `f207fc028a79a19305c7296a9e930c06b64ad40d`, passed the [CiAi Contract Verification workflow](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/40040017424), including build, offline contract checks, NuGet packing, and packed-artifact validation. Re-run CI on the exact final candidate SHA after any further changes. Owner review and explicit publication approval remain required.
 
-Not yet implemented: HeadlessAi invocation from CiAi, ProtocolAi vocabulary integration, host permission policy, live cross-repository request/result round trip, and durable idempotency/history. Those are explicitly outside this read-only alpha package's claims.
+The artifact handoff now has typed manifest, ready-notice, and receipt-acknowledgement contracts with offline constructor checks. Not yet implemented: HeadlessAi invocation from CiAi, ProtocolAi vocabulary integration, host permission policy, live cross-repository request/result round trip, actual payload retrieval/hash verification, durable idempotency/history, and retention/reclamation. Those are explicitly outside this read-only alpha package's claims.
 
 See [release readiness](docs/RELEASE_READINESS.md), the [inter-repository model](docs/INTER_REPOSITORY_MODEL.md), the [capability repository architecture](docs/CAPABILITY_REPOSITORIES.md), the [pull-based artifact handoff contract](docs/ARTIFACT_HANDOFF_CONTRACT.md), the [Cogs-versus-capabilities model](docs/COGS_VS_CAPABILITIES.md), the [ecosystem CI integration roadmap](docs/ECOSYSTEM_CI_INTEGRATION_ROADMAP.md), and the [repository-specific integration samples](docs/Samples/README.md).
