@@ -83,7 +83,10 @@ public sealed class FileArtifactReceiptLedger
         if (input.Length == 0)
             return Array.Empty<string>();
 
-        var bytes = new byte[input.Length];
+        if (input.Length > int.MaxValue)
+            throw new InvalidDataException("Receipt ledger exceeds the supported 2 GiB in-memory scan limit.");
+
+        var bytes = new byte[(int)input.Length];
         input.ReadExactly(bytes);
         if (bytes[^1] != (byte)'\n')
         {
