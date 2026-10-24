@@ -41,3 +41,10 @@ jobs:
           unzip -Z1 "$package" | grep -Fx "README.md"
           unzip -p "$package" "*.nuspec" | grep -F "<id>TheSingularityWorkshop.CiAi</id>"
           unzip -p "$package" "*.nuspec" | grep -F "<version>0.1.0-alpha.1</version>"
+
+      - name: Upload package artifacts for release inspection
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ciai-package-candidate
+          path: artifacts/packages/*
+          if-no-files-found: error
