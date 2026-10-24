@@ -177,6 +177,59 @@ Check("receipt cannot reconcile provider run without provenance", () =>
     Assert(errors.Contains("providerRepository.required") && errors.Contains("providerRunId.required") &&
         errors.Contains("sourceSha.required"), "missing provider provenance was not rejected");
 });
+Check("receipt ledger records once and suppresses retry after reopening", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "ciai-receipts-" + Guid.NewGuid().ToString("N"));
+    var path = Path.Combine(directory, "receipts.log");
+    try
+    {
+        var receipt = NewAcknowledgement();
+        var manifest = NewManifest();
+        Assert(new FileArtifactReceiptLedger(path).Record(receipt, manifest) == ArtifactReceiptRecordOutcome.Recorded,
+            "first receipt was not recorded");
+        Assert(new FileArtifactReceiptLedger(path).Record(receipt, manifest) == ArtifactReceiptRecordOutcome.Duplicate,
+            "same receipt retry was not deduplicated");
+        Assert(new FileArtifactReceiptLedger(path).Record(receipt, manifest) == ArtifactReceiptRecordOutcome.Duplicate,
+            "receipt was not deduplicated after reopening the ledger");
+    }
+    finally
+    {
+        if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+    }
+});
+Check("receipt ledger rejects conflicting reuse of a deduplication key", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "ciai-receipts-" + Guid.NewGuid().ToString("N"));
+    var path = Path.Combine(directory, "receipts.log");
+    try
+    {
+        var ledger = new FileArtifactReceiptLedger(path);
+        Assert(ledger.Record(NewAcknowledgement(), NewManifest()) == ArtifactReceiptRecordOutcome.Recorded,
+            "initial receipt was not recorded");
+        Assert(ledger.Record(NewAcknowledgement(acknowledgementId: "ack-conflict"), NewManifest()) ==
+            ArtifactReceiptRecordOutcome.Conflict, "conflicting duplicate key was not rejected");
+    }
+    finally
+    {
+        if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+    }
+});
+Check("receipt ledger refuses receipts with mismatched provider evidence", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "ciai-receipts-" + Guid.NewGuid().ToString("N"));
+    var path = Path.Combine(directory, "receipts.log");
+    try
+    {
+        var outcome = new FileArtifactReceiptLedger(path).Record(
+            NewAcknowledgement(providerRepository: "Other/Provider"), NewManifest());
+        Assert(outcome == ArtifactReceiptRecordOutcome.Rejected, "mismatched provider evidence was accepted");
+        Assert(!File.Exists(path), "rejected receipt was persisted");
+    }
+    finally
+    {
+        if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+    }
+});
 
 Check("payload verifier accepts bytes matching manifest size and SHA-256", () =>
 {
@@ -309,12 +362,16 @@ static ArtifactManifest NewManifestForPayload(byte[] payload) =>
 static ArtifactReceiptAcknowledgement NewAcknowledgement(
     bool retrieved = true,
     bool integrityVerified = true,
-    ArtifactLocalValidationOutcome localValidation = ArtifactLocalValidationOutcome.NotRun) =>
-    new(1, "ack-1", "request-1:artifact-1:v1", "request-1", "artifact-1", "v1",
+    ArtifactLocalValidationOutcome localValidation = ArtifactLocalValidationOutcome.NotRun,
+    string acknowledgementId = "ack-1",
+    string providerRepository = "TrentBest/SimpleDemos",
+    long? providerRunId = 17,
+    string sourceSha = "abcdef0123456789abcdef0123456789abcdef01") =>
+    new(1, acknowledgementId, "request-1:artifact-1:v1", "request-1", "artifact-1", "v1",
         new string('a', 64), "client-ci", retrieved, integrityVerified,
         DateTimeOffset.Parse("2026-10-24T00:10:00Z"), localValidation,
-        providerRepository: "TrentBest/SimpleDemos", providerRunId: 17,
-        sourceSha: "abcdef0123456789abcdef0123456789abcdef01");
+        providerRepository: providerRepository, providerRunId: providerRunId,
+        sourceSha: sourceSha);
 
 static void Assert(bool condition, string message)
 {
