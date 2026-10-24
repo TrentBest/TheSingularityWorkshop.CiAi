@@ -23,11 +23,9 @@ public sealed class GitHubActionsRunClient
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(repository);
-        var parts = repository.Split('/');
-        if (parts.Length != 2 || parts.Any(part => part.Length == 0 ||
-            part is "." or ".." ||
-            part.Any(character => !(char.IsAsciiLetterOrDigit(character) || character is '-' or '_' or '.'))))
+        if (!RepositoryIdentity.IsValid(repository))
             throw new ArgumentException("Repository must use canonical owner/repository identifiers.", nameof(repository));
+        var parts = repository.Split('/');
         if (runId <= 0)
             throw new ArgumentOutOfRangeException(nameof(runId));
 
