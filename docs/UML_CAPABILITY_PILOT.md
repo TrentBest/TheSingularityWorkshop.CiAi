@@ -121,3 +121,68 @@ A dedicated `TheSingularityWorkshop.UML` repository becomes justified when the e
 ## Important limits
 
 Structural UML documents source structure, not full product intent. AI can propose business use cases, runtime scenarios, and edge cases, but inference is not proof. Tests and repository declarations add separate evidence. A green generator workflow proves generation and validation for that exact input; it does not prove semantic correctness without review, nor does it authorize publication or consumer writes.
+
+
+## Composable CI configuration: the consumer chooses the behavior
+
+The consumer-facing experience should be copy/paste configuration, not a fork of the generator and not a mandatory all-in-one UML mode. A repository owner copies a small, versioned CI entry from us, replaces repository-specific values, and opts into additional capabilities by adding configuration. The configuration is the composition contract: the same structural engine can serve many repositories, while each CI pipeline selects its own stages.
+
+The following is a **proposed consumer-facing shape**, not a claim that a reusable workflow with this interface has already shipped. Keep the first public contract intentionally small and versioned.
+
+```yaml
+# .github/uml.yml — proposed capability composition
+schemaVersion: 1
+
+source:
+  repository: owner/repository
+  revision: ${{ github.sha }}
+  projects:
+    - src/MyLibrary/MyLibrary.csproj
+
+capabilities:
+  - id: uml.structure
+    version: "1"
+    enabled: true
+
+  # Optional: omit this whole entry when only structural UML is wanted.
+  - id: uml.use-cases
+    version: "1"
+    enabled: true
+    provider:
+      capability: headless-ai.inference
+      endpoint: ${{ vars.UML_LLM_ENDPOINT }}
+      model: ${{ vars.UML_LLM_MODEL }}
+      credential: ${{ secrets.UML_LLM_CREDENTIAL }}
+    inputs:
+      include:
+        - public-api
+        - source-grounded-responsibilities
+        - tests
+    outputs:
+      - use-cases
+      - alternate-flows
+      - error-flows
+      - candidate-sequence-diagrams
+
+outputs:
+  directory: artifacts/uml
+  preserve-authored-files: true
+  require-provenance: true
+```
+
+The exact field names and reusable-workflow invocation must be validated before publication. Credentials belong in CI secrets, non-secret configuration in repository variables/configuration, and endpoint/model choice remains consumer-owned. Never put credentials in a committed configuration string or generated artifact.
+
+The copy/paste CI entry should be thin and pinned to an immutable release or commit. It should pass configuration to the versioned UML capability runner rather than embed generation logic in every consuming repository. Repository-specific values (project paths, target frameworks, output policy, optional provider configuration) are substitutions, not forks.
+
+### Composition rules
+
+- **Structure is the baseline capability.** It works without a model, API key, or network access to an inference provider.
+- **Use cases are an independent opt-in capability.** Adding the use-case entry on a later commit activates it on the next CI run; it must not require a structural-generator redesign.
+- **Capabilities declare inputs, outputs, version, and policy needs.** The runner validates configuration and dependency compatibility before execution.
+- **AI configuration selects a provider contract, not arbitrary authority.** The provider receives bounded evidence and returns claims; it cannot commit to the repository, approve its own output, or run commands in the consumer environment.
+- **Each capability has separate output ownership.** For example, structural pages and AI-proposed use cases have distinct paths/manifests so enabling one does not overwrite the other's files or human-authored documentation.
+- **The pipeline composes capabilities, not diagram types hard-coded into the engine.** Future sequence, lifecycle, or workflow generation should be additional entries using the same contract.
+- **Pin executable dependencies.** Pin the reusable workflow/runner and source revision; record tool, schema, model/provider configuration, and accepted artifact provenance. Mutable tags alone are not a sufficient provenance record.
+- **Fail closed on invalid composition.** Unknown capability IDs/versions, missing required settings, unauthorized endpoints, invalid output schemas, or conflicting output ownership produce actionable diagnostics rather than silently changing behavior.
+
+This changes the acceptance test from “the generator can produce use cases” to two separate proofs: (1) structural-only configuration generates valid structural UML without AI dependencies; (2) adding the optional use-case configuration makes the next CI run generate bounded, provenance-bearing use-case proposals while leaving structural and authored outputs intact.
