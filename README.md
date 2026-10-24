@@ -58,6 +58,14 @@ The current client validates the returned repository and run ID, maps unknown pr
 - [Bounded artifact stream reader class companion](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/src/TheSingularityWorkshop.CiAi/ArtifactPayloadReader.md)
 - [Durable receipt ledger class companion](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/src/TheSingularityWorkshop.CiAi/FileArtifactReceiptLedger.md)
 - [Durable receipt ledger UML and use case](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/UML/FileArtifactReceiptLedgerUML.md)
+- [CogA–CogE responsibilities and integration boundary](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/COGS_VS_CAPABILITIES.md)
+- [CogA capability catalog](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogA)
+- [CogB bounded request ledger](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogB)
+- [CogC result correlation](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogC)
+- [CogD default-deny policy](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogD)
+- [CogE lifecycle projection](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogE)
+- [Pinned cross-Cog vertical contract proof](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/integration/CogEcosystem.ContractTests/README.md)
+- [Cross-Cog integration workflow](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/workflows/cog-ecosystem.yml)
 
 ## 05 — Release status
 
