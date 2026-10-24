@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using TheSingularityWorkshop.CiAi;
 
 var passed = 0;
@@ -148,6 +149,41 @@ Check("receipt is correlated to an exact artifact version and digest", () =>
         "receipt correlation fields were not preserved");
 });
 
+Check("payload verifier accepts bytes matching manifest size and SHA-256", () =>
+{
+    var payload = Enumerable.Range(0, 128).Select(i => (byte)i).ToArray();
+    var manifest = NewManifestForPayload(payload);
+    var result = ArtifactPayloadVerifier.Verify(manifest, payload);
+    Assert(result.IsVerified && result.FailureCode is null, "matching payload was rejected");
+    Assert(result.ActualSizeBytes == payload.Length && result.ActualDigest == manifest.Digest,
+        "verification evidence was not returned");
+});
+Check("payload verifier rejects a digest mismatch", () =>
+{
+    var payload = Enumerable.Range(0, 128).Select(i => (byte)i).ToArray();
+    var result = ArtifactPayloadVerifier.Verify(NewManifest(), payload);
+    Assert(!result.IsVerified && result.FailureCode == "payload.digest-mismatch",
+        "payload with a different digest was not rejected");
+});
+Check("payload verifier rejects a size mismatch before hashing", () =>
+{
+    var payload = new byte[127];
+    var result = ArtifactPayloadVerifier.Verify(NewManifest(), payload);
+    Assert(!result.IsVerified && result.FailureCode == "payload.size-mismatch",
+        "payload with wrong size was not rejected");
+});
+Check("payload verifier enforces caller-provided maximum size", () =>
+{
+    var payload = new byte[128];
+    var result = ArtifactPayloadVerifier.Verify(NewManifest(), payload, maximumPayloadBytes: 64);
+    Assert(!result.IsVerified && result.FailureCode == "payload.exceeds-limit",
+        "oversized payload was not rejected");
+});
+Check("payload verifier rejects a negative maximum size", () =>
+{
+    Throws<ArgumentOutOfRangeException>(() => ArtifactPayloadVerifier.Verify(NewManifest(), Array.Empty<byte>(), -1));
+});
+
 Console.WriteLine($"PASS: {passed} CiAi contract checks.");
 await GitHubActionsRunClientTests.RunAsync();
 
@@ -180,6 +216,16 @@ static ArtifactManifest NewManifest(
         uri ?? new Uri("https://provider.example/artifacts/artifact-1"),
         DateTimeOffset.Parse("2026-10-24T00:00:00Z"),
         expiresAt ?? DateTimeOffset.Parse("2026-10-24T01:00:00Z"),
+        "temporary", "client-ci", 17);
+
+static ArtifactManifest NewManifestForPayload(byte[] payload) =>
+    new("request-1", "operation-1", "idempotency-1", "TrentBest/SimpleDemos",
+        "uml.generate", "1.0.0", "abcdef0123456789abcdef0123456789abcdef01",
+        "artifact-1", "v1", "abcdef0123456789abcdef0123456789abcdef01",
+        "SHA-256", Convert.ToHexString(SHA256.HashData(payload)).ToLowerInvariant(), "application/octet-stream", payload.Length,
+        new Uri("https://provider.example/artifacts/artifact-1"),
+        DateTimeOffset.Parse("2026-10-24T00:00:00Z"),
+        DateTimeOffset.Parse("2026-10-24T01:00:00Z"),
         "temporary", "client-ci", 17);
 
 static ArtifactReceiptAcknowledgement NewAcknowledgement(
