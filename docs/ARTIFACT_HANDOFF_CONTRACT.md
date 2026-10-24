@@ -1,6 +1,6 @@
 # Capability Artifact Handoff Contract
 
-**Status:** proposed contract; not implemented by the current CiAi alpha.  
+**Status:** typed contract slice implemented; end-to-end handoff remains unimplemented.  
 **Design owner:** CiAi defines the cross-provider lifecycle; each capability owns its output semantics.
 
 ## Purpose
@@ -115,4 +115,4 @@ Keep the first proof deliberately small and non-destructive:
 5. Demonstrate that a valid acknowledgement marks an artifact eligible for cleanup but a separate retention decision controls reclamation.
 6. Do not add live webhooks, repository dispatch, broad credentials, or publishing/deployment permissions in this first slice.
 
-**Current implementation status:** design only. The existing CiAi alpha remains a read-only GitHub Actions observation library; it does not yet implement this handoff lifecycle.
+**Current implementation status:** `ArtifactManifest`, `ArtifactReadyNotice`, and `ArtifactReceiptAcknowledgement` are implemented as dependency-free typed contracts with offline validation checks. They validate metadata shape and selected invariants; they do not authenticate the provider, retrieve or hash payload bytes, persist/deduplicate receipts, verify authoritative run evidence, or reclaim storage. The existing CiAi alpha remains read-only with respect to GitHub Actions and has no live handoff transport.
