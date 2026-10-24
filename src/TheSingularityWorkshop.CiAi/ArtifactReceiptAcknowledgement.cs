@@ -24,6 +24,7 @@ public sealed record ArtifactReceiptAcknowledgement
         RequireText(requestId, nameof(requestId));
         RequireText(artifactId, nameof(artifactId));
         RequireText(artifactVersion, nameof(artifactVersion));
+        ArgumentException.ThrowIfNullOrWhiteSpace(digest);
         if (digest.Length != 64 || !digest.All(Uri.IsHexDigit))
             throw new ArgumentException("SHA-256 digest must contain 64 hexadecimal characters.", nameof(digest));
         RequireText(clientIdentity, nameof(clientIdentity));
@@ -58,6 +59,26 @@ public sealed record ArtifactReceiptAcknowledgement
     public bool IntegrityVerified { get; }
     public DateTimeOffset AcknowledgedAt { get; }
     public ArtifactLocalValidationOutcome LocalValidation { get; }
+
+    /// <summary>Reconciles this receipt with the exact provider-published manifest.</summary>
+    public IReadOnlyList<string> VerifyAgainst(ArtifactManifest? manifest)
+    {
+        if (manifest is null)
+            return new[] { "manifest.required" };
+
+        var errors = new List<string>();
+        if (!string.Equals(RequestId, manifest.RequestId, StringComparison.Ordinal))
+            errors.Add("requestId.mismatch");
+        if (!string.Equals(ArtifactId, manifest.ArtifactId, StringComparison.Ordinal))
+            errors.Add("artifactId.mismatch");
+        if (!string.Equals(ArtifactVersion, manifest.ArtifactVersion, StringComparison.Ordinal))
+            errors.Add("artifactVersion.mismatch");
+        if (!string.Equals(Digest, manifest.Digest, StringComparison.OrdinalIgnoreCase))
+            errors.Add("digest.mismatch");
+        if (!string.Equals(ClientIdentity, manifest.ClientIdentity, StringComparison.Ordinal))
+            errors.Add("clientIdentity.mismatch");
+        return errors;
+    }
 
     /// <summary>Receipt alone never authorizes deletion; retention policy must independently approve cleanup.</summary>
     public bool MakesPayloadEligibleForRetentionReview =>
