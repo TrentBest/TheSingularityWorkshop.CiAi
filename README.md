@@ -44,7 +44,12 @@ The package candidate is configured with repository metadata, release notes, sym
 
 The current client validates the returned repository and run ID, maps unknown provider conclusions to an explicit `Unknown` value, and never treats an unknown conclusion as success. It does not dispatch work, cancel runs, publish packages, or deploy applications.
 
-## 04 — Release status
+## 04 — Source-derived contract documentation
+
+- [Read-only CI observation UML and use case](docs/UML/CiRunObservationUML.md)
+- [RepositoryIdentity class companion](src/TheSingularityWorkshop.CiAi/RepositoryIdentity.md)
+
+## 05 — Release status
 
 **Implementation readiness: 30%. Package preparation: 70%. Candidate: 0.1.0-alpha.1.**
 
