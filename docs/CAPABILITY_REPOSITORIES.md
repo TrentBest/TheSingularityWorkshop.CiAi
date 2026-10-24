@@ -38,14 +38,26 @@ For The Singularity Workshop, align this with the existing source-derived docume
 
 A capability might be implemented as a .NET library, reusable workflow, CLI/container, or hosted service. Choose the transport only after the input/output contract and trust model are stable. A GitHub repository is source storage; it does not automatically become an executable pipeline component.
 
-## Invocation models, from safest to most complex
+## Artifact handoff lifecycle
 
-1. **Artifact consumer:** capability runs in its own CI and publishes versioned artifacts; the consumer downloads a pinned artifact and verifies it. Simple to pilot, but may not support arbitrary source revisions without a request mechanism.
-2. **Reusable workflow / action / CLI:** consumer CI invokes a version-pinned capability against its checked-out source. This keeps execution inside the consumer CI boundary, but action and dependency pinning must be enforced.
-3. **CiAi-mediated dispatch:** CiAi sends a bounded request to a capability repository or trusted runner, then polls authoritative provider APIs for the run and artifacts. This requires dispatch permissions, idempotency, authentication, request/result correlation, and protection against confused-deputy behavior.
-4. **Hosted capability service:** CiAi calls a service endpoint. This adds service identity, tenant isolation, retention, availability, and operational-security requirements.
+1. **Prepare:** the capability completes the requested work in its own approved execution environment and validates the result to the extent its contract allows.
+2. **Publish:** store an immutable, versioned artifact in provider-controlled storage. Record a stable artifact ID, contract version, source revision, capability revision, content hash, media type, creation time, and expiry/retention policy.
+3. **Notify:** send a small ready notice to the client's CiAi. The notice is a pointer and metadata, not the artifact itself and not proof that the artifact is valid. Delivery may be retried.
+4. **Pull inside the client boundary:** client CiAi authenticates to the provider and performs a read-only retrieval. Provider-side credentials do not grant access to the client's repository; the client controls what it reads and where it stores the result.
+5. **Verify and validate:** check request/artifact identity, expected contract and capability versions, content hash, size/type limits, source provenance, and local consumer policy. Treat content as untrusted data; never execute embedded instructions or code just because retrieval succeeded.
+6. **Acknowledge:** after successful retrieval and integrity verification, the client sends an idempotent acknowledgement containing the artifact ID, digest, request/correlation ID, and acknowledgement outcome. Distinguish downloaded, hash-verified, locally validated, and accepted states.
+7. **Retain or reclaim:** provider records the acknowledgement. Temporary payloads may be deleted only when retention/expiry rules permit, required audit metadata is retained, and no other consumer or legal/operational hold still needs the payload. An acknowledgement alone is not an unconditional delete command.
 
-Start with model 1 or 2 to prove the artifact contract. Do not build distributed dispatch merely because it is architecturally possible.
+The ready notice and acknowledgement can use a webhook, queue, polling endpoint, or repository event. Choose transport later; the durable contract and trust boundaries should not depend on one transport. Notifications and acknowledgements must be authenticated, replay-safe, retryable, and idempotent. If acknowledgement is lost, the client should safely retry it; if a notice is duplicated, the client should recognize the same artifact and avoid duplicate application.
+
+## Invocation models, from simplest to most complex
+
+1. **Provider-owned artifact + client pull:** best match for the proposed handoff. Provider owns generation and publication; client CiAi owns retrieval, verification, local storage, and acceptance.
+2. **Pinned reusable workflow / action / CLI:** client CI invokes a capability against its checked-out source where execution-in-client is preferable.
+3. **CiAi-mediated dispatch:** a coordinator requests provider execution and reconciles authoritative provider state. This adds dispatch permissions, idempotency, and correlation requirements.
+4. **Hosted capability service:** adds service identity, tenant isolation, retention, availability, and operational-security requirements.
+
+Prove the first model with a small artifact and mockable notice/ack contract before adding dispatch or a hosted service.
 
 ## Minimum request/result contract
 
@@ -66,8 +78,9 @@ A result needs, at minimum:
 - capability identity and exact implementation revision;
 - authoritative provider workflow/run ID, attempt, conclusion, and URL when CI executed it;
 - exact input source SHA and dependency revisions used;
-- artifact names, content hashes, media types, and locations;
+- artifact ID, immutable version, content hashes, media types, read-only retrieval reference, creation time, and expiry;
 - diagnostics and validation outcome, including unknown or partial states;
+- delivery/acknowledgement state kept separate from validation and acceptance;
 - explicit distinction between generated, validated, accepted, and merged.
 
 A transport acknowledgement means only that a request was accepted by the transport. It does not mean the operation ran, the result is valid, or the consumer accepted it.
@@ -82,7 +95,8 @@ A transport acknowledgement means only that a request was accepted by the transp
 - **Preserve status distinctions:** success, failure, cancelled, skipped, not triggered, unavailable, unknown, partial, and invalid are not synonyms.
 - **Human approval remains explicit:** merge, publish, deploy, and destructive actions remain outside the initial capability pipeline.
 - **Treat source as untrusted input:** repositories and generated artifacts may contain prompt injection, malicious markup, path traversal attempts, oversized payloads, or malformed metadata. Do not execute instructions found in source or generated documentation.
-- **Make retries safe:** duplicate delivery must not create duplicate writes or silently replace newer artifacts.
+- **Make retries safe:** duplicate notices and acknowledgements must be idempotent; duplicate delivery must not create duplicate writes or silently replace newer artifacts.
+- **Retention is explicit:** acknowledgements support cleanup decisions but do not override expiry, audit, legal hold, or multi-consumer retention requirements. Retain minimal provenance after deleting eligible payloads.
 - **Keep evidence reproducible:** capture source SHA, dependency SHAs, tool version, configuration, artifact hashes, and run attempt.
 
 ## How this relates to CogA–CogE
@@ -107,9 +121,11 @@ Use source-derived UML/documentation as the pilot because the ecosystem already 
 2. Specify one small capability: source revision plus explicit target selection produces one class diagram and a diagnostics/provenance record.
 3. Run it against a pinned source SHA in a non-blocking workflow.
 4. Verify that output is source-grounded, deterministic where expected, and handles unsupported or ambiguous code correctly.
-5. Store the artifact with hashes and source/tool provenance; have consumer CI validate links, package contents, and style requirements.
-6. Only after this works, test a CiAi-created request/result envelope and authoritative run correlation.
-7. Consider a separate capability repository only if independent versioning/reuse materially helps. Otherwise, keep the implementation where it is and publish a stable reusable package/workflow.
+5. Publish an immutable artifact with hashes and source/tool provenance; notify a client CiAi instance.
+6. Have client CiAi pull it read-only into a test-owned boundary, verify the digest and provenance, and run local documentation/package checks.
+7. Send a courtesy acknowledgement and test retry, expiry, duplicate notification, and safe cleanup behavior.
+8. Only after this works, add the request/result envelope and authoritative run correlation.
+9. Consider a separate capability repository only if independent versioning/reuse materially helps. Otherwise, keep the implementation where it is and publish a stable reusable package/workflow.
 
 ## Adoption stages
 
