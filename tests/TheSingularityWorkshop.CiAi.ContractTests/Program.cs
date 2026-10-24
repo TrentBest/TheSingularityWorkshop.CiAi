@@ -184,6 +184,38 @@ Check("payload verifier rejects a negative maximum size", () =>
     Throws<ArgumentOutOfRangeException>(() => ArtifactPayloadVerifier.Verify(NewManifest(), Array.Empty<byte>(), -1));
 });
 
+Check("bounded stream reader verifies exact payload without taking stream ownership", async () =>
+{
+    var payload = Enumerable.Range(0, 128).Select(i => (byte)i).ToArray();
+    var stream = new MemoryStream(payload);
+    var result = await ArtifactPayloadReader.ReadAndVerifyAsync(stream, NewManifestForPayload(payload));
+    Assert(result.Verification.IsVerified, "valid streamed payload was rejected");
+    Assert(result.Payload.HasValue && result.Payload.Value.Span.SequenceEqual(payload), "verified payload bytes differ");
+    Assert(stream.CanRead, "reader unexpectedly disposed caller-owned stream");
+});
+Check("bounded stream reader stops and rejects data beyond configured maximum", async () =>
+{
+    var payload = new byte[1024];
+    var result = await ArtifactPayloadReader.ReadAndVerifyAsync(
+        new MemoryStream(payload), NewManifestForPayload(payload), maximumPayloadBytes: 128);
+    Assert(!result.Verification.IsVerified && result.Verification.FailureCode == "payload.exceeds-limit",
+        "oversized stream was not rejected at the read boundary");
+    Assert(!result.Payload.HasValue, "rejected payload bytes were exposed");
+});
+Check("bounded stream reader reports short streams as size mismatch", async () =>
+{
+    var payload = new byte[128];
+    var result = await ArtifactPayloadReader.ReadAndVerifyAsync(
+        new MemoryStream(new byte[127]), NewManifestForPayload(payload));
+    Assert(!result.Verification.IsVerified && result.Verification.FailureCode == "payload.size-mismatch",
+        "short stream was not rejected");
+});
+Check("bounded stream reader validates arguments before reading", async () =>
+{
+    await ThrowsAsync<ArgumentOutOfRangeException>(() =>
+        ArtifactPayloadReader.ReadAndVerifyAsync(new MemoryStream(), NewManifest(), maximumPayloadBytes: -1));
+});
+
 Console.WriteLine($"PASS: {passed} CiAi contract checks.");
 await GitHubActionsRunClientTests.RunAsync();
 
