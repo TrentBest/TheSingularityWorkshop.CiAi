@@ -525,12 +525,13 @@ static ReleaseEvidenceRecord NewReleaseEvidence(
     string rawStatus = "completed",
     string rawConclusion = "success",
     bool directlyVerified = true,
-    string? artifactDigestScope = "downloaded-nupkg-bytes") =>
+    string? artifactDigestScope = "downloaded-nupkg-bytes",
+    string? diagnostic = null) =>
     new(repository, headSha, category, state, rawStatus, rawConclusion,
         DateTimeOffset.Parse("2026-10-24T04:00:00Z"),
         new Uri("https://github.com/TrentBest/SimpleDemos/actions/runs/42"),
         runId: 42, runAttempt: 1, workflowIdentity: "contract-verification.yml",
-        jobIdentity: "contract", diagnostic: null, artifactName: "candidate.nupkg",
+        jobIdentity: "contract", diagnostic: diagnostic, artifactName: "candidate.nupkg",
         artifactDigest: new string('a', 64), artifactDigestScope: artifactDigestScope,
         directlyVerified: directlyVerified);
 
