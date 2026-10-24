@@ -77,3 +77,14 @@ If you have a known FSM_COS candidate run, its URL is useful as a discovery hint
 The last recorded CiAi readiness estimates are **42% implementation** and **70% package preparation**. These are inherited documented estimates, not a fresh recalculation and not a measure of FSM_COS alpha.7 readiness. The next useful milestone is a tested, target-configurable, read-only FSM_COS evidence report; package publication remains gated on API/README review, package/version confirmation, external credential/permission review, and explicit owner approval.
 
 **Operating principle:** discover broadly, verify strictly, correlate only exact identities, report gaps plainly, and never mutate the release state.
+
+## Implementation progress — 2026-10-24
+
+A first substantial source slice is now committed to CiAi development:
+
+- [Evidence model and aggregator commit](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/commit/235f4f0ec317ab5ce8d688e1d36d9034a5f9331a): added `ReleaseEvidenceRecord`, `ReleaseEvidenceState`, `ReleaseEvidenceCategory`, and `ReleaseEvidenceReport`.
+- [Contract-test commit](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/commit/a115328f3c43fcc682b0d9955ca4ade11cbde25a): added seven checks for raw fact preservation, unverified-pass rejection, digest-scope requirements, exact-SHA aggregation, missing evidence, cross-SHA rejection, and skipped publication.
+
+The model supports the first release-gate report but does **not** yet fetch workflow collections, paginate, reconcile rerun attempts, inspect jobs/steps, or produce a live FSM_COS alpha.7 report. CI is configured to run on `src/**` and `tests/**` changes, but the new commit's result must be inspected before treating this as verified.
+
+Next vertical slice: extend the read-only GitHub provider client with a bounded workflow-run collection query and normalize each returned run into these records; then produce a report artifact for an explicitly supplied FSM_COS repository+SHA. Do not dispatch workflows or mutate FSM_COS. Before selecting the candidate, re-fetch the live PR #35 head and identify required checks from observed workflow files/runs.
