@@ -1,6 +1,6 @@
 # CiAi Release Readiness
 
-**Implementation readiness: 38%. Package preparation: 70%.** This is an alpha package candidate, not a publication approval.
+**Implementation readiness: 42%. Package preparation: 70%.** This is an alpha package candidate, not a publication approval.
 
 ## Candidate
 
@@ -31,15 +31,17 @@
 - Five payload-verifier checks cover valid bytes, digest mismatch, size mismatch, maximum-size rejection, and invalid maximum size. `ArtifactPayloadReader` adds bounded stream reads, cancellation, short-stream rejection, and no ownership transfer for caller streams.
 - Receipt evidence now reconciles provider repository, provider run ID, and source revision as well as request/artifact/version/digest/client identity.
 - `FileArtifactReceiptLedger` persists receipt records, suppresses exact retries across ledger reopen, rejects conflicting reuse of a deduplication key, and refuses receipts whose manifest provenance does not match. Its file write is flushed to disk and cross-process writers are serialized by an exclusive lock file; it does not perform provider cleanup.
-- The current contract suite has 46 offline CiAi contract checks plus 13 GitHub Actions client integration checks. Confirm those counts on the exact candidate workflow run; a green run on an earlier commit is not evidence for a newer tree.
+- The exact candidate SHA `91da92e7e906f31035468a4336bc2d3161d2ff64` passed 46 offline CiAi contract checks plus 13 GitHub Actions client integration checks in [workflow run 40056401428](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/40056401428). The pinned cross-Cog vertical proof passed six checks in [workflow run 40056401592](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/40056401592).
 - Source companion docs and UML/use-case diagram for the three handoff contracts.
 - MIT license, package metadata, embedded README, symbol-package settings, pinned GitHub Actions workflow.
 - CI builds, runs offline contract checks, packs the NuGet candidate, and validates the packed artifact.
+- Standalone CogA–CogE slices now have independent contract suites and package-candidate packing checks. The [cross-Cog integration workflow](../.github/workflows/cog-ecosystem.yml) checks out each Cog at a pinned commit and proves catalog lookup → default-deny policy decision → bounded idempotent request → result correlation → parent payload/receipt verification → lifecycle projection.
 
 ## Must pass before publication
 
 - [x] Baseline build, offline contract checks, pack, and packed-artifact validation passed on commit `f207fc028a79a19305c7296a9e930c06b64ad40d` in [workflow run 40040017424](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/40040017424).
-- [x] The exact source candidate passed build, expanded offline checks, pack, packed-artifact validation, and package-artifact upload in the [CiAi Contract Verification workflow](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/workflows/ci.yml). Re-run and confirm the exact SHA after any source or workflow changes.
+- [x] Exact source candidate `91da92e7e906f31035468a4336bc2d3161d2ff64` passed build, 46 offline contract checks, pack, packed-artifact validation, and package-artifact upload in [workflow run 40056401428](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/40056401428).
+- [x] The pinned cross-Cog vertical contract proof passed six integration checks in [workflow run 40056401592](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/40056401592). This proves the in-process contract mapping only, not remote network handoff.
 - [x] Independently inspected the generated `.nupkg` and `.snupkg`, package contents, nuspec metadata, embedded README links, and SHA-256 hashes. The workflow uploads the pair as the `ciai-package-candidate` artifact for repeatable inspection.
 - [ ] Review README and public API claims against actual implementation.
 - [ ] Confirm package ID and version are intended and not already published.
@@ -48,7 +50,7 @@
 
 ## Deliberately not claimed
 
-This alpha remains read-only with respect to CI-provider operations. Typed handoff contracts, bounded caller-supplied stream reads, local byte-integrity verification, provider provenance reconciliation, and a durable local receipt deduplication ledger now exist. The client still does not fetch the manifest URI or authenticate the provider, and there is no end-to-end authoritative provider CI correlation. The complete catalog-to-request-to-result vertical proof is still missing. HeadlessAi invocation, ProtocolAi vocabulary integration, host authorization, cross-repository dispatch, persistent idempotency/history, and a complete request/result round trip are not implemented in CiAi. No publish or deploy action is exposed by this library.
+This alpha remains read-only with respect to CI-provider operations. Typed handoff contracts, bounded caller-supplied stream reads, local byte-integrity verification, provider provenance reconciliation, and a durable local receipt deduplication ledger now exist. The client still does not fetch the manifest URI or authenticate the provider, and there is no end-to-end authoritative provider CI correlation. The in-process catalog-to-request-to-result vertical proof now exists, but it does not prove remote retrieval, authenticated notification/acknowledgement, or provider run verification. HeadlessAi invocation, ProtocolAi vocabulary integration, host authorization, cross-repository dispatch, persistent idempotency/history, and a complete request/result round trip are not implemented in CiAi. No publish or deploy action is exposed by this library.
 
 ## Release gate
 
