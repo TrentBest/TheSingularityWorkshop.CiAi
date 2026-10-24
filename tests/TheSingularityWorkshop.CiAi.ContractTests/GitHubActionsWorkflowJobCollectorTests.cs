@@ -92,7 +92,7 @@ internal static class GitHubActionsWorkflowJobCollectorTests
                 2 => Job(1201, 42, 2),
                 _ => throw new InvalidOperationException("Collector requested more than two pages.")
             };
-            return Task.FromResult(JsonResponse($"""{"total_count":2,"jobs":[{{job}}]}"""));
+            return Task.FromResult(JsonResponse($$"""{"total_count":2,"jobs":[{{job}}]}"""));
         })))
         {
             var result = await new GitHubActionsWorkflowJobCollector(client)
@@ -107,7 +107,7 @@ internal static class GitHubActionsWorkflowJobCollectorTests
         {
             var page = int.Parse(ParseQueryValue(request.RequestUri!.Query, "page"));
             var job = page == 1 ? Job(1201, 42, 2) : Job(1202, 42, 2);
-            return Task.FromResult(JsonResponse($"""{"total_count":2,"jobs":[{{job}}]}"""));
+            return Task.FromResult(JsonResponse($$"""{"total_count":2,"jobs":[{{job}}]}"""));
         })))
         {
             var result = await new GitHubActionsWorkflowJobCollector(client)
