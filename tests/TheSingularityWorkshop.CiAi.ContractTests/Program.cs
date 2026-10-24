@@ -395,6 +395,52 @@ Check("skipped release evidence cannot make a category pass", () =>
         "skipped publication was treated as passing");
 });
 
+Check("Markdown release report is deterministic and includes exact candidate identity", () =>
+{
+    var report = ReleaseEvidenceReport.Aggregate("TrentBest/SimpleDemos",
+        "abcdef0123456789abcdef0123456789abcdef01",
+        new[] { ReleaseEvidenceCategory.BuildAndTests, ReleaseEvidenceCategory.Security },
+        new[] { NewReleaseEvidence(), NewReleaseEvidence(category: ReleaseEvidenceCategory.Security) });
+    var first = ReleaseEvidenceMarkdownRenderer.Render(report);
+    var second = ReleaseEvidenceMarkdownRenderer.Render(report);
+    Assert(first == second, "same report produced different Markdown");
+    Assert(first.Contains("`TrentBest/SimpleDemos`", StringComparison.Ordinal) &&
+        first.Contains("`abcdef0123456789abcdef0123456789abcdef01`", StringComparison.Ordinal),
+        "report omitted exact repository or candidate SHA");
+    Assert(first.Contains("BuildAndTests", StringComparison.Ordinal) &&
+        first.Contains("Security", StringComparison.Ordinal), "report omitted gate categories");
+    Assert(first.Contains("not release authorization", StringComparison.Ordinal),
+        "report failed to distinguish evidence from authorization");
+});
+Check("Markdown release report preserves missing and skipped gates without upgrading them", () =>
+{
+    var report = ReleaseEvidenceReport.Aggregate("TrentBest/SimpleDemos",
+        "abcdef0123456789abcdef0123456789abcdef01",
+        new[] { ReleaseEvidenceCategory.BuildAndTests, ReleaseEvidenceCategory.PublicationGate,
+            ReleaseEvidenceCategory.Security },
+        new[] {
+            NewReleaseEvidence(),
+            NewReleaseEvidence(category: ReleaseEvidenceCategory.PublicationGate,
+                state: ReleaseEvidenceState.Skipped, rawStatus: "completed", rawConclusion: "skipped")
+        });
+    var markdown = ReleaseEvidenceMarkdownRenderer.Render(report);
+    Assert(!report.IsPassing, "incomplete report unexpectedly passed");
+    Assert(markdown.Contains("Security | **Missing**", StringComparison.Ordinal),
+        "missing gate was not visible");
+    Assert(markdown.Contains("PublicationGate | **Skipped**", StringComparison.Ordinal),
+        "skipped publication gate was not visible");
+});
+Check("Markdown release report escapes table delimiters in provider diagnostics", () =>
+{
+    var record = NewReleaseEvidence(diagnostic: "step | failed\nsecond line");
+    var report = ReleaseEvidenceReport.Aggregate("TrentBest/SimpleDemos",
+        "abcdef0123456789abcdef0123456789abcdef01",
+        new[] { ReleaseEvidenceCategory.BuildAndTests }, new[] { record });
+    var markdown = ReleaseEvidenceMarkdownRenderer.Render(report);
+    Assert(markdown.Contains("step \\| failed second line", StringComparison.Ordinal),
+        "diagnostic was able to break the Markdown table");
+});
+
 Console.WriteLine($"PASS: {passed} CiAi contract checks.");
 await GitHubActionsRunClientTests.RunAsync();
 await GitHubActionsWorkflowRunCollectorTests.RunAsync();
