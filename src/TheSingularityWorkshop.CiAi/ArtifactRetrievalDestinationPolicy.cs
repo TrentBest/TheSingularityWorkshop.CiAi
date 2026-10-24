@@ -41,8 +41,9 @@ public sealed class ArtifactRetrievalDestinationPolicy
         if (!string.IsNullOrEmpty(destination.Fragment)) errors.Add("retrieval.fragment-rejected");
         if (!destination.IsDefaultPort) errors.Add("retrieval.port-not-allowed");
         if (IPAddress.TryParse(destination.Host, out _)) errors.Add("retrieval.ip-literal-rejected");
-        var host = destination.IdnHost.TrimEnd('.');
-        if (!_allowedHosts.Contains(host)) errors.Add("retrieval.host-not-allowed");
+        var host = destination.IdnHost;
+        if (host.EndsWith('.', StringComparison.Ordinal) || !_allowedHosts.Contains(host))
+            errors.Add("retrieval.host-not-allowed");
         if (expiresAt <= now) errors.Add("retrieval.expired");
         return errors;
     }
