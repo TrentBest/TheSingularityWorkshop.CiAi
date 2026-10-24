@@ -35,10 +35,12 @@ public sealed record ArtifactManifest
         RequireText(implementationRevision, nameof(implementationRevision), 200);
         RequireIdentifier(artifactId, nameof(artifactId));
         RequireText(artifactVersion, nameof(artifactVersion), 100);
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceSha);
         if (sourceSha.Length != 40 || !sourceSha.All(Uri.IsHexDigit))
             throw new ArgumentException("Source SHA must be a full 40-character hexadecimal commit identifier.", nameof(sourceSha));
         if (!string.Equals(digestAlgorithm, "SHA-256", StringComparison.Ordinal))
             throw new ArgumentException("Only SHA-256 is supported by this contract version.", nameof(digestAlgorithm));
+        ArgumentException.ThrowIfNullOrWhiteSpace(digest);
         if (digest.Length != 64 || !digest.All(Uri.IsHexDigit))
             throw new ArgumentException("SHA-256 digest must contain 64 hexadecimal characters.", nameof(digest));
         RequireText(mediaType, nameof(mediaType), 200);
