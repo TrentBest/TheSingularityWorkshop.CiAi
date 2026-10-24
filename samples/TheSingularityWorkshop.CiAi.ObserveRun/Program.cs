@@ -44,7 +44,7 @@ try
         repository, headSha, maxPages: 10, perPage: 100, cancellationToken: CancellationToken.None);
 
     var observedRuns = new List<object>();
-    var allJobsComplete = true;
+    var allJobsComplete = runCollection.Runs.Count > 0;
     foreach (var observation in runCollection.Runs)
     {
         // Each job query is tied to the exact attempt reported for this run; retries are not blended.
@@ -52,7 +52,10 @@ try
             repository, observation.Run.RunId, observation.RunAttempt,
             maxPages: 10, perPage: 100, cancellationToken: CancellationToken.None);
 
-        allJobsComplete &= !jobs.IsTruncated;
+        var jobsComplete = !jobs.IsTruncated &&
+            jobs.TotalCount == jobs.Jobs.Count &&
+            jobs.Jobs.Count > 0;
+        allJobsComplete &= jobsComplete;
         observedRuns.Add(new
         {
             run = new
@@ -61,10 +64,8 @@ try
                 observation.Run.RunId,
                 observation.Run.WorkflowName,
                 observation.Run.HeadSha,
-                status = observation.Run.Status.ToString(),
-                conclusion = observation.Run.Conclusion.ToString(),
-                rawStatus = observation.Run.Status.ToString(),
-                rawConclusion = observation.Run.Conclusion.ToString(),
+                normalizedStatus = observation.Run.Status.ToString(),
+                normalizedConclusion = observation.Run.Conclusion.ToString(),
                 observation.Run.UpdatedAt,
                 evidenceUrl = observation.Run.EvidenceUrl.ToString(),
                 observation.RunAttempt,
@@ -92,10 +93,15 @@ try
             }).ToArray(),
             jobsPagesRead = jobs.PagesRead,
             jobsTotalCount = jobs.TotalCount,
-            jobsTruncated = jobs.IsTruncated
+            jobsReturnedCount = jobs.Jobs.Count,
+            jobsTruncated = jobs.IsTruncated,
+            jobsComplete
         });
     }
 
+    var complete = runCollection.Runs.Count > 0 &&
+        !runCollection.IsTruncated &&
+        allJobsComplete;
     var report = new
     {
         schema = "ciai.commit-observation.v1",
@@ -110,8 +116,8 @@ try
             runCollection.IsTruncated,
             returnedRuns = runCollection.Runs.Count
         },
-        complete = !runCollection.IsTruncated && allJobsComplete,
-        note = "Observation only: this report does not certify release readiness, inspect package contents, interpret security findings, or authorize publication.",
+        complete,
+        note = "Observation only: this report does not certify release readiness, inspect package contents, interpret security findings, or authorize publication. A complete report requires at least one matching run and complete, non-empty job observations for each run.",
         runs = observedRuns
     };
 
@@ -124,7 +130,7 @@ try
     }
 
     // Incomplete discovery is not a pass. A complete observation is still not a release approval.
-    return report.complete ? 0 : 3;
+    return complete ? 0 : 3;
 }
 catch (Exception exception) when (exception is HttpRequestException or InvalidDataException or ArgumentException or JsonException or IOException)
 {
