@@ -120,7 +120,7 @@ public sealed class FileArtifactReceiptLedger
             receipt.ProviderRunId?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
             receipt.SourceSha ?? string.Empty
         };
-        return string.Join('|', fields.Select(Encode));
+        return string.Join("|", fields.Select(Encode));
     }
 
     private static string Encode(string value) =>

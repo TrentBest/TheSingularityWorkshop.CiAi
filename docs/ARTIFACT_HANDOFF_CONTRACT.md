@@ -1,6 +1,6 @@
 # Capability Artifact Handoff Contract
 
-**Status:** typed contracts, bounded stream reading, and local payload-integrity verification implemented; end-to-end handoff remains unimplemented.  
+**Status:** typed contracts, bounded caller-supplied stream reading, local payload-integrity verification, exact provider provenance reconciliation, and durable local receipt deduplication implemented; provider-authenticated URI retrieval and end-to-end handoff remain unimplemented.  
 **Design owner:** CiAi defines the cross-provider lifecycle; each capability owns its output semantics.
 
 ## Purpose
@@ -112,7 +112,9 @@ Keep the first proof deliberately small and non-destructive:
 2. Add offline tests for required fields, malformed identities/digests, expiry, mismatched request/artifact IDs, duplicate acknowledgements, and state transitions.
 3. [x] Verify supplied payload bytes against manifest size and SHA-256, with a configurable maximum size and stable rejection codes.
 4. [x] Test valid fixture bytes, digest mismatch, size mismatch, caller-specified size limit, and invalid limit.
-5. Demonstrate that no cleanup happens merely because a notice was sent; a valid acknowledgement only makes a payload eligible for separate policy review.
-7. Do not add live webhooks, repository dispatch, broad credentials, or publishing/deployment permissions in this first slice.
+5. [x] Demonstrate that no cleanup happens merely because a notice was sent; a valid acknowledgement only makes a payload eligible for separate policy review.
+6. [x] Reconcile receipt evidence against the exact provider repository, run ID, and source revision when present in the manifest.
+7. [x] Persist receipts in a local append-only ledger, deduplicate exact retries across reopen, and reject conflicting reuse of a deduplication key.
+8. Do not add live webhooks, repository dispatch, broad credentials, or publishing/deployment permissions in this first slice.
 
 **Current implementation status:** `ArtifactManifest`, `ArtifactReadyNotice`, and `ArtifactReceiptAcknowledgement` are implemented as dependency-free typed contracts. `ArtifactPayloadVerifier` verifies supplied bytes against manifest size and SHA-256. `ArtifactPayloadReader` now reads a caller-supplied readable stream incrementally with a configured memory bound, returns bytes only after successful verification, and leaves stream ownership with the caller. Offline checks cover exact bytes, digest/size failures, maximum limits, short streams, and stream ownership. This is still not a network retrieval client: provider authentication, destination allowlisting, durable staging, provenance checks, durable receipt deduplication, and end-to-end orchestration remain unimplemented. Provider authentication, durable receipt deduplication, authoritative run evidence correlation, live handoff transport, and storage reclamation remain unimplemented. The existing CiAi alpha remains read-only with respect to GitHub Actions.

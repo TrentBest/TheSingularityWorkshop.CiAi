@@ -28,15 +28,18 @@
 - Typed `ArtifactManifest`, `ArtifactReadyNotice`, and `ArtifactReceiptAcknowledgement` contracts; validate request/artifact correlation fields, SHA-256 digest shape, HTTPS retrieval URI shape, recipient binding, contract version, expiry, and acknowledgement state consistency.
 - Fourteen offline handoff-contract checks cover manifest/notice/receipt invariants and receipt-to-manifest reconciliation.
 - `ArtifactPayloadVerifier` checks actual caller-supplied bytes against manifest size and SHA-256, with a default 16 MiB cap, caller-configurable stricter limits, fixed-time digest comparison, and stable failure codes. See [verifier class companion](../src/TheSingularityWorkshop.CiAi/ArtifactPayloadVerifier.md).
-- Five payload-verifier checks cover valid bytes, digest mismatch, size mismatch, maximum-size rejection, and invalid maximum size. The console contract suite now has 33 main contract checks plus 13 read-only GitHub client checks; CI is the execution authority for this count on the candidate SHA.
+- Five payload-verifier checks cover valid bytes, digest mismatch, size mismatch, maximum-size rejection, and invalid maximum size. `ArtifactPayloadReader` adds bounded stream reads, cancellation, short-stream rejection, and no ownership transfer for caller streams.
+- Receipt evidence now reconciles provider repository, provider run ID, and source revision as well as request/artifact/version/digest/client identity.
+- `FileArtifactReceiptLedger` persists receipt records, suppresses exact retries across ledger reopen, rejects conflicting reuse of a deduplication key, and refuses receipts whose manifest provenance does not match. Its file write is flushed to disk and cross-process writers are serialized by an exclusive lock file; it does not perform provider cleanup.
+- Contract-test count is being re-verified on the current source candidate; the latest green run on an earlier commit is not evidence for this newer tree.
 - Source companion docs and UML/use-case diagram for the three handoff contracts.
 - MIT license, package metadata, embedded README, symbol-package settings, pinned GitHub Actions workflow.
 - CI builds, runs offline contract checks, packs the NuGet candidate, and validates the packed artifact.
 
 ## Must pass before publication
 
-- [x] Earlier build, offline contract checks, pack, and packed-artifact validation passed on commit `f207fc028a79a19305c7296a9e930c06b64ad40d` in [workflow run 40040017424](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/40040017424).
-- [ ] Re-run and verify build, offline checks, pack, and packed-artifact validation on the latest payload-verifier implementation commit before treating this as a current release candidate.
+- [x] Baseline build, offline contract checks, pack, and packed-artifact validation passed on commit `f207fc028a79a19305c7296a9e930c06b64ad40d` in [workflow run 40040017424](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/40040017424).
+- [ ] Verify build, expanded offline checks, pack, and packed-artifact validation on the exact current source candidate before treating it as a release candidate.
 - [ ] Inspect the produced `.nupkg` and `.snupkg` contents, package metadata, and embedded README beyond automated CI assertions.
 - [ ] Review README and public API claims against actual implementation.
 - [ ] Confirm package ID and version are intended and not already published.
@@ -45,7 +48,7 @@
 
 ## Deliberately not claimed
 
-This alpha remains a read-only CI observation library. Typed handoff contracts and local byte-integrity verification now exist, but the client still does not retrieve payload bytes or enforce streaming limits while downloading. Provider/receipt authentication, durable acknowledgement deduplication, authoritative provider CI correlation end-to-end, and retention/reclamation remain unimplemented. The complete catalog-to-request-to-result vertical proof is still missing. HeadlessAi invocation, ProtocolAi vocabulary integration, host authorization, cross-repository dispatch, persistent idempotency/history, and a complete request/result round trip are not implemented in CiAi. No publish or deploy action is exposed by this library.
+This alpha remains read-only with respect to CI-provider operations. Typed handoff contracts, bounded caller-supplied stream reads, local byte-integrity verification, provider provenance reconciliation, and a durable local receipt deduplication ledger now exist. The client still does not fetch the manifest URI or authenticate the provider, and there is no end-to-end authoritative provider CI correlation. The complete catalog-to-request-to-result vertical proof is still missing. HeadlessAi invocation, ProtocolAi vocabulary integration, host authorization, cross-repository dispatch, persistent idempotency/history, and a complete request/result round trip are not implemented in CiAi. No publish or deploy action is exposed by this library.
 
 ## Release gate
 
