@@ -82,9 +82,9 @@ internal static class GitHubActionsWorkflowJobCollectorTests
             var page = int.Parse(ParseQueryValue(request.RequestUri!.Query, "page"));
             Assert(ParseQueryValue(request.RequestUri.Query, "per_page") == "1",
                 "configured page size was not honored");
-            return Task.FromResult(JsonResponse(page == 1
-                ? JobPage(2, Job(1202, 42, 2), Job(1201, 42, 2), includeOnlyFirst: true)
-                : JobPage(2, Job(1202, 42, 2), Job(1201, 42, 2), includeOnlyFirst: false)));
+            // Make each page's distinct job explicit so this test isolates pagination/order.
+            var job = page == 1 ? Job(1202, 42, 2) : Job(1201, 42, 2);
+            return Task.FromResult(JsonResponse($"{{\"total_count\":2,\"jobs\":[{job}]}}"));
         })))
         {
             var result = await new GitHubActionsWorkflowJobCollector(client)
