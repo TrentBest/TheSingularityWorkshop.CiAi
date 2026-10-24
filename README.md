@@ -55,6 +55,9 @@ The current client validates the returned repository and run ID, maps unknown pr
 - [ArtifactManifest class companion](src/TheSingularityWorkshop.CiAi/ArtifactManifest.md)
 - [ArtifactReadyNotice class companion](src/TheSingularityWorkshop.CiAi/ArtifactReadyNotice.md)
 - [ArtifactReceiptAcknowledgement class companion](src/TheSingularityWorkshop.CiAi/ArtifactReceiptAcknowledgement.md)
+- [Bounded artifact stream reader class companion](src/TheSingularityWorkshop.CiAi/ArtifactPayloadReader.md)
+- [Durable receipt ledger class companion](src/TheSingularityWorkshop.CiAi/FileArtifactReceiptLedger.md)
+- [Durable receipt ledger UML and use case](docs/UML/FileArtifactReceiptLedgerUML.md)
 
 ## 05 — Release status
 
