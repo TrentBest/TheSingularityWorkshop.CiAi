@@ -62,7 +62,9 @@ public sealed record ArtifactPayloadReadResult
 {
     private ArtifactPayloadReadResult(byte[]? payload, ArtifactPayloadVerificationResult verification)
     {
-        Payload = payload;
+        // Avoid the byte[] -> ReadOnlyMemory<byte> implicit conversion turning a null array
+        // into a present, empty memory value. Rejected payloads must remain explicitly absent.
+        Payload = payload is null ? null : new ReadOnlyMemory<byte>(payload);
         Verification = verification;
     }
 
