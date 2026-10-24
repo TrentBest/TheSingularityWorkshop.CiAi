@@ -7,7 +7,7 @@
 
 A future UML capability could provide a reusable operation: given a declared source snapshot and a bounded request, derive source-grounded UML artifacts and return them with provenance and validation evidence.
 
-A consumer repository would not need to implement UML generation itself. Its CiAi integration would discover a compatible capability, construct a request, arrange for the capability to run in an approved environment, validate the result, and publish a reviewable artifact or proposed change back to the consumer.
+A consumer repository would not need to implement UML generation itself. The provider completes the work and stores a versioned artifact in its own repository or artifact store. It then notifies the client's CiAi that the result is ready. The client's CiAi authenticates and pulls the artifact into the client's own security boundary, verifies its identity and integrity, and applies local validation. After successful retrieval and verification, it sends a courtesy acknowledgement so the provider can account for delivery and eventually reclaim eligible temporary storage.
 
 This is useful when the capability boundary is stable, outputs are independently verifiable, and separate versioning is more valuable than duplicating the implementation in every repository.
 
