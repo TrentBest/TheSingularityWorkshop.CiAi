@@ -326,6 +326,24 @@ Check("retrieval destination policy rejects expired artifacts and IP literals", 
         DateTimeOffset.Parse("2026-10-24T01:00:00Z")).Contains("retrieval.host-not-allowed"), "trailing-dot hostname bypassed allowlist");
 });
 
+Check("retrieval destination policy rejects embedded credentials and fragments", () =>
+{
+    var policy = new ArtifactRetrievalDestinationPolicy(new[] { "provider.example" });
+    var now = DateTimeOffset.Parse("2026-10-24T00:30:00Z");
+    var expiry = DateTimeOffset.Parse("2026-10-24T01:00:00Z");
+    Assert(policy.Validate(new Uri("https://user:secret@provider.example/artifacts/a"), now, expiry)
+        .Contains("retrieval.user-info-rejected"), "embedded credentials were accepted");
+    Assert(policy.Validate(new Uri("https://provider.example/artifacts/a#redirect"), now, expiry)
+        .Contains("retrieval.fragment-rejected"), "fragment-bearing destination was accepted");
+});
+
+Check("retrieval destination policy constructor rejects empty and malformed allowlists", () =>
+{
+    Throws<ArgumentException>(() => new ArtifactRetrievalDestinationPolicy(Array.Empty<string>()));
+    Throws<ArgumentException>(() => new ArtifactRetrievalDestinationPolicy(new[] { "provider.example/path" }));
+    Throws<ArgumentException>(() => new ArtifactRetrievalDestinationPolicy(new[] { "127.0.0.1" }));
+});
+
 Console.WriteLine($"PASS: {passed} CiAi contract checks.");
 await GitHubActionsRunClientTests.RunAsync();
 
