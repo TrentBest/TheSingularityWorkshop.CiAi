@@ -16,6 +16,9 @@
 - Typed, provider-neutral `CiRunSnapshot` and finite status/conclusion vocabulary.
 - Read-only GitHub Actions REST client with request cancellation support.
 - Returned repository and run-ID correlation.
+- Shared bounded canonical repository identity validation used by both the HTTP client and snapshot model; rejects malformed path segments and overlong components before network access.
+- Regression test for overlong repository identities; current client suite contains 13 offline integration checks.
+- Repository identity class companion and read-only observation UML/use-case documentation.
 - Full 40-character hexadecimal commit SHA validation.
 - Exact HTTPS GitHub Actions evidence path validation; rejects query strings, fragments, non-default ports, and user-info.
 - Unknown future provider conclusions remain explicitly unknown and cannot be successful.
