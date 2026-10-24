@@ -1,6 +1,6 @@
 # Cogs and Capability Providers
 
-**Status:** proposed architecture. This document describes a target model, not implemented runtime behavior.
+**Status:** first standalone CogA–CogE slices are implemented with offline contract checks; parent-coordinator integration remains incomplete.
 
 CiAi needs two kinds of modularity.
 
@@ -13,6 +13,18 @@ CiAi needs two kinds of modularity.
 - **CogE — projection:** present validated topology and evidence.
 
 These responsibilities concern identity, policy, correlation, evidence, and presentation. They do not implement every domain operation.
+
+## First implementation slices
+
+| Cog | Implemented slice | Current boundary | Source and verification |
+|---|---|---|---|
+| CogA | Immutable capability descriptors; in-memory catalog; exact lookup, duplicate rejection, stable snapshots, removal | No remote discovery or authorization | [Repository](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogA), [CI](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogA/actions) |
+| CogB | Pinned request contract; bounded output; input digest; in-memory idempotent request book | No durable idempotency or dispatch | [Repository](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogB), [CI](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogB/actions) |
+| CogC | Provider result contract; request/provider/source/contract correlation | Parent manifest and authoritative CI evidence still need adapters | [Repository](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogC), [CI](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogC/actions) |
+| CogD | Exact-match, time-bounded, default-deny policy rules | No authenticated identity source or durable policy store | [Repository](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogD), [CI](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogD/actions) |
+| CogE | Timestamped lifecycle facts; ordered projection; identity and contradiction diagnostics | No durable event ingestion or live reporting UI | [Repository](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogE), [CI](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogE/actions) |
+
+These are intentionally small, dependency-free first slices. Their separate CI checks prove only their own build and offline contract suite. They do **not** prove cross-Cog interoperability, remote retrieval, authenticated handoff, or an end-to-end capability lifecycle. The next integration slice must map these standalone contracts to the parent CiAi contracts and exercise one vertical request-to-result path.
 
 The parent CiAi coordinator must connect the contracts and verify provider-owned facts. Passing isolated Cog tests does not prove the end-to-end lifecycle.
 
@@ -35,7 +47,7 @@ These are candidates, not a commitment to create a separate repository for every
 9. Client CiAi sends a courtesy acknowledgement after retrieval and integrity verification. Provider retention policy—not the acknowledgement alone—determines when temporary payloads can be reclaimed.
 10. Consumer CI and maintainers decide whether to accept the output.
 
-This is a target architecture. The current CiAi alpha provides read-only GitHub Actions observation and normalization; it does not yet execute this lifecycle.
+This is a target architecture. The current CiAi alpha provides read-only GitHub Actions observation and normalization plus local handoff contract primitives; it does not yet execute the complete lifecycle.
 
 ## Example: UML
 
