@@ -298,6 +298,32 @@ await CheckAsync("bounded stream reader validates arguments before reading", asy
         ArtifactPayloadReader.ReadAndVerifyAsync(new MemoryStream(), NewManifest(), maximumPayloadBytes: -1));
 });
 
+
+Check("retrieval destination policy allows only configured HTTPS hosts", () =>
+{
+    var policy = new ArtifactRetrievalDestinationPolicy(new[] { "provider.example", "cdn.provider.example" });
+    Assert(policy.Validate(new Uri("https://provider.example/artifacts/a"), DateTimeOffset.Parse("2026-10-24T00:30:00Z"),
+        DateTimeOffset.Parse("2026-10-24T01:00:00Z")).Count == 0, "allowlisted HTTPS host should be accepted");
+    Assert(policy.Validate(new Uri("https://evil.example/artifacts/a"), DateTimeOffset.Parse("2026-10-24T00:30:00Z"),
+        DateTimeOffset.Parse("2026-10-24T01:00:00Z")).Contains("retrieval.host-not-allowed"), "unlisted host was accepted");
+});
+Check("retrieval destination policy rejects non-HTTPS and non-default ports", () =>
+{
+    var policy = new ArtifactRetrievalDestinationPolicy(new[] { "provider.example" });
+    Assert(policy.Validate(new Uri("http://provider.example/artifacts/a"), DateTimeOffset.Parse("2026-10-24T00:30:00Z"),
+        DateTimeOffset.Parse("2026-10-24T01:00:00Z")).Contains("retrieval.https-required"), "HTTP was accepted");
+    Assert(policy.Validate(new Uri("https://provider.example:8443/artifacts/a"), DateTimeOffset.Parse("2026-10-24T00:30:00Z"),
+        DateTimeOffset.Parse("2026-10-24T01:00:00Z")).Contains("retrieval.port-not-allowed"), "non-default port was accepted");
+});
+Check("retrieval destination policy rejects expired artifacts and IP literals", () =>
+{
+    var policy = new ArtifactRetrievalDestinationPolicy(new[] { "provider.example" });
+    Assert(policy.Validate(new Uri("https://provider.example/a"), DateTimeOffset.Parse("2026-10-24T01:00:00Z"),
+        DateTimeOffset.Parse("2026-10-24T01:00:00Z")).Contains("retrieval.expired"), "expired artifact was accepted");
+    Assert(policy.Validate(new Uri("https://127.0.0.1/a"), DateTimeOffset.Parse("2026-10-24T00:30:00Z"),
+        DateTimeOffset.Parse("2026-10-24T01:00:00Z")).Contains("retrieval.ip-literal-rejected"), "IP literal was accepted");
+});
+
 Console.WriteLine($"PASS: {passed} CiAi contract checks.");
 await GitHubActionsRunClientTests.RunAsync();
 
