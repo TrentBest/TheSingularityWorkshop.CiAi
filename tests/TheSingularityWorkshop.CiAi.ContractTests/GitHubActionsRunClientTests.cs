@@ -74,6 +74,19 @@ internal static class GitHubActionsRunClientTests
             Assert(!malformedRepositoryWasSent, "invalid repository must be rejected before HTTP");
         }
 
+        var overlongRepositoryWasSent = false;
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+        {
+            overlongRepositoryWasSent = true;
+            return Task.FromResult(JsonResponse(successfulRun));
+        })))
+        {
+            var overlongRepository = new string('a', 101) + "/Repo";
+            await ThrowsAsync<ArgumentException>(() =>
+                new GitHubActionsRunClient(client).GetRunAsync(overlongRepository, 42));
+            Assert(!overlongRepositoryWasSent, "overlong repository component must be rejected before HTTP");
+        }
+
         using (var client = new HttpClient(new StubHandler((_, _) =>
             Task.FromResult(JsonResponse(successfulRun.Replace("\"html_url\": \"https://github.com/TrentBest/SimpleDemos/actions/runs/42\"", "\"html_url\": \"not-a-url\""))))))
         {
@@ -125,7 +138,7 @@ internal static class GitHubActionsRunClientTests
                 new GitHubActionsRunClient(client).GetRunAsync("TrentBest/SimpleDemos", 42));
         }
 
-        Console.WriteLine("PASS: 12 GitHub Actions client integration checks.");
+        Console.WriteLine("PASS: 13 GitHub Actions client integration checks.");
     }
 
     private static HttpResponseMessage JsonResponse(string json) => new(HttpStatusCode.OK)
