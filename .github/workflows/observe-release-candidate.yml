@@ -12,7 +12,6 @@ on:
         description: Exact full 40-character candidate commit SHA
         required: true
         type: string
-        default: 67929891e141598ca5c7f17afeb2feb60612e18c
 
 permissions:
   contents: read
