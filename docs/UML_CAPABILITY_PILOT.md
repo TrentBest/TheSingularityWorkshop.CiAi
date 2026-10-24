@@ -186,3 +186,12 @@ The copy/paste CI entry should be thin and pinned to an immutable release or com
 - **Fail closed on invalid composition.** Unknown capability IDs/versions, missing required settings, unauthorized endpoints, invalid output schemas, or conflicting output ownership produce actionable diagnostics rather than silently changing behavior.
 
 This changes the acceptance test from “the generator can produce use cases” to two separate proofs: (1) structural-only configuration generates valid structural UML without AI dependencies; (2) adding the optional use-case configuration makes the next CI run generate bounded, provenance-bearing use-case proposals while leaving structural and authored outputs intact.
+
+
+## Implementation handoff and current blocker
+
+The first cross-repository implementation task is tracked in [GUI issue #46: Expose source-derived UML as a consumer-configurable capability](https://github.com/TrentBest/TheSingularityWorkshop.GUI/issues/46). This is coordination only; the GUI source and workflows have not been changed by CiAi.
+
+The current GUI workflow invokes `samples/SourceUmlGenerator` with GUI-owned project paths and project references to GUI Core and GUI.SVG. It already supports project-semantic models and provenance, but it is not yet a generic external-consumer entry point. The correct next step is to extract or expose the smallest renderer-neutral structural capability and prove it against a non-GUI project. Do not copy the GUI generator into CiAi, and do not advertise the proposed YAML as executable until that proof and a pinned reusable entry point exist.
+
+The first proof should use pinned CogA source and a pinned generator revision. It must produce a deterministic structural artifact and provenance manifest without invoking an LLM. AI semantic enrichment should be added only as a separate, optional stage after the structural boundary is stable. If the generator cannot yet accept an external project without GUI references, record that as the blocker rather than faking a successful CogA generation.
