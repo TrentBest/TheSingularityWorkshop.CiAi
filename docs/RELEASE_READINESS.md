@@ -26,7 +26,7 @@
 - Unknown future provider conclusions remain explicitly unknown and cannot be successful.
 - Offline contract tests and a console observation sample.
 - Typed `ArtifactManifest`, `ArtifactReadyNotice`, and `ArtifactReceiptAcknowledgement` contracts; validate request/artifact correlation fields, SHA-256 digest shape, HTTPS retrieval URI shape, recipient binding, contract version, expiry, and acknowledgement state consistency.
-- Ten additional offline handoff-contract checks. The console contract suite now has 24 main contract checks plus 13 read-only GitHub client checks; CI is the execution authority for this count on the candidate SHA.
+- Fourteen additional offline handoff-contract checks, including exact receipt-to-manifest reconciliation and mismatch rejection. The console contract suite now has 28 main contract checks plus 13 read-only GitHub client checks; CI is the execution authority for this count on the candidate SHA.
 - Source companion docs and UML/use-case diagram for the three handoff contracts.
 - MIT license, package metadata, embedded README, symbol-package settings, pinned GitHub Actions workflow.
 - CI builds, runs offline contract checks, packs the NuGet candidate, and validates the packed artifact.
