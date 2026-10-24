@@ -41,16 +41,18 @@ try
     var runCollector = new GitHubActionsWorkflowRunCollector(httpClient, token);
     var jobCollector = new GitHubActionsWorkflowJobCollector(httpClient, token);
     var runCollection = await runCollector.GetRunsForCommitAsync(
-        repository, headSha, maxPages: 10, perPage: 100, CancellationToken.None);
+        repository, headSha, maxPages: 10, perPage: 100, cancellationToken: CancellationToken.None);
 
     var observedRuns = new List<object>();
+    var allJobsComplete = true;
     foreach (var observation in runCollection.Runs)
     {
         // Each job query is tied to the exact attempt reported for this run; retries are not blended.
         var jobs = await jobCollector.GetJobsForAttemptAsync(
             repository, observation.Run.RunId, observation.RunAttempt,
-            maxPages: 10, perPage: 100, CancellationToken.None);
+            maxPages: 10, perPage: 100, cancellationToken: CancellationToken.None);
 
+        allJobsComplete &= !jobs.IsTruncated;
         observedRuns.Add(new
         {
             run = new
@@ -96,7 +98,7 @@ try
 
     var report = new
     {
-        schema = "c iai.commit-observation.v1".Replace(" ", ""),
+        schema = "ciai.commit-observation.v1",
         reportType = "read-only-workflow-observation",
         repository,
         headSha,
@@ -108,8 +110,7 @@ try
             runCollection.IsTruncated,
             returnedRuns = runCollection.Runs.Count
         },
-        complete = !runCollection.IsTruncated && observedRuns.All(item =>
-            !(bool)item.GetType().GetProperty("jobsTruncated")!.GetValue(item)!),
+        complete = !runCollection.IsTruncated && allJobsComplete,
         note = "Observation only: this report does not certify release readiness, inspect package contents, interpret security findings, or authorize publication.",
         runs = observedRuns
     };
