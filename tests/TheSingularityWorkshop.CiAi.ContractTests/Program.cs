@@ -322,6 +322,8 @@ Check("retrieval destination policy rejects expired artifacts and IP literals", 
         DateTimeOffset.Parse("2026-10-24T01:00:00Z")).Contains("retrieval.expired"), "expired artifact was accepted");
     Assert(policy.Validate(new Uri("https://127.0.0.1/a"), DateTimeOffset.Parse("2026-10-24T00:30:00Z"),
         DateTimeOffset.Parse("2026-10-24T01:00:00Z")).Contains("retrieval.ip-literal-rejected"), "IP literal was accepted");
+    Assert(policy.Validate(new Uri("https://provider.example./a"), DateTimeOffset.Parse("2026-10-24T00:30:00Z"),
+        DateTimeOffset.Parse("2026-10-24T01:00:00Z")).Contains("retrieval.host-not-allowed"), "trailing-dot hostname bypassed allowlist");
 });
 
 Console.WriteLine($"PASS: {passed} CiAi contract checks.");
