@@ -1,8 +1,10 @@
 name: Serialization Development Benchmark Dispatch
 
 on:
+  # GitHub-hosted scheduled workflows have a five-minute minimum cadence.
+  # The repository variable below gates actual polling to a slower configurable interval.
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -16,7 +18,42 @@ jobs:
   dispatch:
     runs-on: ubuntu-latest
     steps:
+      - name: Apply configurable polling cadence
+        id: cadence
+        shell: bash
+        env:
+          POLL_MINUTES: ${{ vars.SERIALIZATION_BENCHMARK_POLL_MINUTES || '15' }}
+          TRIGGER: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          interval="$POLL_MINUTES"
+          case "$interval" in
+            5|10|15|20|30|60) ;;
+            *)
+              echo "::error::SERIALIZATION_BENCHMARK_POLL_MINUTES must be one of 5, 10, 15, 20, 30, or 60 (got '$interval')."
+              exit 1
+              ;;
+          esac
+
+          # Manual runs are an explicit request and always bypass the schedule gate.
+          if [[ "$TRIGGER" == "workflow_dispatch" ]]; then
+            echo "Manual run requested; bypassing the $interval-minute schedule gate."
+            echo "run_poll=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          minute="$(date -u +%M)"
+          minute_number=$((10#$minute))
+          if (( minute_number % interval == 0 )); then
+            echo "Polling on the configured $interval-minute cadence (UTC minute $minute)."
+            echo "run_poll=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Scheduled tick at UTC minute $minute; configured interval is $interval minutes. Skipping this tick."
+            echo "run_poll=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Resolve latest successful build for the current development commit
+        if: steps.cadence.outputs.run_poll == 'true'
         id: source
         shell: bash
         env:
@@ -85,7 +122,14 @@ jobs:
           fi
 
           notice_id="trentbest/fsm_serialization@${SOURCE_SHA,,}"
-          payload="$(jq -n             --arg noticeId "$notice_id"             --arg sha "$SOURCE_SHA"             --arg runId "$SOURCE_RUN_ID"             --arg workflowName "$SOURCE_WORKFLOW_NAME"             --arg workflowUrl "$SOURCE_WORKFLOW_URL"             --arg completedAt "$SOURCE_COMPLETED_AT"             '{
+          payload="$(jq -n \
+            --arg noticeId "$notice_id" \
+            --arg sha "$SOURCE_SHA" \
+            --arg runId "$SOURCE_RUN_ID" \
+            --arg workflowName "$SOURCE_WORKFLOW_NAME" \
+            --arg workflowUrl "$SOURCE_WORKFLOW_URL" \
+            --arg completedAt "$SOURCE_COMPLETED_AT" \
+            '{
               event_type: "serialization-development-changed",
               client_payload: {
                 schema: "ciai.benchmark-build-notice.v1",
@@ -101,7 +145,14 @@ jobs:
               }
             }')"
 
-          status="$(curl --silent --show-error --output response.json --write-out '%{http_code}'             -X POST             -H "Accept: application/vnd.github+json"             -H "X-GitHub-Api-Version: 2022-11-28"             -H "Authorization: Bearer $DISPATCH_TOKEN"             -H "Content-Type: application/json"             --data "$payload"             "https://api.github.com/repos/TrentBest/FSM_Serialization_Benchmarks/dispatches")"
+          status="$(curl --silent --show-error --output response.json --write-out '%{http_code}' \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "Authorization: Bearer $DISPATCH_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data "$payload" \
+            "https://api.github.com/repos/TrentBest/FSM_Serialization_Benchmarks/dispatches")"
           if [[ "$status" != "204" ]]; then
             echo "::error::Benchmark dispatch failed with HTTP $status."
             cat response.json
@@ -109,7 +160,9 @@ jobs:
           fi
 
           mkdir -p .ciai-dispatch-ledger
-          printf 'noticeId=%s\nsourceSha=%s\nsourceRunId=%s\ndispatchedAtUtc=%s\n'             "$notice_id" "$SOURCE_SHA" "$SOURCE_RUN_ID" "$(date -u +%FT%TZ)"             > .ciai-dispatch-ledger/dispatched.txt
+          printf 'noticeId=%s\nsourceSha=%s\nsourceRunId=%s\ndispatchedAtUtc=%s\n' \
+            "$notice_id" "$SOURCE_SHA" "$SOURCE_RUN_ID" "$(date -u +%FT%TZ)" \
+            > .ciai-dispatch-ledger/dispatched.txt
           echo "Accepted benchmark dispatch for $notice_id"
 
       - name: Persist idempotency marker after accepted dispatch
