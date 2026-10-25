@@ -30,6 +30,7 @@ on:
       - ".config/**"
       - ".github/workflows/ci.yml"
       - ".github/workflows/observe-release-candidate.yml"
+      - ".github/workflows/serialization-benchmark-dispatch.yml"
   workflow_dispatch:
 
 permissions:
