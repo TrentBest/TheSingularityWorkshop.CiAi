@@ -76,6 +76,110 @@ internal static class CiPipelineDefinitionContractTests
             Throws<InvalidOperationException>(() => builder.Build());
         });
 
+
+
+        Check("executor runs safe steps in order and records outcomes", () =>
+        {
+            var order = new List<int>();
+            var definition = new CiPipelineBuilder("TrentBest/TheSingularityWorkshop.CiAi")
+                .On(CiPipelineTrigger.Manual)
+                .Add<bool>("first", () => { order.Add(1); return true; })
+                .Add<string>("second", () => { order.Add(2); return "ok"; })
+                .Build();
+            var report = new CiPipelineExecutor().ExecuteAsync(definition,
+                "abcdef0123456789abcdef0123456789abcdef01", "plan-1").GetAwaiter().GetResult();
+            Assert(order.SequenceEqual(new[] { 1, 2 }), "executor did not preserve recipe order");
+            Assert(report.IsSuccessful && report.Steps.Count == 2, "successful steps were not reported");
+        });
+
+        Check("executor stops after false and skips later work", () =>
+        {
+            var laterCalled = false;
+            var definition = new CiPipelineBuilder("TrentBest/TheSingularityWorkshop.CiAi")
+                .On(CiPipelineTrigger.Manual)
+                .Add<bool>("fail", () => false)
+                .Add<bool>("later", () => { laterCalled = true; return true; })
+                .Build();
+            var report = new CiPipelineExecutor().ExecuteAsync(definition,
+                "abcdef0123456789abcdef0123456789abcdef01", "plan-2").GetAwaiter().GetResult();
+            Assert(!report.IsSuccessful && !laterCalled, "executor continued after a failed step");
+            Assert(report.Steps[0].Outcome == CiStepOutcome.Failed && report.Steps[1].Outcome == CiStepOutcome.Skipped,
+                "failure/skip states were not distinct");
+        });
+
+        Check("executor captures exceptions and blocks subsequent work", () =>
+        {
+            var laterCalled = false;
+            var definition = new CiPipelineBuilder("TrentBest/TheSingularityWorkshop.CiAi")
+                .On(CiPipelineTrigger.Manual)
+                .Add<bool>("throws", () => throw new InvalidOperationException("expected failure"))
+                .Add<bool>("later", () => { laterCalled = true; return true; })
+                .Build();
+            var report = new CiPipelineExecutor().ExecuteAsync(definition,
+                "abcdef0123456789abcdef0123456789abcdef01", "plan-3").GetAwaiter().GetResult();
+            Assert(!report.IsSuccessful && !laterCalled, "executor continued after an exception");
+            Assert(report.Steps[0].Diagnostic!.Contains("expected failure", StringComparison.Ordinal),
+                "exception diagnostic was not retained");
+        });
+
+        Check("executor refuses privileged steps even when definition declares approval", () =>
+        {
+            var called = false;
+            var definition = new CiPipelineBuilder("TrentBest/TheSingularityWorkshop.CiAi")
+                .On(CiPipelineTrigger.Manual)
+                .Add<bool>("publish", () => { called = true; return true; },
+                    capability: CiStepCapability.PublishPackage, requiresApproval: true)
+                .Add<bool>("later", () => true)
+                .Build();
+            var report = new CiPipelineExecutor().ExecuteAsync(definition,
+                "abcdef0123456789abcdef0123456789abcdef01", "plan-4").GetAwaiter().GetResult();
+            Assert(!called && report.Steps[0].Outcome == CiStepOutcome.Blocked,
+                "privileged delegate ran without the dedicated authorization protocol");
+            Assert(report.Steps[1].Outcome == CiStepOutcome.Skipped, "work continued after a privileged step was blocked");
+        });
+
+        Check("required evidence evaluator passes only exact identity and passing state", () =>
+        {
+            var sha = "abcdef0123456789abcdef0123456789abcdef01";
+            var result = CiRequiredEvidenceEvaluator.Evaluate("TrentBest/SimpleDemos", sha,
+                new[] { new CiRequiredEvidence("build"), new CiRequiredEvidence("security") },
+                new[] {
+                    new CiEvidenceFact("build", ReleaseEvidenceState.Passed, "TrentBest/SimpleDemos", sha),
+                    new CiEvidenceFact("security", ReleaseEvidenceState.Passed, "TrentBest/SimpleDemos", sha)
+                });
+            Assert(result.IsPassing, "complete exact passing evidence was rejected");
+        });
+
+        Check("required evidence evaluator fails closed on missing, failed and mismatched evidence", () =>
+        {
+            var sha = "abcdef0123456789abcdef0123456789abcdef01";
+            var result = CiRequiredEvidenceEvaluator.Evaluate("TrentBest/SimpleDemos", sha,
+                new[] { new CiRequiredEvidence("build"), new CiRequiredEvidence("security"), new CiRequiredEvidence("test") },
+                new[] {
+                    new CiEvidenceFact("build", ReleaseEvidenceState.Passed, "TrentBest/SimpleDemos", sha),
+                    new CiEvidenceFact("security", ReleaseEvidenceState.Failed, "TrentBest/SimpleDemos", sha),
+                    new CiEvidenceFact("test", ReleaseEvidenceState.Passed, "TrentBest/Other", sha)
+                });
+            Assert(!result.IsPassing && result.Errors.Count == 2, "missing/failed/mismatched evidence was not rejected");
+        });
+
+        Check("authorization is bound to candidate and plan and expires", () =>
+        {
+            var now = DateTimeOffset.Parse("2026-10-25T12:00:00Z");
+            var auth = new CiActionAuthorization("TrentBest/SimpleDemos",
+                "abcdef0123456789abcdef0123456789abcdef01", "Demo.Package", "1.2.3",
+                new string('a', 64), "plan-5", "owner", now.AddMinutes(-1), now.AddMinutes(5));
+            Assert(auth.Validate("TrentBest/SimpleDemos", "abcdef0123456789abcdef0123456789abcdef01",
+                "Demo.Package", "1.2.3", new string('a', 64), "plan-5", now).Count == 0,
+                "valid candidate-bound authorization rejected");
+            Assert(auth.Validate("TrentBest/SimpleDemos", "abcdef0123456789abcdef0123456789abcdef01",
+                "Demo.Package", "1.2.4", new string('a', 64), "plan-5", now).Contains("authorization.package-version-mismatch"),
+                "authorization was replayable for a different package version");
+            Assert(auth.Validate("TrentBest/SimpleDemos", "abcdef0123456789abcdef0123456789abcdef01",
+                "Demo.Package", "1.2.3", new string('a', 64), "plan-5", now.AddMinutes(6)).Count > 0,
+                "expired authorization was accepted");
+        });
+
         return passed;
 
         void Check(string name, Action action)
