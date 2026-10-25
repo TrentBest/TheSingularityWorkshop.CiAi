@@ -54,7 +54,7 @@ The current client validates the returned repository and run ID, maps unknown pr
 
 ## 04 — Source-derived contract documentation
 
-- [Declarative CI builder and publication-authorization design proposal](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/CI_BUILDER_DESIGN.md) — proposed recipe-style pipeline API, typed step outcomes, evidence evaluation, explicit owner approval, and a staged route toward opt-in NuGet publishing. This is a design proposal, not an implemented API.
+- [Declarative CI builder and publication-authorization design](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/CI_BUILDER_DESIGN.md) — recipe-style pipeline direction. The initial definition-only builder now exists on `development`; execution, evidence evaluation, and publication remain unimplemented.
 
 - [UML capability feasibility pilot](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/UML_CAPABILITY_PILOT.md)
 
