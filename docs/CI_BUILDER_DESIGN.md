@@ -39,6 +39,10 @@ A repository-specific operation should also be possible:
 
 The fluent example above remains the target API. The initial implemented slice is intentionally smaller: `new CiPipelineBuilder(repository).On(trigger).Add<T>(...).Build()`. It provides typed step metadata and deterministic recipe text, but not the polished trigger-scoped chaining API yet. The key is that the recipe reads like the work the repository intends to perform, not like a list of incidental runner commands.
 
+## User workflows and vocabulary
+
+Before expanding the API, see [CI User Workflows and Fluent Vocabulary](CI_USER_WORKFLOWS.md). It starts from the actual jobs developers ask CI to perform and separates triggers, work, control flow, evidence, policy evaluation, authorization, and execution. Its examples are target syntax, not claims about implemented methods.
+
 ## Core concepts
 
 - **Pipeline definition:** immutable, inspectable description of triggers, ordered steps, dependencies, conditions, outputs, and policy requirements. Defining a pipeline must not execute it.
