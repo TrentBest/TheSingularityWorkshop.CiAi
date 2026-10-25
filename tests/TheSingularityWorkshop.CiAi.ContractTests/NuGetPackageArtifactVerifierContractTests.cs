@@ -40,6 +40,15 @@ internal static class NuGetPackageArtifactVerifierContractTests
                 "outputs from a different version were incorrectly accepted");
         });
 
+        Check("NuGet artifact inventory recognizes outputs nested in retained artifact folders", () =>
+        {
+            var report = NuGetPackageArtifactVerifier.Verify(
+                "Example.Package", "1.2.3",
+                new[] { "artifacts/release/Example.Package.1.2.3.nupkg",
+                    "symbols/Example.Package.1.2.3.snupkg" });
+            Assert(report.IsComplete, "nested package outputs should be found by their exact filenames");
+        });
+
         Check("NuGet artifact inventory compares portable paths case-insensitively", () =>
         {
             var report = NuGetPackageArtifactVerifier.Verify(
