@@ -7,7 +7,7 @@ namespace TheSingularityWorkshop.CiAi;
 /// <summary>Minimal source-build identity sent to a benchmark harness after a verified successful build.</summary>
 public sealed record BenchmarkBuildNotice
 {
-    public const string DefaultEventType = "ciai-successful-source-build";
+    public const string DefaultEventType = "serialization-development-changed";
 
     public BenchmarkBuildNotice(CiRunSnapshot sourceRun, string benchmarkRepository)
     {
@@ -79,6 +79,9 @@ public sealed class GitHubActionsBenchmarkDispatchClient
                 noticeId = notice.NoticeId,
                 sourceRepository = notice.SourceRepository,
                 sourceCommitSha = notice.SourceCommitSha,
+                // Compatibility aliases consumed by the Serialization benchmark workflow.
+                source_sha = notice.SourceCommitSha,
+                source_ref = "development",
                 sourceWorkflowRunId = notice.SourceWorkflowRunId,
                 sourceWorkflowName = notice.SourceWorkflowName,
                 sourceWorkflowUrl = notice.SourceWorkflowUrl.AbsoluteUri,
