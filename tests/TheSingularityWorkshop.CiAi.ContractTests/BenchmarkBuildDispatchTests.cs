@@ -24,7 +24,7 @@ internal static class BenchmarkBuildDispatchTests
         {
             Throws<ArgumentException>(() => new BenchmarkBuildNotice(NewRun(), "TrentBest/SimpleDemos"));
         });
-        Check("dispatch sends exact source identity to the benchmark repository", async () =>
+        CheckAsync("dispatch sends exact source identity to the benchmark repository", async () =>
         {
             var handler = new RecordingHandler();
             using var http = new HttpClient(handler);
@@ -43,7 +43,7 @@ internal static class BenchmarkBuildDispatchTests
             Assert(clientPayload.GetProperty("sourceWorkflowRunId").GetInt64() == notice.SourceWorkflowRunId, "source run ID mismatch");
             Assert(clientPayload.GetProperty("noticeId").GetString() == notice.NoticeId, "stable notice ID mismatch");
         });
-        Check("dispatch propagates target permission or delivery failure", async () =>
+        CheckAsync("dispatch propagates target permission or delivery failure", async () =>
         {
             var handler = new RecordingHandler(HttpStatusCode.Forbidden);
             using var http = new HttpClient(handler);
@@ -59,7 +59,7 @@ internal static class BenchmarkBuildDispatchTests
             passed++;
             Console.WriteLine($"PASS {name}");
         }
-        void Check(string name, Func<Task> action)
+        void CheckAsync(string name, Func<Task> action)
         {
             action().GetAwaiter().GetResult();
             passed++;
