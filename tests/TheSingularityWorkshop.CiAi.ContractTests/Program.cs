@@ -4,6 +4,7 @@ using TheSingularityWorkshop.CiAi;
 var passed = 0;
 passed += CiPipelineDefinitionContractTests.Run();
 passed += BenchmarkBuildDispatchTests.Run();
+passed += SuccessfulBuildBenchmarkCoordinatorTests.Run();
 passed += NuGetPackageArtifactVerifierContractTests.Run();
 Check("valid completed success is authoritative", () =>
 {
