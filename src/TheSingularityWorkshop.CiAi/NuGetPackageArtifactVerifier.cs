@@ -42,7 +42,7 @@ public static class NuGetPackageArtifactVerifier
     {
         if (value is "." or ".." ||
             value.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
-            value.Contains('/') || value.Contains('\\') ||
+            value.Contains('/') || value.Contains('\\') || value.Contains(':') ||
             value.Any(char.IsControl))
         {
             throw new ArgumentException("Value must be a single safe filename segment.", parameterName);
@@ -53,7 +53,7 @@ public static class NuGetPackageArtifactVerifier
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         var normalized = path.Replace('\\', '/');
-        if (normalized.StartsWith('/', StringComparison.Ordinal) ||
+        if (normalized.StartsWith("/", StringComparison.Ordinal) ||
             (normalized.Length >= 2 && char.IsLetter(normalized[0]) && normalized[1] == ':'))
             throw new ArgumentException("Artifact paths must be relative.", nameof(path));
 
