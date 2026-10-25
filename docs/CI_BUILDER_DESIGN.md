@@ -1,6 +1,6 @@
 # CiAi Declarative Pipeline Builder — Design Proposal
 
-**Status:** Proposed architecture; not implemented in the current alpha package.  
+**Status:** Phase 1 definition-model slice committed on `development`; no executor, evidence evaluator, or publishing adapter is implemented. The broader architecture remains a proposal.  
 **Purpose:** Make CI definitions readable as repository-owned recipes, while keeping execution, provider evidence, and release authorization distinct.
 
 ## Design goal
@@ -37,7 +37,7 @@ A repository-specific operation should also be possible:
 
     pipeline.Add<bool>("Publish NuGet", () => PublishToNuget());
 
-The exact method names and chaining mechanics need API review before implementation. The key is that the recipe reads like the work the repository intends to perform, not like a list of incidental runner commands.
+The fluent example above remains the target API. The initial implemented slice is intentionally smaller: `new CiPipelineBuilder(repository).On(trigger).Add<T>(...).Build()`. It provides typed step metadata and deterministic recipe text, but not the polished trigger-scoped chaining API yet. The key is that the recipe reads like the work the repository intends to perform, not like a list of incidental runner commands.
 
 ## Core concepts
 
@@ -101,10 +101,16 @@ A green observation is evidence for evaluation, not authorization. A passing eva
 
 ### Phase 1 — declarative model, no execution
 
-- Add immutable pipeline/trigger/step/condition/policy models.
-- Add a builder that emits a normalized, deterministic definition.
-- Add validation for duplicate step IDs, missing dependencies, cycles, ambiguous triggers, and privileged steps without policy gates.
-- Render the recipe as readable Markdown and a stable machine-readable representation.
+Initial slice committed on `development`:
+
+- Immutable pipeline definition, trigger list, typed step result metadata, capability marker, and explicit approval-required flag.
+- Builder with `On(...)`, generic `Add<T>(...)`, duplicate-ID rejection, and a single-use `Build()` boundary.
+- Deterministic human-readable recipe rendering.
+- Fail-closed builder validation for privileged capabilities without an approval requirement.
+- Contract tests for delegate non-invocation, stable rendering and order, duplicate IDs, visible approval metadata, and builder lifecycle.
+
+Still outstanding in Phase 1: trigger-scoped fluent recipe ergonomics, dependency/condition models and validation, normalized machine-readable output, and broader edge-case coverage. The initial slice has been committed remotely but has not yet been confirmed by a successful CI run.
+
 - Test that definition and rendering never invoke delegates or access secrets.
 
 ### Phase 2 — deterministic in-process execution for safe steps
