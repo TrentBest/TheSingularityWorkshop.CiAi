@@ -192,8 +192,8 @@ public sealed class CiPipelineExecutor
             }
             catch (Exception exception)
             {
-                var cause = exception is System.Reflection.TargetInvocationException { InnerException: not null } tie
-                    ? tie.InnerException : exception;
+                var cause = exception is System.Reflection.TargetInvocationException tie
+                    ? tie.InnerException ?? exception : exception;
                 var diagnostic = cause.GetType().Name + ": " + cause.Message;
                 if (diagnostic.Length > MaxDiagnosticLength) diagnostic = diagnostic[..MaxDiagnosticLength];
                 records.Add(new(step.Id, step.Name, CiStepOutcome.Failed, stepStarted, DateTimeOffset.UtcNow, diagnostic));
