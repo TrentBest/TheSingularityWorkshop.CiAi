@@ -11,6 +11,12 @@
 - External dependencies in the core library: none
 - Release branch: `development`; the release candidate must be reviewed before any merge or publication.
 
+## Next design direction — recipe-style CI and governed publication
+
+The [declarative CI builder design](CI_BUILDER_DESIGN.md) captures the next capability direction: repository-owned, readable pipeline recipes; typed step outcomes; explicit trigger/condition semantics; mapping observed evidence to declared checks; and a separate, candidate-bound owner approval gate for privileged actions such as NuGet publication. This is a proposal, not implemented functionality, and does not change the current package's read-only scope or readiness estimate.
+
+The intended progression is definition-only models and deterministic recipe rendering first, safe execution semantics second, evidence evaluation third, and a separately reviewed opt-in publishing adapter last. A green Observer report, passing evaluation, or custom step returning true must never substitute for owner authorization.
+
 ## Implemented
 
 - Typed, provider-neutral `CiRunSnapshot` and finite status/conclusion vocabulary.
