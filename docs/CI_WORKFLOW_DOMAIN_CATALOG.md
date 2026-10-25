@@ -6,6 +6,8 @@
 
 ## Why this document exists
 
+This catalog is paired with the [CiAi Product Assessment](CI_PRODUCT_ASSESSMENT.md), which records the complexity-first design method, prioritization rationale, sampling protocol, evidence standards, and open decisions. The catalog organizes the candidate workflow domain; the assessment explains why we are targeting it and how we will validate those choices.
+
 CiAi should be designed from the workflows teams actually need to express and govern—not from a list of YAML keywords. The product opportunity is to make complicated delivery systems easier to understand, compose, validate, audit, and safely operate.
 
 The core product question for each workflow family is:
