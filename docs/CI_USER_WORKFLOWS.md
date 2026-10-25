@@ -61,6 +61,16 @@ CiAi.Create("owner/repository")
 
 **Important semantics:** Artifact identity, digest, source commit, and provenance travel with the artifact. A later stage must not silently rebuild different bits and call them the same candidate.
 
+### 5.1 Verify the complete package output set
+
+**What users say:** “When we pack a NuGet release, confirm that both the package and symbol package for this exact ID and version are present in the artifact we retained.”
+
+**Vocabulary:** `ExpectNuGetPackage`, `VerifyArtifactInventory`, `RequireFiles`, `ReportMissingArtifacts`.
+
+**Important semantics:** A successful `dotnet pack` step is not proof that every expected output was uploaded or retained. For a symbol-enabled NuGet candidate, inventory verification should require both `.nupkg` and `.snupkg` for the exact package ID/version. This is a name-and-presence check only; it does not replace package-content inspection, PDB verification, source-SHA correlation, or artifact digest verification.
+
+The first implementation slice is `NuGetPackageArtifactVerifier.Verify(packageId, version, observedRelativePaths)`. It returns a deterministic report and fails completeness when either exact-version output is absent. It does not download artifacts, inspect archives, or publish packages.
+
 ### 5. Prepare a release candidate
 
 **What users say:** “For a release tag, run the checks, create the package, inspect the package metadata, and produce a candidate report.”
