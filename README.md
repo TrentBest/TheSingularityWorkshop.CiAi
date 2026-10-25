@@ -16,6 +16,14 @@ dotnet run --project samples/TheSingularityWorkshop.CiAi.ObserveRun -- TrentBest
 
 Replace the example with a run ID that exists in the target repository. Public repositories can be queried without a token; set `CIAI_GITHUB_TOKEN` only when the target requires authentication. The client performs GET only.
 
+Observe every matching workflow run, its exact attempt, jobs, and steps for one full commit SHA, then write JSON and Markdown evidence summaries:
+
+```bash
+dotnet run --project samples/TheSingularityWorkshop.CiAi.ObserveRun -- TrentBest/TheSingularityWorkshop.CiAi <full-40-character-commit-sha> artifacts/commit-observation.json
+```
+
+Use a real 40-character SHA in place of the placeholder. The observer uses bounded pagination and exits non-zero when discovery or job evidence is incomplete. Its report is a raw, read-only observation—not a release verdict or publication approval.
+
 Run offline contract checks and pack the library:
 
 ```bash
