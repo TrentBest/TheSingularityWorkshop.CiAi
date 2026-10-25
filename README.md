@@ -80,7 +80,20 @@ The current client validates the returned repository and run ID, maps unknown pr
 - [Pinned cross-Cog vertical contract proof](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/integration/CogEcosystem.ContractTests/README.md)
 - [Cross-Cog integration workflow](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/workflows/cog-ecosystem.yml)
 
-## 05 — Release status
+## 05 — Automated serialization benchmark handoff
+
+The `.github/workflows/serialization-benchmark-dispatch.yml` watcher polls the `FSM_Serialization/development` branch for a successful build of the exact current commit, then dispatches a benchmark notice. It does not publish a package.
+
+- GitHub scheduled workflows have a five-minute minimum cadence; the workflow wakes every five minutes and gates actual polling with the repository Actions variable `SERIALIZATION_BENCHMARK_POLL_MINUTES`.
+- Supported values are `5`, `10`, `15`, `20`, `30`, or `60`. If unset, the default is `15` minutes for current testing.
+- Change it under **Settings → Secrets and variables → Actions → Variables**. The interval is configurable without editing workflow code.
+- **Run workflow** manually bypasses the schedule gate and polls immediately.
+- The repository secret `BENCHMARK_DISPATCH_TOKEN` must authorize repository dispatches to `TrentBest/FSM_Serialization_Benchmarks` (Contents: write).
+- The source SHA is carried as a stable `noticeId`; the receiving workflow should deduplicate that ID because the sender's Actions cache marker is a best-effort duplicate guard, not a transactional exactly-once guarantee.
+
+The polling cadence is an operational setting, not a benchmark definition or a release authorization.
+
+## 06 — Release status
 
 **Implementation readiness: 42%. Package preparation: 70%. Candidate: 0.1.0-alpha.1.**
 
