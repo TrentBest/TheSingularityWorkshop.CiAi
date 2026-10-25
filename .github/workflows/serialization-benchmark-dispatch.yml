@@ -1,0 +1,120 @@
+name: Serialization Development Benchmark Dispatch
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: serialization-benchmark-dispatch
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve latest successful build for the current development commit
+        id: source
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          api="https://api.github.com"
+          headers=(-H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" -H "Authorization: Bearer ${GH_TOKEN}")
+          branch_json="$(curl --fail-with-body --silent --show-error "${headers[@]}" "$api/repos/TrentBest/FSM_Serialization/branches/development")"
+          sha="$(jq -r '.commit.sha // empty' <<< "$branch_json")"
+          if [[ ! "$sha" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "::error::Could not resolve a full development commit SHA from FSM_Serialization."
+            exit 1
+          fi
+
+          runs_json="$(curl --fail-with-body --silent --show-error "${headers[@]}" "$api/repos/TrentBest/FSM_Serialization/actions/workflows/build.yml/runs?branch=development&status=success&per_page=50")"
+          run="$(jq -c --arg sha "$sha" '
+            [.workflow_runs[]
+              | select(.status == "completed" and .conclusion == "success")
+              | select(.head_branch == "development" and (.head_sha | ascii_downcase) == ($sha | ascii_downcase))
+              | select(.event != "pull_request")]
+            | first // empty
+          ' <<< "$runs_json")"
+
+          if [[ -z "$run" ]]; then
+            echo "No successful completed Serialization development build exists for current commit $sha yet; nothing to dispatch."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "run_id=$(jq -r '.id' <<< "$run")" >> "$GITHUB_OUTPUT"
+          echo "workflow_name=$(jq -r '.name // .path // "Build and Test"' <<< "$run")" >> "$GITHUB_OUTPUT"
+          echo "workflow_url=$(jq -r '.html_url' <<< "$run")" >> "$GITHUB_OUTPUT"
+          echo "completed_at=$(jq -r '.updated_at' <<< "$run")" >> "$GITHUB_OUTPUT"
+          echo "Resolved successful build: $sha (run $(jq -r '.id' <<< "$run"))"
+
+      - name: Restore idempotency marker for this source commit
+        if: steps.source.outputs.ready == 'true'
+        id: dispatch-cache
+        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684
+        with:
+          path: .ciai-dispatch-ledger
+          key: serialization-benchmark-dispatched-${{ steps.source.outputs.sha }}
+
+      - name: Skip already dispatched source commit
+        if: steps.source.outputs.ready == 'true' && steps.dispatch-cache.outputs.cache-hit == 'true'
+        run: echo "Source commit ${{ steps.source.outputs.sha }} already has a dispatch marker; duplicate dispatch suppressed."
+
+      - name: Dispatch benchmark request
+        if: steps.source.outputs.ready == 'true' && steps.dispatch-cache.outputs.cache-hit != 'true'
+        shell: bash
+        env:
+          DISPATCH_TOKEN: ${{ secrets.BENCHMARK_DISPATCH_TOKEN }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          SOURCE_RUN_ID: ${{ steps.source.outputs.run_id }}
+          SOURCE_WORKFLOW_NAME: ${{ steps.source.outputs.workflow_name }}
+          SOURCE_WORKFLOW_URL: ${{ steps.source.outputs.workflow_url }}
+          SOURCE_COMPLETED_AT: ${{ steps.source.outputs.completed_at }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${DISPATCH_TOKEN:-}" ]]; then
+            echo "::error::Repository secret BENCHMARK_DISPATCH_TOKEN is required. It must be allowed to dispatch repository events in TrentBest/FSM_Serialization_Benchmarks (Contents: write)."
+            exit 1
+          fi
+
+          notice_id="trentbest/fsm_serialization@${SOURCE_SHA,,}"
+          payload="$(jq -n             --arg noticeId "$notice_id"             --arg sha "$SOURCE_SHA"             --arg runId "$SOURCE_RUN_ID"             --arg workflowName "$SOURCE_WORKFLOW_NAME"             --arg workflowUrl "$SOURCE_WORKFLOW_URL"             --arg completedAt "$SOURCE_COMPLETED_AT"             '{
+              event_type: "serialization-development-changed",
+              client_payload: {
+                schema: "ciai.benchmark-build-notice.v1",
+                noticeId: $noticeId,
+                sourceRepository: "TrentBest/FSM_Serialization",
+                sourceCommitSha: $sha,
+                source_sha: $sha,
+                source_ref: "development",
+                sourceWorkflowRunId: ($runId | tonumber),
+                sourceWorkflowName: $workflowName,
+                sourceWorkflowUrl: $workflowUrl,
+                sourceCompletedAtUtc: $completedAt
+              }
+            }')"
+
+          status="$(curl --silent --show-error --output response.json --write-out '%{http_code}'             -X POST             -H "Accept: application/vnd.github+json"             -H "X-GitHub-Api-Version: 2022-11-28"             -H "Authorization: Bearer $DISPATCH_TOKEN"             -H "Content-Type: application/json"             --data "$payload"             "https://api.github.com/repos/TrentBest/FSM_Serialization_Benchmarks/dispatches")"
+          if [[ "$status" != "204" ]]; then
+            echo "::error::Benchmark dispatch failed with HTTP $status."
+            cat response.json
+            exit 1
+          fi
+
+          mkdir -p .ciai-dispatch-ledger
+          printf 'noticeId=%s\nsourceSha=%s\nsourceRunId=%s\ndispatchedAtUtc=%s\n'             "$notice_id" "$SOURCE_SHA" "$SOURCE_RUN_ID" "$(date -u +%FT%TZ)"             > .ciai-dispatch-ledger/dispatched.txt
+          echo "Accepted benchmark dispatch for $notice_id"
+
+      - name: Persist idempotency marker after accepted dispatch
+        if: steps.source.outputs.ready == 'true' && steps.dispatch-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684
+        with:
+          path: .ciai-dispatch-ledger
+          key: serialization-benchmark-dispatched-${{ steps.source.outputs.sha }}
