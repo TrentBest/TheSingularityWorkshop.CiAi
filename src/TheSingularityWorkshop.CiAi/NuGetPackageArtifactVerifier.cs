@@ -31,8 +31,10 @@ public static class NuGetPackageArtifactVerifier
             $"{packageId}.{version}.snupkg"
         };
 
-        var observedSet = new HashSet<string>(observed, StringComparer.OrdinalIgnoreCase);
-        var missing = expected.Where(path => !observedSet.Contains(path)).ToArray();
+        var observedNames = new HashSet<string>(
+            observed.Select(path => path[(path.LastIndexOf('/') + 1)..]),
+            StringComparer.OrdinalIgnoreCase);
+        var missing = expected.Where(path => !observedNames.Contains(path)).ToArray();
         return new NuGetPackageArtifactReport(packageId, version, expected, observed, missing);
     }
 
