@@ -309,3 +309,7 @@ Every material conclusion should point to its supporting workflow sample, code/t
 **Related document:** [CI Workflow Domain Catalog](CI_WORKFLOW_DOMAIN_CATALOG.md)  
 **User-facing workflow guide:** [CI User Workflows](CI_USER_WORKFLOWS.md)  
 **Release status:** [Release Readiness](RELEASE_READINESS.md)
+
+## Source-level workflow audit
+
+The first four-workflow source audit is recorded in [CI_WORKFLOW_SAMPLE_AUDIT.md](CI_WORKFLOW_SAMPLE_AUDIT.md). It covers CiAi contract verification, release-candidate observation, pinned cross-repository contract testing, and the FSM_API build/package workflow. The sample is intentionally small and ecosystem-biased; it reveals design questions but is not statistical market evidence. Findings are based on YAML review only until referenced application code, scripts, settings, and runs are separately checked.
