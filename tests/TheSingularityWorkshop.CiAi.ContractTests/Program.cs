@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using TheSingularityWorkshop.CiAi;
 
 var passed = 0;
+passed += CiPipelineDefinitionContractTests.Run();
 Check("valid completed success is authoritative", () =>
 {
     var run = NewRun();
