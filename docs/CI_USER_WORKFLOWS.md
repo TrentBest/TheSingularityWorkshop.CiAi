@@ -2,6 +2,8 @@
 
 **Status:** Product and API discovery document. It describes real user intent and target vocabulary; it does not claim these capabilities are implemented in CiAi.
 
+For the broader complexity-ranked inventory—from governed releases and provenance to basic PR checks—see the [CI Workflow Domain Catalog](CI_WORKFLOW_DOMAIN_CATALOG.md).
+
 ## Purpose
 
 CiAi's fluent API should be designed from the work people actually ask CI to do. It should read like a repository's policy and workflow, not like a thin wrapper around shell commands or one provider's YAML syntax.
