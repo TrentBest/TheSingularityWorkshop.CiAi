@@ -98,7 +98,39 @@ internal static class GitHubActionsWorkflowRunCollectorTests
         await ThrowsAsync<ArgumentException>(() => new GitHubActionsWorkflowRunCollector(new HttpClient())
             .GetRunsForCommitAsync("TrentBest/SimpleDemos", "short"));
 
-        Console.WriteLine("PASS: 6 GitHub Actions workflow collector checks.");
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+        {
+            var pending = page.Replace("\\"status\\": \\"completed\\", \\"conclusion\\": \\"failure\\"",
+                "\\"status\\": \\"pending\\", \\"conclusion\\": null");
+            return Task.FromResult(JsonResponse(pending));
+        })))
+        {
+            var collection = await new GitHubActionsWorkflowRunCollector(client)
+                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha);
+            Assert(collection.Runs[0].Run.Status == CiRunStatus.Pending,
+                "pending provider status was not represented as nonterminal");
+            Assert(collection.Runs[0].ProviderStatus == "pending",
+                "raw pending provider status was not preserved");
+            Assert(collection.Runs[0].Run.Conclusion == CiRunConclusion.None,
+                "pending run must not be assigned a final conclusion");
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+        {
+            var unknown = page.Replace("\\"status\\": \\"completed\\", \\"conclusion\\": \\"failure\\"",
+                "\\"status\\": \\"future_provider_state\\", \\"conclusion\\": null");
+            return Task.FromResult(JsonResponse(unknown));
+        })))
+        {
+            var collection = await new GitHubActionsWorkflowRunCollector(client)
+                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha);
+            Assert(collection.Runs[0].Run.Status == CiRunStatus.Unknown,
+                "unknown provider status should remain explicit instead of crashing discovery");
+            Assert(collection.Runs[0].ProviderStatus == "future_provider_state",
+                "raw unknown provider status was not preserved for diagnosis");
+        }
+
+        Console.WriteLine("PASS: 8 GitHub Actions workflow collector checks.");
     }
 
     private static HttpResponseMessage JsonResponse(string json) => new(HttpStatusCode.OK)
