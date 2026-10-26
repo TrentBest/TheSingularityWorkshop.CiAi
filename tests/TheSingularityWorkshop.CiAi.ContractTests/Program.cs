@@ -4,6 +4,7 @@ using TheSingularityWorkshop.CiAi;
 var passed = 0;
 passed += CiPipelineDefinitionContractTests.Run();
 passed += CiWorkflowDomainCatalogContractTests.Run();
+passed += CiWorkflowDomainEvaluatorContractTests.Run();
 passed += BenchmarkBuildDispatchTests.Run();
 passed += SuccessfulBuildBenchmarkCoordinatorTests.Run();
 passed += NuGetPackageArtifactVerifierContractTests.Run();
