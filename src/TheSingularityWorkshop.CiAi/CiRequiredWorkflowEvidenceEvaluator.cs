@@ -14,7 +14,10 @@ public sealed record CiRequiredWorkflowResult(
     string WorkflowPath,
     string State,
     IReadOnlyList<long> MatchingRunIds,
-    string Reason);
+    string Reason,
+    bool EvidenceComplete,
+    bool Terminal,
+    bool Successful);
 
 /// <summary>
 /// Evaluates only explicitly required workflow paths. Unrelated runs remain diagnostic evidence
@@ -59,21 +62,21 @@ public static class CiRequiredWorkflowEvidenceEvaluator
                 (!expectedRunId.HasValue || run.RunId == expectedRunId.Value) &&
                 (!expectedAttempt.HasValue || run.RunAttempt == expectedAttempt.Value)).ToArray();
             if (matching.Length == 0)
-                return new CiRequiredWorkflowResult(path, "missing", Array.Empty<long>(), "No matching run was observed for this required workflow.");
+                return new CiRequiredWorkflowResult(selector, "missing", Array.Empty<long>(), "No matching run was observed for this required workflow.", false, false, false);
             if (matching.Length > 1)
-                return new CiRequiredWorkflowResult(path, "ambiguous", Array.AsReadOnly(matching.Select(run => run.RunId).Distinct().Order().ToArray()),
-                    "Multiple runs match this required workflow path; policy requires an unambiguous run identity.");
+                return new CiRequiredWorkflowResult(selector, "ambiguous", Array.AsReadOnly(matching.Select(run => run.RunId).Distinct().Order().ToArray()),
+                    "Multiple runs match this required workflow identity; policy requires an unambiguous run identity.", false, false, false);
             var run = matching[0];
             var ids = Array.AsReadOnly(new[] { run.RunId });
             if (run.RunAttempt <= 0)
-                return new CiRequiredWorkflowResult(path, "incomplete", ids, "Run attempt identity is invalid.");
+                return new CiRequiredWorkflowResult(selector, "incomplete", ids, "Run attempt identity is invalid.", false, false, false);
             if (run.Status != CiRunStatus.Completed)
-                return new CiRequiredWorkflowResult(path, "incomplete", ids, "Required workflow has not reached a recognized terminal status.");
+                return new CiRequiredWorkflowResult(selector, "incomplete", ids, "Required workflow has not reached a recognized terminal status.", false, false, false);
             if (run.Conclusion != CiRunConclusion.Success)
-                return new CiRequiredWorkflowResult(path, "failed", ids, "Required workflow did not conclude with success.");
+                return new CiRequiredWorkflowResult(selector, "failed", ids, "Required workflow did not conclude with success.", run.JobsComplete, true, false);
             if (!run.JobsComplete)
-                return new CiRequiredWorkflowResult(path, "incomplete", ids, "Required workflow job evidence is missing or truncated.");
-            return new CiRequiredWorkflowResult(path, "passed", ids, "Required workflow completed successfully with complete job evidence.");
+                return new CiRequiredWorkflowResult(selector, "incomplete", ids, "Required workflow job evidence is missing or truncated.", false, true, true);
+            return new CiRequiredWorkflowResult(selector, "passed", ids, "Required workflow completed successfully with complete job evidence.", true, true, true);
         }).ToArray());
     }
 
@@ -81,5 +84,5 @@ public static class CiRequiredWorkflowEvidenceEvaluator
         bool discoveryComplete,
         IEnumerable<CiRequiredWorkflowResult> results) =>
         discoveryComplete && results is not null &&
-        (results.Any()) && results.All(result => result.State == "passed");
+        (results.Any()) && results.All(result => result.EvidenceComplete && result.Terminal && result.Successful);
 }
