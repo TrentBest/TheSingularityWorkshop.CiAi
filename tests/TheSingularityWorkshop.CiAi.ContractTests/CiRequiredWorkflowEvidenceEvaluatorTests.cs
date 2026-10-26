@@ -14,6 +14,12 @@ internal static class CiRequiredWorkflowEvidenceEvaluatorTests
         Assert(CiRequiredWorkflowEvidenceEvaluator.IsPassing(true, results),
             "unrelated in-progress workflow must not block explicitly scoped required evidence");
 
+        results = CiRequiredWorkflowEvidenceEvaluator.Evaluate(new[] { build + "#12" },
+            new[] { pass, pass with { RunId = 12, Status = CiRunStatus.InProgress, Conclusion = CiRunConclusion.None } });
+        Assert(!CiRequiredWorkflowEvidenceEvaluator.IsPassing(true, results) &&
+            results.Single().State == "incomplete",
+            "an exact run-ID selector must evaluate that run, not a different successful run");
+
         results = CiRequiredWorkflowEvidenceEvaluator.Evaluate(new[] { build, benchmark }, new[] { pass });
         Assert(!CiRequiredWorkflowEvidenceEvaluator.IsPassing(true, results) &&
             results.Single(result => result.WorkflowPath == benchmark).State == "missing",
@@ -45,7 +51,7 @@ internal static class CiRequiredWorkflowEvidenceEvaluatorTests
 
         Throws<ArgumentException>(() => CiRequiredWorkflowEvidenceEvaluator.Evaluate(Array.Empty<string>(), new[] { pass }));
         Throws<ArgumentException>(() => CiRequiredWorkflowEvidenceEvaluator.Evaluate(new[] { build, build }, new[] { pass }));
-        Console.WriteLine("PASS: 9 required-workflow policy integration checks.");
+        Console.WriteLine("PASS: 10 required-workflow policy integration checks.");
     }
 
     private static void Assert(bool condition, string message)
