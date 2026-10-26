@@ -9,7 +9,11 @@ public sealed record CiWorkflowRunObservation(
     int RunAttempt,
     string WorkflowPath,
     string Event,
-    IReadOnlyList<int> PullRequestNumbers);
+    IReadOnlyList<int> PullRequestNumbers)
+{
+    /// <summary>The exact provider status string, retained for diagnosis when GitHub adds new values.</summary>
+    public string ProviderStatus { get; init; } = string.Empty;
+}
 
 /// <summary>A bounded page collection. Truncation is explicit and must not be interpreted as complete discovery.</summary>
 public sealed record CiWorkflowRunCollection(
@@ -124,6 +128,7 @@ public sealed class GitHubActionsWorkflowRunCollector
         var status = statusText switch
         {
             "queued" or "requested" or "waiting" => CiRunStatus.Queued,
+            "pending" => CiRunStatus.Pending,
             "in_progress" => CiRunStatus.InProgress,
             "completed" => CiRunStatus.Completed,
             _ => CiRunStatus.Unknown
@@ -145,8 +150,6 @@ public sealed class GitHubActionsWorkflowRunCollector
             "stale" => CiRunConclusion.Stale,
             _ => CiRunConclusion.Unknown
         };
-        if (status == CiRunStatus.Unknown)
-            throw new InvalidDataException($"GitHub returned an unsupported workflow status '{statusText}'.");
         if ((status == CiRunStatus.Completed) == (conclusion == CiRunConclusion.None))
             throw new InvalidDataException("GitHub workflow status and conclusion are inconsistent.");
 
@@ -166,7 +169,8 @@ public sealed class GitHubActionsWorkflowRunCollector
                     prNumbers.Add(prNumber);
         }
 
-        return new CiWorkflowRunObservation(snapshot, attempt, path, eventName, Array.AsReadOnly(prNumbers.Distinct().ToArray()));
+        return new CiWorkflowRunObservation(snapshot, attempt, path, eventName,
+            Array.AsReadOnly(prNumbers.Distinct().ToArray())) { ProviderStatus = statusText };
     }
 
     private static string RequiredString(JsonElement root, string property)
