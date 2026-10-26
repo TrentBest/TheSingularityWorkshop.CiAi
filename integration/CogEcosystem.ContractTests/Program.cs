@@ -72,10 +72,9 @@ Assert(receipt.VerifyAgainst(manifest).Count == 0, "parent CiAi rejected matchin
 Pass("Parent CiAi verifies payload integrity and reconciles receipt provenance");
 
 var handoffEvidence = CiWorkflowDomainEvaluator.Evaluate("artifact-handoff", provider, sourceSha,
-    new[] { new CiRequiredEvidence("artifact"), new CiRequiredEvidence("digest"), new CiRequiredEvidence("receipt") },
+    new[] { new CiRequiredEvidence("digest"), new CiRequiredEvidence("receipt") },
     new[]
     {
-        new CiEvidenceFact("artifact", ReleaseEvidenceState.Passed, provider, sourceSha),
         new CiEvidenceFact("digest", ReleaseEvidenceState.Passed, provider, sourceSha),
         new CiEvidenceFact("receipt", ReleaseEvidenceState.Passed, provider, sourceSha)
     });
@@ -83,10 +82,9 @@ Assert(handoffEvidence.IsPassing, "CiAi artifact-handoff domain did not accept c
 Pass("CiAi artifact-handoff domain reconciles Cog-backed artifact, digest, and receipt evidence");
 
 var mismatchedHandoff = CiWorkflowDomainEvaluator.Evaluate("artifact-handoff", provider, sourceSha,
-    new[] { new CiRequiredEvidence("artifact"), new CiRequiredEvidence("digest"), new CiRequiredEvidence("receipt") },
+    new[] { new CiRequiredEvidence("digest"), new CiRequiredEvidence("receipt") },
     new[]
     {
-        new CiEvidenceFact("artifact", ReleaseEvidenceState.Passed, provider, sourceSha),
         new CiEvidenceFact("digest", ReleaseEvidenceState.Passed, provider, sourceSha),
         new CiEvidenceFact("receipt", ReleaseEvidenceState.Passed, provider, "123456789abcdef0123456789abcdef012345678")
     });
