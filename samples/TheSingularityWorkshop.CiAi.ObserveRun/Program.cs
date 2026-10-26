@@ -45,6 +45,8 @@ try
 
     var observedRuns = new List<object>();
     var allJobsComplete = runCollection.Runs.Count > 0;
+    var allRunsTerminal = runCollection.Runs.Count > 0 &&
+        runCollection.Runs.All(observation => observation.Run.Status == CiRunStatus.Completed);
     foreach (var observation in runCollection.Runs)
     {
         // Each job query is tied to the exact attempt reported for this run; retries are not blended.
@@ -65,6 +67,7 @@ try
                 observation.Run.WorkflowName,
                 observation.Run.HeadSha,
                 normalizedStatus = observation.Run.Status.ToString(),
+                providerStatus = observation.ProviderStatus,
                 normalizedConclusion = observation.Run.Conclusion.ToString(),
                 observation.Run.UpdatedAt,
                 evidenceUrl = observation.Run.EvidenceUrl.ToString(),
@@ -101,6 +104,7 @@ try
 
     var complete = runCollection.Runs.Count > 0 &&
         !runCollection.IsTruncated &&
+        allRunsTerminal &&
         allJobsComplete;
     var report = new
     {
@@ -117,7 +121,7 @@ try
             returnedRuns = runCollection.Runs.Count
         },
         complete,
-        note = "Observation only: this report does not certify release readiness, inspect package contents, interpret security findings, or authorize publication. A complete report requires at least one matching run and complete, non-empty job observations for each run.",
+        note = "Observation only: this report does not certify release readiness, inspect package contents, interpret security findings, or authorize publication. A complete report requires at least one matching run, terminal status for every run, and complete, non-empty job observations for each run.",
         runs = observedRuns
     };
 
