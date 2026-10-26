@@ -29,7 +29,7 @@ export CIAI_REQUIRED_WORKFLOW_PATHS=".github/workflows/ci.yml;.github/workflows/
 dotnet run --project samples/TheSingularityWorkshop.CiAi.ObserveRun -- TrentBest/TheSingularityWorkshop.CiAi <full-40-character-commit-sha> artifacts/commit-observation.json
 ```
 
-Only explicitly required workflow paths block the policy; unrelated runs remain visible as diagnostics. Missing, duplicate, non-terminal, unsuccessful, or incomplete required evidence fails closed. API discovery completeness is reported separately. Without a configured required-workflow policy, `complete` is false. The report is a raw, read-only observation—not a release verdict or publication approval.
+Only explicitly required workflow identities block the policy; unrelated runs remain visible as diagnostics. Selectors may bind a workflow to an exact run and attempt, for example `.github/workflows/ci.yml#123456789#2`. Missing, duplicate, non-terminal, unsuccessful, or incomplete required evidence fails closed. The report separates API discovery completeness, required-evidence completeness, terminality, and success. Without a configured required-workflow policy, `complete` is false. The report is a raw, read-only observation—not a release verdict or publication approval.
 
 Run offline contract checks and pack the library:
 
