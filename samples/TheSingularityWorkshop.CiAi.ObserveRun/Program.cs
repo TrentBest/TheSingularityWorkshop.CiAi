@@ -118,7 +118,7 @@ try
     var complete = CiRequiredWorkflowEvidenceEvaluator.IsPassing(discoveryComplete, requiredWorkflowResults);
     var report = new
     {
-        schema = "ciai.commit-observation.v1",
+        schema = "ciai.commit-observation.v2",
         reportType = "read-only-workflow-observation",
         repository,
         headSha,
