@@ -6,7 +6,8 @@ public enum CiRunStatus
     Unknown = 0,
     Queued = 1,
     InProgress = 2,
-    Completed = 3
+    Completed = 3,
+    Pending = 4
 }
 
 /// <summary>Finite conclusions understood by CiAi. None is valid only before completion.</summary>
