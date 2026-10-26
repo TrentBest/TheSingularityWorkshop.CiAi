@@ -20,6 +20,11 @@ internal static class CiRequiredWorkflowEvidenceEvaluatorTests
             results.Single().State == "incomplete",
             "an exact run-ID selector must evaluate that run, not a different successful run");
 
+        results = CiRequiredWorkflowEvidenceEvaluator.Evaluate(new[] { build + "#10#2" }, new[] { pass });
+        Assert(!CiRequiredWorkflowEvidenceEvaluator.IsPassing(true, results) &&
+            results.Single().State == "missing",
+            "a stale or different run attempt must not satisfy the required identity");
+
         results = CiRequiredWorkflowEvidenceEvaluator.Evaluate(new[] { build, benchmark }, new[] { pass });
         Assert(!CiRequiredWorkflowEvidenceEvaluator.IsPassing(true, results) &&
             results.Single(result => result.WorkflowPath == benchmark).State == "missing",
@@ -51,7 +56,7 @@ internal static class CiRequiredWorkflowEvidenceEvaluatorTests
 
         Throws<ArgumentException>(() => CiRequiredWorkflowEvidenceEvaluator.Evaluate(Array.Empty<string>(), new[] { pass }));
         Throws<ArgumentException>(() => CiRequiredWorkflowEvidenceEvaluator.Evaluate(new[] { build, build }, new[] { pass }));
-        Console.WriteLine("PASS: 10 required-workflow policy integration checks.");
+        Console.WriteLine("PASS: 11 required-workflow policy integration checks.");
     }
 
     private static void Assert(bool condition, string message)
