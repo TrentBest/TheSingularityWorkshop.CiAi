@@ -159,6 +159,11 @@ public sealed class GitHubActionsWorkflowRunCollector
             throw new InvalidDataException("GitHub workflow run contains an invalid updated_at timestamp.");
 
         var path = RequiredString(root, "path");
+        // GitHub may suffix a workflow path with its ref (for example @refs/heads/development).
+        // The stable policy identity is the repository-relative workflow file path.
+        var refSuffix = path.IndexOf('@');
+        if (refSuffix > 0)
+            path = path[..refSuffix];
         var eventName = RequiredString(root, "event");
         var snapshot = new CiRunSnapshot(repository, runId, name, sha, status, conclusion, url, updatedAt);
         var prNumbers = new List<int>();
