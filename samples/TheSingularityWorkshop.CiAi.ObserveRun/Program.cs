@@ -44,9 +44,7 @@ try
         repository, headSha, maxPages: 10, perPage: 100, cancellationToken: CancellationToken.None);
 
     var observedRuns = new List<object>();
-    var allJobsComplete = runCollection.Runs.Count > 0;
-    var allRunsTerminal = runCollection.Runs.Count > 0 &&
-        runCollection.Runs.All(observation => observation.Run.Status == CiRunStatus.Completed);
+    var policyEvidence = new List<CiRequiredWorkflowRunEvidence>();
     foreach (var observation in runCollection.Runs)
     {
         // Each job query is tied to the exact attempt reported for this run; retries are not blended.
@@ -57,7 +55,9 @@ try
         var jobsComplete = !jobs.IsTruncated &&
             jobs.TotalCount == jobs.Jobs.Count &&
             jobs.Jobs.Count > 0;
-        allJobsComplete &= jobsComplete;
+        policyEvidence.Add(new CiRequiredWorkflowRunEvidence(
+            observation.WorkflowPath, observation.Run.RunId, observation.RunAttempt,
+            observation.Run.Status, observation.Run.Conclusion, jobsComplete));
         observedRuns.Add(new
         {
             run = new
@@ -102,10 +102,14 @@ try
         });
     }
 
-    var complete = runCollection.Runs.Count > 0 &&
-        !runCollection.IsTruncated &&
-        allRunsTerminal &&
-        allJobsComplete;
+    var requiredWorkflowPaths = (Environment.GetEnvironmentVariable("CIAI_REQUIRED_WORKFLOW_PATHS") ?? string.Empty)
+        .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    var discoveryComplete = !runCollection.IsTruncated &&
+        runCollection.Runs.Count == runCollection.TotalCount;
+    var requiredWorkflowResults = requiredWorkflowPaths.Length == 0
+        ? Array.Empty<CiRequiredWorkflowResult>()
+        : CiRequiredWorkflowEvidenceEvaluator.Evaluate(requiredWorkflowPaths, policyEvidence).ToArray();
+    var complete = CiRequiredWorkflowEvidenceEvaluator.IsPassing(discoveryComplete, requiredWorkflowResults);
     var report = new
     {
         schema = "ciai.commit-observation.v1",
@@ -120,8 +124,11 @@ try
             runCollection.IsTruncated,
             returnedRuns = runCollection.Runs.Count
         },
+        discoveryComplete,
+        requiredWorkflowPolicy = new { configured = requiredWorkflowPaths.Length > 0, workflowPaths = requiredWorkflowPaths },
+        requiredWorkflowResults,
         complete,
-        note = "Observation only: this report does not certify release readiness, inspect package contents, interpret security findings, or authorize publication. A complete report requires at least one matching run, terminal status for every run, and complete, non-empty job observations for each run.",
+        note = "Observation only: this report does not certify release readiness, inspect package contents, interpret security findings, or authorize publication. Complete discovery is reported separately from policy-scoped required workflow evidence. Only explicitly required workflow paths block the policy; missing, ambiguous, non-terminal, unsuccessful, or incomplete required evidence fails closed. Set CIAI_REQUIRED_WORKFLOW_PATHS to a semicolon-separated list of exact .github/workflows/*.yml paths. Without a configured policy, complete is false.",
         runs = observedRuns
     };
 
