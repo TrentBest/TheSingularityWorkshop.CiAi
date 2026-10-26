@@ -100,8 +100,8 @@ internal static class GitHubActionsWorkflowRunCollectorTests
 
         using (var client = new HttpClient(new StubHandler((_, _) =>
         {
-            var pending = page.Replace("\\"status\\": \\"completed\\", \\"conclusion\\": \\"failure\\"",
-                "\\"status\\": \\"pending\\", \\"conclusion\\": null");
+            var pending = page.Replace("\"status\": \"completed\", \"conclusion\": \"failure\"",
+                "\"status\": \"pending\", \"conclusion\": null");
             return Task.FromResult(JsonResponse(pending));
         })))
         {
@@ -117,8 +117,8 @@ internal static class GitHubActionsWorkflowRunCollectorTests
 
         using (var client = new HttpClient(new StubHandler((_, _) =>
         {
-            var unknown = page.Replace("\\"status\\": \\"completed\\", \\"conclusion\\": \\"failure\\"",
-                "\\"status\\": \\"future_provider_state\\", \\"conclusion\\": null");
+            var unknown = page.Replace("\"status\": \"completed\", \"conclusion\": \"failure\"",
+                "\"status\": \"future_provider_state\", \"conclusion\": null");
             return Task.FromResult(JsonResponse(unknown));
         })))
         {
