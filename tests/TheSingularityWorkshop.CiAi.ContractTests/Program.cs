@@ -500,6 +500,7 @@ Check("Markdown release report escapes table delimiters in provider diagnostics"
 Console.WriteLine($"PASS: {passed} CiAi contract checks.");
 await GitHubActionsRunClientTests.RunAsync();
 await GitHubActionsWorkflowRunCollectorTests.RunAsync();
+CiRequiredWorkflowEvidenceEvaluatorTests.Run();
 await GitHubActionsWorkflowJobCollectorTests.RunAsync();
 
 void Check(string name, Action action)
