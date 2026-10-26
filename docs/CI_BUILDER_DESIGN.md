@@ -1,6 +1,6 @@
 # CiAi Declarative Pipeline Builder — Design Proposal
 
-**Status:** Phase 1 definition-model slice committed on `development`; no executor, evidence evaluator, or publishing adapter is implemented. The broader architecture remains a proposal.  
+**Status:** Phase 1 definition model, an initial Phase 2 in-process executor, and an initial required-evidence evaluator exist on `development`. Phase 2 is not complete: normalized result semantics and canonical deterministic reporting need more contract coverage; the GitHub Actions host adapter and publishing adapter are not implemented. The broader architecture remains in progress.  
 **Purpose:** Make CI definitions readable as repository-owned recipes, while keeping execution, provider evidence, and release authorization distinct.
 
 ## Design goal
@@ -119,9 +119,9 @@ Still outstanding in Phase 1: trigger-scoped fluent recipe ergonomics, dependenc
 
 ### Phase 2 — deterministic in-process execution for safe steps
 
-- Define an executor interface and typed step context/results.
-- Implement sequential execution with cancellation, bounded diagnostics, deterministic ordering, and explicit skip/failure states.
-- Add custom Add<T> steps and tests for true, false, exception, cancellation, and skipped execution.
+- Initial implementation exists in `CiPipelineExecutor` on `development`: sequential execution, a step context, cancellation checks, bounded exception diagnostics, and explicit succeeded/failed/skipped/cancelled/blocked outcomes. The executor blocks privileged capabilities by default.
+- Contract tests cover definition non-execution, step order, false results, exceptions, skipped later work, and privileged-step blocking.
+- Remaining Phase 2 work: add an explicit normalized result contract (rather than treating every non-`false` result as success), test cancellation and diagnostic bounds, define canonical report rendering that excludes wall-clock timestamps, and test task/result edge cases.
 - Keep provider-specific operations behind adapters. Do not add publish capability in this phase.
 
 ### Phase 3 — evidence evaluation
