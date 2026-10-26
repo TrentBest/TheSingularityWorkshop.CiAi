@@ -98,6 +98,7 @@ public sealed class GitHubActionsRunClient
     private static CiRunStatus ParseStatus(string value) => value switch
     {
         "queued" or "requested" or "waiting" => CiRunStatus.Queued,
+        "pending" => CiRunStatus.Pending,
         "in_progress" => CiRunStatus.InProgress,
         "completed" => CiRunStatus.Completed,
         _ => CiRunStatus.Unknown
