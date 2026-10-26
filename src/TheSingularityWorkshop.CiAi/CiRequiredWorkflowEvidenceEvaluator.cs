@@ -33,15 +33,26 @@ public static class CiRequiredWorkflowEvidenceEvaluator
         var required = requiredWorkflowPaths
             .Select(path => path?.Trim() ?? string.Empty)
             .ToArray();
-        if (required.Length == 0 || required.Any(path => path.Length == 0 || !path.StartsWith(".github/workflows/", StringComparison.Ordinal)))
-            throw new ArgumentException("At least one exact workflow path under .github/workflows/ is required.", nameof(requiredWorkflowPaths));
+        if (required.Length == 0 || required.Any(selector =>
+        {
+            var separator = selector.LastIndexOf('#');
+            var workflowPath = separator < 0 ? selector : selector[..separator];
+            return !workflowPath.StartsWith(".github/workflows/", StringComparison.Ordinal) ||
+                (separator >= 0 && (!long.TryParse(selector[(separator + 1)..], out var runId) || runId <= 0));
+        }))
+            throw new ArgumentException("At least one workflow identity is required. Use an exact .github/workflows/ path, optionally suffixed with #<positive-run-id>.", nameof(requiredWorkflowPaths));
         if (required.Distinct(StringComparer.Ordinal).Count() != required.Length)
-            throw new ArgumentException("Required workflow paths must be unique.", nameof(requiredWorkflowPaths));
+            throw new ArgumentException("Required workflow identities must be unique.", nameof(requiredWorkflowPaths));
 
         var runs = observedRuns.ToArray();
-        return Array.AsReadOnly(required.Select(path =>
+        return Array.AsReadOnly(required.Select(selector =>
         {
-            var matching = runs.Where(run => string.Equals(run.WorkflowPath, path, StringComparison.Ordinal)).ToArray();
+            var separator = selector.LastIndexOf('#');
+            var path = separator < 0 ? selector : selector[..separator];
+            long? expectedRunId = separator < 0 ? null : long.Parse(selector[(separator + 1)..], System.Globalization.CultureInfo.InvariantCulture);
+            var matching = runs.Where(run =>
+                string.Equals(run.WorkflowPath, path, StringComparison.Ordinal) &&
+                (!expectedRunId.HasValue || run.RunId == expectedRunId.Value)).ToArray();
             if (matching.Length == 0)
                 return new CiRequiredWorkflowResult(path, "missing", Array.Empty<long>(), "No matching run was observed for this required workflow.");
             if (matching.Length > 1)
