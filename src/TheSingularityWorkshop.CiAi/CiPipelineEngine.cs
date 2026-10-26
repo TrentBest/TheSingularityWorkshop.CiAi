@@ -28,7 +28,7 @@ public sealed record CiPipelineExecutionReport(
     DateTimeOffset StartedAt,
     DateTimeOffset FinishedAt)
 {
-    public bool IsSuccessful => Steps.All(s => s.Outcome == CiStepOutcome.Succeeded);
+    public bool IsSuccessful => Steps.Count > 0 && Steps.All(s => s.Outcome == CiStepOutcome.Succeeded);
 }
 
 /// <summary>Host-owned authorization for one exact candidate and plan.</summary>
