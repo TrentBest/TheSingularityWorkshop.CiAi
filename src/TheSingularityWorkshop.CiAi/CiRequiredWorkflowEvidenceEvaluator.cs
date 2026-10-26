@@ -39,9 +39,10 @@ public static class CiRequiredWorkflowEvidenceEvaluator
         if (required.Length == 0 || required.Any(selector =>
         {
             var parts = selector.Split('#');
+            var explicitMissing = parts.Length == 2 && parts[1] == "missing";
             return parts.Length is < 1 or > 3 ||
                 !parts[0].StartsWith(".github/workflows/", StringComparison.Ordinal) ||
-                (parts.Length >= 2 && (!long.TryParse(parts[1], out var runId) || runId <= 0)) ||
+                (parts.Length >= 2 && !explicitMissing && (!long.TryParse(parts[1], out var runId) || runId <= 0)) ||
                 (parts.Length == 3 && (!int.TryParse(parts[2], out var attempt) || attempt <= 0));
         }))
             throw new ArgumentException("At least one workflow identity is required. Use an exact .github/workflows/ path, optionally suffixed with #<positive-run-id>[#<positive-attempt>].", nameof(requiredWorkflowPaths));
@@ -53,11 +54,12 @@ public static class CiRequiredWorkflowEvidenceEvaluator
         {
             var parts = selector.Split('#');
             var path = parts[0];
-            long? expectedRunId = parts.Length >= 2
+            var explicitMissing = parts.Length == 2 && parts[1] == "missing";
+            long? expectedRunId = parts.Length >= 2 && !explicitMissing
                 ? long.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture) : null;
             int? expectedAttempt = parts.Length == 3
                 ? int.Parse(parts[2], System.Globalization.CultureInfo.InvariantCulture) : null;
-            var matching = runs.Where(run =>
+            var matching = explicitMissing ? Array.Empty<CiRequiredWorkflowRunEvidence>() : runs.Where(run =>
                 string.Equals(run.WorkflowPath, path, StringComparison.Ordinal) &&
                 (!expectedRunId.HasValue || run.RunId == expectedRunId.Value) &&
                 (!expectedAttempt.HasValue || run.RunAttempt == expectedAttempt.Value)).ToArray();
