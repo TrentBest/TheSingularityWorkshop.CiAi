@@ -61,7 +61,7 @@ public static class CommitObservationMarkdownRenderer
             var configured = policy.TryGetProperty("configured", out var configuredValue) &&
                 configuredValue.ValueKind == JsonValueKind.True;
             lines.Add($"- **Configured:** {(configured ? "yes" : "no")}");
-            if (policy.TryGetProperty("workflowPaths", out var paths) && paths.ValueKind == JsonValueKind.Array)
+            if (policy.TryGetProperty("workflowIdentities", out var paths) && paths.ValueKind == JsonValueKind.Array)
                 foreach (var path in paths.EnumerateArray())
                     if (path.ValueKind == JsonValueKind.String)
                         lines.Add($"- Required workflow: `{Escape(path.GetString() ?? string.Empty)}`");
@@ -70,11 +70,16 @@ public static class CommitObservationMarkdownRenderer
         {
             lines.Add("Required workflow policy was not included in this report.");
         }
+        foreach (var field in new[] { "discoveryComplete", "requiredEvidenceComplete", "requiredWorkflowsTerminal", "requiredWorkflowsSuccessful", "complete" })
+        {
+            var value = root.TryGetProperty(field, out var fieldValue) && fieldValue.ValueKind == JsonValueKind.True;
+            lines.Add($"- **{field}:** {(value ? "yes" : "no")}");
+        }
         if (root.TryGetProperty("requiredWorkflowResults", out var policyResults) && policyResults.ValueKind == JsonValueKind.Array)
         {
             lines.Add("");
-            lines.Add("| Required workflow | State | Run IDs | Reason |");
-            lines.Add("| --- | --- | --- | --- |");
+            lines.Add("| Required workflow identity | State | Evidence complete | Terminal | Successful | Run IDs | Reason |");
+            lines.Add("| --- | --- | --- | --- | --- | --- | --- |");
             foreach (var result in policyResults.EnumerateArray())
             {
                 var workflowPath = RequiredString(result, "WorkflowPath");
@@ -82,7 +87,10 @@ public static class CommitObservationMarkdownRenderer
                 var runIds = result.TryGetProperty("MatchingRunIds", out var ids) && ids.ValueKind == JsonValueKind.Array
                     ? string.Join(", ", ids.EnumerateArray().Select(id => id.ToString())) : "—";
                 var reason = RequiredString(result, "Reason");
-                lines.Add($"| `{Escape(workflowPath)}` | {Escape(state)} | {Escape(runIds)} | {Escape(reason)} |");
+                var evidenceComplete = result.TryGetProperty("EvidenceComplete", out var evidenceValue) && evidenceValue.ValueKind == JsonValueKind.True;
+                var terminal = result.TryGetProperty("Terminal", out var terminalValue) && terminalValue.ValueKind == JsonValueKind.True;
+                var successful = result.TryGetProperty("Successful", out var successValue) && successValue.ValueKind == JsonValueKind.True;
+                lines.Add($"| `{Escape(workflowPath)}` | {Escape(state)} | {(evidenceComplete ? "yes" : "no")} | {(terminal ? "yes" : "no")} | {(successful ? "yes" : "no")} | {Escape(runIds)} | {Escape(reason)} |");
             }
         }
 
