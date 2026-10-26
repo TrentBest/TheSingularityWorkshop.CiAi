@@ -54,6 +54,39 @@ public static class CommitObservationMarkdownRenderer
         }
 
         lines.Add("");
+        lines.Add("## Required workflow policy");
+        lines.Add("");
+        if (root.TryGetProperty("requiredWorkflowPolicy", out var policy) && policy.ValueKind == JsonValueKind.Object)
+        {
+            var configured = policy.TryGetProperty("configured", out var configuredValue) &&
+                configuredValue.ValueKind == JsonValueKind.True;
+            lines.Add($"- **Configured:** {(configured ? "yes" : "no")}");
+            if (policy.TryGetProperty("workflowPaths", out var paths) && paths.ValueKind == JsonValueKind.Array)
+                foreach (var path in paths.EnumerateArray())
+                    if (path.ValueKind == JsonValueKind.String)
+                        lines.Add($"- Required workflow: `{Escape(path.GetString() ?? string.Empty)}`");
+        }
+        else
+        {
+            lines.Add("Required workflow policy was not included in this report.");
+        }
+        if (root.TryGetProperty("requiredWorkflowResults", out var policyResults) && policyResults.ValueKind == JsonValueKind.Array)
+        {
+            lines.Add("");
+            lines.Add("| Required workflow | State | Run IDs | Reason |");
+            lines.Add("| --- | --- | --- | --- |");
+            foreach (var result in policyResults.EnumerateArray())
+            {
+                var workflowPath = RequiredString(result, "WorkflowPath");
+                var state = RequiredString(result, "State");
+                var runIds = result.TryGetProperty("MatchingRunIds", out var ids) && ids.ValueKind == JsonValueKind.Array
+                    ? string.Join(", ", ids.EnumerateArray().Select(id => id.ToString())) : "—";
+                var reason = RequiredString(result, "Reason");
+                lines.Add($"| `{Escape(workflowPath)}` | {Escape(state)} | {Escape(runIds)} | {Escape(reason)} |");
+            }
+        }
+
+        lines.Add("");
         lines.Add("## Workflow runs and jobs");
         lines.Add("");
         if (!root.TryGetProperty("runs", out var runs) || runs.ValueKind != JsonValueKind.Array)
