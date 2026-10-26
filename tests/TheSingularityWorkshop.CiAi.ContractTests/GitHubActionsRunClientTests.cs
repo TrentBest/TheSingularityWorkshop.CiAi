@@ -138,7 +138,29 @@ internal static class GitHubActionsRunClientTests
                 new GitHubActionsRunClient(client).GetRunAsync("TrentBest/SimpleDemos", 42));
         }
 
-        Console.WriteLine("PASS: 13 GitHub Actions client integration checks.");
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+            Task.FromResult(JsonResponse(successfulRun.Replace("\\"status\\": \\"completed\\"",
+                "\\"status\\": \\"pending\\"").Replace("\\"conclusion\\": \\"success\\"",
+                "\\"conclusion\\": null"))))))
+        {
+            var run = await new GitHubActionsRunClient(client).GetRunAsync("TrentBest/SimpleDemos", 42);
+            Assert(run.Status == CiRunStatus.Pending && run.Conclusion == CiRunConclusion.None,
+                "pending status must be represented as incomplete, not terminal");
+            Assert(!run.IsSuccessful, "pending workflow was incorrectly treated as successful");
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+            Task.FromResult(JsonResponse(successfulRun.Replace("\\"status\\": \\"completed\\"",
+                "\\"status\\": \\"future_provider_state\\"").Replace("\\"conclusion\\": \\"success\\"",
+                "\\"conclusion\\": null"))))))
+        {
+            var run = await new GitHubActionsRunClient(client).GetRunAsync("TrentBest/SimpleDemos", 42);
+            Assert(run.Status == CiRunStatus.Unknown && run.Conclusion == CiRunConclusion.None,
+                "unknown status should remain explicit rather than aborting observation");
+            Assert(!run.IsSuccessful, "unknown workflow status was incorrectly treated as successful");
+        }
+
+        Console.WriteLine("PASS: 15 GitHub Actions client integration checks.");
     }
 
     private static HttpResponseMessage JsonResponse(string json) => new(HttpStatusCode.OK)
