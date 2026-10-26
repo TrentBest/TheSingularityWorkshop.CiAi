@@ -39,6 +39,8 @@ internal static class CiRequiredWorkflowEvidenceEvaluatorTests
             new[] { pass with { Conclusion = CiRunConclusion.Failure } });
         Assert(!CiRequiredWorkflowEvidenceEvaluator.IsPassing(true, results),
             "failed required workflow must block");
+        Assert(results.Single().EvidenceComplete && results.Single().Terminal && !results.Single().Successful,
+            "a terminal failure must report complete evidence, terminality, and unsuccessful conclusion separately");
 
         results = CiRequiredWorkflowEvidenceEvaluator.Evaluate(new[] { build },
             new[] { pass with { JobsComplete = false } });
