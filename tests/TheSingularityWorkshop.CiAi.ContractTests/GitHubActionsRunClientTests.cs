@@ -139,9 +139,9 @@ internal static class GitHubActionsRunClientTests
         }
 
         using (var client = new HttpClient(new StubHandler((_, _) =>
-            Task.FromResult(JsonResponse(successfulRun.Replace("\\"status\\": \\"completed\\"",
-                "\\"status\\": \\"pending\\"").Replace("\\"conclusion\\": \\"success\\"",
-                "\\"conclusion\\": null"))))))
+            Task.FromResult(JsonResponse(successfulRun.Replace("\"status\": \"completed\"",
+                "\"status\": \"pending\"").Replace("\"conclusion\": \"success\"",
+                "\"conclusion\": null"))))))
         {
             var run = await new GitHubActionsRunClient(client).GetRunAsync("TrentBest/SimpleDemos", 42);
             Assert(run.Status == CiRunStatus.Pending && run.Conclusion == CiRunConclusion.None,
@@ -150,9 +150,9 @@ internal static class GitHubActionsRunClientTests
         }
 
         using (var client = new HttpClient(new StubHandler((_, _) =>
-            Task.FromResult(JsonResponse(successfulRun.Replace("\\"status\\": \\"completed\\"",
-                "\\"status\\": \\"future_provider_state\\"").Replace("\\"conclusion\\": \\"success\\"",
-                "\\"conclusion\\": null"))))))
+            Task.FromResult(JsonResponse(successfulRun.Replace("\"status\": \"completed\"",
+                "\"status\": \"future_provider_state\"").Replace("\"conclusion\": \"success\"",
+                "\"conclusion\": null"))))))
         {
             var run = await new GitHubActionsRunClient(client).GetRunAsync("TrentBest/SimpleDemos", 42);
             Assert(run.Status == CiRunStatus.Unknown && run.Conclusion == CiRunConclusion.None,
