@@ -22,7 +22,14 @@ Observe every matching workflow run, its exact attempt, jobs, and steps for one 
 dotnet run --project samples/TheSingularityWorkshop.CiAi.ObserveRun -- TrentBest/TheSingularityWorkshop.CiAi <full-40-character-commit-sha> artifacts/commit-observation.json
 ```
 
-Use a real 40-character SHA in place of the placeholder. The observer uses bounded pagination and exits non-zero when discovery or job evidence is incomplete. Its report is a raw, read-only observation—not a release verdict or publication approval.
+Use a real 40-character SHA in place of the placeholder. The observer uses bounded pagination and writes raw run/job evidence. To evaluate a policy, configure `CIAI_REQUIRED_WORKFLOW_PATHS` as a semicolon-separated list of exact workflow paths, for example:
+
+```bash
+export CIAI_REQUIRED_WORKFLOW_PATHS=".github/workflows/ci.yml;.github/workflows/benchmarks.yml"
+dotnet run --project samples/TheSingularityWorkshop.CiAi.ObserveRun -- TrentBest/TheSingularityWorkshop.CiAi <full-40-character-commit-sha> artifacts/commit-observation.json
+```
+
+Only explicitly required workflow paths block the policy; unrelated runs remain visible as diagnostics. Missing, duplicate, non-terminal, unsuccessful, or incomplete required evidence fails closed. API discovery completeness is reported separately. Without a configured required-workflow policy, `complete` is false. The report is a raw, read-only observation—not a release verdict or publication approval.
 
 Run offline contract checks and pack the library:
 
