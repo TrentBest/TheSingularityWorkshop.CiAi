@@ -406,12 +406,21 @@ Check("commit observation Markdown preserves incompleteness and exact identity",
 {
     const string observation = """
     {
-      "schema": "ciai.commit-observation.v1",
+      "schema": "ciai.commit-observation.v2",
       "reportType": "read-only-workflow-observation",
       "repository": "TrentBest/SimpleDemos",
       "headSha": "abcdef0123456789abcdef0123456789abcdef01",
       "retrievedAtUtc": "2026-10-24T06:00:00+00:00",
       "discovery": { "PagesRead": 1, "TotalCount": 0, "IsTruncated": false, "returnedRuns": 0 },
+      "discoveryComplete": false,
+      "requiredWorkflowPolicy": { "configured": true, "workflowIdentities": [".github/workflows/build.yml#42#1"] },
+      "requiredWorkflowResults": [{
+        "WorkflowPath": ".github/workflows/build.yml#42#1", "State": "failed", "MatchingRunIds": [42],
+        "Reason": "provider concluded failure", "EvidenceComplete": true, "Terminal": true, "Successful": false
+      }],
+      "requiredEvidenceComplete": true,
+      "requiredWorkflowsTerminal": true,
+      "requiredWorkflowsSuccessful": false,
       "complete": false,
       "note": "observation only",
       "runs": []
@@ -428,6 +437,12 @@ Check("commit observation Markdown preserves incompleteness and exact identity",
         "empty observation was not explained");
     Assert(markdown.Contains("does not certify release readiness", StringComparison.Ordinal),
         "observation report failed to distinguish evidence from release certification");
+    Assert(markdown.Contains("Required workflow identity", StringComparison.Ordinal) &&
+        markdown.Contains(".github/workflows/build.yml#42#1", StringComparison.Ordinal),
+        "v2 report omitted the exact required workflow identity");
+    Assert(markdown.Contains("requiredEvidenceComplete:** yes", StringComparison.Ordinal) &&
+        markdown.Contains("requiredWorkflowsSuccessful:** no", StringComparison.Ordinal),
+        "v2 report failed to distinguish evidence completeness from success");
 });
 Check("commit observation Markdown rejects unsupported schema and unsafe evidence URLs", () =>
 {
