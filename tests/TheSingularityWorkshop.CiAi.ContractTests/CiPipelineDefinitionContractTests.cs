@@ -78,6 +78,17 @@ internal static class CiPipelineDefinitionContractTests
 
 
 
+        Check("empty pipeline execution is not reported as successful", () =>
+        {
+            var definition = new CiPipelineBuilder("TrentBest/TheSingularityWorkshop.CiAi")
+                .On(CiPipelineTrigger.Manual)
+                .Build();
+            var report = new CiPipelineExecutor().ExecuteAsync(definition,
+                "abcdef0123456789abcdef0123456789abcdef01", "plan-empty").GetAwaiter().GetResult();
+            Assert(report.Steps.Count == 0 && !report.IsSuccessful,
+                "an empty recipe was treated as a successful CI run");
+        });
+
         Check("executor runs safe steps in order and records outcomes", () =>
         {
             var order = new List<int>();
