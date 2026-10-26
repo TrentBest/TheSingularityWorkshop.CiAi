@@ -1,6 +1,6 @@
 # CiAi Workflow Domain Map
 
-**The Singularity Workshop**
+**Trent Best · The Singularity Workshop**
 
 CiAi exposes CI to AI through typed, inspectable facts and bounded capabilities. This catalog defines the initial workflow-domain vocabulary; it does not claim that every listed workflow is already executable.
 
@@ -44,6 +44,12 @@ These concerns apply across families and should not be reimplemented inconsisten
 - **Idempotency and recovery:** bounded retries, stable deduplication keys, cancellation, compensation, and safe rollback semantics.
 - **Observability and portability:** deterministic plans, machine-readable facts, readable explanations, provider adapters that preserve meaningful provider differences.
 - **Custom operations:** declare inputs, outputs, capabilities, side effects, and failure semantics.
+
+## Validated workflow plans
+
+`CiWorkflowPlanValidator` validates data-only plan drafts before a host considers execution. It checks stable plan/step IDs, registered workflow domains, dependency references, duplicate/self-dependencies, invalid conditions, and dependency cycles. Valid plans receive a deterministic topological order; invalid plans have no executable order and cannot be rendered as a recipe. Rendering is side-effect-free and includes the declared condition and dependencies.
+
+The current condition vocabulary is descriptive (`AllDependenciesSucceeded`, `Always`, `AnyDependencyFailed`, and `AllDependenciesCompleted`). The validator does not execute steps or implement runtime condition evaluation. A host must still map provider observations to authoritative terminal outcomes before acting on those conditions.
 
 ## Implemented foundation
 
