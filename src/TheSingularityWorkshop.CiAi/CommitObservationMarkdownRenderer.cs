@@ -14,8 +14,10 @@ public static class CommitObservationMarkdownRenderer
         ArgumentException.ThrowIfNullOrWhiteSpace(observationJson);
         using var document = JsonDocument.Parse(observationJson);
         var root = document.RootElement;
-        if (root.ValueKind != JsonValueKind.Object ||
-            RequiredString(root, "schema") != "ciai.commit-observation.v1")
+        if (root.ValueKind != JsonValueKind.Object)
+            throw new InvalidDataException("Input is not a supported CiAi commit-observation document.");
+        var schema = RequiredString(root, "schema");
+        if (schema != "ciai.commit-observation.v1" && schema != "ciai.commit-observation.v2")
             throw new InvalidDataException("Input is not a supported CiAi commit-observation document.");
 
         var repository = RequiredString(root, "repository");
