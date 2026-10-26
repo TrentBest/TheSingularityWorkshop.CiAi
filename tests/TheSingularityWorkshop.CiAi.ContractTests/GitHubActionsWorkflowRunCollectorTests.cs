@@ -12,7 +12,7 @@ internal static class GitHubActionsWorkflowRunCollectorTests
         {
           "total_count": 1,
           "workflow_runs": [{
-            "id": 42, "name": "Pack and publish", "path": ".github/workflows/package.yml",
+            "id": 42, "name": "Pack and publish", "path": ".github/workflows/package.yml@refs/heads/development",
             "head_sha": "abcdef0123456789abcdef0123456789abcdef01",
             "status": "completed", "conclusion": "failure", "run_attempt": 2,
             "event": "push", "html_url": "https://github.com/TrentBest/SimpleDemos/actions/runs/42",
