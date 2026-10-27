@@ -80,6 +80,17 @@ Dependency edges can serve more than build-time compatibility. They can also des
 - **Approval-gated adoption:** evaluate and validate a candidate, then pause for an owner decision.
 - **Policy-bounded adoption:** permit updates only inside explicit constraints, such as patch-only candidates, and only when every required check passes. Publication still follows its own authorization policy.
 
+
+### Implemented policy contract
+
+The initial provider-neutral decision model now lives in `DependencyUpdatePolicy`. It accepts an externally classified candidate and produces one of four outcomes: blocked, report-only, awaiting approval, or eligible for validation. Its modes are deliberately limited to policy decisions:
+
+- `MonitorOnly` returns a report-only decision.
+- `RequireApproval` stops at an approval-required decision.
+- `AutomaticWithinPolicy` allows only the candidate to proceed to validation when its declared scope and prerelease rules permit it.
+
+The contract checks package identity, candidate-newer status, update scope, and prerelease policy. It does **not** discover package versions, parse or verify version ordering, prove compatibility, edit dependency files, run validation, create a release, or authorize publication. The caller must supply an evidence-backed classification; `EligibleForValidation` is not a release-ready or publishable state. These distinctions are covered by the offline contract checks.
+
 A version number or semantic-version range is not proof of compatibility. API compatibility tooling can provide useful evidence but cannot prove all behavioral compatibility. Unknown, missing, stale, or contradictory evidence must pause or block adoption rather than being treated as success.
 
 ### Durable state and user-visible status
