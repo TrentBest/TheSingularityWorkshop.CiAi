@@ -9,6 +9,7 @@ passed += CiWorkflowPlanContractTests.Run();
 passed += BenchmarkBuildDispatchTests.Run();
 passed += SuccessfulBuildBenchmarkCoordinatorTests.Run();
 passed += NuGetPackageArtifactVerifierContractTests.Run();
+passed += NuGetV3VersionCatalogContractTests.Run();
 
 Check("dependency monitor-only policy reports without authorizing adoption", () =>
 {
