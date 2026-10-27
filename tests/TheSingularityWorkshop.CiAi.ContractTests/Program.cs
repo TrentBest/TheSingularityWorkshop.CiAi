@@ -16,6 +16,7 @@ passed += DependencyReleaseGateContractTests.Run();
 passed += ConsumerVerificationContractTests.Run();
 passed += FileDependencyReleaseCandidateStoreContractTests.Run();
 passed += DependencyReleaseGateCoordinatorContractTests.Run();
+passed += CiRequiredEvidenceEvaluatorTests.Run();
 
 Check("dependency monitor-only policy reports without authorizing adoption", () =>
 {
