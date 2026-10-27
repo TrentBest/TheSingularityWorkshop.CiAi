@@ -1,6 +1,6 @@
 # CiAi Release Readiness
 
-**Implementation readiness: 42%. Package preparation: 70%.** This is an alpha package candidate, not a publication approval.
+**Status: alpha candidate; not approved for publication.** Readiness is tracked by explicit gates rather than percentage estimates without a defined scoring model.
 
 ## Candidate
 
