@@ -26,6 +26,8 @@ internal static class NuGetVersionUpdateClassifierContractTests
             var candidate = NuGetVersionUpdateClassifier.CreateCandidate("Owner.Lib", "1.2.3-beta.2", "1.2.3-beta.10");
             Assert(candidate.IsNewerVersion && candidate.IsPrerelease,
                 "numeric prerelease identifiers were not ordered correctly");
+            Assert(candidate.Scope == DependencyUpdateScope.Patch,
+                "prerelease advancement did not remain in the patch lane");
             Assert(!NuGetVersionUpdateClassifier.CreateCandidate("Owner.Lib", "1.2.3-rc.1", "1.2.3").IsPrerelease,
                 "stable candidate was classified as prerelease");
         });
