@@ -12,6 +12,7 @@ passed += NuGetPackageArtifactVerifierContractTests.Run();
 passed += NuGetV3VersionCatalogContractTests.Run();
 passed += NuGetVersionUpdateClassifierContractTests.Run();
 passed += await NuGetDependencyUpdateEvaluatorContractTests.RunAsync();
+passed += DependencyReleaseGateContractTests.Run();
 
 Check("dependency monitor-only policy reports without authorizing adoption", () =>
 {
