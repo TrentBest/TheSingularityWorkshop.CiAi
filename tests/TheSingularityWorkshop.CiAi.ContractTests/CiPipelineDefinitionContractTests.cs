@@ -118,6 +118,34 @@ internal static class CiPipelineDefinitionContractTests
                 "failure/skip states were not distinct");
         });
 
+        Check("executor honors explicit failed step results and bounds diagnostics", () =>
+        {
+            var laterCalled = false;
+            var longDiagnostic = new string('x', 3000);
+            var definition = new CiPipelineBuilder("TrentBest/TheSingularityWorkshop.CiAi")
+                .On(CiPipelineTrigger.Manual)
+                .Add<CiStepResult>("typed failure", () => CiStepResult.Failure(longDiagnostic))
+                .Add<bool>("later", () => { laterCalled = true; return true; })
+                .Build();
+            var report = new CiPipelineExecutor().ExecuteAsync(definition,
+                "abcdef0123456789abcdef0123456789abcdef01", "plan-typed-failure").GetAwaiter().GetResult();
+            Assert(!report.IsSuccessful && !laterCalled, "executor ignored an explicit failed result");
+            Assert(report.Steps[0].Outcome == CiStepOutcome.Failed, "typed failure did not fail the step");
+            Assert(report.Steps[0].Diagnostic!.Length <= 2048, "typed diagnostic exceeded the bound");
+        });
+
+        Check("executor accepts explicit successful step results", () =>
+        {
+            var definition = new CiPipelineBuilder("TrentBest/TheSingularityWorkshop.CiAi")
+                .On(CiPipelineTrigger.Manual)
+                .Add<CiStepResult>("typed success", () => CiStepResult.Success())
+                .Build();
+            var report = new CiPipelineExecutor().ExecuteAsync(definition,
+                "abcdef0123456789abcdef0123456789abcdef01", "plan-typed-success").GetAwaiter().GetResult();
+            Assert(report.IsSuccessful && report.Steps[0].Outcome == CiStepOutcome.Succeeded,
+                "explicit successful result was not accepted");
+        });
+
         Check("executor captures exceptions and blocks subsequent work", () =>
         {
             var laterCalled = false;
