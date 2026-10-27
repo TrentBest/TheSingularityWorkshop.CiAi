@@ -72,8 +72,23 @@ public static class NuGetVersionUpdateClassifier
             if (!match.Success)
                 throw new ArgumentException("Version is not a supported numeric NuGet version.", parameterName);
 
-            static long Number(Group group) =>
-                group.Success ? long.Parse(group.Value, NumberStyles.None, CultureInfo.InvariantCulture) : 0;
+            long Number(Group group)
+            {
+                if (!group.Success)
+                    return 0;
+
+                try
+                {
+                    return long.Parse(group.Value, NumberStyles.None, CultureInfo.InvariantCulture);
+                }
+                catch (OverflowException exception)
+                {
+                    throw new ArgumentException(
+                        "Version numeric components exceed the supported range.",
+                        parameterName,
+                        exception);
+                }
+            }
 
             var prerelease = match.Groups["pre"].Success
                 ? match.Groups["pre"].Value.Split('.')
