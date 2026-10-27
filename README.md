@@ -43,10 +43,10 @@ dotnet pack src/TheSingularityWorkshop.CiAi/TheSingularityWorkshop.CiAi.csproj -
 - Package ID: `TheSingularityWorkshop.CiAi`
 - Current candidate: `0.1.0-alpha.1`
 - Target framework: `.NET 8`
-- Dependencies: none in the core library
+- Runtime dependency: [NuGet.Versioning 7.9.0](https://www.nuget.org/packages/NuGet.Versioning/), used for NuGet-native version parsing and precedence
 - License: MIT
 
-The package candidate is configured with repository metadata, release notes, symbols, and this README embedded in the NuGet package. CI builds, runs offline checks, and packs the library. A passing pack job is not a NuGet publication.
+The package candidate is configured with repository metadata, release notes, symbols, and this README embedded in the NuGet package. The dependency-update evaluator uses Microsoft's `NuGet.Versioning` library rather than a hand-maintained approximation of NuGet version semantics. CI builds, runs contract checks, and packs the library. A passing pack job is not a NuGet publication.
 
 ## 03 — Architecture and trust boundary
 
