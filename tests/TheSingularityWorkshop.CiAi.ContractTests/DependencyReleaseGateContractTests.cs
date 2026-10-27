@@ -54,6 +54,22 @@ internal static class DependencyReleaseGateContractTests
             Assert(result.State == DependencyReleaseGateState.Blocked, "unpublished package was accepted");
         });
 
+        Check("blocks published-package evidence from an insecure HTTP feed", () =>
+        {
+            var result = DependencyReleaseGateEvaluator.Evaluate(candidate,
+                new[] { ValidEvidence(shaB) with { FeedUri = "http://api.nuget.org/v3/index.json" } });
+            Assert(result.State == DependencyReleaseGateState.Blocked &&
+                result.Errors.Any(e => e.StartsWith("dependency.feed-identity-invalid:", StringComparison.Ordinal)),
+                "insecure package feed was accepted");
+        });
+
+        Check("matches NuGet package IDs without case sensitivity", () =>
+        {
+            var result = DependencyReleaseGateEvaluator.Evaluate(candidate,
+                new[] { ValidEvidence(shaB) with { PackageId = "thesingularityworkshop.fsm_api" } });
+            Assert(result.CanVerifyConsumer, "package ID casing prevented exact package evidence from matching");
+        });
+
         Check("blocks duplicate ambiguous evidence", () =>
         {
             var item = ValidEvidence(shaB);
