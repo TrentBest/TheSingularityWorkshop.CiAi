@@ -37,11 +37,21 @@ internal static class NuGetVersionUpdateClassifierContractTests
             Assert(!candidate.IsNewerVersion && candidate.Scope == DependencyUpdateScope.Unknown,
                 "build metadata was treated as version precedence");
         });
+        Check("NuGet version classifier follows NuGet normalization semantics", () =>
+        {
+            var equivalent = NuGetVersionUpdateClassifier.CreateCandidate("Owner.Lib", "1.2", "1.2.0");
+            Assert(!equivalent.IsNewerVersion && equivalent.Scope == DependencyUpdateScope.Unknown,
+                "omitted zero components were incorrectly treated as an update");
+
+            var revision = NuGetVersionUpdateClassifier.CreateCandidate("Owner.Lib", "1.2.3.1", "1.2.3.2");
+            Assert(revision.IsNewerVersion && revision.Scope == DependencyUpdateScope.Unknown,
+                "revision-only changes should be ordered but not guessed into a policy lane");
+        });
         Check("NuGet version classifier fails closed on malformed versions", () =>
         {
             Throws<ArgumentException>(() => NuGetVersionUpdateClassifier.CreateCandidate("Owner.Lib", "1..3", "1.2.4"));
             Throws<ArgumentException>(() => NuGetVersionUpdateClassifier.CreateCandidate("Owner.Lib", "1.2.3", " 1.2.4"));
-            Throws<ArgumentException>(() => NuGetVersionUpdateClassifier.CreateCandidate("Owner.Lib", "1.2.3", "1.2.4-01"));
+            Throws<ArgumentException>(() => NuGetVersionUpdateClassifier.CreateCandidate("Owner.Lib", "1.2.3", "1.2.4-"));
             Throws<ArgumentException>(() => NuGetVersionUpdateClassifier.CreateCandidate(
                 "Owner.Lib", "1.2.3", "999999999999999999999999999999.0.0"));
             Throws<ArgumentException>(() => NuGetVersionUpdateClassifier.CreateCandidate(" ", "1.2.3", "1.2.4"));
