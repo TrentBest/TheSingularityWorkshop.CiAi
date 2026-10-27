@@ -9,6 +9,86 @@ passed += CiWorkflowPlanContractTests.Run();
 passed += BenchmarkBuildDispatchTests.Run();
 passed += SuccessfulBuildBenchmarkCoordinatorTests.Run();
 passed += NuGetPackageArtifactVerifierContractTests.Run();
+
+Check("dependency monitor-only policy reports without authorizing adoption", () =>
+{
+    var policy = new DependencyUpdatePolicy("Owner.Library", DependencyUpdateMode.MonitorOnly);
+    var decision = policy.Evaluate(new DependencyUpdateCandidate("Owner.Library", "1.2.3", "1.2.4",
+        DependencyUpdateScope.Patch, IsNewerVersion: true, IsPrerelease: false));
+    Assert(decision.Disposition == DependencyUpdateDisposition.ReportOnly,
+        "monitor-only policy allowed adoption work");
+});
+Check("dependency approval policy pauses eligible candidate for approval", () =>
+{
+    var policy = new DependencyUpdatePolicy("Owner.Library", DependencyUpdateMode.RequireApproval);
+    var decision = policy.Evaluate(new DependencyUpdateCandidate("Owner.Library", "1.2.3", "1.2.4",
+        DependencyUpdateScope.Patch, IsNewerVersion: true, IsPrerelease: false));
+    Assert(decision.Disposition == DependencyUpdateDisposition.AwaitingApproval,
+        "approval-gated policy did not require approval");
+});
+Check("automatic dependency policy permits validation only, not publication", () =>
+{
+    var policy = new DependencyUpdatePolicy("Owner.Library", DependencyUpdateMode.AutomaticWithinPolicy);
+    var decision = policy.Evaluate(new DependencyUpdateCandidate("Owner.Library", "1.2.3", "1.2.4",
+        DependencyUpdateScope.Patch, IsNewerVersion: true, IsPrerelease: false));
+    Assert(decision.Disposition == DependencyUpdateDisposition.EligibleForValidation,
+        "in-policy update did not proceed to validation");
+});
+Check("dependency policy blocks candidates outside the configured update scope", () =>
+{
+    var policy = new DependencyUpdatePolicy("Owner.Library", DependencyUpdateMode.AutomaticWithinPolicy,
+        DependencyUpdateScope.Patch);
+    var decision = policy.Evaluate(new DependencyUpdateCandidate("Owner.Library", "1.2.3", "1.3.0",
+        DependencyUpdateScope.Minor, IsNewerVersion: true, IsPrerelease: false));
+    Assert(decision.Disposition == DependencyUpdateDisposition.Blocked &&
+        decision.ReasonCode == "dependency.update-outside-policy",
+        "out-of-scope candidate was not blocked");
+});
+Check("dependency policy rejects a mismatched package identity", () =>
+{
+    var policy = new DependencyUpdatePolicy("Owner.Library", DependencyUpdateMode.AutomaticWithinPolicy);
+    var decision = policy.Evaluate(new DependencyUpdateCandidate("Owner.Other", "1.2.3", "1.2.4",
+        DependencyUpdateScope.Patch, IsNewerVersion: true, IsPrerelease: false));
+    Assert(decision.Disposition == DependencyUpdateDisposition.Blocked &&
+        decision.ReasonCode == "dependency.package-id-mismatch",
+        "different package identity was accepted");
+});
+Check("dependency policy rejects unknown update classification", () =>
+{
+    var policy = new DependencyUpdatePolicy("Owner.Library", DependencyUpdateMode.AutomaticWithinPolicy,
+        DependencyUpdateScope.AnyStableUpdate);
+    var decision = policy.Evaluate(new DependencyUpdateCandidate("Owner.Library", "1.2.3", "2.0.0",
+        DependencyUpdateScope.Unknown, IsNewerVersion: true, IsPrerelease: false));
+    Assert(decision.Disposition == DependencyUpdateDisposition.Blocked,
+        "unknown update classification was accepted");
+});
+Check("dependency policy blocks prereleases unless explicitly enabled", () =>
+{
+    var policy = new DependencyUpdatePolicy("Owner.Library", DependencyUpdateMode.AutomaticWithinPolicy);
+    var decision = policy.Evaluate(new DependencyUpdateCandidate("Owner.Library", "1.2.3", "1.2.4-beta.1",
+        DependencyUpdateScope.Patch, IsNewerVersion: true, IsPrerelease: true));
+    Assert(decision.Disposition == DependencyUpdateDisposition.Blocked &&
+        decision.ReasonCode == "dependency.prerelease-not-allowed",
+        "prerelease candidate bypassed policy");
+});
+Check("dependency policy blocks same or older versions", () =>
+{
+    var policy = new DependencyUpdatePolicy("Owner.Library", DependencyUpdateMode.AutomaticWithinPolicy);
+    var decision = policy.Evaluate(new DependencyUpdateCandidate("Owner.Library", "1.2.4", "1.2.3",
+        DependencyUpdateScope.Patch, IsNewerVersion: false, IsPrerelease: false));
+    Assert(decision.Disposition == DependencyUpdateDisposition.Blocked &&
+        decision.ReasonCode == "dependency.candidate-not-newer",
+        "non-newer candidate was accepted");
+});
+Check("dependency policy rejects invalid configuration", () =>
+{
+    Throws<ArgumentException>(() => new DependencyUpdatePolicy(" ", DependencyUpdateMode.MonitorOnly));
+    Throws<ArgumentOutOfRangeException>(() => new DependencyUpdatePolicy("Owner.Library",
+        (DependencyUpdateMode)99));
+    Throws<ArgumentOutOfRangeException>(() => new DependencyUpdatePolicy("Owner.Library",
+        DependencyUpdateMode.MonitorOnly, (DependencyUpdateScope)99));
+});
+
 Check("valid completed success is authoritative", () =>
 {
     var run = NewRun();
