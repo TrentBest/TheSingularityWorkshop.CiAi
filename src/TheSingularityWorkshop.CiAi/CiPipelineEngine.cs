@@ -97,6 +97,8 @@ public static class CiRequiredEvidenceEvaluator
             throw new ArgumentException("Evidence requirement IDs cannot be empty.", nameof(required));
         if (requirements.Select(r => r.Id).Distinct(StringComparer.Ordinal).Count() != requirements.Length)
             throw new ArgumentException("Evidence requirement IDs must be unique.", nameof(required));
+        if (!requirements.Any(r => r.Required))
+            throw new ArgumentException("At least one required evidence gate must be declared.", nameof(required));
         var supplied = facts.ToArray();
         var errors = new List<string>();
         var states = new Dictionary<string, ReleaseEvidenceState>(StringComparer.Ordinal);
