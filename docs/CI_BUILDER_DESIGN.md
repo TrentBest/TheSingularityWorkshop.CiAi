@@ -104,6 +104,8 @@ This example communicates the intended composition pattern; `WithStandardValidat
 
 CiAi must treat a package dependency as an explicit release gate, not merely a project reference or a notification between repositories. This supports the development workflow in which a consumer uses an upstream repository's `development` branch while both projects are changing, then transitions to the exact NuGet package once the upstream release is published and verified.
 
+A concrete acceptance case is the staged release work in `TrentBest/TheSingularityWorkshop.FSM_Serialization`: development may need to continue while upstream package work is in flight, but the intended consumer release must then be held at a durable gate until prerequisites are published. The consumer must restore, rebuild, and test against those exact feed packages before its own release can proceed. The blocked candidate must remain identifiable and resumable; it must not be treated as abandoned, silently retargeted to a moving branch, or published early. See [issue #16](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/16).
+
 ### Intended lifecycle
 
 1. **Develop against source.** A consumer may reference the upstream `development` branch/project during coordinated development. The dependency is labeled as a development source; this state is not proof that a published package is usable.
