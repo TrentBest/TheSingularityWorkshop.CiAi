@@ -10,6 +10,7 @@ passed += BenchmarkBuildDispatchTests.Run();
 passed += SuccessfulBuildBenchmarkCoordinatorTests.Run();
 passed += NuGetPackageArtifactVerifierContractTests.Run();
 passed += NuGetV3VersionCatalogContractTests.Run();
+passed += await NuGetDependencyUpdateEvaluatorContractTests.RunAsync();
 
 Check("dependency monitor-only policy reports without authorizing adoption", () =>
 {
