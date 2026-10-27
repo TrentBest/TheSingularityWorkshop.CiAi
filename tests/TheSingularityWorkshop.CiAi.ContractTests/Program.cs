@@ -37,7 +37,7 @@ Check("automatic dependency policy permits validation only, not publication", ()
 Check("dependency policy blocks candidates outside the configured update scope", () =>
 {
     var policy = new DependencyUpdatePolicy("Owner.Library", DependencyUpdateMode.AutomaticWithinPolicy,
-        DependencyUpdateScope.Patch);
+        DependencyUpdateAllowedScope.Patch);
     var decision = policy.Evaluate(new DependencyUpdateCandidate("Owner.Library", "1.2.3", "1.3.0",
         DependencyUpdateScope.Minor, IsNewerVersion: true, IsPrerelease: false));
     Assert(decision.Disposition == DependencyUpdateDisposition.Blocked &&
@@ -56,7 +56,7 @@ Check("dependency policy rejects a mismatched package identity", () =>
 Check("dependency policy rejects unknown update classification", () =>
 {
     var policy = new DependencyUpdatePolicy("Owner.Library", DependencyUpdateMode.AutomaticWithinPolicy,
-        DependencyUpdateScope.AnyStableUpdate);
+        DependencyUpdateAllowedScope.AnyStableUpdate);
     var decision = policy.Evaluate(new DependencyUpdateCandidate("Owner.Library", "1.2.3", "2.0.0",
         DependencyUpdateScope.Unknown, IsNewerVersion: true, IsPrerelease: false));
     Assert(decision.Disposition == DependencyUpdateDisposition.Blocked,
@@ -86,7 +86,7 @@ Check("dependency policy rejects invalid configuration", () =>
     Throws<ArgumentOutOfRangeException>(() => new DependencyUpdatePolicy("Owner.Library",
         (DependencyUpdateMode)99));
     Throws<ArgumentOutOfRangeException>(() => new DependencyUpdatePolicy("Owner.Library",
-        DependencyUpdateMode.MonitorOnly, (DependencyUpdateScope)99));
+        DependencyUpdateMode.MonitorOnly, (DependencyUpdateAllowedScope)99));
 });
 
 Check("valid completed success is authoritative", () =>
