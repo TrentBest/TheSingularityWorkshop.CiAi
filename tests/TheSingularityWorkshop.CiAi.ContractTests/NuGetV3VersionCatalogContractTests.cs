@@ -6,7 +6,7 @@ internal static class NuGetV3VersionCatalogContractTests
 {
     public static int Run()
     {
-        var passed = 0;
+        var passed = NuGetVersionUpdateClassifierContractTests.Run();
         Check("NuGet V3 catalog returns exact versions with feed and observation provenance", () =>
         {
             var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
