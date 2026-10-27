@@ -94,7 +94,10 @@ public sealed class GitHubActionsWorkflowJobCollector
             foreach (var item in pageJobs.EnumerateArray())
                 jobs.Add(ParseJob(item, repository, runId, runAttempt));
 
-            if (pageJobs.GetArrayLength() < perPage)
+            // GitHub may return a full page even when this page completes the reported collection.
+            // Stop once the provider's total has been collected; otherwise an unnecessary next request
+            // can turn a complete result into a failure (or waste the remaining page budget).
+            if (jobs.Count >= totalCount || pageJobs.GetArrayLength() < perPage)
                 break;
             if (page == maxPages)
                 truncated = jobs.Count < totalCount;
