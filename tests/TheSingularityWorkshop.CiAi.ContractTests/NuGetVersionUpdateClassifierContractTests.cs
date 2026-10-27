@@ -42,6 +42,8 @@ internal static class NuGetVersionUpdateClassifierContractTests
             Throws<ArgumentException>(() => NuGetVersionUpdateClassifier.CreateCandidate("Owner.Lib", "1..3", "1.2.4"));
             Throws<ArgumentException>(() => NuGetVersionUpdateClassifier.CreateCandidate("Owner.Lib", "1.2.3", " 1.2.4"));
             Throws<ArgumentException>(() => NuGetVersionUpdateClassifier.CreateCandidate("Owner.Lib", "1.2.3", "1.2.4-01"));
+            Throws<ArgumentException>(() => NuGetVersionUpdateClassifier.CreateCandidate(
+                "Owner.Lib", "1.2.3", "999999999999999999999999999999.0.0"));
             Throws<ArgumentException>(() => NuGetVersionUpdateClassifier.CreateCandidate(" ", "1.2.3", "1.2.4"));
         });
         return passed;
