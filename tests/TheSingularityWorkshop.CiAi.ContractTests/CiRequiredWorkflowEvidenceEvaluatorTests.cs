@@ -61,9 +61,19 @@ internal static class CiRequiredWorkflowEvidenceEvaluatorTests
             CiRequiredWorkflowEvidenceEvaluator.Evaluate(new[] { build }, new[] { pass })),
             "truncated or incomplete discovery must block even when required run looks successful");
 
+        results = CiRequiredWorkflowEvidenceEvaluator.Evaluate(new[] { build },
+            new[] { pass with { RunId = 0 } });
+        Assert(!CiRequiredWorkflowEvidenceEvaluator.IsPassing(true, results) &&
+            results.Single().State == "incomplete",
+            "a workflow observation without a positive run ID must not pass");
+
         Throws<ArgumentException>(() => CiRequiredWorkflowEvidenceEvaluator.Evaluate(Array.Empty<string>(), new[] { pass }));
         Throws<ArgumentException>(() => CiRequiredWorkflowEvidenceEvaluator.Evaluate(new[] { build, build }, new[] { pass }));
-        Console.WriteLine("PASS: 12 required-workflow policy integration checks.");
+        Throws<ArgumentException>(() => CiRequiredWorkflowEvidenceEvaluator.Evaluate(
+            new[] { ".github/workflows/../evil.yml" }, new[] { pass }));
+        Throws<ArgumentException>(() => CiRequiredWorkflowEvidenceEvaluator.Evaluate(
+            new[] { ".github/workflows/not-a-workflow.txt" }, new[] { pass }));
+        Console.WriteLine("PASS: required-workflow policy integration checks.");
     }
 
     private static void Assert(bool condition, string message)
