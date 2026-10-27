@@ -3,6 +3,14 @@ namespace TheSingularityWorkshop.CiAi;
 /// <summary>Observable lifecycle outcome for one executed pipeline step.</summary>
 public enum CiStepOutcome { Succeeded, Failed, Skipped, Cancelled, Blocked, Indeterminate }
 
+/// <summary>Explicit status returned by a step when a boolean alone is too limiting.</summary>
+public sealed record CiStepResult(bool Succeeded, string? Diagnostic = null)
+{
+    public static CiStepResult Success() => new(true);
+
+    public static CiStepResult Failure(string? diagnostic = null) => new(false, diagnostic);
+}
+
 /// <summary>Execution capability supplied by the host. Approval is deliberately separate from step success.</summary>
 public sealed record CiExecutionContext(
     string Repository,
@@ -179,6 +187,16 @@ public sealed class CiPipelineExecutor
                 if (result is bool boolean && !boolean)
                 {
                     records.Add(new(step.Id, step.Name, CiStepOutcome.Failed, stepStarted, DateTimeOffset.UtcNow, "Operation returned false."));
+                    blocked = true;
+                    continue;
+                }
+                if (result is CiStepResult stepResult && !stepResult.Succeeded)
+                {
+                    var diagnostic = string.IsNullOrWhiteSpace(stepResult.Diagnostic)
+                        ? "Operation returned a failed CiStepResult."
+                        : stepResult.Diagnostic;
+                    if (diagnostic.Length > MaxDiagnosticLength) diagnostic = diagnostic[..MaxDiagnosticLength];
+                    records.Add(new(step.Id, step.Name, CiStepOutcome.Failed, stepStarted, DateTimeOffset.UtcNow, diagnostic));
                     blocked = true;
                     continue;
                 }
