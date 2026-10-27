@@ -253,6 +253,15 @@ Still outstanding in Phase 1: trigger-scoped fluent recipe ergonomics, dependenc
 - Implement a narrowly scoped NuGet adapter only after policy, credential, replay, failure-recovery, and post-publication verification tests pass.
 - Keep publication disabled by default and require explicit owner enablement. No auto-publish based only on a green build or model-generated recommendation.
 
+## Implemented dependency-gate contract
+
+The current `development` branch now contains two provider-neutral evaluation contracts:
+
+- `DependencyReleaseGateEvaluator` preserves a consumer candidate's repository, full source commit, package identity, and exact required upstream package versions. It waits when package evidence is absent and blocks mismatched, ambiguous, unattributed, failed, or unpublished evidence.
+- `ConsumerVerificationEvaluator` checks that downstream evidence refers to that same candidate and workflow attempt, that every declared dependency was resolved at its exact package version from an HTTPS feed, and that restore, build, and tests passed.
+
+These evaluators decide only whether the next verification stage may proceed or whether the candidate is ready for release review. They do not execute workflows, query NuGet, persist/resume candidates, edit project files, or authorize or perform publication. The host must still provide trustworthy observations. Durable candidate storage/resumption, a real consumer verification adapter, feed-backed publication verification, and separately authorized publishing remain unimplemented. The contract tests run in the Cog Ecosystem Integration workflow.
+
 ## Acceptance criteria
 
 - Reading the recipe is sufficient to understand what the repository intends to do.
