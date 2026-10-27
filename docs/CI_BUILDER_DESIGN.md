@@ -224,7 +224,7 @@ Initial slice committed on `development`:
 - Fail-closed builder validation for privileged capabilities without an approval requirement.
 - Contract tests for delegate non-invocation, stable rendering and order, duplicate IDs, visible approval metadata, and builder lifecycle.
 
-Still outstanding in Phase 1: trigger-scoped fluent recipe ergonomics, dependency/condition models and validation, normalized machine-readable output, and broader edge-case coverage. The initial slice has been committed remotely but has not yet been confirmed by a successful CI run.
+Still outstanding in Phase 1: trigger-scoped fluent recipe ergonomics, dependency/condition models and validation, normalized machine-readable output, and broader edge-case coverage. The initial slice and the job-pagination regression correction are committed on `development`. The [CiAi Contract Verification run](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/40460505134) and [Cog Ecosystem Integration run](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/40460505108) passed on the implementation/test commit; subsequent changes to release-readiness documentation were not part of that tested commit.
 
 - Test that definition and rendering never invoke delegates or access secrets.
 
@@ -232,7 +232,8 @@ Still outstanding in Phase 1: trigger-scoped fluent recipe ergonomics, dependenc
 
 - Initial implementation exists in `CiPipelineExecutor` on `development`: sequential execution, a step context, cancellation checks, bounded exception diagnostics, and explicit succeeded/failed/skipped/cancelled/blocked outcomes. The executor blocks privileged capabilities by default.
 - Contract tests cover definition non-execution, step order, false results, exceptions, skipped later work, and privileged-step blocking.
-- Remaining Phase 2 work: add an explicit normalized result contract (rather than treating every non-`false` result as success), test cancellation and diagnostic bounds, define canonical report rendering that excludes wall-clock timestamps, and test task/result edge cases.
+- Result semantics in this prototype are intentionally narrow but not yet safe for interpreting arbitrary process exit codes: a returned `bool false` fails the step, exceptions fail it, and other returned values are retained as step outputs. A non-boolean value (including an integer exit code) is **not** interpreted as a success/failure status. Do not use this executor to wrap commands whose failure is encoded in a non-boolean result.
+- Remaining Phase 2 work: replace this prototype convention with an explicit normalized result contract, test cancellation and diagnostic bounds, define canonical report rendering that excludes wall-clock timestamps, and test task/result edge cases.
 - Keep provider-specific operations behind adapters. Do not add publish capability in this phase.
 
 ### Phase 3 — evidence evaluation
