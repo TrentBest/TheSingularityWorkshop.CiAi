@@ -43,6 +43,63 @@ The fluent example above remains the target API. The initial implemented slice i
 
 Before expanding the API, see [CI User Workflows and Fluent Vocabulary](CI_USER_WORKFLOWS.md). It starts from the actual jobs developers ask CI to perform and separates triggers, work, control flow, evidence, policy evaluation, authorization, and execution. Its examples are target syntax, not claims about implemented methods.
 
+## Composition-first builder model
+
+The builder should hide mechanical detail without hiding policy. Prefer a small set of intention-level `.WithX()` capabilities that expand into ordinary, inspectable plan nodes. Do not turn every low-level operation into another method on the top-level builder.
+
+Illustrative consumer recipe (target syntax, not a current API):
+
+    var pipeline = CiAi.For("TrentBest/FSM_COS")
+        .WhenPullRequest()
+            .WithStandardValidation()
+        .WhenDevelopment()
+            .WithStandardValidation()
+            .WithBenchmarks(options => options
+                .ScaleTo(1, 10, 100, 1_000)
+                .RetainRawReports())
+            .WithPackageValidation()
+        .WithNuGetRelease(options => options
+            .RequireCompleteArtifacts()
+            .RequireOwnerApproval())
+        .Build();
+
+### Composition rules
+
+1. **Intent at the top; mechanics underneath.** A repository selects capabilities such as standard validation, benchmarks, package validation, or a NuGet release. Each capability expands into smaller plan nodes with stable IDs and visible dependencies.
+2. **Parameters stay with the capability.** Use an options callback only when defaults are insufficient. Benchmark scale belongs inside `WithBenchmarks(options => ...)`; package artifact policy belongs inside `WithPackageValidation(...)`. Avoid a giant top-level options object that forces consumers to learn unrelated knobs.
+3. **Capabilities are reusable values, not hidden side effects.** A capability contributes an inspectable definition of work, prerequisites, expected outputs/evidence, failure behavior, and policy requirements. Constructing or printing a recipe never runs work.
+4. **Composition order and dependencies are explicit.** Preserve a deterministic expansion order, validate duplicate IDs and incompatible combinations, and represent dependencies as plan data rather than relying only on the order methods happen to be called.
+5. **Extensions are a first-class escape hatch.** Repositories should be able to define their own `.WithFunStuff()` extension by composing existing capabilities and a small number of repository-specific operations. Customization should not require forking CiAi.
+6. **Defaults cannot weaken safety.** A capability may declare that approval or evidence is required, but the name of a fluent method does not grant authorization. The runner must enforce a real host-provided decision bound to the candidate and plan.
+7. **Inspect the expansion.** The short recipe and its expanded plan are two views of the same definition. Users should be able to inspect exactly which work, evidence, outputs, and gates a capability adds.
+
+### Parameter and extension example
+
+A repository-specific convenience method should compose standard capabilities rather than duplicate their internals:
+
+    public static CiPipelineBuilder WithFunStuff(
+        this CiPipelineBuilder pipeline,
+        BenchmarkOptions options)
+    {
+        return pipeline
+            .WithStandardValidation()
+            .WithBenchmarks(configure => configure
+                .ScaleTo(options.Sizes)
+                .RetainRawReports())
+            .WithPackageValidation();
+    }
+
+This example communicates the intended composition pattern; `WithStandardValidation`, `WithBenchmarks`, `WithPackageValidation`, and `BenchmarkOptions` are proposed names, not existing APIs. The first implementation should prove one capability end-to-end before multiplying the fluent surface.
+
+### What the first prototype must prove
+
+- A concise consumer recipe expands into a deterministic, inspectable plan.
+- A capability can be composed into more than one recipe without copying its definition.
+- Options reach only the capability they configure.
+- Tests can inspect expansion without executing any registered delegate.
+- Required evidence and privileged gates survive composition and cannot be removed by an innocent-looking convenience extension.
+- The expanded plan explains each operation and why it is present, without requiring the user to read implementation code.
+
 ## Core concepts
 
 - **Pipeline definition:** immutable, inspectable description of triggers, ordered steps, dependencies, conditions, outputs, and policy requirements. Defining a pipeline must not execute it.
