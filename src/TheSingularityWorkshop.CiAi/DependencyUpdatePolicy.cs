@@ -11,7 +11,7 @@ public sealed record DependencyUpdatePolicy
     public DependencyUpdatePolicy(
         string packageId,
         DependencyUpdateMode mode,
-        DependencyUpdateScope allowedScope = DependencyUpdateScope.Patch,
+        DependencyUpdateAllowedScope allowedScope = DependencyUpdateAllowedScope.Patch,
         bool allowPrerelease = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(packageId);
@@ -30,7 +30,7 @@ public sealed record DependencyUpdatePolicy
 
     public string PackageId { get; }
     public DependencyUpdateMode Mode { get; }
-    public DependencyUpdateScope AllowedScope { get; }
+    public DependencyUpdateAllowedScope AllowedScope { get; }
     public bool AllowPrerelease { get; }
 
     /// <summary>
@@ -67,10 +67,10 @@ public sealed record DependencyUpdatePolicy
 
     private bool IsWithinScope(DependencyUpdateScope candidateScope) => AllowedScope switch
     {
-        DependencyUpdateScope.Patch => candidateScope == DependencyUpdateScope.Patch,
-        DependencyUpdateScope.MinorOrPatch =>
+        DependencyUpdateAllowedScope.Patch => candidateScope == DependencyUpdateScope.Patch,
+        DependencyUpdateAllowedScope.MinorOrPatch =>
             candidateScope is DependencyUpdateScope.Patch or DependencyUpdateScope.Minor,
-        DependencyUpdateScope.AnyStableUpdate =>
+        DependencyUpdateAllowedScope.AnyStableUpdate =>
             candidateScope is DependencyUpdateScope.Patch or DependencyUpdateScope.Minor or DependencyUpdateScope.Major,
         _ => false
     };
@@ -85,6 +85,14 @@ public enum DependencyUpdateMode
     RequireApproval = 1,
     /// <summary>Permit in-policy candidates to proceed to validation; never grants publish permission.</summary>
     AutomaticWithinPolicy = 2
+}
+
+/// <summary>The independently established compatibility/version lane of a candidate.</summary>
+public enum DependencyUpdateAllowedScope
+{
+    Patch = 0,
+    MinorOrPatch = 1,
+    AnyStableUpdate = 2
 }
 
 /// <summary>The independently established compatibility/version lane of a candidate.</summary>
