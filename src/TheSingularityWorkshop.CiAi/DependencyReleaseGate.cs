@@ -33,7 +33,7 @@ public sealed record DependencyReleaseCandidate
         var copy = dependencies.ToArray();
         if (copy.Any(d => d is null))
             throw new ArgumentException("Dependencies cannot contain null entries.", nameof(dependencies));
-        if (copy.Select(d => d.PackageId).Distinct(StringComparer.Ordinal).Count() != copy.Length)
+        if (copy.Select(d => d.PackageId).Distinct(StringComparer.OrdinalIgnoreCase).Count() != copy.Length)
             throw new ArgumentException("Each package ID may appear only once in a candidate.", nameof(dependencies));
 
         Repository = repository;
@@ -132,7 +132,7 @@ public static class DependencyReleaseGateEvaluator
         foreach (var dependency in candidate.Dependencies)
         {
             var matches = supplied.Where(e =>
-                string.Equals(e.PackageId, dependency.PackageId, StringComparison.Ordinal) &&
+                string.Equals(e.PackageId, dependency.PackageId, StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(e.PackageVersion, dependency.PackageVersion, StringComparison.Ordinal)).ToArray();
 
             var label = dependency.PackageId + "@" + dependency.PackageVersion;
@@ -157,7 +157,7 @@ public static class DependencyReleaseGateEvaluator
             if (string.IsNullOrWhiteSpace(item.WorkflowRunId) || item.WorkflowAttempt < 1)
                 errors.Add("dependency.workflow-identity-missing:" + label);
             if (!Uri.TryCreate(item.FeedUri, UriKind.Absolute, out var feedUri) ||
-                (feedUri.Scheme != Uri.UriSchemeHttps && feedUri.Scheme != Uri.UriSchemeHttp))
+                feedUri.Scheme != Uri.UriSchemeHttps)
                 errors.Add("dependency.feed-identity-invalid:" + label);
             if (!item.UpstreamValidationPassed)
                 errors.Add("dependency.upstream-validation-failed:" + label);
