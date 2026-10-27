@@ -106,7 +106,7 @@ The polling cadence is an operational setting, not a benchmark definition or a r
 
 ## 06 — Release status
 
-**Implementation readiness: 42%. Package preparation: 70%. Candidate: 0.1.0-alpha.1.**
+**Release status: alpha candidate; not approved for publication.** Readiness is tracked by explicit gates below rather than percentage estimates without a defined scoring model.
 
 Release evidence is candidate-specific: use the latest successful [CiAi Contract Verification workflow](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/workflows/ci.yml) for the exact source commit under review. The workflow builds, runs offline contract checks, packs both NuGet and symbol packages, validates package metadata and embedded README, and uploads the artifacts for inspection. A green workflow and inspected package are not publication approval; owner review and explicit publication approval remain required.
 
