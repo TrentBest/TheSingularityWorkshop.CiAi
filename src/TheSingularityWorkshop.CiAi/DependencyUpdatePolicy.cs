@@ -41,6 +41,16 @@ public sealed record DependencyUpdatePolicy
     {
         ArgumentNullException.ThrowIfNull(candidate);
 
+        // Candidate data crosses a provider boundary. Malformed observations must fail closed
+        // before they can influence an adoption decision.
+        if (string.IsNullOrWhiteSpace(candidate.PackageId) ||
+            string.IsNullOrWhiteSpace(candidate.CurrentVersion) ||
+            string.IsNullOrWhiteSpace(candidate.CandidateVersion))
+            return new(DependencyUpdateDisposition.Blocked, "dependency.candidate-identity-incomplete");
+
+        if (!Enum.IsDefined(candidate.Scope))
+            return new(DependencyUpdateDisposition.Blocked, "dependency.update-scope-unknown");
+
         if (!string.Equals(candidate.PackageId, PackageId, StringComparison.Ordinal))
             return new(DependencyUpdateDisposition.Blocked, "dependency.package-id-mismatch");
 
