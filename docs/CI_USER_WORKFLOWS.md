@@ -89,7 +89,46 @@ The first implementation slice is `NuGetPackageArtifactVerifier.Verify(packageId
 
 **Important semantics:** A passing build, an Observer report, a model recommendation, or a custom step returning `true` is not approval. Authorization must be explicit, auditable, scoped to the action and bound to the repository, source commit, package/version/digest, target feed or environment, and run/plan identity. If approval is missing, stale, rejected, or mismatched, execution fails closed. Provider environment protections may be used; CiAi must not pretend its own metadata flag is an approval system.
 
-### 7. Run expensive work only when needed
+### 7. Keep dependencies current without surrendering release control
+
+**What users say:** “Watch the libraries this package depends on. When an upstream release appears, tell me what changed; optionally adopt compatible updates automatically, run the full validation suite, and prepare a maintenance release.”
+
+**Vocabulary:** `MonitorDependencies`, `WithDependencyPolicy`, `AllowPatchUpdates`, `RequireCompatibilityChecks`, `RequireApproval`, `CreateMaintenanceRelease`, `ReportDependencyUpdate`.
+
+**Important semantics:** Discovery, adoption, validation, and publication are separate decisions. Detecting an upstream version does not automatically authorize changing a dependency or publishing a downstream package.
+
+A dependency policy should describe:
+
+- **Development source:** the upstream repository and branch used during coordinated development (for this workshop, normally `development`).
+- **Release source:** package identity and feed, plus an exact version or a version-selection rule.
+- **Monitoring:** which upstream sources are checked, how often, and how new versions are reported.
+- **Adoption:** whether updates are never automatic, require approval, or may be proposed automatically within explicit version bounds.
+- **Compatibility evidence:** restore against the exact candidate, build, tests, API compatibility checks where available, and any repository-specific checks.
+- **Release authority:** whether a validated update may create a candidate only, or may proceed to publication under a separately configured authorization policy.
+
+An automatic maintenance policy should be narrow and fail closed. Semantic versioning is a useful signal, not proof of compatibility. If required evidence is missing, contradictory, or cannot establish the declared policy, pause for review. Never silently rewrite a consumer's dependency declaration.
+
+A downstream maintenance release must identify the upstream package and old/new versions, explain that the upstream update triggered the release, name the source commit, and report the actual validation evidence and authorization mode. These details must come from the verified run, not from guessed commit messages.
+
+The same dependency can be monitored while adoption remains manual. A dashboard or report should distinguish **update detected**, **awaiting evaluation**, **ready to adopt**, **approval required**, **blocked**, and **released downstream**. Monitoring is read-only; dependency adoption changes the candidate; publishing is a separate privileged action.
+
+Illustrative target syntax (not implemented API):
+
+```csharp
+CiAi.For("owner/consumer")
+    .WithDependencyPolicy(policy => policy
+        .MonitorNuGet("Owner.Upstream")
+        .AllowPatchUpdates()
+        .RequireBuildAndTests()
+        .RequirePublicApiCompatibility()
+        .RequireApprovalForPublish())
+    .WithMaintenanceReleaseReporting()
+    .Build();
+```
+
+This example expresses desired policy, not a currently implemented public API. It must expand into inspectable plan nodes and must not execute work during definition or inspection.
+
+### 8. Run expensive work only when needed
 
 **What users say:** “Run the documentation check only if documentation changed; run integration tests only after the unit tests pass.”
 
@@ -97,7 +136,7 @@ The first implementation slice is `NuGetPackageArtifactVerifier.Verify(packageId
 
 **Important semantics:** Conditions and dependencies are distinct. A dependency says what must finish first; a condition says whether a step is eligible. Skipped, unknown, and failed are distinct outcomes. Failure-handling choices must be explicit and visible in the report.
 
-### 8. Parallelize independent work
+### 9. Parallelize independent work
 
 **What users say:** “Run linting, unit tests, and security checks in parallel, then combine their results.”
 
@@ -105,7 +144,7 @@ The first implementation slice is `NuGetPackageArtifactVerifier.Verify(packageId
 
 **Important semantics:** Parallelism is a dependency graph, not merely sequential source-code formatting. Reports retain each branch's outcome and make incomplete work visible.
 
-### 9. Control duplicate and scheduled runs
+### 10. Control duplicate and scheduled runs
 
 **What users say:** “Run the nightly compatibility suite. If a newer commit arrives, cancel obsolete validation for the same branch.”
 
@@ -113,7 +152,7 @@ The first implementation slice is `NuGetPackageArtifactVerifier.Verify(packageId
 
 **Important semantics:** Cancellation, timeout, and retry are distinct from ordinary failure. Retry policy must not repeat non-idempotent or privileged actions without an explicit safe policy.
 
-### 10. Diagnose and audit a run
+### 11. Diagnose and audit a run
 
 **What users say:** “Tell me which checks ran, which were skipped, why something failed, and what exact commit and artifact were involved.”
 
@@ -121,7 +160,7 @@ The first implementation slice is `NuGetPackageArtifactVerifier.Verify(packageId
 
 **Important semantics:** Provider facts are preserved with source identity and provenance. Observation is not evaluation; evaluation is not authorization. Unknown or incomplete evidence stays unknown/incomplete rather than being promoted to success.
 
-### 11. Reuse workflows across repositories
+### 12. Reuse workflows across repositories
 
 **What users say:** “Use our standard library validation recipe for every package, with each repository supplying its own build and test details.”
 
