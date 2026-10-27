@@ -38,7 +38,7 @@ public static class NuGetVersionUpdateClassifier
 
     private static DependencyUpdateScope Classify(ParsedVersion current, ParsedVersion candidate, int comparison)
     {
-        if (comparison <= 0 || candidate.IsPrerelease || current.IsPrerelease)
+        if (comparison <= 0)
             return DependencyUpdateScope.Unknown;
 
         if (candidate.Major != current.Major)
@@ -48,8 +48,12 @@ public static class NuGetVersionUpdateClassifier
         if (candidate.Patch != current.Patch)
             return DependencyUpdateScope.Patch;
 
-        // Revision-only changes and differences that don't fit the supported policy lanes
-        // must not be mislabeled as patch updates.
+        // A prerelease-to-prerelease advance or prerelease-to-stable promotion within the
+        // same numeric release lane is a patch-lane update. Revision-only changes remain unknown.
+        if (candidate.Revision == current.Revision && (candidate.IsPrerelease || current.IsPrerelease))
+            return DependencyUpdateScope.Patch;
+
+        // Revision-only changes and other differences outside policy lanes must not be guessed.
         return DependencyUpdateScope.Unknown;
     }
 
