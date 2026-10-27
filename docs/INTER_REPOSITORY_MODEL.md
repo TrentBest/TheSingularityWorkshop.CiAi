@@ -59,6 +59,39 @@ Conceptual fields for the typed contract (not a finalized wire schema): stable r
 
 Inspect existing repository conventions before implementation. Use ProtocolAi for controlled vocabulary. Do not make LLM-generated strings executable or invent another serialization framework without evidence.
 
+## Dependency monitoring and maintenance-release lifecycle
+
+Dependency edges can serve more than build-time compatibility. They can also describe how a consumer tracks an upstream provider and decides whether to adopt a new published artifact. Keep the following decisions separate:
+
+1. **Observe:** discover a candidate version from an approved package feed or publisher source.
+2. **Classify:** compare it with the consumer's declared version-selection and trust policy.
+3. **Resolve:** identify the exact package ID, version, feed, and available provenance. Do not validate against a floating version that can change during the run.
+4. **Validate:** restore the candidate explicitly and run the consumer's required build, tests, compatibility checks, and other declared evidence.
+5. **Decide:** apply the configured policy: report only, require adoption approval, or permit adoption within bounded rules.
+6. **Prepare:** create a reviewable dependency change and maintenance-release candidate. Preserve the prior version and candidate identity.
+7. **Authorize and publish:** treat downstream publication as a distinct privileged action, bound to the exact source commit, package ID/version/digest, destination feed, and plan.
+8. **Verify and report:** confirm the published artifact is actually available, then record the upstream trigger and evidence in the downstream release report.
+
+### Dependency policy modes
+
+- **Development source:** use an explicitly configured upstream repository branch/project during coordinated development. This is not evidence that a published package is ready.
+- **Pinned release:** require a specific package version for a release candidate.
+- **Monitor only:** report new versions without modifying the consumer.
+- **Approval-gated adoption:** evaluate and validate a candidate, then pause for an owner decision.
+- **Policy-bounded adoption:** permit updates only inside explicit constraints, such as patch-only candidates, and only when every required check passes. Publication still follows its own authorization policy.
+
+A version number or semantic-version range is not proof of compatibility. API compatibility tooling can provide useful evidence but cannot prove all behavioral compatibility. Unknown, missing, stale, or contradictory evidence must pause or block adoption rather than being treated as success.
+
+### Durable state and user-visible status
+
+The coordinator should persist enough state to resume after a runner exits: consumer repository and source SHA; dependency relationship ID; package ID and feed; currently adopted and proposed versions; source/provenance evidence; policy revision; each validation result; approval decision and scope; downstream candidate identity; publication attempt and verified outcome; timestamps and correlation IDs.
+
+Use explicit statuses such as `UpdateDetected`, `AwaitingEvaluation`, `Validating`, `ApprovalRequired`, `Blocked`, `ReadyToAdopt`, `ReleaseCandidateReady`, `Publishing`, `Published`, and `Indeterminate`. In particular, an interrupted publish whose remote outcome is unknown must be reconciled against the feed before retrying; it must not be blindly repeated.
+
+Reports and dashboard projections should distinguish discovery from adoption and adoption from publication. A maintenance release should state that an upstream dependency change triggered it, identify old and new package versions, cite the downstream source commit, and summarize the actual validation and authorization evidence. Never infer these facts from an LLM-generated description or a commit message.
+
+Monitoring adapters should be read-only by default. They can create a notification or candidate request, but must not directly rewrite dependency files or invoke publishers. The existing pipeline engine, policy evaluator, evidence model, and authorization boundary remain the single path through which consequential work is scheduled and verified.
+
 ## Request/result round trip
 1. Caller states intent and target.
 2. Host resolves repository and operation, then validates arguments, contract version, permissions, and approval.
