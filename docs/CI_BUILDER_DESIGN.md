@@ -100,6 +100,60 @@ This example communicates the intended composition pattern; `WithStandardValidat
 - Required evidence and privileged gates survive composition and cannot be removed by an innocent-looking convenience extension.
 - The expanded plan explains each operation and why it is present, without requiring the user to read implementation code.
 
+## Inter-repository dependency release gates
+
+CiAi must treat a package dependency as an explicit release gate, not merely a project reference or a notification between repositories. This supports the development workflow in which a consumer uses an upstream repository's `development` branch while both projects are changing, then transitions to the exact NuGet package once the upstream release is published and verified.
+
+### Intended lifecycle
+
+1. **Develop against source.** A consumer may reference the upstream `development` branch/project during coordinated development. The dependency is labeled as a development source; this state is not proof that a published package is usable.
+2. **Validate upstream candidate.** Upstream build, tests, package validation, and declared evidence must pass for a specific commit and package identity.
+3. **Authorize and publish upstream.** The owner/policy explicitly authorizes the upstream publication. A green build or observed workflow cannot grant that authorization.
+4. **Verify publication.** Query NuGet to confirm the exact package ID/version is available. Record the source commit and available package provenance. A successful upload step alone is not sufficient.
+5. **Transition the consumer.** Change the consumer from the development/project reference to the exact published package version. Keep the change auditable and reviewable; do not silently mutate a consumer's dependency file.
+6. **Verify the consumer against the release.** Restore from the package feed, ensure the build actually consumes the published version (not a project reference or stale cache), then run the consumer's required build, tests, compatibility checks, and any declared benchmarks.
+7. **Authorize and publish the consumer separately.** The consumer can become a release candidate only when its own required evidence passes. Its own publication requires its own explicit authorization and post-publication verification.
+8. **Continue downstream.** A verified consumer publication may trigger the same lifecycle for its dependents. Every dependency edge remains an independent gate.
+
+### Dependency plan contract
+
+A dependency declaration should be short at the recipe level but expand into inspectable plan data, including:
+
+- upstream repository and development source;
+- published package ID and exact version-selection policy;
+- expected source commit/provenance when available;
+- transition method (reviewable commit, pull request, or repository-configured equivalent);
+- required downstream evidence and verification steps;
+- failure behavior and any owner authorization requirements.
+
+The dependency graph must be deterministic and cycle-checked. Missing, stale, failed, indeterminate, or identity-mismatched evidence blocks the downstream transition/release. A branch update is not a publication event; a publication event is not proof of downstream compatibility; downstream compatibility is not permission to publish.
+
+### Target consumer syntax
+
+The following is illustrative target syntax, not an implemented API:
+
+```csharp
+var pipeline = CiAi.For("TrentBest/FSM_COS")
+    .WithDependency("TrentBest/FSM_API", dependency => dependency
+        .DevelopAgainstBranch("development")
+        .ReleaseAsNuGet("TheSingularityWorkshop.FSM_API")
+        .RequirePublishedVersion())
+    .WithStandardValidation()
+    .WithPackageValidation()
+    .WithNuGetRelease(release => release
+        .RequireAllDependenciesVerified()
+        .RequireOwnerApproval())
+    .Build();
+```
+
+This recipe should expand to concrete gates for upstream publication evidence, exact package-feed verification, consumer dependency transition, downstream restore/build/test, and the consumer's separate release authorization. The fluent names above are proposals; do not document them as available until implemented and covered by contract tests.
+
+### Safety boundary
+
+An upstream release can trigger downstream verification automatically, but must never silently publish the downstream package. Each package publication remains separately authorized. If downstream verification fails, the downstream release stays blocked and the report identifies the failed evidence; the system must not merge or publish an unverified transition as a workaround.
+
+Track implementation in [issue #16 — Model inter-repository dependencies as verified release gates](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/16).
+
 ## Core concepts
 
 - **Pipeline definition:** immutable, inspectable description of triggers, ordered steps, dependencies, conditions, outputs, and policy requirements. Defining a pipeline must not execute it.
