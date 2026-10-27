@@ -41,11 +41,12 @@ public static class CiRequiredWorkflowEvidenceEvaluator
             var parts = selector.Split('#');
             var explicitMissing = parts.Length == 2 && parts[1] == "missing";
             return parts.Length is < 1 or > 3 ||
-                !parts[0].StartsWith(".github/workflows/", StringComparison.Ordinal) ||
+                !IsValidWorkflowPath(parts[0]) ||
                 (parts.Length >= 2 && !explicitMissing && (!long.TryParse(parts[1], out var runId) || runId <= 0)) ||
-                (parts.Length == 3 && (!int.TryParse(parts[2], out var attempt) || attempt <= 0));
+                (parts.Length == 3 && (!int.TryParse(parts[2], out var attempt) || attempt <= 0)) ||
+                (explicitMissing && parts.Length != 2);
         }))
-            throw new ArgumentException("At least one workflow identity is required. Use an exact .github/workflows/ path, optionally suffixed with #<positive-run-id>[#<positive-attempt>].", nameof(requiredWorkflowPaths));
+            throw new ArgumentException("At least one valid workflow identity is required. Use a canonical .github/workflows/ path ending in .yml or .yaml, optionally suffixed with #<positive-run-id>[#<positive-attempt>].", nameof(requiredWorkflowPaths));
         if (required.Distinct(StringComparer.Ordinal).Count() != required.Length)
             throw new ArgumentException("Required workflow identities must be unique.", nameof(requiredWorkflowPaths));
 
@@ -70,8 +71,8 @@ public static class CiRequiredWorkflowEvidenceEvaluator
                     "Multiple runs match this required workflow identity; policy requires an unambiguous run identity.", false, false, false);
             var run = matching[0];
             var ids = Array.AsReadOnly(new[] { run.RunId });
-            if (run.RunAttempt <= 0)
-                return new CiRequiredWorkflowResult(selector, "incomplete", ids, "Run attempt identity is invalid.", false, false, false);
+            if (run.RunId <= 0 || run.RunAttempt <= 0)
+                return new CiRequiredWorkflowResult(selector, "incomplete", ids, "Run and attempt identities must be positive.", false, false, false);
             if (run.Status != CiRunStatus.Completed)
                 return new CiRequiredWorkflowResult(selector, "incomplete", ids, "Required workflow has not reached a recognized terminal status.", false, false, false);
             if (run.Conclusion != CiRunConclusion.Success)
@@ -84,7 +85,26 @@ public static class CiRequiredWorkflowEvidenceEvaluator
 
     public static bool IsPassing(
         bool discoveryComplete,
-        IEnumerable<CiRequiredWorkflowResult> results) =>
-        discoveryComplete && results is not null &&
-        (results.Any()) && results.All(result => result.EvidenceComplete && result.Terminal && result.Successful);
+        IEnumerable<CiRequiredWorkflowResult> results)
+    {
+        if (!discoveryComplete || results is null) return false;
+        var materialized = results.ToArray();
+        return materialized.Length > 0 &&
+            materialized.All(result => result is not null &&
+                result.EvidenceComplete && result.Terminal && result.Successful);
+    }
+
+    private static bool IsValidWorkflowPath(string path)
+    {
+        if (!path.StartsWith(".github/workflows/", StringComparison.Ordinal) ||
+            !(path.EndsWith(".yml", StringComparison.Ordinal) || path.EndsWith(".yaml", StringComparison.Ordinal)) ||
+            path.Contains('\\') || path.Contains('#') || path.Contains('?') || path.Contains(':'))
+            return false;
+
+        var segments = path.Split('/');
+        return segments.Length >= 3 &&
+            segments.All(segment => segment.Length > 0 && segment != "." && segment != ".." &&
+                segment.All(character => char.IsAsciiLetterOrDigit(character) ||
+                    character is '-' or '_' or '.'));
+    }
 }
