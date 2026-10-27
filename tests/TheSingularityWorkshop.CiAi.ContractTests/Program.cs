@@ -71,6 +71,31 @@ Check("dependency policy blocks prereleases unless explicitly enabled", () =>
         decision.ReasonCode == "dependency.prerelease-not-allowed",
         "prerelease candidate bypassed policy");
 });
+Check("dependency policy blocks malformed candidate identity and version evidence", () =>
+{
+    var policy = new DependencyUpdatePolicy("Owner.Library", DependencyUpdateMode.AutomaticWithinPolicy);
+    var missingPackage = policy.Evaluate(new DependencyUpdateCandidate(null!, "1.2.3", "1.2.4",
+        DependencyUpdateScope.Patch, IsNewerVersion: true, IsPrerelease: false));
+    var missingCurrentVersion = policy.Evaluate(new DependencyUpdateCandidate("Owner.Library", " ", "1.2.4",
+        DependencyUpdateScope.Patch, IsNewerVersion: true, IsPrerelease: false));
+    var missingCandidateVersion = policy.Evaluate(new DependencyUpdateCandidate("Owner.Library", "1.2.3", null!,
+        DependencyUpdateScope.Patch, IsNewerVersion: true, IsPrerelease: false));
+    Assert(missingPackage.ReasonCode == "dependency.candidate-identity-incomplete" &&
+        missingCurrentVersion.ReasonCode == "dependency.candidate-identity-incomplete" &&
+        missingCandidateVersion.ReasonCode == "dependency.candidate-identity-incomplete",
+        "malformed candidate evidence was not blocked consistently");
+});
+Check("dependency policy blocks invalid candidate scope values", () =>
+{
+    var policy = new DependencyUpdatePolicy("Owner.Library", DependencyUpdateMode.AutomaticWithinPolicy,
+        DependencyUpdateAllowedScope.AnyStableUpdate);
+    var decision = policy.Evaluate(new DependencyUpdateCandidate("Owner.Library", "1.2.3", "2.0.0",
+        (DependencyUpdateScope)99, IsNewerVersion: true, IsPrerelease: false));
+    Assert(decision.Disposition == DependencyUpdateDisposition.Blocked &&
+        decision.ReasonCode == "dependency.update-scope-unknown",
+        "invalid candidate scope was not blocked");
+});
+
 Check("dependency policy blocks same or older versions", () =>
 {
     var policy = new DependencyUpdatePolicy("Owner.Library", DependencyUpdateMode.AutomaticWithinPolicy);
