@@ -7,6 +7,6 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../TheSingularityWorkshop.CiAi/TheSingularityWorkshop.CiAi.csproj" />
+    <ProjectReference Include="../../src/TheSingularityWorkshop.CiAi/TheSingularityWorkshop.CiAi.csproj" />
   </ItemGroup>
 </Project>
