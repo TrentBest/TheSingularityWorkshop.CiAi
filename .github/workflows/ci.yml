@@ -1,0 +1,183 @@
+name: CiAi Contract Verification
+
+on:
+  push:
+    branches: [development, master]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "samples/**"
+      - "README.md"
+      - "CiAi.slnx"
+      - "Directory.Build.*"
+      - "global.json"
+      - "NuGet.config"
+      - ".config/**"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/observe-release-candidate.yml"
+      - ".github/workflows/serialization-benchmark-dispatch.yml"
+  pull_request:
+    branches: [development, master]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "samples/**"
+      - "README.md"
+      - "CiAi.slnx"
+      - "Directory.Build.*"
+      - "global.json"
+      - "NuGet.config"
+      - ".config/**"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/observe-release-candidate.yml"
+      - ".github/workflows/serialization-benchmark-dispatch.yml"
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: "Optional existing branch to gate; blank uses the branch selected for this workflow run."
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ciai-contract-${{ github.ref }}-${{ inputs.target_branch || 'default' }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out workflow revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+      - name: Resolve optional branch target to an immutable commit
+        id: resolve-target
+        if: github.event_name == 'workflow_dispatch' && inputs.target_branch != ''
+        env:
+          TARGET_BRANCH: ${{ inputs.target_branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! git check-ref-format --branch "$TARGET_BRANCH" >/dev/null; then
+            echo "::error::Invalid branch name."
+            exit 1
+          fi
+          matches="$(git ls-remote --heads origin "refs/heads/$TARGET_BRANCH")"
+          if [ -z "$matches" ] || [ "$(printf '%s\n' "$matches" | wc -l)" -ne 1 ]; then
+            echo "::error::Target must resolve to exactly one existing branch."
+            exit 1
+          fi
+          sha="$(printf '%s\n' "$matches" | awk '{print $1}')"
+          if ! [[ "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Resolved target did not produce a full commit SHA."
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "target_branch=$TARGET_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "Resolved branch '$TARGET_BRANCH' to $sha"
+      - name: Check out selected target commit
+        if: github.event_name == 'workflow_dispatch' && inputs.target_branch != ''
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ steps.resolve-target.outputs.sha }}
+      - name: Verify checkout provenance
+        id: provenance
+        env:
+          EXPECTED_SHA: ${{ steps.resolve-target.outputs.sha || github.sha }}
+          TARGET_REF: ${{ inputs.target_branch || github.ref_name }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual_sha="$(git rev-parse HEAD)"
+          if [ "$actual_sha" != "$EXPECTED_SHA" ]; then
+            echo "::error::Checked-out SHA does not match the resolved target."
+            exit 1
+          fi
+          {
+            echo "sha=$actual_sha"
+            echo "target_ref=$TARGET_REF"
+            echo "repository=$REPOSITORY"
+          } >> "$GITHUB_OUTPUT"
+          echo "Verified repository=$REPOSITORY ref=$TARGET_REF sha=$actual_sha"
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        id: setup-dotnet
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore
+        id: restore
+        run: dotnet restore CiAi.slnx
+      - name: Build
+        id: build
+        run: dotnet build CiAi.slnx --configuration Release --no-restore
+      - name: Run contract checks
+        id: contract-tests
+        run: dotnet run --project tests/TheSingularityWorkshop.CiAi.ContractTests --configuration Release --no-build
+      - name: Pack NuGet package
+        id: pack
+        run: dotnet pack src/TheSingularityWorkshop.CiAi/TheSingularityWorkshop.CiAi.csproj --configuration Release --no-build --output artifacts/packages
+      - name: Validate packed artifacts
+        id: validate-package
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="artifacts/packages/TheSingularityWorkshop.CiAi.0.1.0-alpha.1.nupkg"
+          symbols="artifacts/packages/TheSingularityWorkshop.CiAi.0.1.0-alpha.1.snupkg"
+          test -f "$package"
+          test -f "$symbols"
+          unzip -Z1 "$package" | grep -Fx "README.md"
+          unzip -p "$package" "*.nuspec" | grep -F "<id>TheSingularityWorkshop.CiAi</id>"
+          unzip -p "$package" "*.nuspec" | grep -F "<version>0.1.0-alpha.1</version>"
+      - name: Upload package artifacts for release inspection
+        id: upload-artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ciai-package-candidate
+          path: artifacts/packages/*
+          if-no-files-found: error
+      - name: Summarize target provenance and gate evidence
+        if: always()
+        env:
+          REPOSITORY: ${{ github.repository }}
+          TARGET_REF: ${{ inputs.target_branch || github.ref_name }}
+          TARGET_SHA: ${{ steps.provenance.outputs.sha || steps.resolve-target.outputs.sha || github.sha }}
+          POLICY_PROFILE: ciai-contract-verification-v1
+          JOB_STATUS: ${{ job.status }}
+          PROVENANCE_STATUS: ${{ steps.provenance.outcome }}
+          RESTORE_STATUS: ${{ steps.restore.outcome }}
+          BUILD_STATUS: ${{ steps.build.outcome }}
+          CONTRACT_STATUS: ${{ steps.contract-tests.outcome }}
+          PACK_STATUS: ${{ steps.pack.outcome }}
+          PACKAGE_STATUS: ${{ steps.validate-package.outcome }}
+          ARTIFACT_STATUS: ${{ steps.upload-artifacts.outcome }}
+        shell: bash
+        run: |
+          {
+            echo "## CiAi branch-target gate evidence"
+            echo
+            echo "- Repository: `$REPOSITORY`"
+            echo "- Requested ref: `$TARGET_REF`"
+            echo "- Resolved commit: `$TARGET_SHA`"
+            echo "- Policy profile: `$POLICY_PROFILE`"
+            echo "- Job status: **$JOB_STATUS**"
+            echo
+            echo "| Required check | Result |"
+            echo "|---|---|"
+            echo "| Checkout provenance | $PROVENANCE_STATUS |"
+            echo "| Restore | $RESTORE_STATUS |"
+            echo "| Release build | $BUILD_STATUS |"
+            echo "| Contract tests | $CONTRACT_STATUS |"
+            echo "| Package creation | $PACK_STATUS |"
+            echo "| Package validation | $PACKAGE_STATUS |"
+            echo "| Evidence artifact upload | $ARTIFACT_STATUS |"
+            echo
+            if [ "$JOB_STATUS" = "success" ] && [ "$PROVENANCE_STATUS" = "success" ] && [ "$RESTORE_STATUS" = "success" ] && [ "$BUILD_STATUS" = "success" ] && [ "$CONTRACT_STATUS" = "success" ] && [ "$PACK_STATUS" = "success" ] && [ "$PACKAGE_STATUS" = "success" ] && [ "$ARTIFACT_STATUS" = "success" ]; then
+              echo "**Evidence completeness: complete** — all required gate steps succeeded for the resolved commit."
+            else
+              echo "**Evidence completeness: incomplete** — at least one required gate step did not succeed."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
