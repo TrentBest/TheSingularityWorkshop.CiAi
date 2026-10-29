@@ -45,11 +45,11 @@ The normal push and pull-request triggers remain limited to `master` and `develo
 1. Open **Actions → CiAi Contract Verification → Run workflow**.
 2. Choose the workflow branch that contains the desired CI definition (normally `development`).
 3. Optionally enter the existing branch name in `target_branch`, for example `agent/serialization-optimization`. Leave it blank to test the branch selected for the workflow run.
-4. Run the workflow and inspect the run's checkout and contract results.
+4. Run the workflow and inspect the run's **Summary** for the requested ref, resolved commit SHA, policy profile, required-check results, and evidence-completeness verdict.
 
-For a supplied target, the workflow validates the branch name, resolves exactly one matching remote branch to a full commit SHA, and checks out that SHA before running restore, build, contract tests, and package-artifact validation. Unknown or invalid branch names fail before the gate runs. Slash-separated names are supported. The workflow uses read-only repository permissions and does not create/delete branches, merge code, or publish NuGet packages.
+For a supplied target, the workflow validates the branch name, resolves exactly one matching remote branch to a full commit SHA, checks out that SHA, and verifies that the checked-out `HEAD` equals the resolved SHA before running restore, build, contract tests, and package-artifact validation. The summary binds its result to the repository identity and full commit SHA. Unknown or invalid branch names fail before the gate runs. Slash-separated names are supported. The workflow uses read-only repository permissions and does not create/delete branches, merge code, or publish NuGet packages.
 
-This is an initial branch-targeting entry point for **CiAi's own contract workflow**, not yet a universal registry or GitHub Actions host adapter for every ecosystem repository. Consumer repositories still need their own triggers/dispatch wiring until the adapter is proven and adopted. A successful run is evidence for the resolved commit, not release authorization.
+This is an initial branch-targeting entry point for **CiAi's own contract workflow**, not yet a universal registry or GitHub Actions host adapter for every ecosystem repository. Consumer repositories still need their own triggers/dispatch wiring until the adapter is proven and adopted. A successful run is evidence for the resolved commit, not release authorization. The dispatch path still needs an end-to-end run against a third branch before this capability is considered verified.
 
 ## 03 — Package
 
@@ -76,55 +76,11 @@ The read-only GitHub Actions client validates provider identity and preserves un
 
 - [Workflow domain map: 22 workflow families and cross-cutting contracts](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/CI_WORKFLOW_DOMAIN_MAP.md)
 - [Declarative workflow plan validation: stable IDs, domain references, dependency graphs, and deterministic recipes](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/CI_WORKFLOW_DOMAIN_MAP.md#validated-workflow-plans)
-
-
 - [Declarative CI builder and publication-authorization design](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/CI_BUILDER_DESIGN.md) — recipe-style pipeline direction. The definition builder, bounded in-process executor, and fail-closed required-evidence evaluator now exist on `development`; canonical deterministic reporting, provider-host integration, and publication remain incomplete.
 - [CI user workflows and fluent vocabulary](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/CI_USER_WORKFLOWS.md) — user-centered workflows and the words the fluent API should express; proposed capabilities are clearly separated from implemented ones.
-
 - [UML capability feasibility pilot](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/UML_CAPABILITY_PILOT.md)
-
 - [Read-only CI observation UML and use case](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/UML/CiRunObservationUML.md)
 - [RepositoryIdentity class companion](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/src/TheSingularityWorkshop.CiAi/RepositoryIdentity.md)
 - [CiRunEvidenceVerifier class companion](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/src/TheSingularityWorkshop.CiAi/CiRunEvidenceVerifier.md)
 - [Evidence reconciliation UML and use case](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/UML/CiRunEvidenceVerifierUML.md)
 - [Artifact handoff contract types and use case](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/UML/ArtifactHandoffContractsUML.md)
-- [Artifact handoff contract](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/ARTIFACT_HANDOFF_CONTRACT.md)
-- [ArtifactManifest class companion](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/src/TheSingularityWorkshop.CiAi/ArtifactManifest.md)
-- [ArtifactReadyNotice class companion](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/src/TheSingularityWorkshop.CiAi/ArtifactReadyNotice.md)
-- [ArtifactReceiptAcknowledgement class companion](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/src/TheSingularityWorkshop.CiAi/ArtifactReceiptAcknowledgement.md)
-- [Bounded artifact stream reader class companion](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/src/TheSingularityWorkshop.CiAi/ArtifactPayloadReader.md)
-- [Durable receipt ledger class companion](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/src/TheSingularityWorkshop.CiAi/FileArtifactReceiptLedger.md)
-- [Durable receipt ledger UML and use case](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/UML/FileArtifactReceiptLedgerUML.md)
-- [CogA–CogE responsibilities and integration boundary](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/COGS_VS_CAPABILITIES.md)
-- [CogA capability catalog](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogA)
-- [CogB bounded request ledger](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogB)
-- [CogC result correlation](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogC)
-- [CogD default-deny policy](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogD)
-- [CogE lifecycle projection](https://github.com/TrentBest/TheSingularityWorkshop.CiAi.CogE)
-- [Pinned cross-Cog vertical contract proof](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/integration/CogEcosystem.ContractTests/README.md)
-- [Cross-Cog integration workflow](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/workflows/cog-ecosystem.yml)
-
-## 06 — Automated serialization benchmark handoff
-
-The `.github/workflows/serialization-benchmark-dispatch.yml` watcher polls the `FSM_Serialization/development` branch for a successful build of the exact current commit, then dispatches a benchmark notice. It does not publish a package.
-
-- GitHub scheduled workflows have a five-minute minimum cadence; the workflow wakes every five minutes and gates actual polling with the repository Actions variable `SERIALIZATION_BENCHMARK_POLL_MINUTES`.
-- Supported values are `5`, `10`, `15`, `20`, `30`, or `60`. If unset, the default is `15` minutes for current testing.
-- Change it under **Settings → Secrets and variables → Actions → Variables**. The interval is configurable without editing workflow code.
-- **Run workflow** manually bypasses the schedule gate and polls immediately.
-- The repository secret `BENCHMARK_DISPATCH_TOKEN` must authorize repository dispatches to `TrentBest/FSM_Serialization_Benchmarks` (Contents: write).
-- The source SHA is carried as a stable `noticeId`; the receiving workflow should deduplicate that ID because the sender's Actions cache marker is a best-effort duplicate guard, not a transactional exactly-once guarantee.
-
-The polling cadence is an operational setting, not a benchmark definition or a release authorization.
-
-## 07 — Release status
-
-**Release status: alpha candidate; not approved for publication.** Readiness is tracked by explicit gates below rather than percentage estimates without a defined scoring model.
-
-Release evidence is candidate-specific: use the latest successful [CiAi Contract Verification workflow](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/workflows/ci.yml) for the exact source commit under review. The workflow builds, runs offline contract checks, packs both NuGet and symbol packages, validates package metadata and embedded README, and uploads the artifacts for inspection. A green workflow and inspected package are not publication approval; owner review and explicit publication approval remain required.
-
-The artifact handoff has typed manifest, ready-notice, and receipt-acknowledgement contracts, bounded caller-supplied stream reading, SHA-256 verification, provider repository/run/source-revision receipt correlation, and a dependency-free file-backed receipt ledger that suppresses exact retries and rejects conflicting reuse of a deduplication key. The stream reader does not fetch the manifest URI or authenticate a provider, and the ledger does not authorize cleanup. Not yet implemented: HeadlessAi invocation from CiAi, ProtocolAi vocabulary integration, host permission policy, live cross-repository request/result round trip, provider-authenticated URI retrieval, durable request-level idempotency/history, and retention/reclamation.
-
-See the [first demo and commercial-validation plan](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/INITIAL_DEMO_AND_COMMERCIAL_HYPOTHESIS.md) for a reproducible exact-SHA observation walkthrough, a claim ledger, and a service-led customer-validation experiment. This is a plan; a fresh demo run and customer validation are not yet claimed.
-
-See [release readiness](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/RELEASE_READINESS.md), the [inter-repository model](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/INTER_REPOSITORY_MODEL.md), the [capability repository architecture](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/CAPABILITY_REPOSITORIES.md), the [pull-based artifact handoff contract](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/ARTIFACT_HANDOFF_CONTRACT.md), the [Cogs-versus-capabilities model](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/COGS_VS_CAPABILITIES.md), the [ecosystem CI integration roadmap](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/ECOSYSTEM_CI_INTEGRATION_ROADMAP.md), and the [repository-specific integration samples](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/Samples/README.md).
