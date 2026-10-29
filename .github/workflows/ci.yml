@@ -67,11 +67,11 @@ jobs:
             exit 1
           fi
           matches="$(git ls-remote --heads origin "refs/heads/$TARGET_BRANCH")"
-          if [ -z "$matches" ] || [ "$(printf '%s\\n' "$matches" | wc -l)" -ne 1 ]; then
+          if [ -z "$matches" ] || [ "$(printf '%s\n' "$matches" | wc -l)" -ne 1 ]; then
             echo "::error::Target must resolve to exactly one existing branch."
             exit 1
           fi
-          sha="$(printf '%s\\n' "$matches" | awk '{print $1}')"
+          sha="$(printf '%s\n' "$matches" | awk '{print $1}')"
           if ! [[ "$sha" =~ ^[0-9a-f]{40}$ ]]; then
             echo "::error::Resolved target did not produce a full commit SHA."
             exit 1
