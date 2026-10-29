@@ -43,7 +43,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ciai-contract-${{ github.ref }}
+  group: ciai-contract-${{ github.ref }}-${{ inputs.target_branch || 'default' }}
   cancel-in-progress: true
 
 jobs:
