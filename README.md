@@ -38,7 +38,20 @@ dotnet run --project tests/TheSingularityWorkshop.CiAi.ContractTests --configura
 dotnet pack src/TheSingularityWorkshop.CiAi/TheSingularityWorkshop.CiAi.csproj --configuration Release
 ```
 
-## 02 — Package
+## 02 — Gate an existing branch on demand
+
+The normal push and pull-request triggers remain limited to `master` and `development`. To run the same contract gate against another **existing branch** without editing workflow source:
+
+1. Open **Actions → CiAi Contract Verification → Run workflow**.
+2. Choose the workflow branch that contains the desired CI definition (normally `development`).
+3. Optionally enter the existing branch name in `target_branch`, for example `agent/serialization-optimization`. Leave it blank to test the branch selected for the workflow run.
+4. Run the workflow and inspect the run's checkout and contract results.
+
+For a supplied target, the workflow validates the branch name, resolves exactly one matching remote branch to a full commit SHA, and checks out that SHA before running restore, build, contract tests, and package-artifact validation. Unknown or invalid branch names fail before the gate runs. Slash-separated names are supported. The workflow uses read-only repository permissions and does not create/delete branches, merge code, or publish NuGet packages.
+
+This is an initial branch-targeting entry point for **CiAi's own contract workflow**, not yet a universal registry or GitHub Actions host adapter for every ecosystem repository. Consumer repositories still need their own triggers/dispatch wiring until the adapter is proven and adopted. A successful run is evidence for the resolved commit, not release authorization.
+
+## 03 — Package
 
 - Package ID: `TheSingularityWorkshop.CiAi`
 - Current candidate: `0.1.0-alpha.1`
@@ -48,7 +61,7 @@ dotnet pack src/TheSingularityWorkshop.CiAi/TheSingularityWorkshop.CiAi.csproj -
 
 The package candidate is configured with repository metadata, release notes, symbols, and this README embedded in the NuGet package. The dependency-update evaluator uses Microsoft's `NuGet.Versioning` library rather than a hand-maintained approximation of NuGet version semantics. CI builds, runs contract checks, and packs the library. A passing pack job is not a NuGet publication.
 
-## 03 — Architecture and trust boundary
+## 04 — Architecture and trust boundary
 
 - **CI provider:** source of truth for repository identity, workflow run state, commit SHA, conclusion, and run evidence.
 - **CiAi:** validates and normalizes CI facts; the current GitHub Actions client is read-only.
@@ -59,7 +72,7 @@ The package candidate is configured with repository metadata, release notes, sym
 
 The read-only GitHub Actions client validates provider identity and preserves unknown conclusions instead of treating them as success. Separately, `CiPipelineExecutor` on `development` can execute registered in-process delegates sequentially, blocks privileged capabilities, and records step outcomes; `CiRequiredEvidenceEvaluator` checks required facts against an exact repository and full commit SHA. These are bounded building blocks, not yet an end-to-end CI policy host: the executor report includes wall-clock timestamps; `bool false` and `CiStepResult.Failure(...)` fail a step, while `CiStepResult.Success()` explicitly succeeds. Other returned values are outputs, not status codes, and no GitHub Actions adapter yet makes this executor the authority for consumer build/test/coverage/docs/benchmark gates. Do not use the prototype executor for operations that report failure through integer exit codes or other non-boolean values unless an adapter maps them to `CiStepResult`. The observer client itself remains read-only and does not dispatch work, cancel runs, publish packages, or deploy applications.
 
-## 04 — Source-derived contract documentation
+## 05 — Source-derived contract documentation
 
 - [Workflow domain map: 22 workflow families and cross-cutting contracts](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/CI_WORKFLOW_DOMAIN_MAP.md)
 - [Declarative workflow plan validation: stable IDs, domain references, dependency graphs, and deterministic recipes](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/CI_WORKFLOW_DOMAIN_MAP.md#validated-workflow-plans)
@@ -91,7 +104,7 @@ The read-only GitHub Actions client validates provider identity and preserves un
 - [Pinned cross-Cog vertical contract proof](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/integration/CogEcosystem.ContractTests/README.md)
 - [Cross-Cog integration workflow](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/workflows/cog-ecosystem.yml)
 
-## 05 — Automated serialization benchmark handoff
+## 06 — Automated serialization benchmark handoff
 
 The `.github/workflows/serialization-benchmark-dispatch.yml` watcher polls the `FSM_Serialization/development` branch for a successful build of the exact current commit, then dispatches a benchmark notice. It does not publish a package.
 
@@ -104,7 +117,7 @@ The `.github/workflows/serialization-benchmark-dispatch.yml` watcher polls the `
 
 The polling cadence is an operational setting, not a benchmark definition or a release authorization.
 
-## 06 — Release status
+## 07 — Release status
 
 **Release status: alpha candidate; not approved for publication.** Readiness is tracked by explicit gates below rather than percentage estimates without a defined scoring model.
 
