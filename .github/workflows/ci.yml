@@ -32,6 +32,12 @@ on:
       - ".github/workflows/observe-release-candidate.yml"
       - ".github/workflows/serialization-benchmark-dispatch.yml"
   workflow_dispatch:
+    inputs:
+      target_branch:
+        description: "Optional existing branch to gate; blank uses the branch selected for this workflow run."
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -44,7 +50,35 @@ jobs:
   contract:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Resolve optional branch target to an immutable commit
+        id: resolve-target
+        if: github.event_name == 'workflow_dispatch' && inputs.target_branch != ''
+        env:
+          TARGET_BRANCH: ${{ inputs.target_branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! git check-ref-format --branch "$TARGET_BRANCH" >/dev/null; then
+            echo "::error::Invalid branch name."
+            exit 1
+          fi
+          matches="$(git ls-remote --heads origin "refs/heads/$TARGET_BRANCH")"
+          if [ -z "$matches" ] || [ "$(printf '%s\\n' "$matches" | wc -l)" -ne 1 ]; then
+            echo "::error::Target must resolve to exactly one existing branch."
+            exit 1
+          fi
+          sha="$(printf '%s\\n' "$matches" | awk '{print $1}')"
+          if ! [[ "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Resolved target did not produce a full commit SHA."
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "target_branch=$TARGET_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "Resolved branch '$TARGET_BRANCH' to $sha"
+      - name: Check out selected commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ steps.resolve-target.outputs.sha || github.sha }}
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
         with:
           dotnet-version: 8.0.x
