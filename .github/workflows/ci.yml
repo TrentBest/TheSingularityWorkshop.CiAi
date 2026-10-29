@@ -48,10 +48,10 @@ concurrency:
 
 jobs:
   contract:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out workflow revision
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.sha }}
       - name: Resolve optional branch target to an immutable commit
@@ -81,7 +81,7 @@ jobs:
           echo "Resolved branch '$TARGET_BRANCH' to $sha"
       - name: Check out selected target commit
         if: github.event_name == 'workflow_dispatch' && inputs.target_branch != ''
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ steps.resolve-target.outputs.sha }}
       - name: Verify checkout provenance
@@ -104,7 +104,7 @@ jobs:
             echo "repository=$REPOSITORY"
           } >> "$GITHUB_OUTPUT"
           echo "Verified repository=$REPOSITORY ref=$TARGET_REF sha=$actual_sha"
-      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
         id: setup-dotnet
         with:
           dotnet-version: 8.0.x
