@@ -25,8 +25,11 @@ internal static class CiWorkflowRerunRequestLedgerContractTests
             var second = NewRequest(2, "123456789abcdef0123456789abcdef012345678");
             Assert(ledger.Accept(second, auth, NewTarget(second.HeadSha), policy, Now).Outcome == CiWorkflowRerunAcceptanceOutcome.Accepted,
                 "next sequential attempt was not accepted");
-            var gap = NewRequest(4, second.HeadSha);
-            Assert(ledger.Accept(gap, auth, NewTarget(gap.HeadSha), policy, Now).BlockingReasons.Contains("rerun.attempt-sequence-gap"),
+            var gapLedger = new FileCiWorkflowRerunRequestLedger(Path.Combine(root, "gap.jsonl"));
+            Assert(gapLedger.Accept(first, auth, target1, policy, Now).Outcome == CiWorkflowRerunAcceptanceOutcome.Accepted,
+                "gap fixture first attempt was not accepted");
+            var gap = NewRequest(3, second.HeadSha);
+            Assert(gapLedger.Accept(gap, auth, NewTarget(gap.HeadSha), policy, Now).BlockingReasons.Contains("rerun.attempt-sequence-gap"),
                 "attempt sequence gap was not rejected");
             var reopened = new FileCiWorkflowRerunRequestLedger(path);
             Assert(reopened.ReadAccepted().Count == 2, "accepted requests were not durable across reopen");
