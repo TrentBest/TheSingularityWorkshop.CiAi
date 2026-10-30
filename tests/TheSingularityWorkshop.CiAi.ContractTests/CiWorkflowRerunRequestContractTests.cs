@@ -58,7 +58,7 @@ internal static class CiWorkflowRerunRequestContractTests
         {
             Assert(policy.Evaluate(request, auth, now.AddMinutes(11))
                 .Contains("rerun.request-expired-or-not-yet-valid"), "expired request was accepted");
-            var expired = NewAuthorization(expiresAt: now.AddMinutes(-1));
+            var expired = NewAuthorization(expiresAt: now.AddSeconds(-30));
             Assert(policy.Evaluate(request, expired, now).Contains("rerun.authorization-expired-or-not-yet-valid"),
                 "expired authorization was accepted");
         });
