@@ -28,4 +28,20 @@
 
 The existing GitHub Actions run and job collectors remain read-only and retain each run attempt independently. This packet is the normalized handoff layer above those observations. Durable delivery, dispatch/rerun requests, authenticated callback processing, artifact inventory/digest verification, and Foundry lifecycle integration remain separate work items; this type does not claim those systems exist.
 
+
+## Durable evidence outbox
+
+`CiWorkflowEvidenceDelivery` wraps one packet with a caller-supplied delivery ID, a stable run-attempt idempotency key (`repository:runId:runAttempt:headSha`), and a SHA-256 digest of the serialized packet.
+
+`FileCiWorkflowEvidenceOutbox` provides an append-only local journal:
+
+- `Enqueue` persists a new delivery and flushes it to disk before returning.
+- Re-enqueueing the same delivery ID and exact payload returns `Duplicate`.
+- Reusing a delivery ID for different packet content returns `Conflict`; the original evidence is not overwritten.
+- `ReadPending` rehydrates and revalidates packet schema, payload digest, and run-attempt identity after restart.
+- The caller supplies acknowledged delivery IDs when reading pending entries. This deliberately keeps remote acknowledgement authority outside the evidence store; until the caller has durable receipt evidence, the packet remains replayable.
+- A malformed or torn final record fails closed rather than silently discarding potentially valuable evidence.
+
+The file lock serializes writers across processes. This is a local filesystem outbox, not a network transport, authenticated webhook receiver, distributed consensus store, or guarantee of remote delivery. Hosts must protect the outbox path and persist consumer acknowledgements independently.
+
 ![The Singularity Workshop](../../Avatar.jpg)
