@@ -129,6 +129,7 @@ public sealed class FileCiWorkflowEvidenceOutbox
             if (string.IsNullOrWhiteSpace(record.DeliveryId) ||
                 string.IsNullOrWhiteSpace(record.IdempotencyKey) ||
                 string.IsNullOrWhiteSpace(record.Payload) ||
+                string.IsNullOrWhiteSpace(record.PayloadSha256) ||
                 record.PayloadSha256.Length != 64 ||
                 !record.PayloadSha256.All(Uri.IsHexDigit))
                 throw new InvalidDataException("CI evidence outbox contains an invalid record.");
