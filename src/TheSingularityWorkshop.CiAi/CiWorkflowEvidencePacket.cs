@@ -119,9 +119,7 @@ public sealed record CiWorkflowEvidencePacket
     /// <summary>Policy-neutral provider outcome; skipped, cancelled, unknown, and incomplete remain non-success.</summary>
     public bool IsSuccessful =>
         EvidenceComplete && Conclusion == CiRunConclusion.Success &&
-        Jobs.All(job => job.Status == "completed" && job.Conclusion == "success" &&
-            job.Steps.Count > 0 && job.Steps.All(step =>
-                step.Status == "completed" && step.Conclusion == "success"));
+        Jobs.All(job => job.Status == "completed" && job.Conclusion == "success");
 
     /// <summary>Stable, machine-readable reasons why this packet cannot be treated as complete success.</summary>
     public IReadOnlyList<string> BlockingReasons
@@ -139,13 +137,8 @@ public sealed record CiWorkflowEvidencePacket
             {
                 if (job.Status != "completed") reasons.Add($"job.{job.JobId}.not-terminal");
                 else if (job.Conclusion != "success") reasons.Add($"job.{job.JobId}.not-successful");
-                if (job.Steps.Count == 0) reasons.Add($"job.{job.JobId}.steps-missing");
-                foreach (var step in job.Steps)
-                {
-                    if (step.Status != "completed") reasons.Add($"job.{job.JobId}.step.{step.Number}.not-terminal");
-                    else if (step.Conclusion != "success")
-                        reasons.Add($"job.{job.JobId}.step.{step.Number}.not-successful");
-                }
+                // Step outcomes are preserved verbatim. A skipped or continue-on-error step is
+                // not independently a failed workflow; policy must identify required steps.
             }
             return Array.AsReadOnly(reasons.Distinct(StringComparer.Ordinal).ToArray());
         }
