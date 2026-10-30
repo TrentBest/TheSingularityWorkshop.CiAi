@@ -25,10 +25,10 @@ public sealed record CiWorkflowEvidencePacket
         CiRunConclusion conclusion,
         Uri runEvidenceUrl,
         DateTimeOffset observedAt,
-        IEnumerable<CiWorkflowJobObservation> jobs,
+        IReadOnlyList<CiWorkflowJobObservation> jobs,
         bool discoveryComplete,
         bool jobsComplete,
-        IEnumerable<Uri>? artifactReferences = null)
+        IReadOnlyList<Uri>? artifactReferences = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(repository);
         ArgumentException.ThrowIfNullOrWhiteSpace(workflowPath);
