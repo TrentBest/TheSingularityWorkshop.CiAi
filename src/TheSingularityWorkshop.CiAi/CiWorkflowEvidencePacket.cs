@@ -157,12 +157,19 @@ public sealed record CiWorkflowEvidencePacket
     public static CiWorkflowEvidencePacket FromJson(string json)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(json);
-        var packet = JsonSerializer.Deserialize<CiWorkflowEvidencePacket>(json, JsonOptions(false))
-            ?? throw new InvalidDataException("Evidence packet JSON produced no packet.");
-        if (packet.ContractVersion != CurrentContractVersion ||
-            !string.Equals(packet.Schema, CurrentSchema, StringComparison.Ordinal))
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+        if (root.ValueKind != JsonValueKind.Object ||
+            !root.TryGetProperty("contractVersion", out var version) ||
+            !version.TryGetInt32(out var parsedVersion) ||
+            !root.TryGetProperty("schema", out var schema) ||
+            schema.ValueKind != JsonValueKind.String ||
+            parsedVersion != CurrentContractVersion ||
+            !string.Equals(schema.GetString(), CurrentSchema, StringComparison.Ordinal))
             throw new InvalidDataException("Evidence packet contract version or schema is unsupported.");
-        return packet;
+
+        return JsonSerializer.Deserialize<CiWorkflowEvidencePacket>(json, JsonOptions(false))
+            ?? throw new InvalidDataException("Evidence packet JSON produced no packet.");
     }
 
     private static JsonSerializerOptions JsonOptions(bool indented) => new()
