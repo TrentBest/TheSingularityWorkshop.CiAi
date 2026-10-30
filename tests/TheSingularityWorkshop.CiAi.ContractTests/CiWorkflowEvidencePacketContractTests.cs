@@ -41,8 +41,8 @@ internal static class CiWorkflowEvidencePacketContractTests
         Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromJson(
             json.Replace("ciai.workflow-evidence.v1", "ciai.workflow-evidence.v99", StringComparison.Ordinal)));
 
-        Console.WriteLine("PASS: 10 CI workflow evidence packet contract checks.");
-        return 10;
+        Console.WriteLine("PASS: 12 CI workflow evidence packet contract checks.");
+        return 12;
     }
 
     private static CiWorkflowEvidencePacket CreatePacket(
