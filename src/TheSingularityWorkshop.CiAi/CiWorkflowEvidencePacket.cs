@@ -19,7 +19,7 @@ public sealed record CiWorkflowEvidencePacket
         int runAttempt,
         string headRef,
         string headSha,
-        string event,
+        string @event,
         string workflowName,
         CiRunStatus status,
         CiRunConclusion conclusion,
@@ -34,7 +34,7 @@ public sealed record CiWorkflowEvidencePacket
         ArgumentException.ThrowIfNullOrWhiteSpace(workflowPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(headRef);
         ArgumentException.ThrowIfNullOrWhiteSpace(headSha);
-        ArgumentException.ThrowIfNullOrWhiteSpace(event);
+        ArgumentException.ThrowIfNullOrWhiteSpace(@event);
         ArgumentException.ThrowIfNullOrWhiteSpace(workflowName);
         ArgumentNullException.ThrowIfNull(runEvidenceUrl);
         ArgumentNullException.ThrowIfNull(jobs);
@@ -80,7 +80,7 @@ public sealed record CiWorkflowEvidencePacket
         RunAttempt = runAttempt;
         HeadRef = headRef;
         HeadSha = headSha.ToLowerInvariant();
-        Event = event;
+        Event = @event;
         WorkflowName = workflowName;
         Status = status;
         Conclusion = conclusion;
