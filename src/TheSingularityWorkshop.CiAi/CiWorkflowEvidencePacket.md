@@ -12,7 +12,7 @@
 - Every job must belong to the packet's exact run ID and attempt.
 - Every run/job URL must be an HTTPS GitHub URL for that exact run.
 - Missing or truncated discovery/job evidence remains incomplete.
-- A successful workflow summary is not enough: every observed job and step must be completed successfully before `IsSuccessful` is true.
+- A successful workflow summary is not enough: every observed job must be completed successfully before `IsSuccessful` is true. Step outcomes are retained verbatim; a host policy decides which steps are required, so a skipped or continue-on-error step is not silently reclassified as a workflow failure.
 - `BlockingReasons` uses stable machine-readable codes; it does not convert diagnostics into instructions.
 - Artifact references are references only. This contract does not claim that artifact bytes were downloaded, hashed, retained, or independently verified.
 - A packet is not a release verdict, merge approval, publication authorization, or deployment authorization.
