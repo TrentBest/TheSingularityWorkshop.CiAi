@@ -29,10 +29,16 @@ internal static class CiWorkflowEvidencePacketContractTests
             incomplete.BlockingReasons.Contains("evidence.discovery-incomplete"),
             "incomplete discovery was treated as complete evidence");
 
+        // A raw failed step is not enough to infer a failed job: GitHub may report
+        // continue-on-error or other policy-specific semantics at the job level.
         var failedStep = CreatePacket(stepConclusion: "failure");
         Assert(failedStep.EvidenceComplete && failedStep.IsSuccessful &&
             failedStep.Jobs[0].Steps[0].Conclusion == "failure",
             "raw step outcome was not preserved independently from the successful job conclusion");
+
+        var failedJob = CreatePacket(jobConclusion: "failure", runConclusion: CiRunConclusion.Success);
+        Assert(!failedJob.IsSuccessful && failedJob.BlockingReasons.Contains("job.101.not-successful"),
+            "unsuccessful job was accepted despite a successful workflow conclusion");
 
         Throws<ArgumentException>(() => CreatePacket(jobAttempt: 1));
         Throws<ArgumentException>(() => CreatePacket(jobRunId: 43));
@@ -41,13 +47,15 @@ internal static class CiWorkflowEvidencePacketContractTests
         Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromJson(
             json.Replace("ciai.workflow-evidence.v1", "ciai.workflow-evidence.v99", StringComparison.Ordinal)));
 
-        Console.WriteLine("PASS: 12 CI workflow evidence packet contract checks.");
-        return 12;
+        Console.WriteLine("PASS: 13 CI workflow evidence packet contract checks.");
+        return 13;
     }
 
     private static CiWorkflowEvidencePacket CreatePacket(
         bool discoveryComplete = true,
         string stepConclusion = "success",
+        string jobConclusion = "success",
+        CiRunConclusion? runConclusion = null,
         int jobAttempt = 2,
         long jobRunId = 42,
         Uri? runUrl = null,
@@ -60,13 +68,13 @@ internal static class CiWorkflowEvidencePacketContractTests
         var jobs = new[]
         {
             new CiWorkflowJobObservation(101, jobRunId, jobAttempt, "build-and-test",
-                "completed", stepConclusion, new Uri("https://github.com/TrentBest/SimpleDemos/actions/runs/42/job/101"),
+                "completed", jobConclusion, new Uri("https://github.com/TrentBest/SimpleDemos/actions/runs/42/job/101"),
                 Array.AsReadOnly(steps))
         };
         return new CiWorkflowEvidencePacket(
             "TrentBest/SimpleDemos", workflowPath, 42, 2, "refs/heads/agent/fix", Sha,
             "pull_request", "CI", CiRunStatus.Completed,
-            stepConclusion == "success" ? CiRunConclusion.Success : CiRunConclusion.Failure,
+            runConclusion ?? (jobConclusion == "success" ? CiRunConclusion.Success : CiRunConclusion.Failure),
             runUrl ?? new Uri("https://github.com/TrentBest/SimpleDemos/actions/runs/42"),
             DateTimeOffset.Parse("2026-10-30T20:01:00Z"),
             Array.AsReadOnly(jobs), discoveryComplete, jobsComplete: true);
