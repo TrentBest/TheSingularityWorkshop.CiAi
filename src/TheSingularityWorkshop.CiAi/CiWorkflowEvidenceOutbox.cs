@@ -60,10 +60,19 @@ public sealed class FileCiWorkflowEvidenceOutbox
             FileAccess.ReadWrite, FileShare.None);
 
         var records = ReadRecords();
-        var existing = records.FirstOrDefault(record =>
+        var existingByDeliveryId = records.FirstOrDefault(record =>
             string.Equals(record.DeliveryId, delivery.DeliveryId, StringComparison.Ordinal));
-        if (existing is not null)
-            return string.Equals(existing.PayloadSha256, delivery.PayloadSha256, StringComparison.Ordinal)
+        if (existingByDeliveryId is not null)
+            return string.Equals(existingByDeliveryId.PayloadSha256, delivery.PayloadSha256, StringComparison.Ordinal)
+                ? CiWorkflowEvidenceEnqueueOutcome.Duplicate
+                : CiWorkflowEvidenceEnqueueOutcome.Conflict;
+
+        // The run-attempt key is the real idempotency boundary. A caller cannot enqueue
+        // the same attempt twice merely by inventing a second delivery ID.
+        var existingByAttempt = records.FirstOrDefault(record =>
+            string.Equals(record.IdempotencyKey, delivery.IdempotencyKey, StringComparison.Ordinal));
+        if (existingByAttempt is not null)
+            return string.Equals(existingByAttempt.PayloadSha256, delivery.PayloadSha256, StringComparison.Ordinal)
                 ? CiWorkflowEvidenceEnqueueOutcome.Duplicate
                 : CiWorkflowEvidenceEnqueueOutcome.Conflict;
 
@@ -80,6 +89,10 @@ public sealed class FileCiWorkflowEvidenceOutbox
     public IReadOnlyList<CiWorkflowEvidenceDelivery> ReadPending(
         IReadOnlySet<string>? acknowledgedDeliveryIds = null)
     {
+        var directory = Path.GetDirectoryName(_path)!;
+        Directory.CreateDirectory(directory);
+        using var fileLock = new FileStream(_path + ".lock", FileMode.OpenOrCreate,
+            FileAccess.ReadWrite, FileShare.None);
         var records = ReadRecords();
         var pending = records
             .Where(record => acknowledgedDeliveryIds is null ||
