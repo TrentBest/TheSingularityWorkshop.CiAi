@@ -30,6 +30,12 @@ The policy also checks a fresh `CiWorkflowRerunTarget` obtained from GitHub imme
 
 The caller must persist request/idempotency state and enforce the total task retry budget across requests. The per-request attempt cap is not a distributed rate limiter or a substitute for Foundry's task-level budget.
 
+## Durable acceptance ledger
+
+`FileCiWorkflowRerunRequestLedger` evaluates the policy before appending an accepted request to a local append-only journal. It flushes before reporting acceptance, deduplicates exact request retries, rejects conflicting reuse of a task-attempt identity, enforces sequential attempts and a stable task-level maximum, and rehydrates accepted requests after restart. An incomplete final journal record fails closed.
+
+The ledger records acceptance, not execution. A caller still owns dispatch state, callback retry scheduling, delivery acknowledgement, and task lifecycle. The journal is local storage, not a distributed coordination service.
+
 ## Not implemented by this contract
 
 This slice does not expose an HTTP callback, validate cryptographic credentials, retrieve GitHub branch state, dispatch `workflow_dispatch`, wait for a run, or deliver the resulting evidence packet. Those operations belong in a trusted host adapter and must retain GitHub provenance. No rerun request authorizes code changes, merge, publication, deployment, or release.
