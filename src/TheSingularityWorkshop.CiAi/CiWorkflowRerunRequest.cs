@@ -150,7 +150,38 @@ public sealed record CiDispatchAuthorizationContext
     }
 }
 
-/// <summary>Evaluates a rerun request against trusted host identity and repository policy.</summary>
+/// <summary>A fresh read-only GitHub snapshot used to reject stale or mismatched rerun targets.</summary>
+public sealed record CiWorkflowRerunTarget
+{
+    public CiWorkflowRerunTarget(string repository, string headRef, string headSha, string workflowPath)
+    {
+        if (!RepositoryIdentity.IsValid(repository))
+            throw new ArgumentException("Repository must be canonical owner/repository identity.", nameof(repository));
+        ArgumentException.ThrowIfNullOrWhiteSpace(headRef);
+        ArgumentException.ThrowIfNullOrWhiteSpace(headSha);
+        ArgumentException.ThrowIfNullOrWhiteSpace(workflowPath);
+        if (headSha.Length != 40 || !headSha.All(Uri.IsHexDigit))
+            throw new ArgumentException("Target SHA must be a full commit identifier.", nameof(headSha));
+        if (!headRef.StartsWith("refs/heads/feature/", StringComparison.Ordinal))
+            throw new ArgumentException("Target must be an isolated feature branch.", nameof(headRef));
+        if (!workflowPath.StartsWith(".github/workflows/", StringComparison.Ordinal) ||
+            !(workflowPath.EndsWith(".yml", StringComparison.OrdinalIgnoreCase) ||
+              workflowPath.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase)) ||
+            workflowPath.Contains("..", StringComparison.Ordinal))
+            throw new ArgumentException("Target workflow path is invalid.", nameof(workflowPath));
+        Repository = repository;
+        HeadRef = headRef;
+        HeadSha = headSha.ToLowerInvariant();
+        WorkflowPath = workflowPath;
+    }
+
+    public string Repository { get; }
+    public string HeadRef { get; }
+    public string HeadSha { get; }
+    public string WorkflowPath { get; }
+}
+
+/// <summary>Evaluates a rerun request against a fresh GitHub target and trusted host identity.</summary>
 public sealed class CiWorkflowRerunRequestPolicy
 {
     private readonly string _expectedIssuer;
@@ -184,16 +215,23 @@ public sealed class CiWorkflowRerunRequestPolicy
     public IReadOnlyList<string> Evaluate(
         CiWorkflowRerunRequest? request,
         CiDispatchAuthorizationContext? authorization,
+        CiWorkflowRerunTarget? currentTarget,
         DateTimeOffset now)
     {
         var reasons = new List<string>();
         if (request is null) return new[] { "rerun.request-required" };
         if (authorization is null) return new[] { "rerun.authorization-required" };
+        if (currentTarget is null) return new[] { "rerun.current-target-required" };
 
         if (request.ContractVersion != CiWorkflowRerunRequest.CurrentContractVersion)
             reasons.Add("rerun.unsupported-contract");
         if (now < request.RequestedAt || now >= request.ExpiresAt)
             reasons.Add("rerun.request-expired-or-not-yet-valid");
+        if (!string.Equals(request.Repository, currentTarget.Repository, StringComparison.Ordinal) ||
+            !string.Equals(request.HeadRef, currentTarget.HeadRef, StringComparison.Ordinal) ||
+            !string.Equals(request.HeadSha, currentTarget.HeadSha, StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(request.WorkflowPath, currentTarget.WorkflowPath, StringComparison.Ordinal))
+            reasons.Add("rerun.target-mismatch-or-stale");
         if (!_allowedRepositories.Contains(request.Repository))
             reasons.Add("rerun.repository-not-allowed");
         if (!_allowedWorkflowPaths.Contains(request.WorkflowPath))
