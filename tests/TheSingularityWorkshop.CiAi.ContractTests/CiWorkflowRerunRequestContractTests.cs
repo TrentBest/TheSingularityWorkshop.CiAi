@@ -63,7 +63,7 @@ internal static class CiWorkflowRerunRequestContractTests
         Check("policy requires repository-specific authorization", () =>
         {
             var wrong = NewAuthorization(authorizedRepositories: new[] { "TrentBest/Other" });
-            Assert(policy.Evaluate(request, wrong, now).Contains("rerun.repository-not-authorized"),
+            Assert(policy.Evaluate(request, wrong, target, now).Contains("rerun.repository-not-authorized"),
                 "repository authorization was not enforced");
         });
         Check("policy rejects expired requests and expired authorization", () =>
@@ -78,6 +78,7 @@ internal static class CiWorkflowRerunRequestContractTests
         {
             Assert(policy.Evaluate(null, auth, target, now).Contains("rerun.request-required"), "missing request accepted");
             Assert(policy.Evaluate(request, null, target, now).Contains("rerun.authorization-required"), "missing auth accepted");
+            Assert(policy.Evaluate(request, auth, null, now).Contains("rerun.current-target-required"), "missing target accepted");
         });
 
         return passed;
