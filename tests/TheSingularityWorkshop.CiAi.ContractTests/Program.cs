@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using TheSingularityWorkshop.CiAi;
 
 var passed = 0;
+passed += CiWorkflowEvidencePacketContractTests.Run();
 passed += CiPipelineDefinitionContractTests.Run();
 passed += CiWorkflowDomainCatalogContractTests.Run();
 passed += CiWorkflowDomainEvaluatorContractTests.Run();
