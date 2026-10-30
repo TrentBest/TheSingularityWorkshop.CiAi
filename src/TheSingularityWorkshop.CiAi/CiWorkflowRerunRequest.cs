@@ -7,7 +7,7 @@ namespace TheSingularityWorkshop.CiAi;
 public sealed record CiWorkflowRerunRequest
 {
     public const int CurrentContractVersion = 1;
-    public const int MaximumAttempts = 5;
+    public const int MaximumAllowedAttempts = 5;
     public static readonly TimeSpan MaximumRequestLifetime = TimeSpan.FromMinutes(30);
 
     public CiWorkflowRerunRequest(
@@ -43,7 +43,7 @@ public sealed record CiWorkflowRerunRequest
             throw new ArgumentException("Reruns are permitted only for an isolated feature branch ref.", nameof(headRef));
         if (!IsWorkflowPath(workflowPath))
             throw new ArgumentException("Workflow path must identify a .yml or .yaml file under .github/workflows.", nameof(workflowPath));
-        if (attemptNumber < 1 || maximumAttempts < 1 || maximumAttempts > MaximumAttempts || attemptNumber > maximumAttempts)
+        if (attemptNumber < 1 || maximumAttempts < 1 || maximumAttempts > MaximumAllowedAttempts || attemptNumber > maximumAttempts)
             throw new ArgumentOutOfRangeException(nameof(attemptNumber), "Attempt must fit within the configured maximum of five.");
         if (!string.Equals(idempotencyKey, $"{repository}:{taskId}:{attemptNumber}", StringComparison.Ordinal))
             throw new ArgumentException("Idempotency key must be derived from repository, task, and attempt identity.", nameof(idempotencyKey));
