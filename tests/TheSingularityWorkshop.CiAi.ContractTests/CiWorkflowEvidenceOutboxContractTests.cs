@@ -15,6 +15,9 @@ internal static class CiWorkflowEvidenceOutboxContractTests
                 "first enqueue was not persisted");
             Assert(outbox.Enqueue(delivery) == CiWorkflowEvidenceEnqueueOutcome.Duplicate,
                 "identical retry was not deduplicated");
+            Assert(outbox.Enqueue(new CiWorkflowEvidenceDelivery("delivery-alias", packet)) ==
+                CiWorkflowEvidenceEnqueueOutcome.Duplicate,
+                "same workflow attempt under a second delivery ID was not deduplicated");
             Assert(outbox.ReadPending().Count == 1, "pending evidence was not replayable");
             var reopened = new FileCiWorkflowEvidenceOutbox(path);
             var replay = reopened.ReadPending();
@@ -29,11 +32,15 @@ internal static class CiWorkflowEvidenceOutboxContractTests
             Assert(reopened.Enqueue(new CiWorkflowEvidenceDelivery("delivery-1", changed)) ==
                 CiWorkflowEvidenceEnqueueOutcome.Conflict,
                 "delivery ID reuse with different evidence did not conflict");
+            var sameAttemptDifferentEvidence = CreatePacket(workflowName: "Changed workflow metadata");
+            Assert(reopened.Enqueue(new CiWorkflowEvidenceDelivery("delivery-conflict", sameAttemptDifferentEvidence)) ==
+                CiWorkflowEvidenceEnqueueOutcome.Conflict,
+                "same run-attempt key with changed evidence did not conflict");
             Assert(reopened.ReadPending().Count == 1,
                 "conflicting enqueue changed the original durable evidence");
 
-            Console.WriteLine("PASS: 9 CI workflow evidence outbox contract checks.");
-            return 9;
+            Console.WriteLine("PASS: 11 CI workflow evidence outbox contract checks.");
+            return 11;
         }
         finally
         {
@@ -41,7 +48,7 @@ internal static class CiWorkflowEvidenceOutboxContractTests
         }
     }
 
-    private static CiWorkflowEvidencePacket CreatePacket(long runId = 42)
+    private static CiWorkflowEvidencePacket CreatePacket(long runId = 42, string workflowName = "CI")
     {
         var job = new CiWorkflowJobObservation(101, runId, 1, "build",
             "completed", "success",
@@ -52,7 +59,7 @@ internal static class CiWorkflowEvidenceOutboxContractTests
             }));
         return new CiWorkflowEvidencePacket("TrentBest/SimpleDemos", ".github/workflows/ci.yml",
             runId, 1, "refs/heads/development",
-            "abcdef0123456789abcdef0123456789abcdef01", "push", "CI",
+            "abcdef0123456789abcdef0123456789abcdef01", "push", workflowName,
             CiRunStatus.Completed, CiRunConclusion.Success,
             new Uri($"https://github.com/TrentBest/SimpleDemos/actions/runs/{runId}"),
             DateTimeOffset.Parse("2026-10-30T20:01:00Z"),
