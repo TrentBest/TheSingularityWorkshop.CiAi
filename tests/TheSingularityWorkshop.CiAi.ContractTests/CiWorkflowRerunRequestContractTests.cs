@@ -30,6 +30,12 @@ internal static class CiWorkflowRerunRequestContractTests
             Throws<ArgumentOutOfRangeException>(() => NewRequest(maximumAttempts: 6));
             Throws<ArgumentOutOfRangeException>(() => NewRequest(attemptNumber: 3, maximumAttempts: 2));
         });
+        Check("rerun request rejects caller-selected idempotency aliases", () =>
+            Throws<ArgumentException>(() => new CiWorkflowRerunRequest("request-1", "correlation-1", "task-1",
+                "TrentBest/TheSingularityWorkshop.CiAi", "refs/heads/feature/agent-fix",
+                "abcdef0123456789abcdef0123456789abcdef01", ".github/workflows/contract-verification.yml",
+                "arbitrary-key", 1, 3, DateTimeOffset.Parse("2026-10-30T22:00:00Z"),
+                DateTimeOffset.Parse("2026-10-30T22:10:00Z"))));
         Check("rerun request bounds lifetime to thirty minutes", () =>
             Throws<ArgumentException>(() => NewRequest(expiresAt: now.AddMinutes(31))));
         Check("policy rejects a different repository and workflow", () =>
@@ -98,7 +104,7 @@ internal static class CiWorkflowRerunRequestContractTests
         int maximumAttempts = 3,
         DateTimeOffset? expiresAt = null) =>
         new("request-1", "correlation-1", "task-1", "TrentBest/TheSingularityWorkshop.CiAi",
-            headRef, "ABCDEF0123456789ABCDEF0123456789ABCDEF01", workflowPath, "task-1:attempt-1",
+            headRef, "ABCDEF0123456789ABCDEF0123456789ABCDEF01", workflowPath, "TrentBest/TheSingularityWorkshop.CiAi:task-1:1",
             attemptNumber, maximumAttempts, DateTimeOffset.Parse("2026-10-30T22:00:00Z"),
             expiresAt ?? DateTimeOffset.Parse("2026-10-30T22:10:00Z"));
 
