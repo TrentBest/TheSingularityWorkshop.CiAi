@@ -39,6 +39,15 @@ internal static class CiWorkflowEvidenceOutboxContractTests
             Assert(reopened.ReadPending().Count == 1,
                 "conflicting enqueue changed the original durable evidence");
 
+            // Corrupted payload digests and torn final records must fail closed.
+            var corruptedPath = Path.Combine(root, "corrupted.jsonl");
+            File.WriteAllText(corruptedPath, File.ReadAllText(path).Replace(delivery.PayloadSha256, new string('0', 64), StringComparison.Ordinal));
+            AssertThrows<InvalidDataException>(() => new FileCiWorkflowEvidenceOutbox(corruptedPath).ReadPending());
+
+            var tornPath = Path.Combine(root, "torn.jsonl");
+            File.WriteAllText(tornPath, new string('x', 5));
+            AssertThrows<InvalidDataException>(() => new FileCiWorkflowEvidenceOutbox(tornPath).ReadPending());
+
             Console.WriteLine("PASS: 11 CI workflow evidence outbox contract checks.");
             return 11;
         }
@@ -64,6 +73,13 @@ internal static class CiWorkflowEvidenceOutboxContractTests
             new Uri($"https://github.com/TrentBest/SimpleDemos/actions/runs/{runId}"),
             DateTimeOffset.Parse("2026-10-30T20:01:00Z"),
             Array.AsReadOnly(new[] { job }), true, true);
+    }
+
+    private static void AssertThrows<TException>(Action action) where TException : Exception
+    {
+        try { action(); }
+        catch (TException) { return; }
+        throw new InvalidOperationException("Expected " + typeof(TException).Name + ".");
     }
 
     private static void Assert(bool condition, string message)
