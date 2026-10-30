@@ -5,6 +5,7 @@ var passed = 0;
 passed += CiWorkflowEvidencePacketContractTests.Run();
 passed += CiWorkflowEvidenceOutboxContractTests.Run();
 passed += CiWorkflowRerunRequestContractTests.Run();
+passed += CiWorkflowRerunRequestLedgerContractTests.Run();
 passed += CiPipelineDefinitionContractTests.Run();
 passed += CiWorkflowDomainCatalogContractTests.Run();
 passed += CiWorkflowDomainEvaluatorContractTests.Run();
