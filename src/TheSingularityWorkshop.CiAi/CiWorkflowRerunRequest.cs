@@ -45,6 +45,8 @@ public sealed record CiWorkflowRerunRequest
             throw new ArgumentException("Workflow path must identify a .yml or .yaml file under .github/workflows.", nameof(workflowPath));
         if (attemptNumber < 1 || maximumAttempts < 1 || maximumAttempts > MaximumAttempts || attemptNumber > maximumAttempts)
             throw new ArgumentOutOfRangeException(nameof(attemptNumber), "Attempt must fit within the configured maximum of five.");
+        if (!string.Equals(idempotencyKey, $"{repository}:{taskId}:{attemptNumber}", StringComparison.Ordinal))
+            throw new ArgumentException("Idempotency key must be derived from repository, task, and attempt identity.", nameof(idempotencyKey));
         if (expiresAt <= requestedAt || expiresAt - requestedAt > MaximumRequestLifetime)
             throw new ArgumentException("Request expiry must be after creation and no more than 30 minutes later.", nameof(expiresAt));
 
