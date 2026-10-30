@@ -37,6 +37,7 @@ The existing GitHub Actions run and job collectors remain read-only and retain e
 
 - `Enqueue` persists a new delivery and flushes it to disk before returning.
 - Re-enqueueing the same delivery ID and exact payload returns `Duplicate`.
+- The workflow-attempt idempotency key also deduplicates an identical packet submitted under a different delivery ID; reusing that attempt key with different packet content returns `Conflict`.
 - Reusing a delivery ID for different packet content returns `Conflict`; the original evidence is not overwritten.
 - `ReadPending` rehydrates and revalidates packet schema, payload digest, and run-attempt identity after restart.
 - The caller supplies acknowledged delivery IDs when reading pending entries. This deliberately keeps remote acknowledgement authority outside the evidence store; until the caller has durable receipt evidence, the packet remains replayable.
