@@ -27,3 +27,5 @@
 ## Current boundary
 
 The existing GitHub Actions run and job collectors remain read-only and retain each run attempt independently. This packet is the normalized handoff layer above those observations. Durable delivery, dispatch/rerun requests, authenticated callback processing, artifact inventory/digest verification, and Foundry lifecycle integration remain separate work items; this type does not claim those systems exist.
+
+![The Singularity Workshop](../../Avatar.jpg)
