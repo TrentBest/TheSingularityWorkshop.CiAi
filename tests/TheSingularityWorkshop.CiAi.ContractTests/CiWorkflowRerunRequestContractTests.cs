@@ -9,9 +9,10 @@ internal static class CiWorkflowRerunRequestContractTests
         var request = NewRequest();
         var auth = NewAuthorization();
         var policy = NewPolicy();
+        var target = NewTarget();
 
         Check("rerun request accepts an authorized exact feature-branch candidate", () =>
-            Assert(policy.Evaluate(request, auth, now).Count == 0, "valid request was blocked"));
+            Assert(policy.Evaluate(request, auth, target, now).Count == 0, "valid request was blocked"));
         Check("rerun request normalizes full SHA", () =>
             Assert(request.HeadSha == "abcdef0123456789abcdef0123456789abcdef01", "SHA was not normalized"));
         Check("rerun request rejects development and master refs", () =>
@@ -34,16 +35,27 @@ internal static class CiWorkflowRerunRequestContractTests
         Check("policy rejects a different repository and workflow", () =>
         {
             var wrongRepository = NewPolicy(allowedRepositories: new[] { "TrentBest/Other" });
-            Assert(wrongRepository.Evaluate(request, auth, now).Contains("rerun.repository-not-allowed"),
+            Assert(wrongRepository.Evaluate(request, auth, target, now).Contains("rerun.repository-not-allowed"),
                 "repository mismatch was not reported");
             var wrongWorkflow = NewPolicy(allowedWorkflowPaths: new[] { ".github/workflows/release.yml" });
-            Assert(wrongWorkflow.Evaluate(request, auth, now).Contains("rerun.workflow-not-allowed"),
+            Assert(wrongWorkflow.Evaluate(request, auth, target, now).Contains("rerun.workflow-not-allowed"),
                 "workflow mismatch was not reported");
+        });
+        Check("policy rejects stale branch SHA and mismatched ref", () =>
+        {
+            var stale = new CiWorkflowRerunTarget(request.Repository, request.HeadRef,
+                "123456789abcdef0123456789abcdef012345678", request.WorkflowPath);
+            Assert(policy.Evaluate(request, auth, stale, now).Contains("rerun.target-mismatch-or-stale"),
+                "stale SHA was accepted");
+            var wrongRef = new CiWorkflowRerunTarget(request.Repository, "refs/heads/feature/other",
+                request.HeadSha, request.WorkflowPath);
+            Assert(policy.Evaluate(request, auth, wrongRef, now).Contains("rerun.target-mismatch-or-stale"),
+                "mismatched ref was accepted");
         });
         Check("policy requires issuer, audience, and dispatch scope", () =>
         {
             var wrong = NewAuthorization(issuer: "untrusted", audience: "other", scopes: new[] { "read" });
-            var reasons = policy.Evaluate(request, wrong, now);
+            var reasons = policy.Evaluate(request, wrong, target, now);
             Assert(reasons.Contains("rerun.authorization-issuer-mismatch") &&
                 reasons.Contains("rerun.authorization-audience-mismatch") &&
                 reasons.Contains("rerun.authorization-scope-missing"), "authorization claims were not enforced");
@@ -56,16 +68,16 @@ internal static class CiWorkflowRerunRequestContractTests
         });
         Check("policy rejects expired requests and expired authorization", () =>
         {
-            Assert(policy.Evaluate(request, auth, now.AddMinutes(11))
+            Assert(policy.Evaluate(request, auth, target, now.AddMinutes(11))
                 .Contains("rerun.request-expired-or-not-yet-valid"), "expired request was accepted");
             var expired = NewAuthorization(expiresAt: now.AddSeconds(-30));
-            Assert(policy.Evaluate(request, expired, now).Contains("rerun.authorization-expired-or-not-yet-valid"),
+            Assert(policy.Evaluate(request, expired, target, now).Contains("rerun.authorization-expired-or-not-yet-valid"),
                 "expired authorization was accepted");
         });
         Check("policy rejects missing request or authorization", () =>
         {
-            Assert(policy.Evaluate(null, auth, now).Contains("rerun.request-required"), "missing request accepted");
-            Assert(policy.Evaluate(request, null, now).Contains("rerun.authorization-required"), "missing auth accepted");
+            Assert(policy.Evaluate(null, auth, target, now).Contains("rerun.request-required"), "missing request accepted");
+            Assert(policy.Evaluate(request, null, target, now).Contains("rerun.authorization-required"), "missing auth accepted");
         });
 
         return passed;
@@ -88,6 +100,11 @@ internal static class CiWorkflowRerunRequestContractTests
             headRef, "ABCDEF0123456789ABCDEF0123456789ABCDEF01", workflowPath, "task-1:attempt-1",
             attemptNumber, maximumAttempts, DateTimeOffset.Parse("2026-10-30T22:00:00Z"),
             expiresAt ?? DateTimeOffset.Parse("2026-10-30T22:10:00Z"));
+
+    private static CiWorkflowRerunTarget NewTarget() =>
+        new("TrentBest/TheSingularityWorkshop.CiAi", "refs/heads/feature/agent-fix",
+            "abcdef0123456789abcdef0123456789abcdef01",
+            ".github/workflows/contract-verification.yml");
 
     private static CiDispatchAuthorizationContext NewAuthorization(
         string issuer = "foundry-host",
