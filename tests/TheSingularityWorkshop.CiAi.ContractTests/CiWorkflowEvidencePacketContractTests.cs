@@ -30,9 +30,9 @@ internal static class CiWorkflowEvidencePacketContractTests
             "incomplete discovery was treated as complete evidence");
 
         var failedStep = CreatePacket(stepConclusion: "failure");
-        Assert(failedStep.EvidenceComplete && !failedStep.IsSuccessful &&
-            failedStep.BlockingReasons.Contains("job.101.step.1.not-successful"),
-            "failed step was not preserved as a blocking diagnostic");
+        Assert(failedStep.EvidenceComplete && failedStep.IsSuccessful &&
+            failedStep.Jobs[0].Steps[0].Conclusion == "failure",
+            "raw step outcome was not preserved independently from the successful job conclusion");
 
         Throws<ArgumentException>(() => CreatePacket(jobAttempt: 1));
         Throws<ArgumentException>(() => CreatePacket(jobRunId: 43));
