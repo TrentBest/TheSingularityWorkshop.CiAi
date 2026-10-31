@@ -343,7 +343,7 @@ public sealed class FileAwaitGateEventReceiptLedger
             ?? throw new InvalidDataException("Await gate receipt snapshot is empty.");
         if (stored.SchemaVersion != CurrentSchemaVersion)
             throw new InvalidDataException("Await gate receipt schema version is unsupported.");
-        return stored.Receipt;
+        return stored.Receipt ?? throw new InvalidDataException("Await gate receipt snapshot is incomplete.");
     }
 
     private sealed record StoredReceipt(int SchemaVersion, AwaitGateDeliveryReceipt Receipt);
