@@ -247,12 +247,13 @@ public sealed record CiTestResultReport
         ReadOnlyMemory<byte> trxBytes,
         CiWorkflowEvidencePacketV3 evidence,
         CiTestResultArtifactSource source,
-        CiRequiredCheckStatus requiredCheckStatus,
+        CiRequiredJobPolicy requiredJobPolicy,
         DateTimeOffset observedAt,
         long maximumPayloadBytes = DefaultMaximumPayloadBytes)
     {
         ArgumentNullException.ThrowIfNull(evidence);
         ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(requiredJobPolicy);
         if (maximumPayloadBytes is <= 0 or > DefaultMaximumPayloadBytes)
             throw new ArgumentOutOfRangeException(nameof(maximumPayloadBytes));
         if (trxBytes.IsEmpty || trxBytes.Length > maximumPayloadBytes)
@@ -270,6 +271,7 @@ public sealed record CiTestResultReport
 
         var parsed = ParseTrx(trxBytes);
         var job = evidence.ObservedRun.Jobs.Single(item => item.JobId == source.JobId);
+        var requiredCheckStatus = requiredJobPolicy.Evaluate(evidence, source.JobId, source.JobKey);
         var reasons = new List<string>();
         var verdict = EvaluateVerdict(job, requiredCheckStatus, parsed, reasons);
         return new CiTestResultReport(
@@ -284,10 +286,13 @@ public sealed record CiTestResultReport
     public static CiTestResultReport MissingArtifact(
         CiWorkflowEvidencePacketV3 evidence,
         long jobId,
-        CiRequiredCheckStatus requiredCheckStatus,
+        string jobKey,
+        CiRequiredJobPolicy requiredJobPolicy,
         DateTimeOffset observedAt)
     {
         ArgumentNullException.ThrowIfNull(evidence);
+        ArgumentNullException.ThrowIfNull(requiredJobPolicy);
+        ArgumentException.ThrowIfNullOrWhiteSpace(jobKey);
         if (jobId <= 0 || observedAt == default)
             throw new ArgumentOutOfRangeException(nameof(jobId));
         if (!evidence.WorkflowDefinitionTrusted || !evidence.CheckoutVerified || !evidence.EvidenceComplete)
@@ -295,9 +300,13 @@ public sealed record CiTestResultReport
         var matches = evidence.ObservedRun.Jobs.Where(item => item.JobId == jobId).ToArray();
         if (matches.Length != 1)
             throw new InvalidDataException("Missing-artifact report must identify exactly one observed job.");
+        var requiredCheckStatus = requiredJobPolicy.Evaluate(evidence, jobId, jobKey);
+        var reasonCode = requiredCheckStatus == CiRequiredCheckStatus.NotRequired
+            ? "test-results.check-not-required"
+            : "test-results.artifact-missing";
         return new CiTestResultReport(
             evidence, matches[0], requiredCheckStatus, CiTestResultVerdict.IncompleteOrUntrusted,
-            new[] { "test-results.artifact-missing" }, null, null, null, null, null,
+            new[] { reasonCode }, null, null, null, jobKey, null,
             null, null, null, null, 0, 0, 0, 0, 0, Array.Empty<CiTestResultRecord>(), observedAt);
     }
 
