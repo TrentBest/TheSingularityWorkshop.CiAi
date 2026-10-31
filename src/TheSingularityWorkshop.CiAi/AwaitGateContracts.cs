@@ -23,6 +23,8 @@ public sealed record AwaitGateApproval
         ArgumentException.ThrowIfNullOrWhiteSpace(authorityPolicyId);
         ArgumentException.ThrowIfNullOrWhiteSpace(approverIdentity);
         if (!Enum.IsDefined(kind)) throw new ArgumentOutOfRangeException(nameof(kind));
+        if (approvedAt == default)
+            throw new ArgumentException("An explicit approval timestamp is required.", nameof(approvedAt));
         ApprovalReference = approvalReference;
         AuthorityPolicyId = authorityPolicyId;
         ApproverIdentity = approverIdentity;
