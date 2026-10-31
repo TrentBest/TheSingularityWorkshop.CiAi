@@ -207,7 +207,7 @@ public sealed record CiWorkflowProvenanceRecord
             value.Contains('\\') || value.Contains("..", StringComparison.Ordinal) ||
             value.Contains("@{", StringComparison.Ordinal) || value.Contains("//", StringComparison.Ordinal) ||
             value.IndexOfAny(new[] { '~', '^', ':', '?', '*', '[', ']' }) >= 0 ||
-            value.StartsWith("/", StringComparison.Ordinal) || value.EndsWith('/', StringComparison.Ordinal) ||
+            value.StartsWith("/", StringComparison.Ordinal) || value.EndsWith("/", StringComparison.Ordinal) ||
             segments.Any(segment => segment.Length == 0 || segment.StartsWith(".", StringComparison.Ordinal) ||
                 segment.EndsWith(".lock", StringComparison.OrdinalIgnoreCase)))
             throw new InvalidDataException($"Workflow provenance branch name '{property}' is invalid.");
