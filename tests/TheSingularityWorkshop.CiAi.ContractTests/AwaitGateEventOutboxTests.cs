@@ -83,17 +83,15 @@ internal static class AwaitGateEventOutboxTests
                     AwaitGateEvaluator.Evaluate(contract, Array.Empty<AwaitGateEvidence>()),
                     DateTimeOffset.UtcNow)));
 
-            Check("invalidation event records revocation without rewriting satisfaction", () =>
+            Check("authorized revocation emits a distinct invalidation without rewriting history", () =>
             {
-                var rejectedEvidence = new AwaitGateEvidence("dimensions", "B", 1, contract.ContractDigest, Provider,
-                    SourceSha, ManifestDigest, EvidenceDigest, AwaitGateEvidenceKind.Machine, "invalid",
-                    "workflow-artifact:42:1", "42", 1);
-                var rejected = AwaitGateEvaluator.Evaluate(contract, new[] { rejectedEvidence });
+                var revoked = AwaitGateEvaluator.Revoke(contract, "evidence.withdrawn");
                 var invalidated = new AwaitGateEvent("event-revoked", "await-1", Consumer,
-                    AwaitGateEventKind.Invalidated, rejected, DateTimeOffset.UtcNow);
+                    AwaitGateEventKind.Invalidated, revoked, DateTimeOffset.UtcNow);
                 Assert(invalidated.Kind == AwaitGateEventKind.Invalidated &&
-                    invalidated.EvaluationState == AwaitGateState.Rejected,
-                    "revocation/rejection did not produce a distinct invalidation event");
+                    invalidated.EvaluationState == AwaitGateState.Revoked &&
+                    invalidated.RequirementResults.Single().ReasonCode == "evidence.withdrawn",
+                    "revocation did not produce a distinct invalidation event");
             });
 
             Check("receipt ledger accepts exact authenticated-host receipt and suppresses replay", () =>
