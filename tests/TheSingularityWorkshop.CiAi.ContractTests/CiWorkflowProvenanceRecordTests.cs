@@ -43,6 +43,21 @@ internal static class CiWorkflowProvenanceRecordTests
             foreignWorkflowRepository, "TrentBest/CiAi", 42, 2,
             Convert.ToHexString(SHA256.HashData(foreignWorkflowRepository))));
 
+        var traversalWorkflowPath = Encoding.UTF8.GetBytes(CreatePullRequestJson()
+            .Replace("TrentBest/CiAi/.github/workflows/ci.yml",
+                "TrentBest/CiAi/.github/workflows/../ci.yml", StringComparison.Ordinal));
+        Throws<InvalidDataException>(() => CiWorkflowProvenanceRecord.ParseAndValidate(
+            traversalWorkflowPath, "TrentBest/CiAi", 42, 2,
+            Convert.ToHexString(SHA256.HashData(traversalWorkflowPath))));
+
+        var duplicateProperty = Encoding.UTF8.GetBytes(CreatePullRequestJson()
+            .Replace($"\\"sha\\": \\"{CheckoutSha}\\"",
+                $"\\"sha\\": \\"{CheckoutSha}\\", \\"sha\\": \\"{CheckoutSha}\\"",
+                StringComparison.Ordinal));
+        Throws<InvalidDataException>(() => CiWorkflowProvenanceRecord.ParseAndValidate(
+            duplicateProperty, "TrentBest/CiAi", 42, 2,
+            Convert.ToHexString(SHA256.HashData(duplicateProperty))));
+
         var wrongSchema = Encoding.UTF8.GetBytes(CreatePullRequestJson()
             .Replace(CiWorkflowProvenanceRecord.CurrentSchema, "ciai.workflow-provenance.v99", StringComparison.Ordinal));
         Throws<InvalidDataException>(() => CiWorkflowProvenanceRecord.ParseAndValidate(
@@ -68,8 +83,8 @@ internal static class CiWorkflowProvenanceRecordTests
         Assert(dispatchRecord.PullRequest is null && dispatchRecord.EventName == "workflow_dispatch",
             "workflow_dispatch provenance with no PR was not accepted");
 
-        Console.WriteLine("PASS: 12 workflow provenance artifact contract checks.");
-        return 12;
+        Console.WriteLine("PASS: 14 workflow provenance artifact contract checks.");
+        return 14;
     }
 
 
