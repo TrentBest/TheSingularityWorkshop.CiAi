@@ -342,6 +342,7 @@ public sealed record AwaitRegistration
             string.Equals(item.GateId, gate.GateId, StringComparison.Ordinal) &&
             item.GateVersion == gate.Version &&
             string.Equals(item.ProviderRepository, gate.ProviderRepository, StringComparison.Ordinal) &&
+            string.Equals(item.ContractDigest, gate.ContractDigest, StringComparison.Ordinal) &&
             item.State == AwaitGateState.Satisfied) == 1);
     }
 }
@@ -349,19 +350,22 @@ public sealed record AwaitRegistration
 /// <summary>Versioned reference to a gate required by one Await registration.</summary>
 public sealed record AwaitGateReference
 {
-    public AwaitGateReference(string gateId, int version, string providerRepository)
+    public AwaitGateReference(string gateId, int version, string contractDigest, string providerRepository)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(gateId);
         if (version < 1) throw new ArgumentOutOfRangeException(nameof(version));
+        AwaitGateContract.ValidateDigest(contractDigest, nameof(contractDigest));
         if (!RepositoryIdentity.IsValid(providerRepository))
             throw new ArgumentException("Repository must be canonical owner/repository.", nameof(providerRepository));
         GateId = gateId;
         Version = version;
+        ContractDigest = contractDigest;
         ProviderRepository = providerRepository;
     }
 
     public string GateId { get; }
     public int Version { get; }
+    public string ContractDigest { get; }
     public string ProviderRepository { get; }
-    public string Identity => $"{ProviderRepository}:{GateId}:v{Version}";
+    public string Identity => $"{ProviderRepository}:{GateId}:v{Version}:{ContractDigest}";
 }
