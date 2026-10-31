@@ -35,6 +35,38 @@ public sealed record CiWorkflowEvidencePacketV3
     /// and WorkflowSha against its protected control-plane policy. This flag is not a substitute
     /// for that host-side verification.
     /// </summary>
+    /// <summary>
+    /// Builds v3 from the exact collected run/job attempt and a separately validated provenance
+    /// artifact. The caller must obtain provenance through the trusted provider artifact boundary
+    /// and apply protected workflow-definition policy before setting the trust argument.
+    /// </summary>
+    public static CiWorkflowEvidencePacketV3 FromCollections(
+        CiWorkflowRunCollection runCollection,
+        CiWorkflowJobCollection jobCollection,
+        long runId,
+        int runAttempt,
+        DateTimeOffset observedAt,
+        CiWorkflowProvenanceRecord provenance,
+        bool workflowDefinitionTrusted,
+        CiWorkflowCandidateCheckoutEvidence? candidateCheckoutEvidence = null,
+        IReadOnlyList<Uri>? artifactReferences = null)
+    {
+        ArgumentNullException.ThrowIfNull(provenance);
+        var observedRun = CiWorkflowEvidencePacket.FromCollections(
+            runCollection,
+            jobCollection,
+            runId,
+            runAttempt,
+            observedAt,
+            candidateCheckoutEvidence,
+            artifactReferences);
+        return FromValidatedProvenance(
+            observedRun,
+            provenance,
+            workflowDefinitionTrusted,
+            candidateCheckoutEvidence);
+    }
+
     public static CiWorkflowEvidencePacketV3 FromValidatedProvenance(
         CiWorkflowEvidencePacket observedRun,
         CiWorkflowProvenanceRecord provenance,
