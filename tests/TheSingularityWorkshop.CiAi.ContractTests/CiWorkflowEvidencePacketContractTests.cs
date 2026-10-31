@@ -46,6 +46,15 @@ internal static class CiWorkflowEvidencePacketContractTests
             candidateRoundTrip.CandidateSha == Sha &&
             candidateRoundTrip.WorkflowSha == WorkflowSha,
             "candidate provenance was lost on JSON round-trip");
+
+        var tamperedCandidateSha = ReplaceFirst(candidateJson,
+            "\"candidateSha\": \"" + Sha + "\"",
+            "\"candidateSha\": \"" + WorkflowSha + "\"");
+        Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromJson(tamperedCandidateSha));
+        var tamperedCheckoutFlag = ReplaceFirst(candidateJson,
+            "\"candidateCheckoutVerified\": true",
+            "\"candidateCheckoutVerified\": false");
+        Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromJson(tamperedCheckoutFlag));
         var candidateDelivery = new CiWorkflowEvidenceDelivery("delivery-v2", candidate);
         Assert(candidateDelivery.IdempotencyKey ==
             $"TrentBest/SimpleDemos:42:2:{WorkflowSha}:{Sha}",
@@ -94,8 +103,8 @@ internal static class CiWorkflowEvidencePacketContractTests
             json.Replace("\"contractVersion\": 2", "\"contractVersion\": 1", StringComparison.Ordinal)
                 .Replace("ciai.workflow-evidence.v2", "ciai.workflow-evidence.v1", StringComparison.Ordinal)));
 
-        Console.WriteLine("PASS: 22 CI workflow evidence packet v2 contract checks.");
-        return 22;
+        Console.WriteLine("PASS: 24 CI workflow evidence packet v2 contract checks.");
+        return 24;
     }
 
     private static CiWorkflowEvidencePacket CreatePacket(
@@ -158,6 +167,13 @@ internal static class CiWorkflowEvidencePacketContractTests
             DateTimeOffset.Parse("2026-10-31T00:00:03Z"),
             Array.AsReadOnly(jobs), true, true,
             candidateCheckoutEvidence: candidateEvidence);
+    }
+
+    private static string ReplaceFirst(string source, string oldValue, string newValue)
+    {
+        var index = source.IndexOf(oldValue, StringComparison.Ordinal);
+        if (index < 0) throw new InvalidOperationException("Expected JSON fragment was not found.");
+        return source[..index] + newValue + source[(index + oldValue.Length)..];
     }
 
     private static void Assert(bool condition, string message)
