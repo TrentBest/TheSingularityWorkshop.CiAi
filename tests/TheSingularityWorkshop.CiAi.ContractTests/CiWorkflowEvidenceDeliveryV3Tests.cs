@@ -18,7 +18,8 @@ internal static class CiWorkflowEvidenceDeliveryV3Tests
                 "v3 idempotency identity was not encoded as a bounded SHA-256 key");
             Assert(new CiWorkflowEvidenceDeliveryV3("v3-delivery-stable", packet).IdempotencyKey ==
                 delivery.IdempotencyKey, "identical v3 provenance produced an unstable idempotency key");
-            var outbox = new FileCiWorkflowEvidenceOutboxV3(Path.Combine(root, "v3-outbox.jsonl"));
+            var outboxPath = Path.Combine(root, "v3-outbox.jsonl");
+            var outbox = new FileCiWorkflowEvidenceOutboxV3(outboxPath);
             Assert(outbox.Enqueue(delivery) == CiWorkflowEvidenceEnqueueV3Outcome.Enqueued,
                 "first v3 enqueue was not persisted");
             Assert(outbox.Enqueue(delivery) == CiWorkflowEvidenceEnqueueV3Outcome.Duplicate,
@@ -33,6 +34,19 @@ internal static class CiWorkflowEvidenceDeliveryV3Tests
                 "v3 outbox did not replay the exact payload and provenance identity");
             Assert(!replay[0].Packet.WorkflowDefinitionTrusted && !replay[0].Packet.IsSuccessful,
                 "v3 durable reload improperly restored host workflow trust");
+
+            var persistedOutbox = File.ReadAllText(outboxPath);
+            var uppercaseKeyPath = Path.Combine(root, "v3-outbox-uppercase.jsonl");
+            File.WriteAllText(uppercaseKeyPath, persistedOutbox.Replace(
+                delivery.IdempotencyKey, "sha256:" + new string('A', 64), StringComparison.Ordinal));
+            AssertThrows<InvalidDataException>(() =>
+                new FileCiWorkflowEvidenceOutboxV3(uppercaseKeyPath).ReadPending());
+            var nullKeyPath = Path.Combine(root, "v3-outbox-null-key.jsonl");
+            File.WriteAllText(nullKeyPath, persistedOutbox.Replace(
+                $"\\\"IdempotencyKey\\\":\\\"{delivery.IdempotencyKey}\\\"",
+                "\\\"IdempotencyKey\\\":null", StringComparison.Ordinal));
+            AssertThrows<InvalidDataException>(() =>
+                new FileCiWorkflowEvidenceOutboxV3(nullKeyPath).ReadPending());
 
             var changedPacket = CreatePacket(workflowName: "Different observed workflow label");
             var conflict = new CiWorkflowEvidenceDeliveryV3("v3-delivery-conflict", changedPacket);
@@ -74,9 +88,14 @@ internal static class CiWorkflowEvidenceDeliveryV3Tests
                 1, "remote-receipt-invalid-key", delivery.DeliveryId, "not-a-v3-key",
                 delivery.PayloadSha256, CiWorkflowEvidenceReceiptV3Outcome.Accepted,
                 DateTimeOffset.Parse("2026-10-31T02:03:00Z")));
+            AssertThrows<ArgumentException>(() => new CiWorkflowEvidenceRemoteReceiptV3(
+                1, "remote-receipt-uppercase-key", delivery.DeliveryId,
+                "sha256:" + new string('A', 64), delivery.PayloadSha256,
+                CiWorkflowEvidenceReceiptV3Outcome.Accepted,
+                DateTimeOffset.Parse("2026-10-31T02:04:00Z")));
 
-            Console.WriteLine("PASS: 14 CI workflow evidence v3 delivery and receipt checks.");
-            return 14;
+            Console.WriteLine("PASS: 17 CI workflow evidence v3 delivery and receipt checks.");
+            return 17;
         }
         finally
         {
