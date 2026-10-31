@@ -13,12 +13,13 @@ internal static class CiTestResultReportTests
     private const long JobId = 124634066027;
     private const string JobName = "test-minesweeper";
     private const string JobKey = "test-minesweeper";
+    private const string WorkflowPath = ".github/workflows/ci.yml";
     private static readonly DateTimeOffset CreatedAt = DateTimeOffset.Parse("2026-10-31T01:00:00Z");
     private static readonly DateTimeOffset ExpiresAt = DateTimeOffset.Parse("2026-11-07T01:00:00Z");
     private static readonly DateTimeOffset ObservedAt = DateTimeOffset.Parse("2026-10-31T01:05:00Z");
     private static CiRequiredJobPolicy RequiredPolicy => new(new[]
     {
-        new CiRequiredJobDefinition(JobKey, JobName)
+        new CiRequiredJobDefinition(WorkflowPath, JobKey, JobName)
     });
     private static CiRequiredJobPolicy NonRequiredPolicy => new(Array.Empty<CiRequiredJobDefinition>());
 
@@ -38,14 +39,20 @@ internal static class CiTestResultReportTests
             "CiAi required-job policy did not derive the exact observed job outcome");
         Assert(RequiredPolicy.Evaluate(failedPacket, JobId, "optional-job") == CiRequiredCheckStatus.NotRequired,
             "unconfigured workflow job was treated as a required check");
+        var otherWorkflowPolicy = new CiRequiredJobPolicy(new[]
+        {
+            new CiRequiredJobDefinition(".github/workflows/other.yml", JobKey, JobName)
+        });
+        Assert(otherWorkflowPolicy.Evaluate(failedPacket, JobId, JobKey) == CiRequiredCheckStatus.NotRequired,
+            "required job policy was applied across a different workflow definition");
         Assert(RequiredPolicy.Evaluate(failedPacket, JobId + 1, JobKey) == CiRequiredCheckStatus.Incomplete,
             "required-job policy accepted a missing numeric job identity");
         Throws<ArgumentException>(() => new CiRequiredJobPolicy(new[]
         {
             new CiRequiredJobDefinition(JobKey, JobName),
-            new CiRequiredJobDefinition(JobKey, "duplicate")
+            new CiRequiredJobDefinition(WorkflowPath, JobKey, "duplicate")
         }));
-        Throws<ArgumentException>(() => new CiRequiredJobDefinition("../unsafe", JobName));
+        Throws<ArgumentException>(() => new CiRequiredJobDefinition(WorkflowPath, "../unsafe", JobName));
         var actionable = CiTestResultReport.ParseAndValidate(
             failedTrx, failedPacket, failedSource, RequiredPolicy, ObservedAt);
         Assert(actionable.Verdict == CiTestResultVerdict.ActionableFailure &&
@@ -55,7 +62,7 @@ internal static class CiTestResultReportTests
         Assert(actionable.Repository == Repository && actionable.CandidateSha == CandidateSha &&
             actionable.RunId == RunId && actionable.RunAttempt == RunAttempt &&
             actionable.JobId == JobId && actionable.JobName == JobName &&
-            actionable.WorkflowDefinitionSha == WorkflowSha,
+            actionable.WorkflowPath == WorkflowPath && actionable.WorkflowDefinitionSha == WorkflowSha,
             "normalized report lost exact workflow, checkout, run, attempt, or job provenance");
         Assert(actionable.Results.Where(item => item.Outcome == CiTestOutcome.Failed)
             .All(item => !string.IsNullOrWhiteSpace(item.Message) &&
@@ -99,7 +106,7 @@ internal static class CiTestResultReportTests
 
         var inconsistentPolicy = new CiRequiredJobPolicy(new[]
         {
-            new CiRequiredJobDefinition(JobKey, "unexpected-job-name")
+            new CiRequiredJobDefinition(WorkflowPath, JobKey, "unexpected-job-name")
         });
         var inconsistent = CiTestResultReport.ParseAndValidate(
             failedTrx, failedPacket, failedSource, inconsistentPolicy, ObservedAt);
@@ -200,8 +207,8 @@ internal static class CiTestResultReportTests
             truncated.Results[0].StackTrace!.Length <= 8_020,
             "diagnostic message or stack trace was not bounded");
 
-        Console.WriteLine("PASS: 32 provenance-bound TRX diagnostic report contract checks.");
-        return 32;
+        Console.WriteLine("PASS: 33 provenance-bound TRX diagnostic report contract checks.");
+        return 33;
     }
 
     private static CiWorkflowEvidencePacketV3 CreatePacket(
