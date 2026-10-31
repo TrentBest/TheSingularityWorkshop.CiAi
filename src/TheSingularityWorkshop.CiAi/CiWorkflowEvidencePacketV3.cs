@@ -51,15 +51,53 @@ public sealed record CiWorkflowEvidencePacketV3
         CiWorkflowCandidateCheckoutEvidence? candidateCheckoutEvidence = null,
         IReadOnlyList<Uri>? artifactReferences = null)
     {
+        ArgumentNullException.ThrowIfNull(runCollection);
+        ArgumentNullException.ThrowIfNull(jobCollection);
         ArgumentNullException.ThrowIfNull(provenance);
-        var observedRun = CiWorkflowEvidencePacket.FromCollections(
-            runCollection,
-            jobCollection,
-            runId,
-            runAttempt,
+        if (runId <= 0) throw new ArgumentOutOfRangeException(nameof(runId));
+        if (runAttempt <= 0) throw new ArgumentOutOfRangeException(nameof(runAttempt));
+
+        if (!string.Equals(runCollection.Repository, jobCollection.Repository, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Run and job collections belong to different repositories.");
+        if (jobCollection.RunId != runId || jobCollection.RunAttempt != runAttempt)
+            throw new InvalidDataException("Job collection does not identify the requested run attempt.");
+
+        var matchingRuns = runCollection.Runs
+            .Where(item => item.Run.RunId == runId && item.RunAttempt == runAttempt)
+            .ToArray();
+        if (matchingRuns.Length != 1)
+            throw new InvalidDataException("Run collection must contain exactly one observation for the requested run attempt.");
+
+        var observation = matchingRuns[0];
+        if (!string.Equals(observation.Run.Repository, runCollection.Repository, StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(observation.Run.HeadSha, runCollection.HeadSha, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Run observation does not match the collection repository and exact event SHA.");
+
+        var workflowRefSeparator = provenance.WorkflowRef.LastIndexOf('@');
+        if (workflowRefSeparator <= 0)
+            throw new InvalidDataException("Validated workflow provenance does not contain a full workflow ref.");
+        var legacyWorkflowRef = provenance.WorkflowRef[(workflowRefSeparator + 1)..];
+        var jobsComplete = !jobCollection.IsTruncated && jobCollection.TotalCount == jobCollection.Jobs.Count;
+        var discoveryComplete = !runCollection.IsTruncated && runCollection.TotalCount == runCollection.Runs.Count;
+        var observedRun = new CiWorkflowEvidencePacket(
+            observation.Run.Repository,
+            observation.WorkflowPath,
+            observation.Run.RunId,
+            observation.RunAttempt,
+            legacyWorkflowRef,
+            observation.Run.HeadSha,
+            observation.Event,
+            observation.Run.WorkflowName,
+            observation.Run.Status,
+            observation.Run.Conclusion,
+            observation.Run.EvidenceUrl,
             observedAt,
-            candidateCheckoutEvidence,
-            artifactReferences);
+            jobCollection.Jobs,
+            discoveryComplete,
+            jobsComplete,
+            artifactReferences,
+            candidateCheckoutEvidence);
+
         return FromValidatedProvenance(
             observedRun,
             provenance,
