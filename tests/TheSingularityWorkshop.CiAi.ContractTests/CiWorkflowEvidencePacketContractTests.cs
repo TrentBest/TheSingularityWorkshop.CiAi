@@ -46,6 +46,10 @@ internal static class CiWorkflowEvidencePacketContractTests
             candidateRoundTrip.CandidateSha == Sha &&
             candidateRoundTrip.WorkflowSha == WorkflowSha,
             "candidate provenance was lost on JSON round-trip");
+        var candidateDelivery = new CiWorkflowEvidenceDelivery("delivery-v2", candidate);
+        Assert(candidateDelivery.IdempotencyKey ==
+            $"TrentBest/SimpleDemos:42:2:{WorkflowSha}:{Sha}",
+            "delivery idempotency did not bind both workflow and candidate SHA roles");
 
         var unverifiedCandidate = CreateCandidatePacket(verificationStepConclusion: "skipped");
         Assert(unverifiedCandidate.EvidenceComplete && !unverifiedCandidate.CandidateCheckoutVerified &&
