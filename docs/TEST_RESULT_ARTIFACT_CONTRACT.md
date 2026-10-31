@@ -86,7 +86,7 @@ The artifact name binds the run, attempt, and workflow job key. The trusted host
 4. Safely extract only the expected TRX payload. Reject path traversal, unexpected entries, oversized archives, duplicate payloads, and malformed manifests.
 5. Compute the extracted TRX SHA-256 and byte length. Bind the artifact ID/name/digests to the exact repository, run, attempt, numeric job ID, job name, and job key.
 6. Parse the extracted bytes with DTD processing disabled and strict size/record limits.
-7. Configure `CiRequiredJobPolicy` with the exact workflow job key/name pairs that CiAi considers required. The report derives `CiRequiredCheckStatus` from that policy and the validated v3 job observation; do not accept a caller's raw boolean or an externally supplied verdict.
+7. Configure `CiRequiredJobPolicy` with exact workflow path, YAML job key, and observed job name triples that CiAi considers required. The report derives `CiRequiredCheckStatus` from that policy and the validated v3 job observation; do not accept a caller's raw boolean or an externally supplied verdict.
 8. Preserve the normalized report and its source digests for the next bounded HeadlessAi turn.
 
 `CiTestResultReport.ParseAndValidate` verifies the extracted payload digest and size, the v3 workflow/event/checkout provenance, and the exact job binding. It does not download the ZIP, verify the provider ZIP digest, or perform ZIP extraction. Those are trusted-host responsibilities and must be completed before constructing `CiTestResultArtifactSource`.
@@ -108,7 +108,7 @@ The following is a source-checked API sketch. `v3Packet`, `verifiedTrxBytes`, an
 ```csharp
 var requiredJobs = new CiRequiredJobPolicy(new[]
 {
-    new CiRequiredJobDefinition("test-minesweeper", "test-minesweeper")
+    new CiRequiredJobDefinition(".github/workflows/ci.yml", "test-minesweeper", "test-minesweeper")
 });
 
 var report = CiTestResultReport.ParseAndValidate(
