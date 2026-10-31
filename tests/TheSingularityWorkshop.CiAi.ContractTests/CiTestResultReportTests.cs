@@ -110,6 +110,17 @@ internal static class CiTestResultReportTests
             nonActionable.ReasonCodes.Contains("test-results.failure-diagnostics-incomplete"),
             "failed test without a bounded diagnostic was treated as repairable");
 
+        var stackOnlyText = "at Minesweeper.Tests.GameTests.StackOnlyFailure() in GameTests.cs:line 123";
+        var stackOnlyTrx = Encoding.UTF8.GetBytes(CreateTrx(
+            ("test-stack", "StackOnlyFailure", "Failed", null, stackOnlyText),
+            total: 1, passed: 0, failed: 1, skipped: 0));
+        var stackOnly = CiTestResultReport.ParseAndValidate(
+            stackOnlyTrx, CreatePacket("failure"), CreateSource(stackOnlyTrx),
+            RequiredPolicy, ObservedAt);
+        Assert(stackOnly.Results[0].Message is null &&
+            stackOnly.Results[0].StackTrace == stackOnlyText,
+            "TRX ErrorInfo StackTrace was conflated with assertion message or actual value");
+
         var noTestFailureButRedJobTrx = Encoding.UTF8.GetBytes(CreateTrx(
             ("test-1", "PassedBeforeBuildFailure", "Passed", null, null),
             total: 1, passed: 1, failed: 0, skipped: 0));
@@ -223,8 +234,8 @@ internal static class CiTestResultReportTests
             truncated.Results[0].StackTrace!.Length <= 8_020,
             "diagnostic message or stack trace was not bounded");
 
-        Console.WriteLine("PASS: 34 provenance-bound TRX diagnostic report contract checks.");
-        return 34;
+        Console.WriteLine("PASS: 35 provenance-bound TRX diagnostic report contract checks.");
+        return 35;
     }
 
     private static CiWorkflowEvidencePacketV3 CreatePacket(
