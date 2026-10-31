@@ -417,7 +417,8 @@ public sealed record CiTestResultReport
         {
             var testId = RequiredAttribute(element, "testId", 200);
             var rawTestName = RequiredAttribute(element, "testName", 512);
-            var (testName, testNameTruncated, testNameRedacted) = NormalizeDiagnostic(rawTestName, 512);
+            var (normalizedTestName, testNameTruncated, testNameRedacted) = NormalizeDiagnostic(rawTestName, 512);
+            var testName = normalizedTestName ?? rawTestName;
             var outcomeText = RequiredAttribute(element, "outcome", 100);
             var outcome = MapOutcome(outcomeText);
             var errorInfo = element.Descendants().FirstOrDefault(child => child.Name.LocalName == "ErrorInfo");
