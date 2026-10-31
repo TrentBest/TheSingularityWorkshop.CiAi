@@ -3,6 +3,7 @@ using TheSingularityWorkshop.CiAi;
 
 var passed = 0;
 passed += CiWorkflowEvidencePacketContractTests.Run();
+passed += CiWorkflowEvidencePacketFactoryTests.Run();
 passed += CiWorkflowEvidenceOutboxContractTests.Run();
 passed += CiWorkflowEvidenceReceiptLedgerContractTests.Run();
 passed += await FoundryArtifactReadyNoticeClientTests.RunAsync();
