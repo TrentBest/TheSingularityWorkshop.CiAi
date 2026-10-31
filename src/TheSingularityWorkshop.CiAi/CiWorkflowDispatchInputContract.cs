@@ -22,6 +22,10 @@ public static class CiWorkflowDispatchInputContract
         ArgumentNullException.ThrowIfNull(request);
         if (!CiWorkflowRerunRequest.IsFeatureBranchRef(request.HeadRef))
             throw new ArgumentException("Dispatch inputs require a valid isolated feature branch.", nameof(request));
+        if (!IsWorkflowIdentity(request.RequestId) ||
+            !IsWorkflowIdentity(request.CorrelationId) ||
+            !IsWorkflowIdentity(request.TaskId))
+            throw new ArgumentException("Request, correlation, and task IDs must match the workflow's bounded ASCII identity format.", nameof(request));
 
         var branchName = request.HeadRef["refs/heads/".Length..];
         var inputs = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -35,4 +39,12 @@ public static class CiWorkflowDispatchInputContract
         };
         return new ReadOnlyDictionary<string, string>(inputs);
     }
+
+    private static bool IsWorkflowIdentity(string value) =>
+        !string.IsNullOrEmpty(value) &&
+        value.Length <= 200 &&
+        char.IsAsciiLetterOrDigit(value[0]) &&
+        value.All(character =>
+            char.IsAsciiLetterOrDigit(character) ||
+            character is '.' or '_' or ':' or '-');
 }
