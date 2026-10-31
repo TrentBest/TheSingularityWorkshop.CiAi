@@ -94,6 +94,19 @@ internal static class FoundryArtifactReadyNoticeClientTests
                 "5xx was not left retryable");
         }
 
+        using (var http = new HttpClient(new StubHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.Accepted)
+            {
+                Content = new StringContent(Receipt(notice, "accepted"), Encoding.UTF8, "text/plain")
+            }))))
+        {
+            var result = await new FoundryArtifactReadyNoticeClient(http, Endpoint(),
+                new FixtureCredentials("token")).SendAsync(notice);
+            Assert(result.Outcome == FoundryArtifactIngressOutcome.Rejected &&
+                result.ErrorCode == "receipt.content-type-invalid",
+                "non-JSON receipt content type was accepted");
+        }
+
         using (var http = ResponseClient(HttpStatusCode.Accepted, "{malformed"))
         {
             var result = await new FoundryArtifactReadyNoticeClient(http, Endpoint(),
@@ -110,8 +123,8 @@ internal static class FoundryArtifactReadyNoticeClientTests
             new HttpClient(), new Uri("https://foundry.example/api/v1/other"),
             new FixtureCredentials("token")));
 
-        Console.WriteLine("PASS: 9 Foundry artifact-ready ingress client contract checks.");
-        return 9;
+        Console.WriteLine("PASS: 10 Foundry artifact-ready ingress client contract checks.");
+        return 10;
     }
 
     private static HttpClient ResponseClient(HttpStatusCode status, string body) =>
