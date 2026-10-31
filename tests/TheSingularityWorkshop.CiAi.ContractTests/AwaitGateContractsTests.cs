@@ -99,8 +99,8 @@ internal static class AwaitGateContractsTests
             var registration = new AwaitRegistration("await-1", Consumer, "dock-integration",
                 new[]
                 {
-                    new AwaitGateReference("B", 1, Provider),
-                    new AwaitGateReference("C", 1, Provider)
+                    new AwaitGateReference("B", 1, contract.ContractDigest, Provider),
+                    new AwaitGateReference("C", 1, NewContract(gateId: "C").ContractDigest, Provider)
                 });
             var gateB = AwaitGateEvaluator.Evaluate(contract, new[] { machine });
             Assert(!registration.IsReady(new[] { gateB }),
