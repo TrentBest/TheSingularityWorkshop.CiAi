@@ -26,7 +26,7 @@ All six values are emitted together. The request, correlation, and task IDs must
 
 CiAi's `.github/workflows/ci.yml` treats the five `ciai_*` fields as an all-or-none opt-in group. It requires a valid `feature/*` branch and requires the dispatch event's ref and SHA to match the request. It resolves the branch again from the remote and fails before build/test if the branch has moved; it then checks out the resolved immutable SHA and includes request/correlation/task/attempt provenance in the run summary.
 
-This guards the branch-ref nature of GitHub workflow dispatch: the API dispatches a branch, not an arbitrary commit SHA. The run's actual repository, workflow path, run ID, attempt, and head SHA still require read-back and evidence reconciliation by the host.
+This guards the branch-ref nature of GitHub workflow dispatch: the API dispatches a branch, not an arbitrary commit SHA. The run's actual repository, workflow path, run ID, attempt, and head SHA still require read-back and evidence reconciliation by the host. The workflow concurrency group includes the request ID when present, so distinct task requests on the same feature branch do not cancel one another; duplicate dispatches for the same request remain in one group.
 
 ## Security boundary
 
