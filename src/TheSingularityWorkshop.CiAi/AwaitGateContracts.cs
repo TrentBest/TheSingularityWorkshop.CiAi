@@ -319,6 +319,11 @@ public static class AwaitGateEvaluator
         if (supplied.Any(item => item is null))
             throw new ArgumentException("Evidence cannot contain null entries.", nameof(evidence));
         var results = new List<AwaitGateRequirementResult>();
+        var knownRequirementIds = contract.Requirements.Select(item => item.RequirementId)
+            .ToHashSet(StringComparer.Ordinal);
+        foreach (var unknown in supplied.Where(item => !knownRequirementIds.Contains(item.RequirementId)))
+            results.Add(new("evidence:" + unknown.RequirementId, AwaitGateState.Indeterminate,
+                "evidence.requirement-unknown"));
         foreach (var requirement in contract.Requirements)
         {
             var matches = supplied.Where(item =>
