@@ -11,6 +11,9 @@ public sealed record CiWorkflowRunObservation(
     string Event,
     IReadOnlyList<int> PullRequestNumbers)
 {
+    /// <summary>The workflow-definition ref encoded in GitHub's workflow path, when supplied by the API.</summary>
+    public string? WorkflowRef { get; init; }
+
     /// <summary>The exact provider status string, retained for diagnosis when GitHub adds new values.</summary>
     public string ProviderStatus { get; init; } = string.Empty;
 }
@@ -159,11 +162,19 @@ public sealed class GitHubActionsWorkflowRunCollector
             throw new InvalidDataException("GitHub workflow run contains an invalid updated_at timestamp.");
 
         var path = RequiredString(root, "path");
-        // GitHub may suffix a workflow path with its ref (for example @refs/heads/development).
-        // The stable policy identity is the repository-relative workflow file path.
+        // GitHub suffixes the workflow file path with the ref that supplied the workflow definition.
+        // Preserve that trust-boundary fact separately from the run's head SHA.
+        string? workflowRef = null;
         var refSuffix = path.IndexOf('@');
         if (refSuffix > 0)
+        {
+            workflowRef = path[(refSuffix + 1)..];
+            if (!workflowRef.StartsWith("refs/", StringComparison.Ordinal) ||
+                workflowRef.Any(char.IsControl) ||
+                workflowRef.Any(char.IsWhiteSpace))
+                throw new InvalidDataException("GitHub workflow path contains an invalid workflow-definition ref.");
             path = path[..refSuffix];
+        }
         var eventName = RequiredString(root, "event");
         var snapshot = new CiRunSnapshot(repository, runId, name, sha, status, conclusion, url, updatedAt);
         var prNumbers = new List<int>();
@@ -175,7 +186,11 @@ public sealed class GitHubActionsWorkflowRunCollector
         }
 
         return new CiWorkflowRunObservation(snapshot, attempt, path, eventName,
-            Array.AsReadOnly(prNumbers.Distinct().ToArray())) { ProviderStatus = statusText };
+            Array.AsReadOnly(prNumbers.Distinct().ToArray()))
+        {
+            ProviderStatus = statusText,
+            WorkflowRef = workflowRef
+        };
     }
 
     private static string RequiredString(JsonElement root, string property)
