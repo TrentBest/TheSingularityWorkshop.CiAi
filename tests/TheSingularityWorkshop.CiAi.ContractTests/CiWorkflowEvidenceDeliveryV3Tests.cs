@@ -65,8 +65,8 @@ internal static class CiWorkflowEvidenceDeliveryV3Tests
                     new string('0', 64), CiWorkflowEvidenceReceiptV3Outcome.Accepted,
                     DateTimeOffset.Parse("2026-10-31T02:02:00Z")), delivery));
 
-            Console.WriteLine("PASS: 12 CI workflow evidence v3 delivery and receipt checks.");
-            return 12;
+            Console.WriteLine("PASS: 13 CI workflow evidence v3 delivery and receipt checks.");
+            return 13;
         }
         finally
         {
