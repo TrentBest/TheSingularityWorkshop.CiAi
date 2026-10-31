@@ -50,7 +50,8 @@ public sealed record ArtifactManifest
             throw new ArgumentOutOfRangeException(nameof(sizeBytes));
         ArgumentNullException.ThrowIfNull(retrievalUri);
         if (retrievalUri.Scheme != Uri.UriSchemeHttps || !retrievalUri.IsDefaultPort ||
-            !string.IsNullOrEmpty(retrievalUri.UserInfo) || !string.IsNullOrEmpty(retrievalUri.Fragment))
+            !string.IsNullOrEmpty(retrievalUri.UserInfo) || !string.IsNullOrEmpty(retrievalUri.Query) ||
+            !string.IsNullOrEmpty(retrievalUri.Fragment))
             throw new ArgumentException("Retrieval URI must use HTTPS without user-info or a fragment.", nameof(retrievalUri));
         if (expiresAt <= createdAt)
             throw new ArgumentException("Artifact expiry must be later than creation.", nameof(expiresAt));

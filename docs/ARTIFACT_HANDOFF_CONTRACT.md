@@ -1,6 +1,9 @@
+<!-- The Singularity Workshop moniker -->
+<p align="center"><a href="https://github.com/TrentBest"><img src="https://raw.githubusercontent.com/TrentBest/TheSingularityWorkshop.Visualize/development/docs/assets/moniker.svg" alt="The Singularity Workshop animated moniker" width="720" /></a></p>
+
 # Capability Artifact Handoff Contract
 
-**Status:** typed contracts, bounded caller-supplied stream reading, local payload-integrity verification, destination preflight policy, exact provider provenance reconciliation, and durable local receipt deduplication are implemented; provider-authenticated URI retrieval, durable staging, and end-to-end handoff remain unimplemented.  
+**Status:** typed contracts, bounded caller-supplied stream reading, local payload-integrity verification, destination preflight policy, exact provider provenance reconciliation, durable local artifact receipts, outbound Foundry ready-notice transport, and durable notice/ingress-receipt journals are implemented; immutable remote artifact publication, provider-authenticated URI retrieval, durable staging, provider acknowledgement transport, and end-to-end handoff remain unimplemented.  
 **Design owner:** CiAi defines the cross-provider lifecycle; each capability owns its output semantics.
 
 ## Purpose
@@ -37,6 +40,17 @@ These are separate facts, not a single boolean success flag.
 | Reclaimed | Provider removed an eligible temporary payload under retention policy |
 
 Failure, partial, expired, unavailable, cancelled, rejected, and unknown outcomes must remain explicit. An acknowledgement may report successful retrieval and integrity verification even when local validation later rejects the artifact; do not conflate those events.
+
+## CI evidence artifact provenance
+
+For GitHub Actions evidence payloads using `ciai.workflow-evidence.v2`, keep the two SHA roles distinct:
+
+- `workflowRef` / `workflowSha` identify the trusted workflow execution revision recorded by GitHub.
+- `candidateRef` / `candidateSha` identify the isolated feature-branch code that the trusted workflow resolved and checked out.
+- `CandidateCheckoutVerified` is derived from the exact registered job's branch-resolution and checkout-verification steps; it must be true before the packet can be successful.
+- `ArtifactManifest.SourceSha` binds to the packet's `candidateSha`; `ProviderRunId` binds to the packet's `runId`; `ProviderRepository` binds to the packet's `repository`.
+
+The consumer must validate workflow ref/SHA against its trusted workflow registration and candidate ref/SHA against the exact task/request. A successful run on the trusted workflow ref is not proof that a candidate commit passed unless candidate checkout provenance is present and verified. Packet v1 is not sufficient for trusted-ref dispatch and must not be silently reinterpreted as candidate evidence.
 
 ## Ready notice
 
@@ -115,6 +129,11 @@ Keep the first proof deliberately small and non-destructive:
 5. [x] Demonstrate that no cleanup happens merely because a notice was sent; a valid acknowledgement only makes a payload eligible for separate policy review.
 6. [x] Reconcile receipt evidence against the exact provider repository, run ID, and source revision when present in the manifest.
 7. [x] Persist receipts in a local append-only ledger, deduplicate exact retries across reopen, and reject conflicting reuse of a deduplication key.
-8. Do not add live webhooks, repository dispatch, broad credentials, or publishing/deployment permissions in this first slice.
+8. [x] Keep the callback sender outbound and host-authenticated; do not add receiver hosting, repository dispatch, broad credentials, or publishing/deployment permissions to CiAi.
 
-**Current implementation status:** `ArtifactManifest`, `ArtifactReadyNotice`, and `ArtifactReceiptAcknowledgement` are implemented as dependency-free typed contracts. `ArtifactPayloadVerifier` verifies supplied bytes against manifest size and SHA-256. `ArtifactPayloadReader` now reads a caller-supplied readable stream incrementally with a configured memory bound, returns bytes only after successful verification, and leaves stream ownership with the caller. Offline checks cover exact bytes, digest/size failures, maximum limits, short streams, and stream ownership. This is still not a network retrieval client. A destination preflight policy exists, but it is not a standalone SSRF defense; transport must additionally enforce DNS/IP restrictions, redirect policy, provider-scoped authentication, timeouts, and byte bounds. Provider-authenticated retrieval, durable staging, authoritative provider-run verification, authenticated notice/ack transport, end-to-end orchestration, and storage reclamation remain unimplemented. Receipt deduplication is durable locally, but request-level idempotency/history is not. The existing CiAi alpha remains read-only with respect to GitHub Actions.
+**Current implementation status:** `ArtifactManifest`, `ArtifactReadyNotice`, and `ArtifactReceiptAcknowledgement` are implemented as dependency-free typed contracts. `ArtifactPayloadVerifier` verifies supplied bytes against manifest size and SHA-256. `ArtifactPayloadReader` reads a caller-supplied readable stream incrementally with a configured memory bound and returns bytes only after successful verification. `FoundryArtifactReadyNoticeClient` now implements the outbound HTTPS POST to Foundry's normative `foundry.ciai-artifact-ingress.v1` route. It obtains a short-lived bearer token from a host-supplied credential provider, sends only metadata, validates the exact durable receipt identity, bounds response parsing, and classifies policy versus retryable outcomes. The caller must disable automatic redirects and owns retry scheduling. `FileFoundryArtifactReadyNoticeOutbox` persists exact notice bytes and replays them after restart; `FileFoundryArtifactIngressReceiptLedger` suppresses replay only after a matching accepted/duplicate receipt is recorded. The sender performs one attempt and obtains credentials through a host-supplied provider. See [the sender boundary](../src/TheSingularityWorkshop.CiAi/FoundryArtifactReadyNoticeClient.md) and [Foundry's host-owned callback contract](https://github.com/TrentBest/TheSingularityWorkshop.Foundry/blob/work/code-red-task-lifecycle/docs/CIAI_ARTIFACT_CALLBACK_CONTRACT.md). A destination preflight policy is not a standalone SSRF defense. Immutable remote artifact publication/hosting, concrete secure credential provisioning, provider-authenticated retrieval, durable staging, authoritative provider-run verification, the provider-side acknowledgement sender, end-to-end orchestration, and storage reclamation remain unimplemented. The sender's accepted receipt proves only durable notice recording, not artifact retrieval or CI success. CiAi remains read-only with respect to GitHub repository state; no repository dispatch, merge, release, or publication authority is introduced.
+
+---
+
+<!-- THE SINGULARITY WORKSHOP FOOTER -->
+<p align="center"><img src="https://raw.githubusercontent.com/TrentBest/FSM_API/master/Documentation/Branding/TheSingularityWorkshop.png" alt="The Singularity Workshop" width="200" /></p>

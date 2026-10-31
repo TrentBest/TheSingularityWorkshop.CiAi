@@ -73,6 +73,7 @@ try
                 evidenceUrl = observation.Run.EvidenceUrl.ToString(),
                 observation.RunAttempt,
                 observation.WorkflowPath,
+                observation.WorkflowRef,
                 observation.Event,
                 observation.PullRequestNumbers
             },
@@ -137,7 +138,7 @@ try
         requiredWorkflowsTerminal,
         requiredWorkflowsSuccessful,
         complete,
-        note = "Observation only: this report does not certify release readiness, inspect package contents, interpret security findings, or authorize publication. API discovery completeness, required evidence completeness, required-workflow terminality, and required-workflow success are separate facts. Only explicitly required workflow identities block the policy; missing, ambiguous, non-terminal, unsuccessful, or incomplete required evidence fails closed. Set CIAI_REQUIRED_WORKFLOW_PATHS to a semicolon-separated list of exact .github/workflows/ paths, optionally suffixed with #<run-id>#<attempt>. Without a configured policy, complete is false.",
+        note = "Observation only: this report does not certify release readiness, inspect package contents, interpret security findings, or authorize publication. Workflow-definition ref and run head SHA are distinct facts; for trusted-ref candidate dispatch, query by workflow SHA and correlate candidate ref/SHA through evidence packet v2. API discovery completeness, required evidence completeness, required-workflow terminality, and required-workflow success are separate facts. Only explicitly required workflow identities block the policy; missing, ambiguous, non-terminal, unsuccessful, or incomplete required evidence fails closed. Set CIAI_REQUIRED_WORKFLOW_PATHS to a semicolon-separated list of exact .github/workflows/ paths, optionally suffixed with #<run-id>#<attempt>. Without a configured policy, complete is false.",
         runs = observedRuns
     };
 

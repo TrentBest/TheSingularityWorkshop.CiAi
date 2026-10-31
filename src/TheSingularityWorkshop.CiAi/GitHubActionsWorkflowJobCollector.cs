@@ -97,8 +97,13 @@ public sealed class GitHubActionsWorkflowJobCollector
             // GitHub may return a full page even when this page completes the reported collection.
             // Stop once the provider's total has been collected; otherwise an unnecessary next request
             // can turn a complete result into a failure (or waste the remaining page budget).
-            if (jobs.Count >= totalCount || pageJobs.GetArrayLength() < perPage)
+            if (jobs.Count >= totalCount)
                 break;
+            if (pageJobs.GetArrayLength() < perPage)
+            {
+                truncated = jobs.Count < totalCount;
+                break;
+            }
             if (page == maxPages)
                 truncated = jobs.Count < totalCount;
         }

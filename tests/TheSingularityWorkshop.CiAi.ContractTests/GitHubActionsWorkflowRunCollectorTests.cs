@@ -43,10 +43,24 @@ internal static class GitHubActionsWorkflowRunCollectorTests
                 "run ID or attempt was not retained");
             Assert(collection.Runs[0].WorkflowPath == ".github/workflows/package.yml",
                 "workflow path was not retained");
+            Assert(collection.Runs[0].WorkflowRef == "refs/heads/development",
+                "workflow-definition ref was not retained separately from run head SHA");
             Assert(collection.Runs[0].PullRequestNumbers.SequenceEqual(new[] { 35 }),
                 "PR correlation was not retained");
             Assert(collection.Runs[0].Run.Conclusion == CiRunConclusion.Failure,
                 "failed conclusion was not preserved");
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+        {
+            var malformedWorkflowRef = page.Replace(
+                ".github/workflows/package.yml@refs/heads/development",
+                ".github/workflows/package.yml@development");
+            return Task.FromResult(JsonResponse(malformedWorkflowRef));
+        })))
+        {
+            await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowRunCollector(client)
+                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha));
         }
 
         using (var client = new HttpClient(new StubHandler((request, _) =>
@@ -130,7 +144,7 @@ internal static class GitHubActionsWorkflowRunCollectorTests
                 "raw unknown provider status was not preserved for diagnosis");
         }
 
-        Console.WriteLine("PASS: 8 GitHub Actions workflow collector checks.");
+        Console.WriteLine("PASS: 10 GitHub Actions workflow collector checks.");
     }
 
     private static HttpResponseMessage JsonResponse(string json) => new(HttpStatusCode.OK)

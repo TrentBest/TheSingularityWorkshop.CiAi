@@ -2,6 +2,16 @@ using System.Security.Cryptography;
 using TheSingularityWorkshop.CiAi;
 
 var passed = 0;
+passed += CiWorkflowEvidencePacketContractTests.Run();
+passed += CiWorkflowEvidencePacketFactoryTests.Run();
+passed += CiWorkflowEvidenceOutboxContractTests.Run();
+passed += CiWorkflowEvidenceReceiptLedgerContractTests.Run();
+passed += await FoundryArtifactReadyNoticeClientTests.RunAsync();
+passed += FoundryArtifactReadyNoticeOutboxTests.Run();
+passed += await FoundryArtifactReadyNoticeDeliveryCoordinatorTests.RunAsync();
+passed += CiWorkflowRerunRequestContractTests.Run();
+passed += CiWorkflowDispatchInputContractTests.Run();
+passed += CiWorkflowRerunRequestLedgerContractTests.Run();
 passed += CiPipelineDefinitionContractTests.Run();
 passed += CiWorkflowDomainCatalogContractTests.Run();
 passed += CiWorkflowDomainEvaluatorContractTests.Run();
@@ -212,6 +222,10 @@ Check("artifact manifest rejects malformed SHA-256 digests", () =>
 Check("artifact manifest rejects non-HTTPS retrieval references", () =>
 {
     Throws<ArgumentException>(() => NewManifest(uri: new Uri("http://provider.example/artifacts/1")));
+});
+Check("artifact manifest rejects query-bearing retrieval references", () =>
+{
+    Throws<ArgumentException>(() => NewManifest(uri: new Uri("https://provider.example/artifacts/1?token=embedded")));
 });
 Check("artifact manifest requires expiry after creation", () =>
 {
@@ -456,6 +470,8 @@ Check("retrieval destination policy rejects embedded credentials and fragments",
         .Contains("retrieval.user-info-rejected"), "embedded credentials were accepted");
     Assert(policy.Validate(new Uri("https://provider.example/artifacts/a#redirect"), now, expiry)
         .Contains("retrieval.fragment-rejected"), "fragment-bearing destination was accepted");
+    Assert(policy.Validate(new Uri("https://provider.example/artifacts/a?token=embedded"), now, expiry)
+        .Contains("retrieval.query-rejected"), "query-bearing destination was accepted");
 });
 
 Check("retrieval destination policy constructor rejects empty and malformed allowlists", () =>
