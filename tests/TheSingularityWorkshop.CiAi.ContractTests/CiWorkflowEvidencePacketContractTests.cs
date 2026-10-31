@@ -53,6 +53,14 @@ internal static class CiWorkflowEvidencePacketContractTests
             unverifiedCandidate.BlockingReasons.Contains("candidate.checkout-unverified"),
             "candidate without successful checkout provenance was accepted");
 
+        var checkoutThenFailedBuild = CreateCandidatePacket(
+            jobConclusion: "failure", runConclusion: CiRunConclusion.Failure);
+        Assert(checkoutThenFailedBuild.CandidateCheckoutVerified && !checkoutThenFailedBuild.IsSuccessful &&
+            checkoutThenFailedBuild.BlockingReasons.Contains("job.101.not-successful"),
+            "later build failure erased independently successful candidate checkout provenance");
+
+        Throws<ArgumentException>(() => CreateCandidatePacket(@event: "push"));
+
         var incomplete = CreatePacket(discoveryComplete: false);
         Assert(!incomplete.EvidenceComplete && !incomplete.IsSuccessful &&
             incomplete.BlockingReasons.Contains("evidence.discovery-incomplete"),
@@ -82,8 +90,8 @@ internal static class CiWorkflowEvidencePacketContractTests
             json.Replace("\"contractVersion\": 2", "\"contractVersion\": 1", StringComparison.Ordinal)
                 .Replace("ciai.workflow-evidence.v2", "ciai.workflow-evidence.v1", StringComparison.Ordinal)));
 
-        Console.WriteLine("PASS: 20 CI workflow evidence packet v2 contract checks.");
-        return 20;
+        Console.WriteLine("PASS: 22 CI workflow evidence packet v2 contract checks.");
+        return 22;
     }
 
     private static CiWorkflowEvidencePacket CreatePacket(
@@ -117,7 +125,10 @@ internal static class CiWorkflowEvidencePacketContractTests
 
     private static CiWorkflowEvidencePacket CreateCandidatePacket(
         string workflowRef = "refs/heads/development",
-        string verificationStepConclusion = "success")
+        string verificationStepConclusion = "success",
+        string jobConclusion = "success",
+        CiRunConclusion runConclusion = CiRunConclusion.Success,
+        string @event = "workflow_dispatch")
     {
         var steps = new[]
         {
@@ -128,7 +139,7 @@ internal static class CiWorkflowEvidencePacketContractTests
         };
         var jobs = new[]
         {
-            new CiWorkflowJobObservation(101, 42, 2, "contract", "completed", "success",
+            new CiWorkflowJobObservation(101, 42, 2, "contract", "completed", jobConclusion,
                 new Uri("https://github.com/TrentBest/SimpleDemos/actions/runs/42/job/101"),
                 Array.AsReadOnly(steps))
         };
@@ -137,8 +148,8 @@ internal static class CiWorkflowEvidencePacketContractTests
             "Resolve optional branch target to an immutable commit", "Verify checkout provenance");
         return new CiWorkflowEvidencePacket(
             "TrentBest/SimpleDemos", ".github/workflows/ci.yml", 42, 2,
-            workflowRef, WorkflowSha, "workflow_dispatch", "CI",
-            CiRunStatus.Completed, CiRunConclusion.Success,
+            workflowRef, WorkflowSha, @event, "CI",
+            CiRunStatus.Completed, runConclusion,
             new Uri("https://github.com/TrentBest/SimpleDemos/actions/runs/42"),
             DateTimeOffset.Parse("2026-10-31T00:00:03Z"),
             Array.AsReadOnly(jobs), true, true,
