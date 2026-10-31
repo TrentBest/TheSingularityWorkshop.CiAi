@@ -49,6 +49,8 @@ public sealed record CiWorkflowEvidencePacket
         if (runAttempt <= 0) throw new ArgumentOutOfRangeException(nameof(runAttempt));
         if (workflowSha.Length != 40 || !workflowSha.All(Uri.IsHexDigit))
             throw new ArgumentException("Workflow SHA must be a full 40-character hexadecimal commit identifier.", nameof(workflowSha));
+        if (observedAt == default)
+            throw new ArgumentException("Observation timestamp is required.", nameof(observedAt));
         if (!Enum.IsDefined(status)) throw new ArgumentOutOfRangeException(nameof(status));
         if (!Enum.IsDefined(conclusion)) throw new ArgumentOutOfRangeException(nameof(conclusion));
         if ((status == CiRunStatus.Completed) == (conclusion == CiRunConclusion.None))
