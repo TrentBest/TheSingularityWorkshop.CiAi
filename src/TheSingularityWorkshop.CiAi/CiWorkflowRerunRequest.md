@@ -40,6 +40,8 @@ CiAi's own `.github/workflows/ci.yml` now exposes an optional correlated dispatc
 
 The five `ciai_*` values are all-or-none. When supplied, the workflow requires a valid `feature/*` target, requires the dispatch event ref and SHA to match that target/candidate, resolves the branch again from the remote, and fails before build/test if the branch has moved. It checks out the resolved immutable SHA and includes the correlation fields in the evidence summary. Ordinary push/PR runs and existing manual `target_branch` dispatches retain their prior behavior when the CiAi input group is omitted.
 
+`CiWorkflowDispatchInputContract.CreateInputs` creates the exact six-field mapping as an immutable dictionary and contains no credential fields; see its [class companion](CiWorkflowDispatchInputContract.md).
+
 This is the opt-in workflow-side contract only. The authenticated HTTP dispatcher that supplies these inputs, its durable dispatch-intent ledger, and run receipt/reconciliation client are not yet implemented. A caller must not treat a green run summary as accepted evidence until it reconciles the exact repository, workflow, run, attempt, and candidate SHA.
 
 ## Durable acceptance ledger
