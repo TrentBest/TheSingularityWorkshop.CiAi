@@ -289,6 +289,19 @@ public sealed record AwaitGateEvaluation
 /// </summary>
 public static class AwaitGateEvaluator
 {
+    /// <summary>Creates a fail-closed revoked evaluation after the host authorizes revocation.</summary>
+    public static AwaitGateEvaluation Revoke(AwaitGateContract contract, string reasonCode)
+    {
+        ArgumentNullException.ThrowIfNull(contract);
+        ArgumentException.ThrowIfNullOrWhiteSpace(reasonCode);
+        var results = contract.Requirements.Select(requirement =>
+            new AwaitGateRequirementResult(requirement.RequirementId, AwaitGateState.Revoked, reasonCode.Trim()))
+            .ToArray();
+        return new AwaitGateEvaluation(contract.GateId, contract.Version, contract.ContractDigest,
+            contract.ProviderRepository, contract.ProviderSourceSha, contract.ManifestDigest,
+            contract.EvaluationPolicyVersion, AwaitGateState.Revoked, Array.AsReadOnly(results));
+    }
+
     public static AwaitGateEvaluation Evaluate(AwaitGateContract contract,
         IEnumerable<AwaitGateEvidence> evidence)
     {
