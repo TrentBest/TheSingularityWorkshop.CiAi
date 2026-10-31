@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 
 namespace TheSingularityWorkshop.CiAi;
@@ -91,15 +92,27 @@ public sealed class FoundryArtifactReadyNoticeClient
     }
 
     /// <summary>Sends one immutable notice attempt and classifies the receiver's response.</summary>
-    public async Task<FoundryArtifactIngressResult> SendAsync(
+    public Task<FoundryArtifactIngressResult> SendAsync(
         ArtifactReadyNotice notice,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(notice);
-        if (notice.ContractVersion != ArtifactReadyNotice.SupportedContractVersion)
-            throw new ArgumentException("Only ArtifactReadyNotice v1 is supported.", nameof(notice));
+        return SendAsync(new FoundryArtifactReadyNoticeDelivery(notice), cancellationToken);
+    }
 
-        var payload = JsonSerializer.SerializeToUtf8Bytes(notice, JsonOptions);
+    /// <summary>Sends the exact serialized notice previously persisted in the durable outbox.</summary>
+    public async Task<FoundryArtifactIngressResult> SendAsync(
+        FoundryArtifactReadyNoticeDelivery delivery,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(delivery);
+        var notice = delivery.Notice;
+        if (notice.ContractVersion != ArtifactReadyNotice.SupportedContractVersion)
+            throw new ArgumentException("Only ArtifactReadyNotice v1 is supported.", nameof(delivery));
+
+        var payload = Encoding.UTF8.GetBytes(delivery.Payload);
+        if (!string.Equals(SerializeNotice(notice), delivery.Payload, StringComparison.Ordinal))
+            throw new ArgumentException("Delivery payload does not match its immutable notice.", nameof(delivery));
         if (payload.Length > MaximumNoticeBytes)
             return new FoundryArtifactIngressResult(FoundryArtifactIngressOutcome.InvalidRequest,
                 ErrorCode: "notice.exceeds-64-kib-limit");
@@ -177,6 +190,9 @@ public sealed class FoundryArtifactReadyNoticeClient
                 ErrorCode: "receiver.rejected");
         }
     }
+
+    internal static string SerializeNotice(ArtifactReadyNotice notice) =>
+        JsonSerializer.Serialize(notice, JsonOptions);
 
     private static async Task<FoundryArtifactIngressResult> ReadReceiptAsync(
         HttpResponseMessage response,
