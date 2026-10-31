@@ -99,6 +99,10 @@ jobs:
           for value in "${values[@]}"; do
             if [ -n "$value" ]; then supplied=$((supplied + 1)); fi
           done
+          if [ "$EVENT_REF" != "refs/heads/development" ]; then
+            echo "::error::workflow_dispatch must use the trusted development workflow definition, never a candidate branch definition."
+            exit 1
+          fi
           if [ "$supplied" -eq 0 ]; then
             exit 0
           fi
