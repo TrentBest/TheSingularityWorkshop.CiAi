@@ -62,8 +62,15 @@ internal static class CiTestResultReportTests
         Assert(actionable.Repository == Repository && actionable.CandidateSha == CandidateSha &&
             actionable.RunId == RunId && actionable.RunAttempt == RunAttempt &&
             actionable.JobId == JobId && actionable.JobName == JobName &&
-            actionable.WorkflowPath == WorkflowPath && actionable.WorkflowDefinitionSha == WorkflowSha,
-            "normalized report lost exact workflow, checkout, run, attempt, or job provenance");
+            actionable.WorkflowPath == WorkflowPath && actionable.WorkflowDefinitionSha == WorkflowSha &&
+            actionable.PullRequestNumber == 17 &&
+            actionable.PullRequestHeadRef == "feature/minesweeper-domain-pilot" &&
+            actionable.PullRequestHeadSha == new string('c', 40) &&
+            actionable.PullRequestBaseRef == "development" &&
+            actionable.PullRequestBaseSha == new string('d', 40) &&
+            actionable.RunEvidenceUrl.AbsolutePath == $"/{Repository}/actions/runs/{RunId}" &&
+            actionable.JobEvidenceUrl.AbsolutePath == $"/{Repository}/actions/runs/{RunId}/job/{JobId}",
+            "normalized report lost exact workflow, checkout, PR, run, attempt, or job provenance");
 
         Assert(actionable.RequiredCheckStatus == CiRequiredCheckStatus.Failed &&
             actionable.SourceArtifactId == 7001 && actionable.SourceArtifactName ==
@@ -225,7 +232,7 @@ internal static class CiTestResultReportTests
         bool workflowTrusted = true,
         bool checkoutMatches = true)
     {
-        var eventRef = "refs/heads/feature/minesweeper-domain-pilot";
+        var eventRef = "refs/pull/17/merge";
         var provenanceJson = $$"""
         {
           "schema": "{{CiWorkflowProvenanceRecord.CurrentSchema}}",
@@ -237,10 +244,14 @@ internal static class CiTestResultReportTests
             "sha": "{{WorkflowSha}}"
           },
           "event": {
-            "name": "push",
+            "name": "pull_request",
             "ref": "{{eventRef}}",
             "sha": "{{CandidateSha}}",
-            "pullRequest": null
+            "pullRequest": {
+              "number": 17,
+              "head": { "ref": "feature/minesweeper-domain-pilot", "sha": "cccccccccccccccccccccccccccccccccccccccc" },
+              "base": { "ref": "development", "sha": "dddddddddddddddddddddddddddddddddddddddd" }
+            }
           },
           "checkout": {
             "ref": "{{eventRef}}",
@@ -262,7 +273,7 @@ internal static class CiTestResultReportTests
             }));
         var observed = new CiWorkflowEvidencePacket(
             Repository, ".github/workflows/ci.yml", RunId, RunAttempt,
-            "refs/heads/development", CandidateSha, "push", "Validation",
+            "refs/heads/development", CandidateSha, "pull_request", "Validation",
             CiRunStatus.Completed,
             conclusion == "success" ? CiRunConclusion.Success : CiRunConclusion.Failure,
             new Uri($"https://github.com/{Repository}/actions/runs/{RunId}"),
