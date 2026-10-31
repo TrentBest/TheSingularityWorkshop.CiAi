@@ -29,7 +29,7 @@ For ordinary CI runs, candidate provenance defaults to the workflow event ref/SH
 
 A missing, skipped, failed, duplicate, or ambiguous step makes candidate checkout unverified. Checkout verification is independent of later build/test outcome: if those two steps succeeded and a later test fails, the packet still proves which candidate was checked out, while `IsSuccessful` remains false because the workflow/job failed. `IsSuccessful` requires `CandidateCheckoutVerified`; `BlockingReasons` then includes `candidate.checkout-unverified` only when checkout proof itself is missing or failed. A successful workflow run on `development` alone is not evidence that a feature-branch candidate passed.
 
-The workflow-definition ref for separate candidate evidence must be the trusted `refs/heads/development` ref. The host must additionally validate the workflow SHA against its trusted workflow revision policy.
+The workflow-definition ref for separate candidate evidence must be the trusted `refs/heads/development` ref. The host must additionally validate the workflow SHA against its trusted workflow revision policy. `IsSuccessful` is a CI outcome, not a workflow-trust verdict: even a successful packet must be rejected as authoritative CODE RED evidence when its workflow-definition ref/SHA is not approved by the host. A candidate-controlled workflow must never be allowed to evaluate itself.
 
 ## Remaining evidence facts
 
@@ -44,6 +44,7 @@ The packet also carries repository, workflow path, run ID/attempt, event, workfl
 - A successful workflow summary is not enough: every observed job must be completed successfully before `IsSuccessful` is true.
 - Step outcomes are retained verbatim; a host policy decides which steps are required, so a skipped or continue-on-error step is not silently reclassified as a workflow failure.
 - Artifact references are references only. This contract does not claim that artifact bytes were downloaded, hashed, retained, or independently verified.
+- Workflow-definition trust is external policy. The host must verify the workflow ref/SHA against protected control-plane policy; the packet records those facts but cannot certify its own workflow as trusted.
 - A packet is not a release verdict, merge approval, publication authorization, or deployment authorization.
 
 ## JSON contract
