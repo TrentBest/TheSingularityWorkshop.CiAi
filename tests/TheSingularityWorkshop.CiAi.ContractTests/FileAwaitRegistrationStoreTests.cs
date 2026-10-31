@@ -44,7 +44,8 @@ internal static class FileAwaitRegistrationStoreTests
             Check("registration enumeration is stable and includes independent Await consumers", () =>
             {
                 var other = new AwaitRegistration("await-2", "TrentBest/OtherConsumer", "other-work",
-                    new[] { new AwaitGateReference("B", 1, "TrentBest/MyVR") });
+                    new[] { new AwaitGateReference("B", 1,
+                        ContractDigest("TrentBest/OtherConsumer", "TrentBest/MyVR", "B"), "TrentBest/MyVR") });
                 var store = new FileAwaitRegistrationStore(root);
                 Assert(store.Save(other) == AwaitRegistrationStoreOutcome.Saved, "second consumer was not saved");
                 var all = store.ReadAll();
