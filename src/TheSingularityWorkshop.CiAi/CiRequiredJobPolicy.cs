@@ -1,32 +1,50 @@
 namespace TheSingularityWorkshop.CiAi;
 
-/// <summary>One required workflow job, identified by its workflow YAML key and observed GitHub job name.</summary>
+/// <summary>One required job, scoped to an exact workflow path and its YAML job key/name.</summary>
 public sealed record CiRequiredJobDefinition
 {
-    public CiRequiredJobDefinition(string jobKey, string jobName)
+    public CiRequiredJobDefinition(string workflowPath, string jobKey, string jobName)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(workflowPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(jobKey);
         ArgumentException.ThrowIfNullOrWhiteSpace(jobName);
+        if (!IsValidWorkflowPath(workflowPath))
+            throw new ArgumentException("Required workflow path must be a canonical .github/workflows YAML path.", nameof(workflowPath));
         if (jobKey.Length > 100 ||
             !jobKey.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_' or '.'))
             throw new ArgumentException("Workflow job key contains unsupported characters.", nameof(jobKey));
         if (jobName.Length > 200 || jobName.Any(char.IsControl))
             throw new ArgumentException("Workflow job name must be at most 200 characters without control characters.", nameof(jobName));
+        WorkflowPath = workflowPath;
         JobKey = jobKey;
         JobName = jobName;
     }
 
+    public string WorkflowPath { get; }
     public string JobKey { get; }
     public string JobName { get; }
+
+    private static bool IsValidWorkflowPath(string path)
+    {
+        if (!path.StartsWith(".github/workflows/", StringComparison.Ordinal) ||
+            !(path.EndsWith(".yml", StringComparison.Ordinal) || path.EndsWith(".yaml", StringComparison.Ordinal)) ||
+            path.Contains('\\') || path.Contains('#') || path.Contains('?') || path.Contains(':'))
+            return false;
+        var segments = path.Split('/');
+        return segments.Length >= 3 &&
+            segments.All(segment => segment.Length > 0 && segment != "." && segment != ".." &&
+                segment.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_' or '.'));
+    }
 }
 
 /// <summary>
-/// CiAi-owned policy that maps configured workflow job keys to exact observed job names and
+/// CiAi-owned policy that maps exact workflow paths and job keys to observed job names, then
 /// derives required-check status from the validated v3 run/job evidence.
 /// </summary>
 public sealed class CiRequiredJobPolicy
 {
     private readonly IReadOnlyDictionary<string, string> _requiredJobs;
+    private readonly IReadOnlyList<CiRequiredJobDefinition> _definitions;
 
     public CiRequiredJobPolicy(IEnumerable<CiRequiredJobDefinition> requiredJobs)
     {
@@ -34,13 +52,15 @@ public sealed class CiRequiredJobPolicy
         var definitions = requiredJobs.ToArray();
         if (definitions.Any(item => item is null))
             throw new ArgumentException("Required job policy cannot contain null definitions.", nameof(requiredJobs));
-        if (definitions.Select(item => item.JobKey).Distinct(StringComparer.Ordinal).Count() != definitions.Length)
-            throw new ArgumentException("Required workflow job keys must be unique.", nameof(requiredJobs));
+        if (definitions.Select(item => GetKey(item.WorkflowPath, item.JobKey))
+            .Distinct(StringComparer.Ordinal).Count() != definitions.Length)
+            throw new ArgumentException("Required workflow path/job key pairs must be unique.", nameof(requiredJobs));
+        _definitions = Array.AsReadOnly(definitions);
         _requiredJobs = new System.Collections.ObjectModel.ReadOnlyDictionary<string, string>(
-            definitions.ToDictionary(item => item.JobKey, item => item.JobName, StringComparer.Ordinal));
+            definitions.ToDictionary(item => GetKey(item.WorkflowPath, item.JobKey), item => item.JobName, StringComparer.Ordinal));
     }
 
-    public IReadOnlyCollection<string> RequiredJobKeys => Array.AsReadOnly(_requiredJobs.Keys.OrderBy(key => key, StringComparer.Ordinal).ToArray());
+    public IReadOnlyList<CiRequiredJobDefinition> RequiredJobs => _definitions;
 
     public CiRequiredCheckStatus Evaluate(
         CiWorkflowEvidencePacketV3 evidence,
@@ -54,7 +74,7 @@ public sealed class CiRequiredJobPolicy
             throw new ArgumentException("Workflow job key contains unsupported characters.", nameof(jobKey));
         if (jobId <= 0)
             throw new ArgumentOutOfRangeException(nameof(jobId));
-        if (!_requiredJobs.TryGetValue(jobKey, out var expectedJobName))
+        if (!_requiredJobs.TryGetValue(GetKey(evidence.Provenance.WorkflowPath, jobKey), out var expectedJobName))
             return CiRequiredCheckStatus.NotRequired;
         if (!evidence.WorkflowDefinitionTrusted || !evidence.CheckoutVerified || !evidence.EvidenceComplete)
             return CiRequiredCheckStatus.Incomplete;
@@ -76,4 +96,6 @@ public sealed class CiRequiredJobPolicy
             _ => CiRequiredCheckStatus.Incomplete
         };
     }
+
+    private static string GetKey(string workflowPath, string jobKey) => workflowPath + "\0" + jobKey;
 }
