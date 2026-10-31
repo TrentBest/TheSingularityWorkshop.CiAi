@@ -97,6 +97,8 @@ public sealed class FileAwaitGateContractStore
             ?? throw new InvalidDataException("Await gate contract snapshot is empty.");
         if (stored.SchemaVersion != CurrentSchemaVersion)
             throw new InvalidDataException("Await gate contract schema version is unsupported.");
+        if (stored.Approval is null || stored.Requirements is null || stored.Requirements.Any(item => item is null))
+            throw new InvalidDataException("Await gate contract snapshot is incomplete.");
         try
         {
             var contract = new AwaitGateContract(stored.GateId, stored.Version, stored.ConsumerRepository,
