@@ -194,6 +194,10 @@ public sealed class FoundryArtifactReadyNoticeClient
     internal static string SerializeNotice(ArtifactReadyNotice notice) =>
         JsonSerializer.Serialize(notice, JsonOptions);
 
+    internal static ArtifactReadyNotice DeserializeNotice(string payload) =>
+        JsonSerializer.Deserialize<ArtifactReadyNotice>(payload, JsonOptions)
+        ?? throw new InvalidDataException("Persisted Foundry notice payload could not be rehydrated.");
+
     private static async Task<FoundryArtifactIngressResult> ReadReceiptAsync(
         HttpResponseMessage response,
         ArtifactReadyNotice notice,
