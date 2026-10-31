@@ -90,6 +90,32 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
                     "coordinator did not persist only the independently accepted notice");
             }
 
+            var redirectRoot = Path.Combine(root, "redirect");
+            Directory.CreateDirectory(redirectRoot);
+            var redirectOutbox = new FileFoundryArtifactReadyNoticeOutbox(Path.Combine(redirectRoot, "notices.jsonl"));
+            var redirectLedger = new FileFoundryArtifactIngressReceiptLedger(Path.Combine(redirectRoot, "receipts.jsonl"));
+            redirectOutbox.Enqueue(new FoundryArtifactReadyNoticeDelivery(CreateNotice("redirect-1", "redirect-request-1")));
+            redirectOutbox.Enqueue(new FoundryArtifactReadyNoticeDelivery(CreateNotice("redirect-2", "redirect-request-2")));
+            var redirectCount = 0;
+            using (var http = new HttpClient(new StubHandler((_, _) =>
+            {
+                redirectCount++;
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Redirect)
+                {
+                    Headers = { Location = new Uri("https://untrusted.example/redirect") }
+                });
+            })))
+            {
+                var coordinator = new FoundryArtifactReadyNoticeDeliveryCoordinator(
+                    redirectOutbox, redirectLedger, new FoundryArtifactReadyNoticeClient(http, Endpoint(), new FixtureCredentials()));
+                var batch = await coordinator.DeliverPendingAsync();
+                Assert(batch.Attempted == 1 && batch.Acknowledged == 0 && batch.RemainingPending == 2 &&
+                    batch.Attempts[0].Outcome == FoundryArtifactIngressOutcome.Rejected &&
+                    batch.Attempts[0].StatusCode == HttpStatusCode.Redirect,
+                    "rejected redirect did not stop the delivery batch and preserve pending notices");
+                Assert(redirectCount == 1, "coordinator followed or continued after an untrusted redirect");
+            }
+
             var retryRoot = Path.Combine(root, "retry");
             Directory.CreateDirectory(retryRoot);
             var retryOutbox = new FileFoundryArtifactReadyNoticeOutbox(Path.Combine(retryRoot, "notices.jsonl"));
@@ -149,8 +175,8 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
                 Assert(policySendCount == 2, "coordinator did not continue after a notice-specific rejection");
             }
 
-            Console.WriteLine("PASS: 19 Foundry notice delivery coordinator checks.");
-            return 19;
+            Console.WriteLine("PASS: 21 Foundry notice delivery coordinator checks.");
+            return 21;
         }
         finally
         {
