@@ -100,6 +100,18 @@ internal static class CiTestResultReportTests
             passing.Passed == 2 && passing.Skipped == 1,
             "complete successful test evidence did not produce a pass verdict");
 
+        var unknownOutcomeTrx = Encoding.UTF8.GetBytes(CreateTrx(
+            ("test-unknown", "FutureOutcome", "Queued", null, null),
+            total: 1, passed: 0, failed: 0, skipped: 0));
+        var unknownOutcome = CiTestResultReport.ParseAndValidate(
+            unknownOutcomeTrx, CreatePacket("failure"), CreateSource(unknownOutcomeTrx),
+            RequiredPolicy, ObservedAt);
+        Assert(unknownOutcome.Other == 1 && unknownOutcome.Results[0].Outcome == CiTestOutcome.Other &&
+            unknownOutcome.Results[0].RawOutcome == "Queued" &&
+            unknownOutcome.Verdict == CiTestResultVerdict.IncompleteOrUntrusted &&
+            unknownOutcome.ReasonCodes.Contains("test-results.unknown-outcome"),
+            "unknown TRX outcome was not preserved as explicit non-actionable evidence");
+
         var noDiagnosticTrx = Encoding.UTF8.GetBytes(CreateTrx(
             ("test-1", "FailureWithoutDiagnostic", "Failed", null, null),
             total: 1, passed: 0, failed: 1, skipped: 0));
@@ -234,8 +246,8 @@ internal static class CiTestResultReportTests
             truncated.Results[0].StackTrace!.Length <= 8_020,
             "diagnostic message or stack trace was not bounded");
 
-        Console.WriteLine("PASS: 35 provenance-bound TRX diagnostic report contract checks.");
-        return 35;
+        Console.WriteLine("PASS: 36 provenance-bound TRX diagnostic report contract checks.");
+        return 36;
     }
 
     private static CiWorkflowEvidencePacketV3 CreatePacket(
@@ -336,7 +348,8 @@ internal static class CiTestResultReportTests
     {
         var actualPassed = results.Count(item => item.Outcome == "Passed");
         var actualFailed = results.Count(item => item.Outcome is "Failed" or "Error" or "Timeout" or "Aborted");
-        var actualSkipped = results.Length - actualPassed - actualFailed;
+        var actualSkipped = results.Count(item => item.Outcome is "NotExecuted" or "Inconclusive" or
+            "NotRunnable" or "Disconnected" or "Warning" or "Pending" or "InProgress" or "PassedButRunAborted");
         var xmlResults = string.Join("\n", results.Select(item =>
             $"<UnitTestResult testId=\"{item.Id}\" testName=\"{item.Name}\" outcome=\"{item.Outcome}\">" +
             (item.Message is null && item.Stack is null ? "" :
