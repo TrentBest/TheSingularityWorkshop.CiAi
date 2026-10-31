@@ -295,7 +295,6 @@ public sealed class FileFoundryArtifactIngressReceiptLedger
 
     private void AppendRecord(ReceiptRecord record)
     {
-        var json = JsonSerializer.Serialize(record);
         var complete = record with
         {
             ReceiptJsonSha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(record.ReceiptJson))).ToLowerInvariant()
