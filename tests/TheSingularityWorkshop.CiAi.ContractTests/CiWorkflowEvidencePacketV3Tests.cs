@@ -25,6 +25,21 @@ internal static class CiWorkflowEvidencePacketV3Tests
             trusted.CandidateSha == CheckoutSha && trusted.CheckoutVerified && trusted.IsSuccessful,
             "v3 did not preserve independent workflow, event, and checkout identities");
 
+        var serialized = trusted.ToJson();
+        var serializedBytes = Encoding.UTF8.GetBytes(serialized);
+        var packetDigest = Convert.ToHexString(SHA256.HashData(serializedBytes));
+        var roundTrip = CiWorkflowEvidencePacketV3.FromJson(
+            serialized, "TrentBest/CiAi", 42, 2, packetDigest, workflowDefinitionTrusted: true);
+        Assert(roundTrip.IsSuccessful && roundTrip.Provenance.WorkflowSha == WorkflowSha &&
+            roundTrip.CandidateSha == CheckoutSha,
+            "v3 durable round-trip lost validated provenance");
+        var reloadedWithoutTrust = CiWorkflowEvidencePacketV3.FromJson(
+            serialized, "TrentBest/CiAi", 42, 2, packetDigest, workflowDefinitionTrusted: false);
+        Assert(!reloadedWithoutTrust.IsSuccessful,
+            "durable packet restored workflow trust without a host policy decision");
+        Throws<InvalidDataException>(() => CiWorkflowEvidencePacketV3.FromJson(
+            serialized, "TrentBest/CiAi", 42, 2, new string('0', 64), workflowDefinitionTrusted: true));
+
         var untrusted = CiWorkflowEvidencePacketV3.FromValidatedProvenance(
             CreateObservedRun(), provenance, workflowDefinitionTrusted: false);
         Assert(!untrusted.IsSuccessful &&
@@ -51,8 +66,8 @@ internal static class CiWorkflowEvidencePacketV3Tests
             failClosed.BlockingReasons.Contains("candidate.checkout-unverified"),
             "checkout SHA differing from event SHA was not failed closed");
 
-        Console.WriteLine("PASS: 5 CI workflow evidence packet v3 contract checks.");
-        return 5;
+        Console.WriteLine("PASS: 8 CI workflow evidence packet v3 contract checks.");
+        return 8;
     }
 
     private static CiWorkflowEvidencePacket CreateObservedRun(
