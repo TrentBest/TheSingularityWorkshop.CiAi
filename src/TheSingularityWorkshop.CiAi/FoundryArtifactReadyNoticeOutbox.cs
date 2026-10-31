@@ -77,8 +77,7 @@ public sealed class FileFoundryArtifactReadyNoticeOutbox
             .Where(item => acknowledgedNoticeIds is null || !acknowledgedNoticeIds.Contains(item.NoticeId))
             .Select(item =>
             {
-                var notice = JsonSerializer.Deserialize<ArtifactReadyNotice>(item.Payload)
-                    ?? throw new InvalidDataException("Notice outbox contains an empty notice payload.");
+                var notice = FoundryArtifactReadyNoticeClient.DeserializeNotice(item.Payload);
                 var delivery = new FoundryArtifactReadyNoticeDelivery(notice);
                 if (!string.Equals(delivery.NoticeId, item.NoticeId, StringComparison.Ordinal) ||
                     !string.Equals(delivery.IdempotencyKey, item.IdempotencyKey, StringComparison.Ordinal) ||
@@ -128,8 +127,7 @@ public sealed class FileFoundryArtifactReadyNoticeOutbox
             var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(item.Payload))).ToLowerInvariant();
             if (!string.Equals(digest, item.PayloadSha256, StringComparison.Ordinal))
                 throw new InvalidDataException("Notice outbox payload digest validation failed.");
-            var notice = JsonSerializer.Deserialize<ArtifactReadyNotice>(item.Payload)
-                ?? throw new InvalidDataException("Notice outbox payload could not be rehydrated.");
+            var notice = FoundryArtifactReadyNoticeClient.DeserializeNotice(item.Payload);
             if (!string.Equals(notice.NoticeId, item.NoticeId, StringComparison.Ordinal) ||
                 !string.Equals(notice.Manifest.IdempotencyKey, item.IdempotencyKey, StringComparison.Ordinal))
                 throw new InvalidDataException("Notice outbox record does not match its notice payload.");
