@@ -229,23 +229,38 @@ internal static class CiTestResultReportTests
         return new CiTestResultArtifactSource(
             repository ?? Repository, RunId, runAttempt ?? RunAttempt,
             jobId ?? JobId, jobName ?? JobName, JobKey,
-            7001, artifactName ?? $"ciai-test-results-{RunId}-{RunAttempt}-{JobKey}",
+            7001, artifactName ?? $"ciai-test-results-{RunId}-{runAttempt ?? RunAttempt}-{JobKey}",
             archiveDigest ?? "sha256:" + new string('a', 64), 512,
             payloadSha256 ?? digest, payload.Length, "xUnit", CreatedAt, ExpiresAt);
     }
 
     private static string CreateTrx(
+        (string Id, string Name, string Outcome, string? Message, string? Stack) first,
+        int? total = null, int? passed = null, int? failed = null, int? skipped = null) =>
+        BuildTrx(new[] { first }, total, passed, failed, skipped);
+
+    private static string CreateTrx(
+        (string Id, string Name, string Outcome, string? Message, string? Stack) first,
+        (string Id, string Name, string Outcome, string? Message, string? Stack) second,
+        int? total = null, int? passed = null, int? failed = null, int? skipped = null) =>
+        BuildTrx(new[] { first, second }, total, passed, failed, skipped);
+
+    private static string CreateTrx(
+        (string Id, string Name, string Outcome, string? Message, string? Stack) first,
+        (string Id, string Name, string Outcome, string? Message, string? Stack) second,
+        (string Id, string Name, string Outcome, string? Message, string? Stack) third,
+        int? total = null, int? passed = null, int? failed = null, int? skipped = null) =>
+        BuildTrx(new[] { first, second, third }, total, passed, failed, skipped);
+
+    private static string BuildTrx(
         (string Id, string Name, string Outcome, string? Message, string? Stack)[] results,
-        int? total = null,
-        int? passed = null,
-        int? failed = null,
-        int? skipped = null)
+        int? total, int? passed, int? failed, int? skipped)
     {
         var actualPassed = results.Count(item => item.Outcome == "Passed");
         var actualFailed = results.Count(item => item.Outcome is "Failed" or "Error" or "Timeout" or "Aborted");
         var actualSkipped = results.Length - actualPassed - actualFailed;
-        var xmlResults = string.Join("\n", results.Select(item =>
-            $"<UnitTestResult testId=\"{item.Id}\" testName=\"{item.Name}\" outcome=\"{item.Outcome}\">" +
+        var xmlResults = string.Join("\\n", results.Select(item =>
+            $"<UnitTestResult testId=\\"{item.Id}\\" testName=\\"{item.Name}\\" outcome=\\"{item.Outcome}\\">" +
             (item.Message is null && item.Stack is null ? "" :
                 "<Output><ErrorInfo>" +
                 (item.Message is null ? "" : $"<Message>{System.Security.SecurityElement.Escape(item.Message)}</Message>") +
