@@ -70,9 +70,13 @@ internal static class CiWorkflowEvidenceDeliveryV3Tests
                     1, "remote-receipt-3", delivery.DeliveryId, delivery.IdempotencyKey,
                     new string('0', 64), CiWorkflowEvidenceReceiptV3Outcome.Accepted,
                     DateTimeOffset.Parse("2026-10-31T02:02:00Z")), delivery));
+            AssertThrows<ArgumentException>(() => new CiWorkflowEvidenceRemoteReceiptV3(
+                1, "remote-receipt-invalid-key", delivery.DeliveryId, "not-a-v3-key",
+                delivery.PayloadSha256, CiWorkflowEvidenceReceiptV3Outcome.Accepted,
+                DateTimeOffset.Parse("2026-10-31T02:03:00Z")));
 
-            Console.WriteLine("PASS: 13 CI workflow evidence v3 delivery and receipt checks.");
-            return 13;
+            Console.WriteLine("PASS: 14 CI workflow evidence v3 delivery and receipt checks.");
+            return 14;
         }
         finally
         {
