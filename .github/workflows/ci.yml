@@ -231,8 +231,10 @@ jobs:
         if: always()
         env:
           REPOSITORY: ${{ github.repository }}
-          TARGET_REF: ${{ inputs.target_branch || github.ref_name }}
+          TARGET_REF: ${{ steps.provenance.outputs.target_ref || github.ref }}
           TARGET_SHA: ${{ steps.provenance.outputs.sha || steps.resolve-target.outputs.sha || github.sha }}
+          WORKFLOW_DEFINITION_REF: ${{ steps.provenance.outputs.workflow_definition_ref || github.ref }}
+          WORKFLOW_DEFINITION_SHA: ${{ steps.provenance.outputs.workflow_definition_sha || github.sha }}
           CIAI_REQUEST_ID: ${{ inputs.ciai_request_id }}
           CIAI_CORRELATION_ID: ${{ inputs.ciai_correlation_id }}
           CIAI_TASK_ID: ${{ inputs.ciai_task_id }}
@@ -254,8 +256,10 @@ jobs:
             echo "## CiAi branch-target gate evidence"
             echo
             echo "- Repository: \`$REPOSITORY\`"
-            echo "- Requested ref: \`$TARGET_REF\`"
-            echo "- Resolved commit: \`$TARGET_SHA\`"
+            echo "- Workflow definition ref: \`$WORKFLOW_DEFINITION_REF\`"
+            echo "- Workflow definition SHA: \`$WORKFLOW_DEFINITION_SHA\`"
+            echo "- Candidate ref: \`$TARGET_REF\`"
+            echo "- Candidate SHA: \`$TARGET_SHA\`"
             if [ -n "$CIAI_REQUEST_ID" ]; then
               echo "- CiAi request: \`$CIAI_REQUEST_ID\`"
               echo "- Correlation: \`$CIAI_CORRELATION_ID\`"
