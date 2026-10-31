@@ -123,8 +123,7 @@ if (evaluation.IsSatisfied)
 {
     var notification = new AwaitGateEvent(
         "event-the-dock-await-001-gate-b-v1",
-        registration.AwaitId,
-        registration.ConsumerRepository,
+        registration,
         AwaitGateEventKind.Satisfied,
         evaluation,
         DateTimeOffset.UtcNow);
@@ -135,7 +134,7 @@ if (evaluation.IsSatisfied)
 
 The host reads durable events, delivers them at least once, and records an `AwaitGateDeliveryReceipt` only after authenticating the receiver's acknowledgement. The receipt ledger then allows the host to avoid repeating an already acknowledged logical delivery.
 
-An invalidation follows the same pattern with `AwaitGateEventKind.Invalidated` and an evaluator result of Rejected or Indeterminate. It does not erase the historical satisfied event; it adds a new event bound to the changed evaluation.
+An invalidation follows the same pattern with `AwaitGateEventKind.Invalidated` and an evaluator result of Rejected, Indeterminate, or Revoked. Use `AwaitGateEvaluator.Revoke` after the host authorizes revocation. It does not erase the historical satisfied event; it adds a new event bound to the changed evaluation.
 
 ## Deliberate boundaries and remaining integration
 
