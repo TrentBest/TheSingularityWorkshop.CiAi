@@ -78,7 +78,7 @@ internal static class CiWorkflowEvidenceDeliveryV3Tests
     {
         const string eventSha = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
         const string workflowSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-        var json = $$""" 
+        var json = $"""
         {
           "schema": "{{CiWorkflowProvenanceRecord.CurrentSchema}}",
           "repository": "TrentBest/SimpleDemos",
