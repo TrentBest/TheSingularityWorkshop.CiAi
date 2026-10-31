@@ -51,7 +51,7 @@ internal static class CiWorkflowEvidencePacketV3Tests
             "Verify checkout provenance");
         var dispatchPacket = CiWorkflowEvidencePacketV3.FromValidatedProvenance(
             CreateDispatchObservedRun(candidateEvidence), dispatchProvenance,
-            workflowDefinitionTrusted: true, candidateEvidence);
+            workflowDefinitionTrusted: true, candidateCheckoutEvidence: candidateEvidence);
         Assert(dispatchPacket.IsSuccessful &&
             dispatchPacket.CandidateRef == "refs/heads/feature/candidate" &&
             dispatchPacket.CandidateSha == "ffffffffffffffffffffffffffffffffffffffff",
