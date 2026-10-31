@@ -198,7 +198,7 @@ internal static class CiTestResultReportTests
             failedTrx, CreatePacket("failure", checkoutMatches: false), failedSource,
             RequiredPolicy, ObservedAt));
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
-            failedTrx, failedPacket, failedSource, CiRequiredCheckStatus.Failed, ExpiresAt.AddSeconds(1)));
+            failedTrx, failedPacket, failedSource, RequiredPolicy, ExpiresAt.AddSeconds(1)));
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
             failedTrx, failedPacket, CreateSource(failedTrx, payloadSha256: new string('0', 64)),
             RequiredPolicy, ObservedAt));
