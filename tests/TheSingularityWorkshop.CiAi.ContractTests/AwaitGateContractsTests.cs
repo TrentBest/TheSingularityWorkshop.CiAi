@@ -6,7 +6,6 @@ internal static class AwaitGateContractsTests
     private const string Provider = "TrentBest/MyVR";
     private const string SourceSha = "abcdef0123456789abcdef0123456789abcdef01";
     private const string ManifestDigest = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    private const string ContractDigest = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
     private const string EvidenceDigest = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
 
     public static int Run()
@@ -18,7 +17,7 @@ internal static class AwaitGateContractsTests
         Check("gate contract requires an exact provider source and SHA-256 identities", () =>
         {
             Throws<ArgumentException>(() => new AwaitGateContract("B", 1, Consumer, Provider, "short",
-                ManifestDigest, ContractDigest, "policy-v1",
+                ManifestDigest, "policy-v1",
                 new[] { new AwaitGateRequirement("dimensions", "Dimensions are validated", "valid", AwaitGateEvidenceKind.Machine) }));
             Throws<ArgumentException>(() => new AwaitGateContract("B", 1, Consumer, Provider, SourceSha,
                 "not-a-digest", ContractDigest, "policy-v1",
@@ -80,7 +79,7 @@ internal static class AwaitGateContractsTests
 
         Check("human adjudication requires explicit policy and adjudicator identity", () =>
         {
-            Throws<ArgumentException>(() => new AwaitGateEvidence("review", "B", 1, ContractDigest,
+            Throws<ArgumentException>(() => new AwaitGateEvidence("review", "B", 1, NewContract(new[] { new AwaitGateRequirement("review", "Human review is approved", "approved", AwaitGateEvidenceKind.HumanAdjudication) }).ContractDigest,
                 Provider, SourceSha, ManifestDigest, EvidenceDigest, AwaitGateEvidenceKind.HumanAdjudication,
                 "approved", "approval-1"));
             var humanContract = NewContract(new[]
@@ -88,7 +87,7 @@ internal static class AwaitGateContractsTests
                 new AwaitGateRequirement("review", "Human review is approved", "approved",
                     AwaitGateEvidenceKind.HumanAdjudication)
             });
-            var humanEvidence = new AwaitGateEvidence("review", "B", 1, ContractDigest, Provider, SourceSha,
+            var humanEvidence = new AwaitGateEvidence("review", "B", 1, humanContract.ContractDigest, Provider, SourceSha,
                 ManifestDigest, EvidenceDigest, AwaitGateEvidenceKind.HumanAdjudication, "approved",
                 "approval-1", authorityPolicyId: "release-review-v1", adjudicatorId: "authorized-reviewer");
             Assert(AwaitGateEvaluator.Evaluate(humanContract, new[] { humanEvidence }).IsSatisfied,
@@ -147,7 +146,7 @@ internal static class AwaitGateContractsTests
 
     private static AwaitGateContract NewContract(IReadOnlyList<AwaitGateRequirement>? requirements = null,
         string gateId = "B") =>
-        new(gateId, 1, Consumer, Provider, SourceSha, ManifestDigest, ContractDigest, "policy-v1",
+        new(gateId, 1, Consumer, Provider, SourceSha, ManifestDigest, "policy-v1",
             requirements ?? new[] { MachineRequirement() });
 
     private static AwaitGateRequirement MachineRequirement() =>
@@ -155,7 +154,7 @@ internal static class AwaitGateContractsTests
 
     private static AwaitGateEvidence NewEvidence(string? providerSourceSha = null,
         string? manifestDigest = null, string value = "valid", string gateId = "B") =>
-        new("dimensions", gateId, 1, ContractDigest, Provider, providerSourceSha ?? SourceSha,
+        new("dimensions", gateId, 1, NewContract(gateId: gateId).ContractDigest, Provider, providerSourceSha ?? SourceSha,
             manifestDigest ?? ManifestDigest, EvidenceDigest, AwaitGateEvidenceKind.Machine, value,
             "workflow-artifact:run-42:attempt-1", "42", 1);
 
