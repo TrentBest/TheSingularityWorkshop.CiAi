@@ -42,6 +42,6 @@ classDiagram
     CiWorkflowRunObservation --> CiRunSnapshot : normalized facts
 ```
 
-**Trust boundary:** For a `workflow_dispatch` candidate run, the workflow path suffix identifies the workflow-definition ref (for example `refs/heads/development`); the run's `head_sha` remains the commit associated with the run. Consumers must not infer candidate SHA from the workflow-definition ref. Missing workflow-ref suffix remains explicit as null and must be resolved by a trusted source before constructing candidate evidence.
+**Trust boundary:** For a `workflow_dispatch` candidate run, the workflow path suffix identifies the workflow-definition ref (for example `refs/heads/development`); the run's `head_sha` remains the commit associated with the run. Consumers must not infer candidate SHA from the workflow-definition ref. Missing workflow-ref suffix remains explicit as null; `CiWorkflowEvidencePacket.FromCollections` fails closed until a trusted source supplies the workflow-definition ref.
 
 **Use case:** An operator supplies `TrentBest/TheSingularityWorkshop.FSM_COS` and a full candidate SHA. CiAi discovers only runs for that exact SHA, validates every returned record, reports whether discovery was truncated, and leaves release authorization with the owner.
