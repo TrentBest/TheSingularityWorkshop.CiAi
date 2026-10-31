@@ -5,7 +5,7 @@ using TheSingularityWorkshop.CiAi;
 internal static class CiWorkflowEvidencePacketV3Tests
 {
     private const string EventSha = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-    private const string CheckoutSha = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+    private const string CheckoutSha = EventSha;
     private const string WorkflowSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
     public static int Run()
