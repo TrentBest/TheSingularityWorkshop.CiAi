@@ -166,6 +166,7 @@ public sealed record CiTestResultReport
         int passed,
         int failed,
         int skipped,
+        int other,
         IReadOnlyList<CiTestResultRecord> results,
         DateTimeOffset observedAt)
     {
@@ -211,6 +212,7 @@ public sealed record CiTestResultReport
         Passed = passed;
         Failed = failed;
         Skipped = skipped;
+        Other = other;
         Results = Array.AsReadOnly(results.ToArray());
         ObservedAt = observedAt;
     }
@@ -257,6 +259,7 @@ public sealed record CiTestResultReport
     public int Passed { get; }
     public int Failed { get; }
     public int Skipped { get; }
+    public int Other { get; }
     public IReadOnlyList<CiTestResultRecord> Results { get; }
     public DateTimeOffset ObservedAt { get; }
 
@@ -297,7 +300,7 @@ public sealed record CiTestResultReport
             source.ArtifactId, source.ArtifactName, source.JobKey,
             source.ProviderArchiveDigest, source.ArchiveSizeBytes, source.CreatedAt, source.ExpiresAt,
             payloadDigest, trxBytes.Length,
-            parsed.Total, parsed.Passed, parsed.Failed, parsed.Skipped, parsed.Results, observedAt);
+            parsed.Total, parsed.Passed, parsed.Failed, parsed.Skipped, parsed.Other, parsed.Results, observedAt);
     }
 
     /// <summary>Creates explicit incomplete evidence when the exact required test artifact is absent.</summary>
@@ -327,7 +330,7 @@ public sealed record CiTestResultReport
         return new CiTestResultReport(
             evidence, matches[0], requiredCheckStatus, CiTestResultVerdict.IncompleteOrUntrusted,
             new[] { reasonCode }, null, null, null, jobKey, null,
-            null, null, null, null, 0, 0, 0, 0, 0, Array.Empty<CiTestResultRecord>(), observedAt);
+            null, null, null, null, 0, 0, 0, 0, 0, 0, Array.Empty<CiTestResultRecord>(), observedAt);
     }
 
     public string ToJson(bool indented = true)
@@ -365,6 +368,11 @@ public sealed record CiTestResultReport
         if (requiredCheckStatus == CiRequiredCheckStatus.NotRequired)
         {
             reasons.Add("test-results.check-not-required");
+            return CiTestResultVerdict.IncompleteOrUntrusted;
+        }
+        if (parsed.Other > 0)
+        {
+            reasons.Add("test-results.unknown-outcome");
             return CiTestResultVerdict.IncompleteOrUntrusted;
         }
         if (requiredCheckStatus == CiRequiredCheckStatus.Incomplete ||
@@ -443,7 +451,7 @@ public sealed record CiTestResultReport
 
         var resultElements = root.Descendants().Where(element => element.Name.LocalName == "UnitTestResult").ToArray();
         if (resultElements.Length > MaximumTestResults || resultElements.Length != total ||
-            passed + failed + skipped != total)
+            passed + failed + skipped > total)
             throw new InvalidDataException("TRX result records do not reconcile with the summary counters or exceed the record limit.");
 
         var results = new List<CiTestResultRecord>(resultElements.Length);
@@ -464,21 +472,23 @@ public sealed record CiTestResultReport
             var (stackTrace, stackTruncated, stackRedacted) = NormalizeDiagnostic(rawStack, MaximumStackTraceLength);
             var redacted = testIdRedacted || testNameRedacted || messageRedacted || stackRedacted;
             var truncated = testIdTruncated || testNameTruncated || messageTruncated || stackTruncated;
-            var digestInput = string.Join("\0", testId, testName, outcome.ToString(), message ?? "", stackTrace ?? "",
+            var digestInput = string.Join("\0", testId, testName, outcome.ToString(), outcomeText, message ?? "", stackTrace ?? "",
                 redacted.ToString(CultureInfo.InvariantCulture), truncated.ToString(CultureInfo.InvariantCulture));
             var recordDigest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(digestInput))).ToLowerInvariant();
-            results.Add(new CiTestResultRecord(testId, testName, outcome, message, stackTrace,
+            results.Add(new CiTestResultRecord(testId, testName, outcome, outcomeText, message, stackTrace,
                 redacted, truncated, recordDigest));
         }
 
         if (results.Select(item => item.TestId + "\0" + item.TestName).Distinct(StringComparer.Ordinal).Count() != results.Count)
             throw new InvalidDataException("TRX contains duplicate stable test identities.");
+        var other = total - passed - failed - skipped;
         if (results.Count(item => item.Outcome == CiTestOutcome.Passed) != passed ||
             results.Count(item => item.Outcome == CiTestOutcome.Failed) != failed ||
-            results.Count(item => item.Outcome == CiTestOutcome.Skipped) != skipped)
+            results.Count(item => item.Outcome == CiTestOutcome.Skipped) != skipped ||
+            results.Count(item => item.Outcome == CiTestOutcome.Other) != other)
             throw new InvalidDataException("TRX test outcomes do not match the summary counters.");
 
-        return new ParsedTrx(total, passed, failed, skipped, results);
+        return new ParsedTrx(total, passed, failed, skipped, other, results);
     }
 
     private static CiTestOutcome MapOutcome(string value) => value switch
@@ -487,7 +497,7 @@ public sealed record CiTestResultReport
         "Failed" or "Error" or "Timeout" or "Aborted" => CiTestOutcome.Failed,
         "NotExecuted" or "Inconclusive" or "NotRunnable" or "Disconnected" or
             "Warning" or "Pending" or "InProgress" or "PassedButRunAborted" => CiTestOutcome.Skipped,
-        _ => throw new InvalidDataException($"TRX contains unsupported test outcome '{value}'.")
+        _ => CiTestOutcome.Other
     };
 
     private static int ReadCounter(XElement counters, string name)
@@ -523,6 +533,7 @@ public sealed record CiTestResultReport
         int Passed,
         int Failed,
         int Skipped,
+        int Other,
         IReadOnlyList<CiTestResultRecord> Results);
 }
 
@@ -530,13 +541,15 @@ public enum CiTestOutcome
 {
     Passed,
     Failed,
-    Skipped
+    Skipped,
+    Other
 }
 
 public sealed record CiTestResultRecord(
     string TestId,
     string TestName,
     CiTestOutcome Outcome,
+    string RawOutcome,
     string? Message,
     string? StackTrace,
     bool SensitiveContentRedacted,
