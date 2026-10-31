@@ -18,9 +18,9 @@ internal static class CiWorkflowProvenanceRecordTests
             bytes, "TrentBest/CiAi", 42, 2, digest);
 
         Assert(record.WorkflowSha == WorkflowSha && record.EventSha == EventSha &&
-            record.PullRequest is { HeadSha: var headSha, BaseSha: var baseSha } &&
-            headSha == PrHeadSha && baseSha == PrBaseSha && record.CheckoutSha == CheckoutSha &&
-            record.PullRequest.HeadRef == "feature/fix" && record.PullRequest.BaseRef == "development",
+            record.PullRequest is { HeadSha: var headSha, BaseSha: var baseSha,
+                HeadRef: "feature/fix", BaseRef: "development" } &&
+            headSha == PrHeadSha && baseSha == PrBaseSha && record.CheckoutSha == CheckoutSha,
             "workflow, event, PR source/base, and tested checkout identities were conflated");
         Assert(record.WorkflowPath == ".github/workflows/ci.yml" && record.WorkflowRef ==
             "TrentBest/CiAi/.github/workflows/ci.yml@refs/heads/development",
