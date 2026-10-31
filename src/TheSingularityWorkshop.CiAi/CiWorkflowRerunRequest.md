@@ -38,9 +38,13 @@ CiAi's own `.github/workflows/ci.yml` now exposes an optional correlated dispatc
 - `ciai_candidate_sha`: the exact full candidate SHA;
 - `ciai_attempt_number`: 1 through 5.
 
-The five `ciai_*` values are all-or-none. When supplied, the workflow requires a valid `feature/*` target, requires the dispatch event ref and SHA to match that target/candidate, resolves the branch again from the remote, and fails before build/test if the branch has moved. It checks out the resolved immutable SHA and includes the correlation fields in the evidence summary. Ordinary push/PR runs and existing manual `target_branch` dispatches retain their prior behavior when the CiAi input group is omitted.
+The five `ciai_*` values are all-or-none. Every `workflow_dispatch` run must use trusted `refs/heads/development` as its workflow-definition ref; never dispatch the candidate feature branch as the workflow-definition ref. When the CiAi input group is supplied, the workflow validates the isolated `feature/*` target, resolves that branch again from the remote, requires the resolved head to equal `ciai_candidate_sha`, and fails before build/test if it moved. It then checks out the immutable candidate SHA and records both workflow-definition and candidate provenance. Push/PR runs are unaffected. Manual workflow dispatches must also select `development`; the optional `target_branch` input can still select a candidate to test from that trusted workflow ref.
 
 `CiWorkflowDispatchInputContract.CreateInputs` creates the exact six-field mapping as an immutable dictionary and contains no credential fields; see its [class companion](CiWorkflowDispatchInputContract.md).
+
+
+
+Because the trusted workflow run's GitHub `headRef`/`headSha` now identify `development`, they are not the candidate code ref/SHA. The current evidence packet v1 does not yet carry separate candidate provenance fields. Until a versioned packet adds `candidateRef`/`candidateSha` and the host verifies the candidate-checkout provenance step, do not treat trusted-ref dispatch runs as v1 evidence for the candidate SHA.
 
 This is the opt-in workflow-side contract only. The authenticated HTTP dispatcher that supplies these inputs, its durable dispatch-intent ledger, and run receipt/reconciliation client are not yet implemented. A caller must not treat a green run summary as accepted evidence until it reconciles the exact repository, workflow, run, attempt, and candidate SHA.
 
