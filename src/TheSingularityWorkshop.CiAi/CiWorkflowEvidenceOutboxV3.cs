@@ -19,9 +19,21 @@ public sealed record CiWorkflowEvidenceDeliveryV3
         Payload = packet.ToJson(indented: false);
         PayloadSha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Payload))).ToLowerInvariant();
         var provenance = packet.Provenance;
-        IdempotencyKey = string.Join(":", packet.ObservedRun.Repository, packet.ObservedRun.RunId,
-            packet.ObservedRun.RunAttempt, provenance.WorkflowRef, provenance.WorkflowSha,
-            provenance.CheckoutRef, provenance.CheckoutSha);
+        // Hash a structured identity rather than delimiter-joining untrusted refs.
+        // This keeps the key bounded and prevents ambiguous tuples if a workflow path
+        // contains punctuation that would otherwise collide with the separator.
+        var identity = JsonSerializer.SerializeToUtf8Bytes(new
+        {
+            repository = packet.ObservedRun.Repository,
+            runId = packet.ObservedRun.RunId,
+            runAttempt = packet.ObservedRun.RunAttempt,
+            workflowRef = provenance.WorkflowRef,
+            workflowSha = provenance.WorkflowSha,
+            checkoutRef = provenance.CheckoutRef,
+            checkoutSha = provenance.CheckoutSha
+        });
+        IdempotencyKey = "sha256:" +
+            Convert.ToHexString(SHA256.HashData(identity)).ToLowerInvariant();
     }
 
     public string DeliveryId { get; }
