@@ -82,8 +82,8 @@ internal static class CiWorkflowEvidencePacketContractTests
             json.Replace("\"contractVersion\": 2", "\"contractVersion\": 1", StringComparison.Ordinal)
                 .Replace("ciai.workflow-evidence.v2", "ciai.workflow-evidence.v1", StringComparison.Ordinal)));
 
-        Console.WriteLine("PASS: 19 CI workflow evidence packet v2 contract checks.");
-        return 19;
+        Console.WriteLine("PASS: 20 CI workflow evidence packet v2 contract checks.");
+        return 20;
     }
 
     private static CiWorkflowEvidencePacket CreatePacket(
