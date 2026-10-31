@@ -41,7 +41,7 @@ public static class CiWorkflowDispatchInputContract
         return new ReadOnlyDictionary<string, string>(inputs);
     }
 
-    private static bool IsWorkflowIdentity(string value) =>
+    internal static bool IsWorkflowIdentity(string value) =>
         !string.IsNullOrEmpty(value) &&
         value.Length <= 200 &&
         char.IsAsciiLetterOrDigit(value[0]) &&
