@@ -129,10 +129,13 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
             {
                 policySendCount++;
                 var payload = await request.Content!.ReadAsStringAsync(cancellationToken);
-                var notice = FoundryArtifactReadyNoticeClient.DeserializeNotice(payload);
-                return notice.NoticeId == "policy-rejected"
+                using var document = JsonDocument.Parse(payload);
+                var noticeId = document.RootElement.GetProperty("noticeId").GetString()!;
+                var idempotencyKey = document.RootElement.GetProperty("manifest").GetProperty("idempotencyKey").GetString()!;
+                return noticeId == "policy-rejected"
                     ? Response(HttpStatusCode.UnprocessableEntity, "{\\"code\\":\\"artifact.policy-rejected\\"}")
-                    : Response(HttpStatusCode.Accepted, Receipt(notice, "receipt-" + notice.NoticeId, "accepted"));
+                    : Response(HttpStatusCode.Accepted,
+                        Receipt(noticeId, idempotencyKey, "receipt-" + noticeId, "accepted"));
             })))
             {
                 var coordinator = new FoundryArtifactReadyNoticeDeliveryCoordinator(
@@ -140,14 +143,14 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
                 var batch = await coordinator.DeliverPendingAsync();
                 Assert(batch.Attempted == 2 && batch.Acknowledged == 1 && batch.RemainingPending == 1,
                     "notice-specific policy rejection incorrectly stopped later independent delivery");
-                Assert(batch.Attempts[0].Outcome == FoundryArtifactIngressOutcome.Rejected &&
+                Assert(batch.Attempts[0].Outcome == FoundryArtifactIngressOutcome.InvalidRequest &&
                     batch.Attempts[1].ReceiptRecordOutcome == FoundryArtifactIngressReceiptRecordOutcome.Recorded,
                     "policy rejection or subsequent accepted receipt was misclassified");
                 Assert(policySendCount == 2, "coordinator did not continue after a notice-specific rejection");
             }
 
-            Console.WriteLine("PASS: 13 Foundry notice delivery coordinator checks.");
-            return 13;
+            Console.WriteLine("PASS: 19 Foundry notice delivery coordinator checks.");
+            return 19;
         }
         finally
         {
