@@ -91,7 +91,7 @@ public sealed record CiWorkflowProvenanceRecord
             throw new InvalidDataException("Workflow provenance belongs to a different repository, run, or attempt.");
 
         var workflow = RequiredObject(root, "workflow");
-        var workflowRef = RequiredRef(workflow, "ref");
+        var workflowRef = RequiredWorkflowRef(workflow, "ref");
         var workflowSha = RequiredSha(workflow, "sha");
 
         var @event = RequiredObject(root, "event");
@@ -145,6 +145,17 @@ public sealed record CiWorkflowProvenanceRecord
         var value = RequiredString(parent, property);
         if (value.Length > maximumLength || value.Any(char.IsControl) || value.Any(char.IsWhiteSpace))
             throw new InvalidDataException($"Workflow provenance identity '{property}' is invalid.");
+        return value;
+    }
+
+    private static string RequiredWorkflowRef(JsonElement parent, string property)
+    {
+        var value = RequiredString(parent, property);
+        var separator = value.LastIndexOf('@');
+        if (value.Length > 1024 || value.Any(char.IsControl) || value.Any(char.IsWhiteSpace) ||
+            separator <= 0 || !value[(separator + 1)..].StartsWith("refs/", StringComparison.Ordinal) ||
+            !value[..separator].Contains(".github/workflows/", StringComparison.Ordinal))
+            throw new InvalidDataException("Workflow definition ref is invalid.");
         return value;
     }
 
