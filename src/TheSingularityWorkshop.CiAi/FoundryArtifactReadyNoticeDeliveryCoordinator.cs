@@ -87,13 +87,12 @@ public sealed class FoundryArtifactReadyNoticeDeliveryCoordinator
             attempts.Add(new FoundryArtifactReadyNoticeDeliveryAttempt(
                 delivery.NoticeId, outcome, receiptOutcome, errorCode, result.RetryAfter));
 
-            // These outcomes are global transport/authorization/back-pressure signals.
+            // These outcomes are global transport/authorization/back-pressure signals. A policy rejection is notice-specific, so later independent notices may still be attempted.
             // Leave all remaining notices pending for a later, policy-controlled invocation.
             if (outcome is FoundryArtifactIngressOutcome.AuthenticationRequired
                 or FoundryArtifactIngressOutcome.AuthorizationDenied
                 or FoundryArtifactIngressOutcome.RateLimited
-                or FoundryArtifactIngressOutcome.RetryableFailure
-                or FoundryArtifactIngressOutcome.Rejected)
+                or FoundryArtifactIngressOutcome.RetryableFailure)
                 break;
         }
 
