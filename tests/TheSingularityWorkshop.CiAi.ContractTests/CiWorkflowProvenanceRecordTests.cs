@@ -18,8 +18,8 @@ internal static class CiWorkflowProvenanceRecordTests
             bytes, "TrentBest/CiAi", 42, 2, digest);
 
         Assert(record.WorkflowSha == WorkflowSha && record.EventSha == EventSha &&
-            record.PullRequest?.HeadSha == PrHeadSha && record.PullRequest.BaseSha == PrBaseSha &&
-            record.CheckoutSha == CheckoutSha,
+            record.PullRequest is { HeadSha: var headSha, BaseSha: var baseSha } &&
+            headSha == PrHeadSha && baseSha == PrBaseSha && record.CheckoutSha == CheckoutSha,
             "workflow, event, PR source/base, and tested checkout identities were conflated");
         Assert(record.WorkflowRef ==
             "TrentBest/CiAi/.github/workflows/ci.yml@refs/heads/development",
@@ -48,6 +48,12 @@ internal static class CiWorkflowProvenanceRecordTests
         Throws<InvalidDataException>(() => CiWorkflowProvenanceRecord.ParseAndValidate(
             inconsistentPullRequest, "TrentBest/CiAi", 42, 2,
             Convert.ToHexString(SHA256.HashData(inconsistentPullRequest))));
+
+        var missingCheckoutSha = Encoding.UTF8.GetBytes(CreatePullRequestJson()
+            .Replace($"\\"sha\\": \\"{CheckoutSha}\\"", "\\"sha\\": \\"\\"", StringComparison.Ordinal));
+        Throws<InvalidDataException>(() => CiWorkflowProvenanceRecord.ParseAndValidate(
+            missingCheckoutSha, "TrentBest/CiAi", 42, 2,
+            Convert.ToHexString(SHA256.HashData(missingCheckoutSha))));
 
         var dispatch = Encoding.UTF8.GetBytes(CreateDispatchJson());
         var dispatchRecord = CiWorkflowProvenanceRecord.ParseAndValidate(
