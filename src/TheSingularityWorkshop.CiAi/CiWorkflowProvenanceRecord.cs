@@ -115,9 +115,9 @@ public sealed record CiWorkflowProvenanceRecord
             var @base = RequiredObject(pr, "base");
             pullRequest = new CiWorkflowPullRequestProvenance(
                 RequiredPositiveInt32(pr, "number"),
-                RequiredRef(head, "ref"),
+                RequiredBranchName(head, "ref"),
                 RequiredSha(head, "sha"),
-                RequiredRef(@base, "ref"),
+                RequiredBranchName(@base, "ref"),
                 RequiredSha(@base, "sha"));
         }
 
@@ -194,6 +194,23 @@ public sealed record CiWorkflowProvenanceRecord
             !(path.EndsWith(".yml", StringComparison.Ordinal) ||
               path.EndsWith(".yaml", StringComparison.Ordinal)))
             throw new InvalidDataException("Workflow definition ref is invalid.");
+        return value;
+    }
+
+    // github.event.pull_request.head.ref and base.ref are branch names (for example
+    // "feature/fix" and "development"), not fully-qualified refs/heads/... values.
+    private static string RequiredBranchName(JsonElement parent, string property)
+    {
+        var value = RequiredString(parent, property);
+        var segments = value.Split('/');
+        if (value.Length > 512 || value.Any(char.IsControl) || value.Any(char.IsWhiteSpace) ||
+            value.Contains('\\\\') || value.Contains("..", StringComparison.Ordinal) ||
+            value.Contains("@{", StringComparison.Ordinal) || value.Contains("//", StringComparison.Ordinal) ||
+            value.IndexOfAny(new[] { '~', '^', ':', '?', '*', '[', ']' }) >= 0 ||
+            value.StartsWith('/', StringComparison.Ordinal) || value.EndsWith('/', StringComparison.Ordinal) ||
+            segments.Any(segment => segment.Length == 0 || segment.StartsWith('.', StringComparison.Ordinal) ||
+                segment.EndsWith(".lock", StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidDataException($"Workflow provenance branch name '{property}' is invalid.");
         return value;
     }
 
