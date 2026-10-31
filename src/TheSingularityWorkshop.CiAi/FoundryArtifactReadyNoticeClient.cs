@@ -203,6 +203,10 @@ public sealed class FoundryArtifactReadyNoticeClient
         ArtifactReadyNotice notice,
         CancellationToken cancellationToken)
     {
+        if (!string.Equals(response.Content.Headers.ContentType?.MediaType, "application/json",
+            StringComparison.OrdinalIgnoreCase))
+            return InvalidReceipt(response.StatusCode, "receipt.content-type-invalid");
+
         byte[]? bytes;
         try
         {
