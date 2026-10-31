@@ -22,7 +22,7 @@ The contract rejects `master`, `development`, tags, malformed Git refs (includin
 
 **This object is not a credential verifier.** The authenticated host adapter must validate the credential signature, issuer, audience, expiry, and revocation state before constructing this context. Never populate it from unverified HTTP headers, callback JSON, issue text, or model output. Raw tokens and secrets are not represented in the contract and must never enter evidence packets or logs.
 
-The policy also checks a fresh `CiWorkflowRerunTarget` obtained from GitHub immediately before dispatch. Repository, ref, full SHA, and workflow path must all match exactly; a moved branch is stale and must be rejected rather than silently dispatching against a different commit.
+The policy also checks a fresh `CiWorkflowRerunTarget` obtained from GitHub immediately before dispatch. Repository, ref, full SHA, and workflow path must all match exactly; a moved branch is stale and must be rejected rather than silently dispatching against a different commit. For the workflow-dispatch transport, the host must select the trusted `refs/heads/development` workflow definition and pass the candidate feature branch as a separate input. Never dispatch the candidate branch as the workflow-definition ref: candidate code must not supply the workflow that evaluates itself. The run must retain both workflow-definition ref/SHA and candidate ref/SHA as separate provenance fields.
 
 ## Policy outcomes
 
