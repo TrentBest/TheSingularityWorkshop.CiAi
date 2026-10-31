@@ -30,6 +30,18 @@ The policy also checks a fresh `CiWorkflowRerunTarget` obtained from GitHub imme
 
 The caller must persist request/idempotency state and enforce the total task retry budget across requests. The per-request attempt cap is not a distributed rate limiter or a substitute for Foundry's task-level budget.
 
+## Opt-in GitHub Actions workflow input contract
+
+CiAi's own `.github/workflows/ci.yml` now exposes an optional correlated dispatch input group:
+- `target_branch`: the isolated feature branch name (without `refs/heads/`);
+- `ciai_request_id`, `ciai_correlation_id`, and `ciai_task_id`;
+- `ciai_candidate_sha`: the exact full candidate SHA;
+- `ciai_attempt_number`: 1 through 5.
+
+The five `ciai_*` values are all-or-none. When supplied, the workflow requires a valid `feature/*` target, requires the dispatch event ref and SHA to match that target/candidate, resolves the branch again from the remote, and fails before build/test if the branch has moved. It checks out the resolved immutable SHA and includes the correlation fields in the evidence summary. Ordinary push/PR runs and existing manual `target_branch` dispatches retain their prior behavior when the CiAi input group is omitted.
+
+This is the opt-in workflow-side contract only. The authenticated HTTP dispatcher that supplies these inputs, its durable dispatch-intent ledger, and run receipt/reconciliation client are not yet implemented. A caller must not treat a green run summary as accepted evidence until it reconciles the exact repository, workflow, run, attempt, and candidate SHA.
+
 ## Durable acceptance ledger
 
 `FileCiWorkflowRerunRequestLedger` evaluates the policy before appending an accepted request to a local append-only journal. It flushes before reporting acceptance, deduplicates exact request retries, rejects conflicting reuse of a task-attempt identity, enforces sequential attempts and a stable task-level maximum, and rehydrates accepted requests after restart. An incomplete final journal record fails closed.
