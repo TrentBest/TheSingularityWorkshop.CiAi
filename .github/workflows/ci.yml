@@ -17,7 +17,7 @@ on:
       - ".github/workflows/observe-release-candidate.yml"
       - ".github/workflows/serialization-benchmark-dispatch.yml"
   pull_request:
-    branches: [development, master]
+    branches: [development, master, feature/ciai-versioned-ci-evidence-packet]
     paths:
       - "src/**"
       - "tests/**"
