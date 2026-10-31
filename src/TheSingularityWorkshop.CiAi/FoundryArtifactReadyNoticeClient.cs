@@ -82,7 +82,7 @@ public sealed class FoundryArtifactReadyNoticeClient
         if (!string.Equals(endpoint.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
             !endpoint.IsDefaultPort || !string.IsNullOrEmpty(endpoint.UserInfo) ||
             !string.IsNullOrEmpty(endpoint.Query) || !string.IsNullOrEmpty(endpoint.Fragment) ||
-            !endpoint.AbsolutePath.EndsWith(EndpointPath, StringComparison.Ordinal))
+            !string.Equals(endpoint.AbsolutePath, EndpointPath, StringComparison.Ordinal))
             throw new ArgumentException("Foundry ingress endpoint must be an HTTPS URL on the default port with the exact v1 route and no credentials, query, or fragment.", nameof(endpoint));
 
         _httpClient = httpClient;
@@ -238,7 +238,9 @@ public sealed class FoundryArtifactReadyNoticeClient
         if (root.ValueKind != JsonValueKind.Object ||
             !root.TryGetProperty(name, out var value) ||
             value.ValueKind != JsonValueKind.String ||
-            string.IsNullOrWhiteSpace(value.GetString()))
+            string.IsNullOrWhiteSpace(value.GetString()) ||
+            value.GetString()!.Length > 200 ||
+            value.GetString()!.Any(char.IsControl))
             throw new InvalidOperationException("Required receipt field is missing.");
         return value.GetString()!;
     }
@@ -260,7 +262,7 @@ public sealed class FoundryArtifactReadyNoticeClient
                 ? code.GetString()!
                 : "receiver.invalid-request";
         }
-        catch (Exception exception) when (exception is JsonException or InvalidOperationException)
+        catch (Exception exception) when (exception is JsonException or InvalidOperationException or IOException or HttpRequestException)
         {
             return "receiver.invalid-request";
         }
