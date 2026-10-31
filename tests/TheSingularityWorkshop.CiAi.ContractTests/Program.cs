@@ -18,6 +18,7 @@ passed += FileDependencyReleaseCandidateStoreContractTests.Run();
 passed += DependencyReleaseGateCoordinatorContractTests.Run();
 passed += CiRequiredEvidenceEvaluatorTests.Run();
 passed += CiBenchmarkEvidencePolicyEvaluatorTests.Run();
+passed += AwaitGateContractsTests.Run();
 
 Check("dependency monitor-only policy reports without authorizing adoption", () =>
 {
