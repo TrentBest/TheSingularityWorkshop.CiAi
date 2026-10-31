@@ -44,7 +44,7 @@ internal static class CiWorkflowProvenanceRecordTests
             Convert.ToHexString(SHA256.HashData(wrongSchema))));
 
         var inconsistentPullRequest = Encoding.UTF8.GetBytes(CreatePullRequestJson()
-            .Replace("\"name\":\"pull_request\"", "\"name\":\"push\"", StringComparison.Ordinal));
+            .Replace("\"name\": \"pull_request\"", "\"name\": \"push\"", StringComparison.Ordinal));
         Throws<InvalidDataException>(() => CiWorkflowProvenanceRecord.ParseAndValidate(
             inconsistentPullRequest, "TrentBest/CiAi", 42, 2,
             Convert.ToHexString(SHA256.HashData(inconsistentPullRequest))));
