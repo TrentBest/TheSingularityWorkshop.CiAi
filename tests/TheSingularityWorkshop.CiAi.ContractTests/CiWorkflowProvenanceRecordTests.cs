@@ -19,7 +19,8 @@ internal static class CiWorkflowProvenanceRecordTests
 
         Assert(record.WorkflowSha == WorkflowSha && record.EventSha == EventSha &&
             record.PullRequest is { HeadSha: var headSha, BaseSha: var baseSha } &&
-            headSha == PrHeadSha && baseSha == PrBaseSha && record.CheckoutSha == CheckoutSha,
+            headSha == PrHeadSha && baseSha == PrBaseSha && record.CheckoutSha == CheckoutSha &&
+            record.PullRequest.HeadRef == "feature/fix" && record.PullRequest.BaseRef == "development",
             "workflow, event, PR source/base, and tested checkout identities were conflated");
         Assert(record.WorkflowPath == ".github/workflows/ci.yml" && record.WorkflowRef ==
             "TrentBest/CiAi/.github/workflows/ci.yml@refs/heads/development",
@@ -76,6 +77,12 @@ internal static class CiWorkflowProvenanceRecordTests
             missingCheckoutSha, "TrentBest/CiAi", 42, 2,
             Convert.ToHexString(SHA256.HashData(missingCheckoutSha))));
 
+        var invalidBranch = Encoding.UTF8.GetBytes(CreatePullRequestJson()
+            .Replace("\\"feature/fix\\"", "\\"../feature/fix\\"", StringComparison.Ordinal));
+        Throws<InvalidDataException>(() => CiWorkflowProvenanceRecord.ParseAndValidate(
+            invalidBranch, "TrentBest/CiAi", 42, 2,
+            Convert.ToHexString(SHA256.HashData(invalidBranch))));
+
         var dispatch = Encoding.UTF8.GetBytes(CreateDispatchJson());
         var dispatchRecord = CiWorkflowProvenanceRecord.ParseAndValidate(
             dispatch, "TrentBest/CiAi", 42, 2,
@@ -83,8 +90,8 @@ internal static class CiWorkflowProvenanceRecordTests
         Assert(dispatchRecord.PullRequest is null && dispatchRecord.EventName == "workflow_dispatch",
             "workflow_dispatch provenance with no PR was not accepted");
 
-        Console.WriteLine("PASS: 14 workflow provenance artifact contract checks.");
-        return 14;
+        Console.WriteLine("PASS: 15 workflow provenance artifact contract checks.");
+        return 15;
     }
 
 
@@ -127,8 +134,8 @@ internal static class CiWorkflowProvenanceRecordTests
         "sha": "{{EventSha}}",
         "pullRequest": {
           "number": 17,
-          "head": { "ref": "refs/heads/feature/fix", "sha": "{{PrHeadSha}}" },
-          "base": { "ref": "refs/heads/development", "sha": "{{PrBaseSha}}" }
+          "head": { "ref": "feature/fix", "sha": "{{PrHeadSha}}" },
+          "base": { "ref": "development", "sha": "{{PrBaseSha}}" }
         }
       },
       "checkout": {
