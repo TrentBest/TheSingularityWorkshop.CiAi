@@ -183,7 +183,20 @@ public sealed class FoundryArtifactReadyNoticeClient
         ArtifactReadyNotice notice,
         CancellationToken cancellationToken)
     {
-        var bytes = await ReadBoundedContentAsync(response.Content, MaximumNoticeBytes, cancellationToken).ConfigureAwait(false);
+        byte[]? bytes;
+        try
+        {
+            bytes = await ReadBoundedContentAsync(response.Content, MaximumNoticeBytes, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception) when (exception is IOException or HttpRequestException or OperationCanceledException)
+        {
+            return new FoundryArtifactIngressResult(FoundryArtifactIngressOutcome.RetryableFailure,
+                response.StatusCode, ErrorCode: "receipt.response-incomplete");
+        }
         if (bytes is null)
             return InvalidReceipt(response.StatusCode, "receipt.exceeds-response-limit");
 
