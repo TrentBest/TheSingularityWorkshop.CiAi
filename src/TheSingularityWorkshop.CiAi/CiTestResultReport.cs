@@ -57,6 +57,7 @@ public sealed record CiTestResultArtifactSource
         RequireText(jobName, nameof(jobName), 200);
         RequireIdentifier(jobKey, nameof(jobKey), 100);
         RequireText(artifactName, nameof(artifactName), 200);
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerArchiveDigest);
         var expectedName = $"ciai-test-results-{runId}-{runAttempt}-{jobKey}";
         if (!string.Equals(artifactName, expectedName, StringComparison.Ordinal))
             throw new ArgumentException("Artifact name must bind the exact run, attempt, and workflow job key.", nameof(artifactName));
@@ -260,7 +261,8 @@ public sealed record CiTestResultReport
             throw new ArgumentOutOfRangeException(nameof(maximumPayloadBytes));
         if (trxBytes.IsEmpty || trxBytes.Length > maximumPayloadBytes)
             throw new InvalidDataException("TRX payload is empty or exceeds the configured byte limit.");
-        if (observedAt == default || observedAt < source.CreatedAt || observedAt > source.ExpiresAt)
+        if (observedAt == default || observedAt < source.CreatedAt || observedAt > source.ExpiresAt ||
+            observedAt < evidence.ObservedRun.ObservedAt)
             throw new InvalidDataException("TRX artifact is not valid at the supplied observation time.");
 
         ValidateEvidenceBinding(evidence, source);
@@ -297,6 +299,8 @@ public sealed record CiTestResultReport
         ArgumentException.ThrowIfNullOrWhiteSpace(jobKey);
         if (jobId <= 0 || observedAt == default)
             throw new ArgumentOutOfRangeException(nameof(jobId));
+        if (observedAt < evidence.ObservedRun.ObservedAt)
+            throw new InvalidDataException("Missing-artifact observation predates the workflow evidence.");
         if (!evidence.WorkflowDefinitionTrusted || !evidence.CheckoutVerified || !evidence.EvidenceComplete)
             throw new InvalidDataException("Missing-artifact reports still require trusted exact-run provenance.");
         var matches = evidence.ObservedRun.Jobs.Where(item => item.JobId == jobId).ToArray();
