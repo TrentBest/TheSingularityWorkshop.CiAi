@@ -176,6 +176,13 @@ public sealed record CiTestResultReport
         CandidateSha = evidence.CandidateSha;
         WorkflowPath = evidence.Provenance.WorkflowPath;
         WorkflowDefinitionRef = evidence.Provenance.WorkflowRef;
+        PullRequestNumber = evidence.Provenance.PullRequest?.Number;
+        PullRequestHeadRef = evidence.Provenance.PullRequest?.HeadRef;
+        PullRequestHeadSha = evidence.Provenance.PullRequest?.HeadSha;
+        PullRequestBaseRef = evidence.Provenance.PullRequest?.BaseRef;
+        PullRequestBaseSha = evidence.Provenance.PullRequest?.BaseSha;
+        RunEvidenceUrl = evidence.ObservedRun.RunEvidenceUrl;
+        JobEvidenceUrl = job.EvidenceUrl;
         WorkflowDefinitionSha = evidence.Provenance.WorkflowSha;
         EventName = evidence.Provenance.EventName;
         EventRef = evidence.Provenance.EventRef;
@@ -215,6 +222,13 @@ public sealed record CiTestResultReport
     public string CandidateSha { get; }
     public string WorkflowPath { get; }
     public string WorkflowDefinitionRef { get; }
+    public int? PullRequestNumber { get; }
+    public string? PullRequestHeadRef { get; }
+    public string? PullRequestHeadSha { get; }
+    public string? PullRequestBaseRef { get; }
+    public string? PullRequestBaseSha { get; }
+    public Uri RunEvidenceUrl { get; }
+    public Uri JobEvidenceUrl { get; }
     public string WorkflowDefinitionSha { get; }
     public string EventName { get; }
     public string EventRef { get; }
