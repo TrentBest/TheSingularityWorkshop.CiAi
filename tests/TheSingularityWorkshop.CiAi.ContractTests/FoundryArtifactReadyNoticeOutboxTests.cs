@@ -61,8 +61,8 @@ internal static class FoundryArtifactReadyNoticeOutboxTests
             AssertThrows<InvalidDataException>(() =>
                 new FileFoundryArtifactIngressReceiptLedger(tornLedger).ReadAcknowledgedNoticeIds());
 
-            Console.WriteLine("PASS: 10 Foundry notice outbox and receipt ledger contract checks.");
-            return 10;
+            Console.WriteLine("PASS: 13 Foundry notice outbox and receipt ledger contract checks.");
+            return 13;
         }
         finally
         {
