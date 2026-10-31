@@ -33,7 +33,7 @@ public sealed record CiWorkflowEvidenceRemoteReceiptV3
         RequireText(idempotencyKey, nameof(idempotencyKey), 71);
         if (idempotencyKey.Length != 71 ||
             !idempotencyKey.StartsWith("sha256:", StringComparison.Ordinal) ||
-            !idempotencyKey.AsSpan(7).ToString().All(Uri.IsHexDigit))
+            !idempotencyKey.AsSpan(7).ToString().All(IsLowerHex))
             throw new ArgumentException("Idempotency key must use the bounded sha256:<hex> v3 format.", nameof(idempotencyKey));
         ArgumentException.ThrowIfNullOrWhiteSpace(payloadSha256);
         if (payloadSha256.Length != 64 || !payloadSha256.All(Uri.IsHexDigit))
@@ -76,6 +76,9 @@ public sealed record CiWorkflowEvidenceRemoteReceiptV3
             errors.Add("payloadSha256.mismatch");
         return Array.AsReadOnly(errors.ToArray());
     }
+
+    private static bool IsLowerHex(char value) =>
+        value is >= '0' and <= '9' or >= 'a' and <= 'f';
 
     private static void RequireText(string value, string name, int maxLength)
     {
