@@ -50,7 +50,7 @@ internal static class CiWorkflowProvenanceRecordTests
             Convert.ToHexString(SHA256.HashData(inconsistentPullRequest))));
 
         var missingCheckoutSha = Encoding.UTF8.GetBytes(CreatePullRequestJson()
-            .Replace($"\\"sha\\": \\"{CheckoutSha}\\"", "\\"sha\\": \\"\\"", StringComparison.Ordinal));
+            .Replace($"\"sha\": \"{CheckoutSha}\"", "\"sha\": \"\"", StringComparison.Ordinal));
         Throws<InvalidDataException>(() => CiWorkflowProvenanceRecord.ParseAndValidate(
             missingCheckoutSha, "TrentBest/CiAi", 42, 2,
             Convert.ToHexString(SHA256.HashData(missingCheckoutSha))));
