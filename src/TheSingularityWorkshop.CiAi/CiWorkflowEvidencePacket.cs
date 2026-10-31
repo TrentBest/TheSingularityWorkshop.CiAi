@@ -5,20 +5,21 @@ namespace TheSingularityWorkshop.CiAi;
 
 /// <summary>
 /// Versioned, immutable evidence for one exact GitHub Actions workflow run attempt.
-/// The packet preserves provider facts; it does not authorize a repair, merge, release, or publication.
+/// Workflow-definition provenance and candidate-code provenance are distinct when a trusted
+/// workflow checks out a separately authorized feature-branch commit.
 /// </summary>
 public sealed record CiWorkflowEvidencePacket
 {
-    public const int CurrentContractVersion = 1;
-    public const string CurrentSchema = "ciai.workflow-evidence.v1";
+    public const int CurrentContractVersion = 2;
+    public const string CurrentSchema = "ciai.workflow-evidence.v2";
 
     public CiWorkflowEvidencePacket(
         string repository,
         string workflowPath,
         long runId,
         int runAttempt,
-        string headRef,
-        string headSha,
+        string workflowRef,
+        string workflowSha,
         string @event,
         string workflowName,
         CiRunStatus status,
@@ -28,12 +29,13 @@ public sealed record CiWorkflowEvidencePacket
         IReadOnlyList<CiWorkflowJobObservation> jobs,
         bool discoveryComplete,
         bool jobsComplete,
-        IReadOnlyList<Uri>? artifactReferences = null)
+        IReadOnlyList<Uri>? artifactReferences = null,
+        CiWorkflowCandidateCheckoutEvidence? candidateCheckoutEvidence = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(repository);
         ArgumentException.ThrowIfNullOrWhiteSpace(workflowPath);
-        ArgumentException.ThrowIfNullOrWhiteSpace(headRef);
-        ArgumentException.ThrowIfNullOrWhiteSpace(headSha);
+        ArgumentException.ThrowIfNullOrWhiteSpace(workflowRef);
+        ArgumentException.ThrowIfNullOrWhiteSpace(workflowSha);
         ArgumentException.ThrowIfNullOrWhiteSpace(@event);
         ArgumentException.ThrowIfNullOrWhiteSpace(workflowName);
         ArgumentNullException.ThrowIfNull(runEvidenceUrl);
@@ -45,8 +47,8 @@ public sealed record CiWorkflowEvidencePacket
             throw new ArgumentException("Workflow path must identify a .yml or .yaml file under .github/workflows.", nameof(workflowPath));
         if (runId <= 0) throw new ArgumentOutOfRangeException(nameof(runId));
         if (runAttempt <= 0) throw new ArgumentOutOfRangeException(nameof(runAttempt));
-        if (headSha.Length != 40 || !headSha.All(Uri.IsHexDigit))
-            throw new ArgumentException("Head SHA must be a full 40-character hexadecimal commit identifier.", nameof(headSha));
+        if (workflowSha.Length != 40 || !workflowSha.All(Uri.IsHexDigit))
+            throw new ArgumentException("Workflow SHA must be a full 40-character hexadecimal commit identifier.", nameof(workflowSha));
         if (!Enum.IsDefined(status)) throw new ArgumentOutOfRangeException(nameof(status));
         if (!Enum.IsDefined(conclusion)) throw new ArgumentOutOfRangeException(nameof(conclusion));
         if ((status == CiRunStatus.Completed) == (conclusion == CiRunConclusion.None))
@@ -78,8 +80,11 @@ public sealed record CiWorkflowEvidencePacket
         WorkflowPath = workflowPath;
         RunId = runId;
         RunAttempt = runAttempt;
-        HeadRef = headRef;
-        HeadSha = headSha.ToLowerInvariant();
+        WorkflowRef = workflowRef;
+        WorkflowSha = workflowSha.ToLowerInvariant();
+        CandidateCheckoutEvidence = candidateCheckoutEvidence;
+        CandidateRef = candidateCheckoutEvidence?.CandidateRef ?? WorkflowRef;
+        CandidateSha = candidateCheckoutEvidence?.CandidateSha ?? WorkflowSha;
         Event = @event;
         WorkflowName = workflowName;
         Status = status;
@@ -90,6 +95,7 @@ public sealed record CiWorkflowEvidencePacket
         DiscoveryComplete = discoveryComplete;
         JobsComplete = jobsComplete;
         ArtifactReferences = Array.AsReadOnly(artifacts);
+        CandidateCheckoutVerified = IsCandidateCheckoutVerified(candidateCheckoutEvidence, Jobs);
     }
 
     public int ContractVersion { get; }
@@ -98,8 +104,12 @@ public sealed record CiWorkflowEvidencePacket
     public string WorkflowPath { get; }
     public long RunId { get; }
     public int RunAttempt { get; }
-    public string HeadRef { get; }
-    public string HeadSha { get; }
+    public string WorkflowRef { get; }
+    public string WorkflowSha { get; }
+    public string CandidateRef { get; }
+    public string CandidateSha { get; }
+    public CiWorkflowCandidateCheckoutEvidence? CandidateCheckoutEvidence { get; }
+    public bool CandidateCheckoutVerified { get; }
     public string Event { get; }
     public string WorkflowName { get; }
     public CiRunStatus Status { get; }
@@ -111,14 +121,25 @@ public sealed record CiWorkflowEvidencePacket
     public bool JobsComplete { get; }
     public IReadOnlyList<Uri> ArtifactReferences { get; }
 
+    /// <summary>Compatibility aliases for GitHub's run-level head fields; these are workflow provenance, not candidate provenance.</summary>
+    [JsonIgnore]
+    public string HeadRef => WorkflowRef;
+
+    [JsonIgnore]
+    public string HeadSha => WorkflowSha;
+
     /// <summary>True only when discovery and job collection are complete and the run is terminal.</summary>
     public bool EvidenceComplete =>
         DiscoveryComplete && JobsComplete && Jobs.Count > 0 &&
         Status == CiRunStatus.Completed && Conclusion != CiRunConclusion.None;
 
-    /// <summary>Policy-neutral provider outcome; skipped, cancelled, unknown, and incomplete remain non-success.</summary>
+    /// <summary>
+    /// True only when the workflow succeeded, every observed job succeeded, and the code-under-test
+    /// candidate is either the workflow event commit or has explicit successful checkout provenance.
+    /// </summary>
     public bool IsSuccessful =>
-        EvidenceComplete && Conclusion == CiRunConclusion.Success &&
+        EvidenceComplete && CandidateCheckoutVerified &&
+        Conclusion == CiRunConclusion.Success &&
         Jobs.All(job => job.Status == "completed" && job.Conclusion == "success");
 
     /// <summary>Stable, machine-readable reasons why this packet cannot be treated as complete success.</summary>
@@ -133,6 +154,7 @@ public sealed record CiWorkflowEvidencePacket
             if (Status != CiRunStatus.Completed) reasons.Add("run.not-terminal");
             if (Status == CiRunStatus.Completed && Conclusion != CiRunConclusion.Success)
                 reasons.Add("run.not-successful");
+            if (!CandidateCheckoutVerified) reasons.Add("candidate.checkout-unverified");
             foreach (var job in Jobs)
             {
                 if (job.Status != "completed") reasons.Add($"job.{job.JobId}.not-terminal");
@@ -163,6 +185,35 @@ public sealed record CiWorkflowEvidencePacket
 
         return JsonSerializer.Deserialize<CiWorkflowEvidencePacket>(json, JsonOptions(false))
             ?? throw new InvalidDataException("Evidence packet JSON produced no packet.");
+    }
+
+    private static bool IsCandidateCheckoutVerified(
+        CiWorkflowCandidateCheckoutEvidence? evidence,
+        IReadOnlyList<CiWorkflowJobObservation> jobs)
+    {
+        if (evidence is null)
+            return true; // Ordinary CI run: candidate is the workflow event commit itself.
+
+        var matchingJobs = jobs.Where(job =>
+            string.Equals(job.Name, evidence.JobName, StringComparison.Ordinal)).ToArray();
+        if (matchingJobs.Length != 1)
+            return false;
+
+        var job = matchingJobs[0];
+        if (job.Status != "completed" || job.Conclusion != "success")
+            return false;
+
+        var resolutionSteps = job.Steps.Where(step =>
+            string.Equals(step.Name, evidence.ResolutionStepName, StringComparison.Ordinal)).ToArray();
+        var verificationSteps = job.Steps.Where(step =>
+            string.Equals(step.Name, evidence.VerificationStepName, StringComparison.Ordinal)).ToArray();
+
+        return resolutionSteps.Length == 1 &&
+            resolutionSteps[0].Status == "completed" &&
+            resolutionSteps[0].Conclusion == "success" &&
+            verificationSteps.Length == 1 &&
+            verificationSteps[0].Status == "completed" &&
+            verificationSteps[0].Conclusion == "success";
     }
 
     private static JsonSerializerOptions JsonOptions(bool indented) => new()
