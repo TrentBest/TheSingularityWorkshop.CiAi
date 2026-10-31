@@ -1,3 +1,6 @@
+<!-- The Singularity Workshop moniker -->
+<p align="center"><a href="https://github.com/TrentBest"><img src="https://raw.githubusercontent.com/TrentBest/TheSingularityWorkshop.Visualize/development/docs/assets/moniker.svg" alt="The Singularity Workshop animated moniker" width="720" /></a></p>
+
 # GitHubActionsWorkflowRunCollector
 
 **Owner:** The Singularity Workshop  
@@ -45,3 +48,8 @@ classDiagram
 **Trust boundary:** For a `workflow_dispatch` candidate run, the workflow path suffix identifies the workflow-definition ref (for example `refs/heads/development`); the run's `head_sha` remains the commit associated with the run. Consumers must not infer candidate SHA from the workflow-definition ref. Missing workflow-ref suffix remains explicit as null; `CiWorkflowEvidencePacket.FromCollections` fails closed until a trusted source supplies the workflow-definition ref.
 
 **Use case:** An operator supplies `TrentBest/TheSingularityWorkshop.FSM_COS` and a full candidate SHA. CiAi discovers only runs for that exact SHA, validates every returned record, reports whether discovery was truncated, and leaves release authorization with the owner.
+
+---
+
+<!-- THE SINGULARITY WORKSHOP FOOTER -->
+<p align="center"><img src="https://raw.githubusercontent.com/TrentBest/FSM_API/master/Documentation/Branding/TheSingularityWorkshop.png" alt="The Singularity Workshop" width="200" /></p>
