@@ -16,7 +16,7 @@
 | `workflowRef` / `workflowSha` | GitHub run-level event ref and head SHA: the workflow-definition execution provenance |
 | `candidateRef` / `candidateSha` | The exact repository ref and commit whose code was checked out and tested |
 
-For ordinary CI runs, candidate provenance defaults to the workflow event ref/SHA. For trusted-ref dispatch, the workflow runs from `refs/heads/development` and checks out a separate `refs/heads/feature/...` candidate. In that case the packet must include `CiWorkflowCandidateCheckoutEvidence` with the candidate ref/SHA, the exact job name, the branch-resolution step name, and the checkout-verification step name.
+For ordinary CI runs, candidate provenance defaults to the workflow event ref/SHA. For trusted-ref dispatch, the workflow runs from `refs/heads/development` and checks out a separate `refs/heads/feature/...` candidate. In that case the packet must include `CiWorkflowCandidateCheckoutEvidence` with the candidate ref/SHA, the exact job name, the branch-resolution step name, and the checkout-verification step name. See the [candidate checkout evidence companion](CiWorkflowCandidateCheckoutEvidence.md) for the exact verification rules.
 
 ## Candidate checkout verification
 
