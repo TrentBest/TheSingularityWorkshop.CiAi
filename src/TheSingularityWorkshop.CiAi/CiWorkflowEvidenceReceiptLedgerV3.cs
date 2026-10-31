@@ -30,7 +30,11 @@ public sealed record CiWorkflowEvidenceRemoteReceiptV3
             throw new ArgumentOutOfRangeException(nameof(contractVersion));
         RequireText(remoteReceiptId, nameof(remoteReceiptId), 200);
         RequireText(deliveryId, nameof(deliveryId), 200);
-        RequireText(idempotencyKey, nameof(idempotencyKey), 1500);
+        RequireText(idempotencyKey, nameof(idempotencyKey), 71);
+        if (idempotencyKey.Length != 71 ||
+            !idempotencyKey.StartsWith("sha256:", StringComparison.Ordinal) ||
+            !idempotencyKey.AsSpan(7).ToString().All(Uri.IsHexDigit))
+            throw new ArgumentException("Idempotency key must use the bounded sha256:<hex> v3 format.", nameof(idempotencyKey));
         ArgumentException.ThrowIfNullOrWhiteSpace(payloadSha256);
         if (payloadSha256.Length != 64 || !payloadSha256.All(Uri.IsHexDigit))
             throw new ArgumentException("Payload digest must be a SHA-256 hexadecimal value.", nameof(payloadSha256));
