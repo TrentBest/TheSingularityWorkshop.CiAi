@@ -55,7 +55,7 @@ The packet also carries repository, workflow path, run ID/attempt, event, workfl
 - Schema: `ciai.workflow-evidence.v2`
 - Contract version: `2`
 - Serialization uses camelCase property names and string enum values.
-- `FromJson` rejects v1 and unknown versions; callers must not silently reinterpret v1 run-head SHA as candidate SHA.
+- `FromJson` rejects v1 and unknown versions; callers must not silently reinterpret v1 run-head SHA as candidate SHA. Because the durable outbox rehydrates through `FromJson`, a journal containing v1 packet records fails closed; archive or explicitly migrate that journal before opening it with v2. No implicit in-place migration is performed.
 - `FromJson` recomputes candidate provenance from nested checkout evidence and raw job/step observations, then rejects JSON whose flattened workflow/candidate refs, SHAs, or `candidateCheckoutVerified` value disagree with that recomputation.
 - The legacy source aliases `HeadRef` and `HeadSha` refer only to workflow execution provenance and are not serialized in v2.
 
