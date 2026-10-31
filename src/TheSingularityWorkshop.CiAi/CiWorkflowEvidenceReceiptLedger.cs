@@ -113,8 +113,7 @@ public sealed class FileCiWorkflowEvidenceReceiptLedger
 
         var directory = Path.GetDirectoryName(_path)!;
         Directory.CreateDirectory(directory);
-        using var fileLock = new FileStream(_path + ".lock", FileMode.OpenOrCreate,
-            FileAccess.ReadWrite, FileShare.None);
+        using var fileLock = AcquireFileLock();
         var records = ReadRecords();
         var existing = records.FirstOrDefault(item =>
             string.Equals(item.RemoteReceiptId, receipt.RemoteReceiptId, StringComparison.Ordinal));
@@ -135,6 +134,7 @@ public sealed class FileCiWorkflowEvidenceReceiptLedger
     /// <summary>Returns the exact delivery IDs with a durable accepted or duplicate receipt.</summary>
     public IReadOnlySet<string> ReadAcknowledgedDeliveryIds()
     {
+        using var fileLock = AcquireFileLock();
         var records = ReadRecords();
         return new HashSet<string>(records
             .Where(item => item.Outcome is CiWorkflowEvidenceReceiptOutcome.Accepted or CiWorkflowEvidenceReceiptOutcome.Duplicate)
@@ -142,10 +142,20 @@ public sealed class FileCiWorkflowEvidenceReceiptLedger
     }
 
     /// <summary>Returns all durable receipts, including policy rejections.</summary>
-    public IReadOnlyList<CiWorkflowEvidenceRemoteReceipt> ReadReceipts() =>
-        Array.AsReadOnly(ReadRecords().Select(item =>
+    public IReadOnlyList<CiWorkflowEvidenceRemoteReceipt> ReadReceipts()
+    {
+        using var fileLock = AcquireFileLock();
+        return Array.AsReadOnly(ReadRecords().Select(item =>
             JsonSerializer.Deserialize<CiWorkflowEvidenceRemoteReceipt>(item.ReceiptJson, JsonOptions())
             ?? throw new InvalidDataException("Receipt ledger contains an empty receipt.")).ToArray());
+    }
+
+    private FileStream AcquireFileLock()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+        return new FileStream(_path + ".lock", FileMode.OpenOrCreate,
+            FileAccess.ReadWrite, FileShare.None);
+    }
 
     private ReceiptRecord[] ReadRecords()
     {
