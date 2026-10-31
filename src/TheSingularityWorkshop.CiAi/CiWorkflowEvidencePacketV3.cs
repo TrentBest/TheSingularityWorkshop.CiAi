@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text.Json;
+
 namespace TheSingularityWorkshop.CiAi;
 
 /// <summary>
@@ -97,6 +100,89 @@ public sealed record CiWorkflowEvidencePacketV3
         ObservedRun.Jobs.All(job => job.Status == "completed" && job.Conclusion == "success");
 
     public IReadOnlyList<string> BlockingReasons { get; }
+
+    /// <summary>
+    /// Serializes the v3 envelope without persisting the host's workflow-trust decision.
+    /// Trust must be re-evaluated by the host whenever the durable packet is reloaded.
+    /// </summary>
+    public string ToJson(bool indented = true)
+    {
+        var pullRequest = Provenance.PullRequest is null ? null : new
+        {
+            number = Provenance.PullRequest.Number,
+            head = new { @ref = Provenance.PullRequest.HeadRef, sha = Provenance.PullRequest.HeadSha },
+            @base = new { @ref = Provenance.PullRequest.BaseRef, sha = Provenance.PullRequest.BaseSha }
+        };
+        var provenance = new
+        {
+            schema = CiWorkflowProvenanceRecord.CurrentSchema,
+            repository = Provenance.Repository,
+            runId = Provenance.RunId,
+            runAttempt = Provenance.RunAttempt,
+            workflow = new { @ref = Provenance.WorkflowRef, sha = Provenance.WorkflowSha },
+            @event = new
+            {
+                name = Provenance.EventName,
+                @ref = Provenance.EventRef,
+                sha = Provenance.EventSha,
+                pullRequest
+            },
+            checkout = new { @ref = Provenance.CheckoutRef, sha = Provenance.CheckoutSha }
+        };
+        using var observedRun = JsonDocument.Parse(ObservedRun.ToJson(indented: false));
+        var envelope = new
+        {
+            contractVersion = CurrentContractVersion,
+            schema = CurrentSchema,
+            observedRun = observedRun.RootElement,
+            provenance
+        };
+        return JsonSerializer.Serialize(envelope, new JsonSerializerOptions { WriteIndented = indented });
+    }
+
+    /// <summary>
+    /// Reloads v3 evidence after revalidating the embedded provenance payload. The caller must
+    /// independently re-check protected workflow-definition policy and supply that result;
+    /// the trust decision is deliberately not serialized as self-authenticating evidence.
+    /// </summary>
+    public static CiWorkflowEvidencePacketV3 FromJson(
+        string json,
+        string expectedRepository,
+        long expectedRunId,
+        int expectedRunAttempt,
+        bool workflowDefinitionTrusted)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(json);
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+        if (root.ValueKind != JsonValueKind.Object ||
+            !root.TryGetProperty("contractVersion", out var version) ||
+            !version.TryGetInt32(out var parsedVersion) ||
+            parsedVersion != CurrentContractVersion ||
+            !root.TryGetProperty("schema", out var schema) ||
+            schema.ValueKind != JsonValueKind.String ||
+            !string.Equals(schema.GetString(), CurrentSchema, StringComparison.Ordinal) ||
+            !root.TryGetProperty("observedRun", out var observedRunElement) ||
+            observedRunElement.ValueKind != JsonValueKind.Object ||
+            !root.TryGetProperty("provenance", out var provenanceElement) ||
+            provenanceElement.ValueKind != JsonValueKind.Object)
+            throw new InvalidDataException("Evidence packet v3 contract version or schema is unsupported.");
+
+        var observedRun = CiWorkflowEvidencePacket.FromJson(observedRunElement.GetRawText());
+        var provenanceBytes = JsonSerializer.SerializeToUtf8Bytes(provenanceElement);
+        var provenance = CiWorkflowProvenanceRecord.ParseAndValidate(
+            provenanceBytes,
+            expectedRepository,
+            expectedRunId,
+            expectedRunAttempt,
+            Convert.ToHexString(SHA256.HashData(provenanceBytes)));
+
+        return FromValidatedProvenance(
+            observedRun,
+            provenance,
+            workflowDefinitionTrusted,
+            observedRun.CandidateCheckoutEvidence);
+    }
 
     private IEnumerable<string> BuildBlockingReasons()
     {
