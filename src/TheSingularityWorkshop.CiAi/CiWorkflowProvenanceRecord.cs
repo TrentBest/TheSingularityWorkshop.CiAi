@@ -82,6 +82,7 @@ public sealed record CiWorkflowProvenanceRecord
 
         using var document = JsonDocument.Parse(artifactBytes);
         var root = document.RootElement;
+        ValidateNoDuplicateProperties(root);
         if (root.ValueKind != JsonValueKind.Object ||
             RequiredString(root, "schema") != CurrentSchema)
             throw new InvalidDataException("Workflow provenance schema is unsupported.");
@@ -130,6 +131,25 @@ public sealed record CiWorkflowProvenanceRecord
             eventName, eventRef, eventSha, pullRequest, checkoutRef, checkoutSha);
     }
 
+    private static void ValidateNoDuplicateProperties(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var property in element.EnumerateObject())
+            {
+                if (!names.Add(property.Name))
+                    throw new InvalidDataException($"Workflow provenance contains duplicate property '{property.Name}'.");
+                ValidateNoDuplicateProperties(property.Value);
+            }
+        }
+        else if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+                ValidateNoDuplicateProperties(item);
+        }
+    }
+
     private static JsonElement RequiredObject(JsonElement parent, string property)
     {
         if (!parent.TryGetProperty(property, out var value) || value.ValueKind != JsonValueKind.Object)
@@ -157,11 +177,20 @@ public sealed record CiWorkflowProvenanceRecord
     {
         var value = RequiredString(parent, property);
         var separator = value.LastIndexOf('@');
+        var path = separator > 0 ? value[..separator] : string.Empty;
+        var prefix = expectedRepository + "/.github/workflows/";
+        var relativePath = path.StartsWith(prefix, StringComparison.Ordinal)
+            ? path[prefix.Length..]
+            : string.Empty;
+        var pathSegments = relativePath.Split('/');
         if (value.Length > 1024 || value.Any(char.IsControl) || value.Any(char.IsWhiteSpace) ||
+            value.Contains('\\') || value.Contains('#') || value.Contains('?') ||
             separator <= 0 || !value[(separator + 1)..].StartsWith("refs/", StringComparison.Ordinal) ||
-            !value[..separator].StartsWith(expectedRepository + "/.github/workflows/", StringComparison.Ordinal) ||
-            !(value[..separator].EndsWith(".yml", StringComparison.Ordinal) ||
-              value[..separator].EndsWith(".yaml", StringComparison.Ordinal)))
+            !path.StartsWith(prefix, StringComparison.Ordinal) ||
+            relativePath.Length == 0 ||
+            pathSegments.Any(segment => segment.Length == 0 || segment is "." or "..") ||
+            !(path.EndsWith(".yml", StringComparison.Ordinal) ||
+              path.EndsWith(".yaml", StringComparison.Ordinal)))
             throw new InvalidDataException("Workflow definition ref is invalid.");
         return value;
     }
