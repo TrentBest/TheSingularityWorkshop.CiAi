@@ -38,6 +38,17 @@ These are separate facts, not a single boolean success flag.
 
 Failure, partial, expired, unavailable, cancelled, rejected, and unknown outcomes must remain explicit. An acknowledgement may report successful retrieval and integrity verification even when local validation later rejects the artifact; do not conflate those events.
 
+## CI evidence artifact provenance
+
+For GitHub Actions evidence payloads using `ciai.workflow-evidence.v2`, keep the two SHA roles distinct:
+
+- `workflowRef` / `workflowSha` identify the trusted workflow execution revision recorded by GitHub.
+- `candidateRef` / `candidateSha` identify the isolated feature-branch code that the trusted workflow resolved and checked out.
+- `CandidateCheckoutVerified` is derived from the exact registered job's branch-resolution and checkout-verification steps; it must be true before the packet can be successful.
+- `ArtifactManifest.SourceSha` binds to the packet's `candidateSha`; `ProviderRunId` binds to the packet's `runId`; `ProviderRepository` binds to the packet's `repository`.
+
+The consumer must validate workflow ref/SHA against its trusted workflow registration and candidate ref/SHA against the exact task/request. A successful run on the trusted workflow ref is not proof that a candidate commit passed unless candidate checkout provenance is present and verified. Packet v1 is not sufficient for trusted-ref dispatch and must not be silently reinterpreted as candidate evidence.
+
 ## Ready notice
 
 The notice should be small and contain metadata only. Its fields are a conceptual contract, not a prescribed wire format:
