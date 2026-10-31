@@ -49,19 +49,40 @@ internal static class CiWorkflowProvenanceRecordTests
             inconsistentPullRequest, "TrentBest/CiAi", 42, 2,
             Convert.ToHexString(SHA256.HashData(inconsistentPullRequest))));
 
-        var dispatch = Encoding.UTF8.GetBytes(CreatePullRequestJson()
-            .Replace("\"name\":\"pull_request\"", "\"name\":\"workflow_dispatch\"", StringComparison.Ordinal)
-            .Replace(",\"pullRequest\":{\"number\":17,\"head\":{\"ref\":\"refs/heads/feature/fix\",\"sha\":\"" + PrHeadSha +
-                "\"},\"base\":{\"ref\":\"refs/heads/development\",\"sha\":\"" + PrBaseSha + "\"}}", ",\"pullRequest\":null", StringComparison.Ordinal));
+        var dispatch = Encoding.UTF8.GetBytes(CreateDispatchJson());
         var dispatchRecord = CiWorkflowProvenanceRecord.ParseAndValidate(
             dispatch, "TrentBest/CiAi", 42, 2,
             Convert.ToHexString(SHA256.HashData(dispatch)));
         Assert(dispatchRecord.PullRequest is null && dispatchRecord.EventName == "workflow_dispatch",
             "workflow_dispatch provenance with no PR was not accepted");
 
-        Console.WriteLine("PASS: 8 workflow provenance artifact contract checks.");
-        return 8;
+        Console.WriteLine("PASS: 10 workflow provenance artifact contract checks.");
+        return 10;
     }
+
+
+    private static string CreateDispatchJson() => $"""
+    {
+      "schema": "{{CiWorkflowProvenanceRecord.CurrentSchema}}",
+      "repository": "TrentBest/CiAi",
+      "runId": 42,
+      "runAttempt": 2,
+      "workflow": {
+        "ref": "TrentBest/CiAi/.github/workflows/ci.yml@refs/heads/development",
+        "sha": "{{WorkflowSha}}"
+      },
+      "event": {
+        "name": "workflow_dispatch",
+        "ref": "refs/heads/development",
+        "sha": "{{EventSha}}",
+        "pullRequest": null
+      },
+      "checkout": {
+        "ref": "refs/heads/feature/fix",
+        "sha": "{{CheckoutSha}}"
+      }
+    }
+    """;
 
     private static string CreatePullRequestJson() => $$"""
     {
