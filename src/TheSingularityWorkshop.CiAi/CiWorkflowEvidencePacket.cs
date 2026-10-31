@@ -207,7 +207,7 @@ public sealed record CiWorkflowEvidencePacket
             throw new InvalidDataException("GitHub did not provide a workflow-definition ref; candidate evidence cannot be constructed safely.");
 
         var jobsComplete = !jobCollection.IsTruncated && jobCollection.TotalCount == jobCollection.Jobs.Count;
-        var discoveryComplete = !runCollection.IsTruncated;
+        var discoveryComplete = !runCollection.IsTruncated && runCollection.TotalCount == runCollection.Runs.Count;
         return new CiWorkflowEvidencePacket(
             observation.Run.Repository,
             observation.WorkflowPath,
