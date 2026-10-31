@@ -56,8 +56,8 @@ internal static class CiWorkflowProvenanceRecordTests
         Assert(dispatchRecord.PullRequest is null && dispatchRecord.EventName == "workflow_dispatch",
             "workflow_dispatch provenance with no PR was not accepted");
 
-        Console.WriteLine("PASS: 10 workflow provenance artifact contract checks.");
-        return 10;
+        Console.WriteLine("PASS: 11 workflow provenance artifact contract checks.");
+        return 11;
     }
 
 
