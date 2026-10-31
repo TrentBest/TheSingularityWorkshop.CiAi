@@ -16,6 +16,11 @@ internal static class CiTestResultReportTests
     private static readonly DateTimeOffset CreatedAt = DateTimeOffset.Parse("2026-10-31T01:00:00Z");
     private static readonly DateTimeOffset ExpiresAt = DateTimeOffset.Parse("2026-11-07T01:00:00Z");
     private static readonly DateTimeOffset ObservedAt = DateTimeOffset.Parse("2026-10-31T01:05:00Z");
+    private static CiRequiredJobPolicy RequiredPolicy => new(new[]
+    {
+        new CiRequiredJobDefinition(JobKey, JobName)
+    });
+    private static CiRequiredJobPolicy NonRequiredPolicy => new(Array.Empty<CiRequiredJobDefinition>());
 
     public static int Run()
     {
@@ -28,7 +33,7 @@ internal static class CiTestResultReportTests
         var failedPacket = CreatePacket("failure");
         var failedSource = CreateSource(failedTrx);
         var actionable = CiTestResultReport.ParseAndValidate(
-            failedTrx, failedPacket, failedSource, CiRequiredCheckStatus.Failed, ObservedAt);
+            failedTrx, failedPacket, failedSource, RequiredPolicy, ObservedAt);
         Assert(actionable.Verdict == CiTestResultVerdict.ActionableFailure &&
             actionable.Total == 3 && actionable.Passed == 1 && actionable.Failed == 2 &&
             actionable.Skipped == 0 && actionable.Results.Count == 3,
@@ -53,7 +58,7 @@ internal static class CiTestResultReportTests
             total: 3, passed: 2, failed: 0, skipped: 1));
         var passing = CiTestResultReport.ParseAndValidate(
             passingTrx, CreatePacket("success"), CreateSource(passingTrx),
-            CiRequiredCheckStatus.Passed, ObservedAt);
+            RequiredPolicy, ObservedAt);
         Assert(passing.Verdict == CiTestResultVerdict.CompletePass &&
             passing.Passed == 2 && passing.Skipped == 1,
             "complete successful test evidence did not produce a pass verdict");
@@ -63,7 +68,7 @@ internal static class CiTestResultReportTests
             total: 1, passed: 0, failed: 1, skipped: 0));
         var nonActionable = CiTestResultReport.ParseAndValidate(
             noDiagnosticTrx, CreatePacket("failure"), CreateSource(noDiagnosticTrx),
-            CiRequiredCheckStatus.Failed, ObservedAt);
+            RequiredPolicy, ObservedAt);
         Assert(nonActionable.Verdict == CiTestResultVerdict.NonActionableFailure &&
             nonActionable.ReasonCodes.Contains("test-results.failure-diagnostics-incomplete"),
             "failed test without a bounded diagnostic was treated as repairable");
@@ -73,33 +78,38 @@ internal static class CiTestResultReportTests
             total: 1, passed: 1, failed: 0, skipped: 0));
         var jobFailure = CiTestResultReport.ParseAndValidate(
             noTestFailureButRedJobTrx, CreatePacket("failure"), CreateSource(noTestFailureButRedJobTrx),
-            CiRequiredCheckStatus.Failed, ObservedAt);
+            RequiredPolicy, ObservedAt);
         Assert(jobFailure.Verdict == CiTestResultVerdict.NonActionableFailure &&
             jobFailure.ReasonCodes.Contains("test-results.check-failed-without-test-failure"),
             "a red job without a failing test was incorrectly classified as an actionable test failure");
 
+        var inconsistentPolicy = new CiRequiredJobPolicy(new[]
+        {
+            new CiRequiredJobDefinition(JobKey, "unexpected-job-name")
+        });
         var inconsistent = CiTestResultReport.ParseAndValidate(
-            failedTrx, failedPacket, failedSource, CiRequiredCheckStatus.Passed, ObservedAt);
+            failedTrx, failedPacket, failedSource, inconsistentPolicy, ObservedAt);
         Assert(inconsistent.Verdict == CiTestResultVerdict.IncompleteOrUntrusted &&
-            inconsistent.ReasonCodes.Contains("test-results.required-check-status-mismatch"),
-            "test failure with a passing required-check verdict was accepted");
+            inconsistent.RequiredCheckStatus == CiRequiredCheckStatus.Incomplete &&
+            inconsistent.ReasonCodes.Contains("test-results.required-check-incomplete"),
+            "job name mismatch in required-check policy was accepted");
 
         var failedTestsInGreenJob = CiTestResultReport.ParseAndValidate(
             failedTrx, CreatePacket("success"), CreateSource(failedTrx),
-            CiRequiredCheckStatus.Passed, ObservedAt);
+            RequiredPolicy, ObservedAt);
         Assert(failedTestsInGreenJob.Verdict == CiTestResultVerdict.IncompleteOrUntrusted &&
             failedTestsInGreenJob.ReasonCodes.Contains("test-results.failed-tests-in-green-job"),
             "failed test records in a green job were accepted as a complete pass");
 
         var nonRequired = CiTestResultReport.ParseAndValidate(
             passingTrx, CreatePacket("success"), CreateSource(passingTrx),
-            CiRequiredCheckStatus.NotRequired, ObservedAt);
+            NonRequiredPolicy, ObservedAt);
         Assert(nonRequired.Verdict == CiTestResultVerdict.IncompleteOrUntrusted &&
             nonRequired.ReasonCodes.Contains("test-results.check-not-required"),
             "a non-required job was promoted to the required-check pass verdict");
 
         var missing = CiTestResultReport.MissingArtifact(
-            failedPacket, JobId, CiRequiredCheckStatus.Failed, ObservedAt);
+            failedPacket, JobId, RequiredPolicy, ObservedAt);
         Assert(missing.Verdict == CiTestResultVerdict.IncompleteOrUntrusted &&
             missing.ReasonCodes.Contains("test-results.artifact-missing") &&
             missing.SourceArtifactId is null,
@@ -110,7 +120,7 @@ internal static class CiTestResultReportTests
             total: 1, passed: 0, failed: 1, skipped: 0));
         var secretReport = CiTestResultReport.ParseAndValidate(
             secretTrx, CreatePacket("failure"), CreateSource(secretTrx),
-            CiRequiredCheckStatus.Failed, ObservedAt);
+            RequiredPolicy, ObservedAt);
         Assert(secretReport.Results[0].SensitiveContentRedacted &&
             secretReport.Results[0].TestId == "[REDACTED]" &&
             !secretReport.ToJson().Contains("ghp_123456789012345678901234567890", StringComparison.Ordinal) &&
@@ -123,54 +133,54 @@ internal static class CiTestResultReportTests
             total: 2, passed: 2, failed: 0, skipped: 0));
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
             duplicateTrx, CreatePacket("success"), CreateSource(duplicateTrx),
-            CiRequiredCheckStatus.Passed, ObservedAt));
+            RequiredPolicy, ObservedAt));
 
         var wrongCountTrx = Encoding.UTF8.GetBytes(CreateTrx(
             ("test-1", "OnlyOne", "Passed", null, null),
             total: 2, passed: 2, failed: 0, skipped: 0));
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
             wrongCountTrx, CreatePacket("success"), CreateSource(wrongCountTrx),
-            CiRequiredCheckStatus.Passed, ObservedAt));
+            RequiredPolicy, ObservedAt));
 
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
             failedTrx, failedPacket, CreateSource(failedTrx, repository: "Other/Repo"),
-            CiRequiredCheckStatus.Failed, ObservedAt));
+            RequiredPolicy, ObservedAt));
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
             failedTrx, failedPacket, CreateSource(failedTrx, runAttempt: 2),
-            CiRequiredCheckStatus.Failed, ObservedAt));
+            RequiredPolicy, ObservedAt));
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
             failedTrx, failedPacket, CreateSource(failedTrx, jobId: JobId + 1),
-            CiRequiredCheckStatus.Failed, ObservedAt));
+            RequiredPolicy, ObservedAt));
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
             failedTrx, failedPacket, CreateSource(failedTrx, jobName: "other-job"),
-            CiRequiredCheckStatus.Failed, ObservedAt));
+            RequiredPolicy, ObservedAt));
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
             failedTrx, CreatePacket("failure", workflowTrusted: false), failedSource,
-            CiRequiredCheckStatus.Failed, ObservedAt));
+            RequiredPolicy, ObservedAt));
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
             failedTrx, CreatePacket("failure", checkoutMatches: false), failedSource,
-            CiRequiredCheckStatus.Failed, ObservedAt));
+            RequiredPolicy, ObservedAt));
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
             failedTrx, failedPacket, failedSource, CiRequiredCheckStatus.Failed, ExpiresAt.AddSeconds(1)));
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
             failedTrx, failedPacket, CreateSource(failedTrx, payloadSha256: new string('0', 64)),
-            CiRequiredCheckStatus.Failed, ObservedAt));
+            RequiredPolicy, ObservedAt));
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
-            failedTrx, failedPacket, failedSource, CiRequiredCheckStatus.Failed, ObservedAt,
+            failedTrx, failedPacket, failedSource, RequiredPolicy, ObservedAt,
             maximumPayloadBytes: 2));
         Throws<ArgumentException>(() => CreateSource(failedTrx, archiveDigest: "not-a-digest"));
         Throws<ArgumentException>(() => CreateSource(failedTrx, artifactName: "wrong-artifact-name"));
 
         var dtd = Encoding.UTF8.GetBytes("<!DOCTYPE TestRun [<!ENTITY xxe SYSTEM 'file:///etc/passwd'>]><TestRun>&xxe;</TestRun>");
         Throws<XmlException>(() => CiTestResultReport.ParseAndValidate(
-            dtd, failedPacket, CreateSource(dtd), CiRequiredCheckStatus.Failed, ObservedAt));
+            dtd, failedPacket, CreateSource(dtd), RequiredPolicy, ObservedAt));
 
         var truncatedTrx = Encoding.UTF8.GetBytes(CreateTrx(
             ("test-1", "LongDiagnostic", "Failed", new string('x', 5_000), new string('y', 9_000)),
             total: 1, passed: 0, failed: 1, skipped: 0));
         var truncated = CiTestResultReport.ParseAndValidate(
             truncatedTrx, failedPacket, CreateSource(truncatedTrx),
-            CiRequiredCheckStatus.Failed, ObservedAt);
+            RequiredPolicy, ObservedAt);
         Assert(truncated.Results[0].DiagnosticTruncated &&
             truncated.Results[0].Message!.Length <= 4_020 &&
             truncated.Results[0].StackTrace!.Length <= 8_020,
