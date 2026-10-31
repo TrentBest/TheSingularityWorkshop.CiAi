@@ -173,8 +173,16 @@ jobs:
         env:
           EXPECTED_SHA: ${{ steps.resolve-target.outputs.sha || github.sha }}
           TARGET_REF: ${{ inputs.target_branch != '' && format('refs/heads/{0}', inputs.target_branch) || github.ref }}
-          WORKFLOW_DEFINITION_REF: ${{ github.ref }}
-          WORKFLOW_DEFINITION_SHA: ${{ github.sha }}
+          WORKFLOW_DEFINITION_REF: ${{ github.workflow_ref }}
+          WORKFLOW_DEFINITION_SHA: ${{ github.workflow_sha }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_REF: ${{ github.ref }}
+          EVENT_SHA: ${{ github.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number || '' }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref || '' }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha || '' }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref || '' }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
           REPOSITORY: ${{ github.repository }}
         shell: bash
         run: |
@@ -184,14 +192,50 @@ jobs:
             echo "::error::Checked-out SHA does not match the resolved target."
             exit 1
           fi
+          provenance_file="$RUNNER_TEMP/ciai-workflow-provenance.json"
+          jq -n \
+            --arg schema "ciai.workflow-provenance.v1" \
+            --arg repository "$REPOSITORY" \
+            --arg runId "$GITHUB_RUN_ID" \
+            --arg runAttempt "$GITHUB_RUN_ATTEMPT" \
+            --arg workflowRef "$WORKFLOW_DEFINITION_REF" \
+            --arg workflowSha "$WORKFLOW_DEFINITION_SHA" \
+            --arg eventName "$EVENT_NAME" \
+            --arg eventRef "$EVENT_REF" \
+            --arg eventSha "$EVENT_SHA" \
+            --arg checkoutRef "$TARGET_REF" \
+            --arg checkoutSha "$actual_sha" \
+            --arg prNumber "$PR_NUMBER" \
+            --arg prHeadRef "$PR_HEAD_REF" \
+            --arg prHeadSha "$PR_HEAD_SHA" \
+            --arg prBaseRef "$PR_BASE_REF" \
+            --arg prBaseSha "$PR_BASE_SHA" \
+            '{schema:$schema,repository:$repository,runId:($runId|tonumber),runAttempt:($runAttempt|tonumber),workflow:{ref:$workflowRef,sha:$workflowSha},event:{name:$eventName,ref:$eventRef,sha:$eventSha,pullRequest:(if $prNumber == "" then null else {number:($prNumber|tonumber),head:{ref:$prHeadRef,sha:$prHeadSha},base:{ref:$prBaseRef,sha:$prBaseSha}} end)},checkout:{ref:$checkoutRef,sha:$checkoutSha}}' \
+            > "$provenance_file"
           {
             echo "sha=$actual_sha"
             echo "target_ref=$TARGET_REF"
             echo "workflow_definition_ref=$WORKFLOW_DEFINITION_REF"
             echo "workflow_definition_sha=$WORKFLOW_DEFINITION_SHA"
+            echo "event_name=$EVENT_NAME"
+            echo "event_ref=$EVENT_REF"
+            echo "event_sha=$EVENT_SHA"
+            echo "pr_number=$PR_NUMBER"
+            echo "pr_head_ref=$PR_HEAD_REF"
+            echo "pr_head_sha=$PR_HEAD_SHA"
+            echo "pr_base_ref=$PR_BASE_REF"
+            echo "pr_base_sha=$PR_BASE_SHA"
             echo "repository=$REPOSITORY"
           } >> "$GITHUB_OUTPUT"
-          echo "Verified repository=$REPOSITORY ref=$TARGET_REF sha=$actual_sha"
+          echo "Verified repository=$REPOSITORY workflow_ref=$WORKFLOW_DEFINITION_REF workflow_sha=$WORKFLOW_DEFINITION_SHA event=$EVENT_NAME event_ref=$EVENT_REF event_sha=$EVENT_SHA checkout_ref=$TARGET_REF checkout_sha=$actual_sha"
+      - name: Upload verified checkout provenance
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: ciai-workflow-provenance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ciai-workflow-provenance.json
+          if-no-files-found: ignore
+          retention-days: 30
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
         id: setup-dotnet
         with:
@@ -233,8 +277,11 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           TARGET_REF: ${{ steps.provenance.outputs.target_ref || github.ref }}
           TARGET_SHA: ${{ steps.provenance.outputs.sha || steps.resolve-target.outputs.sha || github.sha }}
-          WORKFLOW_DEFINITION_REF: ${{ steps.provenance.outputs.workflow_definition_ref || github.ref }}
-          WORKFLOW_DEFINITION_SHA: ${{ steps.provenance.outputs.workflow_definition_sha || github.sha }}
+          WORKFLOW_DEFINITION_REF: ${{ steps.provenance.outputs.workflow_definition_ref || github.workflow_ref }}
+          WORKFLOW_DEFINITION_SHA: ${{ steps.provenance.outputs.workflow_definition_sha || github.workflow_sha }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_REF: ${{ github.ref }}
+          EVENT_SHA: ${{ github.sha }}
           CIAI_REQUEST_ID: ${{ inputs.ciai_request_id }}
           CIAI_CORRELATION_ID: ${{ inputs.ciai_correlation_id }}
           CIAI_TASK_ID: ${{ inputs.ciai_task_id }}
@@ -258,7 +305,10 @@ jobs:
             echo "- Repository: \`$REPOSITORY\`"
             echo "- Workflow definition ref: \`$WORKFLOW_DEFINITION_REF\`"
             echo "- Workflow definition SHA: \`$WORKFLOW_DEFINITION_SHA\`"
-            echo "- Candidate ref: \`$TARGET_REF\`"
+            echo "- Event: \`$EVENT_NAME\`"
+            echo "- Event ref: \`$EVENT_REF\`"
+            echo "- Event SHA: \`$EVENT_SHA\`"
+            echo "- Tested checkout ref: \`$TARGET_REF\`"
             echo "- Candidate SHA: \`$TARGET_SHA\`"
             if [ -n "$CIAI_REQUEST_ID" ]; then
               echo "- CiAi request: \`$CIAI_REQUEST_ID\`"

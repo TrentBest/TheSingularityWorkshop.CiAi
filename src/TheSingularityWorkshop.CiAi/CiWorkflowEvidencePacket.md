@@ -7,20 +7,28 @@
 
 ## Purpose
 
-`CiWorkflowEvidencePacket` v2 is a versioned, immutable JSON envelope for one exact GitHub Actions workflow run attempt. It separates the commit that executed the trusted workflow definition from the candidate commit that the workflow actually checked out and tested.
+`CiWorkflowEvidencePacket` v2 is the frozen compatibility envelope for one GitHub Actions run attempt. Its historical `workflowRef` / `workflowSha` fields are sourced from the run observation and must not be treated as independently validated workflow-definition provenance. V2 remains readable for compatibility, but a standalone v2 `IsSuccessful` result is not authoritative checkout or workflow-trust evidence. New trust-sensitive evaluation must use `CiWorkflowEvidencePacketV3`.
 
-## Two SHA roles
+## Provenance roles and schema versions
 
-| Field | Meaning |
+V2 preserves its original serialized meaning. Do not reinterpret v2 run-head fields as workflow-definition identity, and do not silently upgrade v2 packets to v3.
+
+V3 takes its authoritative provenance from a separately retrieved and validated `ciai.workflow-provenance.v1` artifact:
+
+| V3 field | Meaning |
 |---|---|
-| `workflowRef` / `workflowSha` | GitHub run-level event ref and head SHA: the workflow-definition execution provenance |
-| `candidateRef` / `candidateSha` | The exact repository ref and commit whose code was checked out and tested |
+| `Provenance.WorkflowRef` / `WorkflowSha` | Exact workflow file ref and workflow-definition commit from `github.workflow_ref` / `github.workflow_sha` |
+| `Provenance.EventName` / `EventRef` / `EventSha` | Triggering event identity from `github.event_name` / `github.ref` / `github.sha` |
+| `Provenance.PullRequest` | PR number, source head and base branch names/SHA, when the event is a pull request (GitHub's `pull_request.head.ref` and `pull_request.base.ref` are branch names, not fully qualified `refs/heads/...` values) |
+| `Provenance.CheckoutRef` / `CheckoutSha` | Actual tested checkout, verified by the trusted workflow after checkout |
 
-`GitHubActionsWorkflowRunCollector` preserves the workflow-definition ref from GitHub's workflow-path suffix separately from the run's head SHA. `CiWorkflowEvidencePacket.FromCollections` combines one exact run/attempt with its attempt-specific job collection, rejects missing/ambiguous/mismatched observations, and marks truncated discovery or job pages incomplete. For ordinary CI runs, candidate provenance defaults to the workflow event ref/SHA. For trusted-ref dispatch, the workflow runs from `refs/heads/development` and checks out a separate `refs/heads/feature/...` candidate. In that case the packet must include `CiWorkflowCandidateCheckoutEvidence` with the candidate ref/SHA, the exact job name, the branch-resolution step name, and the checkout-verification step name. See the [candidate checkout evidence companion](CiWorkflowCandidateCheckoutEvidence.md) for the exact verification rules.
+For a pull request, the event SHA and tested checkout normally identify the synthetic merge commit; the PR source head SHA is a separate fact. For a trusted `workflow_dispatch` run, the workflow definition can remain on `development` while the actual candidate checkout is a feature-branch ref/SHA.
 
-## Candidate checkout verification
+## V2 candidate checkout verification (compatibility semantics)
 
-`CandidateCheckoutVerified` is derived from the raw job/step observations; it is not a caller-supplied success flag. It is true for a normal run where the candidate is the workflow event commit. For a separately checked-out candidate, it is true only when:
+The following rules describe the frozen v2 packet only. They do not establish trusted workflow-definition provenance. V3 uses the independent artifact rules in the next section.
+
+`CandidateCheckoutVerified` in v2 is derived from the raw job/step observations; it is not a caller-supplied success flag. It is true for a normal run where the candidate is the workflow event commit. For a separately checked-out candidate, it is true only when:
 
 - exactly one job matches the registered job name and belongs to the packet's exact run/attempt;
 - exactly one branch-resolution step with the registered name completed successfully; and
@@ -30,9 +38,19 @@ A missing, skipped, failed, duplicate, or ambiguous step makes candidate checkou
 
 The workflow-definition ref for separate candidate evidence must be the trusted `refs/heads/development` ref. The host must additionally validate the workflow SHA against its trusted workflow revision policy. `IsSuccessful` is a CI outcome, not a workflow-trust verdict: even a successful packet must be rejected as authoritative CODE RED evidence when its workflow-definition ref/SHA is not approved by the host. A candidate-controlled workflow must never be allowed to evaluate itself.
 
+## V3 validated evidence envelope
+
+`CiWorkflowEvidencePacketV3.FromCollections` is the provenance-required factory. It combines one exact run/attempt and its job collection with a `CiWorkflowProvenanceRecord` already parsed from the exact run-attempt artifact. The factory rejects repository, run, attempt, workflow-path, or event mismatches.
+
+For ordinary event runs, V3 marks checkout verified only when the actual checkout ref/SHA equals the event ref/SHA. For a separate `workflow_dispatch` candidate, V3 additionally requires `CiWorkflowCandidateCheckoutEvidence` to match the provenance artifact's checkout ref/SHA and requires the named resolution and verification steps to have completed successfully in the exact observed job attempt.
+
+V3 success additionally requires the host to set `workflowDefinitionTrusted` only after independently matching the full workflow-definition ref/SHA against protected control-plane policy. This is a host assertion, not a self-certifying packet field. The trust decision is deliberately omitted from `ToJson`; `FromJson` requires the trusted durable-store SHA-256, exact repository/run/attempt identity, and a fresh host workflow-policy decision. A packet digest must come from the trusted store, not be computed from the untrusted JSON being loaded.
+
+The v3 envelope retains the v2 packet only as run/job outcome observations. Its v2 workflow/candidate aliases are not authoritative in V3. GitHub's artifact metadata digest covers the downloaded ZIP archive, not the extracted JSON file: the trusted host retriever must verify the ZIP digest, safely extract only the expected JSON entry, compute the extracted JSON content digest, and pass those exact bytes and digest to `CiWorkflowProvenanceRecord.ParseAndValidate`.
+
 ## Building from observed GitHub collections
 
-`CiWorkflowEvidencePacket.FromCollections` is the preferred adapter from `CiWorkflowRunCollection` and `CiWorkflowJobCollection`. It requires one exact run identity and matching repository/workflow/run/attempt values, then carries collection truncation/completeness into the packet. Pass `CiWorkflowCandidateCheckoutEvidence` only when the trusted workflow checked out a separate candidate ref/SHA. The packet constructor and JSON reader both recompute checkout verification from the raw job/step observations.
+`CiWorkflowEvidencePacket.FromCollections` remains the v2 compatibility adapter. New trusted evaluation should call `CiWorkflowEvidencePacketV3.FromCollections` and supply the independently validated provenance record. V3 carries collection truncation/completeness forward and refuses to infer workflow-definition or checkout identity from the legacy run-head fields.
 
 ## Remaining evidence facts
 
@@ -52,16 +70,22 @@ The packet also carries repository, workflow path, run ID/attempt, event, workfl
 
 ## JSON contract
 
-- Schema: `ciai.workflow-evidence.v2`
-- Contract version: `2`
+- V2 compatibility schema: `ciai.workflow-evidence.v2` (contract version `2`); semantics are frozen.
+- V3 trust-sensitive schema: `ciai.workflow-evidence.v3` (contract version `3`).
+- V3 embeds the v2 run/job observation plus the distinct workflow/event/checkout provenance record.
 - Serialization uses camelCase property names and string enum values.
-- `FromJson` rejects v1 and unknown versions; callers must not silently reinterpret v1 run-head SHA as candidate SHA. Because the durable outbox rehydrates through `FromJson`, a journal containing v1 packet records fails closed; archive or explicitly migrate that journal before opening it with v2. No implicit in-place migration is performed.
-- `FromJson` recomputes candidate provenance from nested checkout evidence and raw job/step observations, then rejects JSON whose flattened workflow/candidate refs, SHAs, or `candidateCheckoutVerified` value disagree with that recomputation.
-- The legacy source aliases `HeadRef` and `HeadSha` refer only to workflow execution provenance and are not serialized in v2.
+- V2 `FromJson` rejects unsupported versions; callers must not silently reinterpret old run-head SHA values as workflow-definition or checkout provenance. No implicit in-place migration is performed.
+- V3 `FromJson` requires the expected repository/run/attempt, a trusted durable-store packet SHA-256, and a fresh host workflow-definition trust decision. It does not restore trust from serialized JSON.
+- V2 `FromJson` recomputes its compatibility candidate fields from nested checkout evidence and raw job/step observations, then rejects JSON whose flattened workflow/candidate refs, SHAs, or `candidateCheckoutVerified` value disagree with that recomputation.
+- The legacy v2 source aliases `HeadRef` and `HeadSha` expose only the historical v2 workflow/candidate values; they must not be interpreted as `github.workflow_ref` / `github.workflow_sha`.
 
 ## Durable evidence outbox
 
-`CiWorkflowEvidenceDelivery` wraps one packet with a caller-supplied delivery ID, a stable run-attempt idempotency key (`repository:runId:runAttempt:workflowSha:candidateSha`), and a SHA-256 digest of the serialized packet.
+V2 and V3 use separate durable contracts. Do not mix their serialized records or infer v3 provenance from a v2 delivery.
+
+### V2 compatibility outbox
+
+`CiWorkflowEvidenceDelivery` and `FileCiWorkflowEvidenceOutbox` remain the v2 compatibility path. Do not use a v2 outbox delivery's success bit as authoritative workflow-definition or checkout provenance.
 
 `FileCiWorkflowEvidenceOutbox` provides an append-only local journal:
 
@@ -74,6 +98,18 @@ The packet also carries repository, workflow path, run ID/attempt, event, workfl
 - A malformed or torn final record fails closed rather than silently discarding potentially valuable evidence.
 
 The file lock serializes outbox writers across processes. `FileCiWorkflowEvidenceReceiptLedger` separately journals remote receipt records and binds each receipt to the exact delivery ID, idempotency key, and payload digest. Accepted and duplicate receipts acknowledge a delivery; rejected receipts remain visible and retryable. Exact receipt retries deduplicate, conflicting reuse of a receipt ID is rejected, and torn receipt journals fail closed. Receipt reads and writes share a process-wide file lock so readers do not observe an in-progress append.
+
+### V3 provenance outbox and receipt ledger
+
+`CiWorkflowEvidenceDeliveryV3`, `FileCiWorkflowEvidenceOutboxV3`, and `FileCiWorkflowEvidenceReceiptLedgerV3` are separate v3 contracts:
+
+- The idempotency identity is a structured, schema-scoped tuple of repository, run ID, attempt, workflow-definition ref/SHA, and tested-checkout ref/SHA. Its SHA-256 representation is the canonical lowercase `sha256:<64 hex>` form.
+- Enqueueing the same delivery or attempt identity with the same payload is idempotent; reusing either identity with different payload content returns `Conflict`.
+- V3 outbox records persist the exact v3 packet payload and its SHA-256 digest. On reload, the packet digest and idempotency identity are recomputed and checked.
+- Reload deliberately sets workflow-definition trust to false. The host must re-evaluate the full workflow ref/SHA against protected control-plane policy before treating the packet as successful.
+- A remote receipt must match the exact delivery ID, idempotency key, and payload digest. Accepted/duplicate receipts acknowledge that delivery; rejected receipts are retained but do not suppress replay.
+- Receipt correlation is not authentication. The host must authenticate the remote response and validate its contract before recording it.
+- These v3 journals are not yet connected to the Foundry transport/delivery coordinator. They provide durable local contracts, not a live end-to-end v3 delivery path.
 
 This is still a local filesystem outbox and receipt journal, not a network transport, authenticated webhook receiver, distributed consensus store, or guarantee of remote delivery. **The host must authenticate and validate the remote response before calling `Record`; the ledger verifies correlation, not cryptographic authenticity.** Hosts must protect both journal paths and retain the remote transport's authentication and endpoint policy outside model-visible evidence.
 
