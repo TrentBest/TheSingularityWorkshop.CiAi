@@ -24,7 +24,7 @@ All six values are emitted together. The request, correlation, and task IDs must
 
 ## Workflow-side exact-SHA guard
 
-CiAi's `.github/workflows/ci.yml` treats the five `ciai_*` fields as an all-or-none opt-in group. It requires a valid `feature/*` branch and requires the dispatch event's ref and SHA to match the request. It resolves the branch again from the remote and fails before build/test if the branch has moved; it then checks out the resolved immutable SHA and includes request/correlation/task/attempt provenance in the run summary.
+CiAi's `.github/workflows/ci.yml` treats the five `ciai_*` fields as an all-or-none opt-in group. The host must dispatch the workflow on the trusted `refs/heads/development` ref; it must never dispatch the candidate feature branch as the workflow-definition ref. The workflow records the trusted workflow-definition ref/SHA separately from the candidate ref/SHA. It validates the `feature/*` target branch, resolves that branch again from the remote, requires the resolved head to equal the requested candidate SHA, and fails before build/test if the branch moved. Only after that check does it check out the immutable candidate SHA and include both workflow-definition and candidate provenance in the run summary.
 
 This guards the branch-ref nature of GitHub workflow dispatch: the API dispatches a branch, not an arbitrary commit SHA. The run's actual repository, workflow path, run ID, attempt, and head SHA still require read-back and evidence reconciliation by the host. The workflow concurrency group includes the request ID when present, so distinct task requests on the same feature branch do not cancel one another; duplicate dispatches for the same request remain in one group.
 
@@ -32,7 +32,7 @@ This guards the branch-ref nature of GitHub workflow dispatch: the API dispatche
 
 - The trusted host authenticates the rerun request and evaluates `CiWorkflowRerunRequestPolicy` before mapping it.
 - The host obtains a repository-scoped GitHub credential from its secret/workload-identity provider; the token is not represented here.
-- The host dispatches only an allowlisted workflow and isolated feature ref.
+- The host dispatches only an allowlisted workflow from trusted `development`, passes the isolated feature branch as `target_branch`, and supplies the exact candidate SHA separately.
 - A workflow run is not accepted as evidence merely because dispatch returned success; the host must reconcile exact run provenance.
 - A network timeout after dispatch is ambiguous and must be reconciled before retry. This mapper does not implement dispatch scheduling or durable dispatch-attempt state.
 
