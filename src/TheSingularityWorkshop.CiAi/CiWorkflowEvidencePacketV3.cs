@@ -150,11 +150,22 @@ public sealed record CiWorkflowEvidencePacketV3
         string expectedRepository,
         long expectedRunId,
         int expectedRunAttempt,
+        string expectedPacketSha256,
         bool workflowDefinitionTrusted)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(json);
+        ArgumentException.ThrowIfNullOrWhiteSpace(expectedPacketSha256);
+        if (expectedPacketSha256.Length != 64 || !expectedPacketSha256.All(Uri.IsHexDigit))
+            throw new ArgumentException("Expected packet digest must be a full SHA-256 hexadecimal value.", nameof(expectedPacketSha256));
+        var jsonBytes = System.Text.Encoding.UTF8.GetBytes(json);
+        var actualPacketDigest = SHA256.HashData(jsonBytes);
+        if (!CryptographicOperations.FixedTimeEquals(
+            actualPacketDigest, Convert.FromHexString(expectedPacketSha256)))
+            throw new InvalidDataException("Evidence packet v3 content digest does not match the trusted durable-store value.");
+
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
+        ValidateNoDuplicateProperties(root);
         if (root.ValueKind != JsonValueKind.Object ||
             !root.TryGetProperty("contractVersion", out var version) ||
             !version.TryGetInt32(out var parsedVersion) ||
@@ -182,6 +193,25 @@ public sealed record CiWorkflowEvidencePacketV3
             provenance,
             workflowDefinitionTrusted,
             observedRun.CandidateCheckoutEvidence);
+    }
+
+    private static void ValidateNoDuplicateProperties(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var property in element.EnumerateObject())
+            {
+                if (!names.Add(property.Name))
+                    throw new InvalidDataException($"Evidence packet v3 contains duplicate property '{property.Name}'.");
+                ValidateNoDuplicateProperties(property.Value);
+            }
+        }
+        else if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+                ValidateNoDuplicateProperties(item);
+        }
     }
 
     private IEnumerable<string> BuildBlockingReasons()
