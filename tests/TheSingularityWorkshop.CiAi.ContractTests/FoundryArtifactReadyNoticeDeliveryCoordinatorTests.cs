@@ -24,8 +24,11 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
             {
                 sendCount++;
                 var payload = await request.Content!.ReadAsStringAsync(cancellationToken);
-                var notice = FoundryArtifactReadyNoticeClient.DeserializeNotice(payload);
-                return Response(HttpStatusCode.Accepted, Receipt(notice, "receipt-" + notice.NoticeId, "accepted"));
+                using var document = JsonDocument.Parse(payload);
+                var noticeId = document.RootElement.GetProperty("noticeId").GetString()!;
+                var idempotencyKey = document.RootElement.GetProperty("manifest").GetProperty("idempotencyKey").GetString()!;
+                return Response(HttpStatusCode.Accepted,
+                    Receipt(noticeId, idempotencyKey, "receipt-" + noticeId, "accepted"));
             })))
             {
                 var coordinator = new FoundryArtifactReadyNoticeDeliveryCoordinator(
@@ -91,7 +94,7 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
     {
         var sha = "abcdef0123456789abcdef0123456789abcdef01";
         var manifest = new ArtifactManifest(
-            idempotencyKey, "operation-" + noticeId, idempotencyKey,
+            "request-" + noticeId, "operation-" + noticeId, idempotencyKey,
             "TrentBest/TheSingularityWorkshop.CiAi", "ci.evidence", "2.0.0",
             sha, "artifact-" + noticeId, "v2", sha,
             "SHA-256", new string('a', 64), "application/json", 1024,
@@ -103,13 +106,13 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
             DateTimeOffset.Parse("2026-10-31T00:01:00Z"));
     }
 
-    private static string Receipt(ArtifactReadyNotice notice, string receiptId, string outcome) =>
+    private static string Receipt(string noticeId, string idempotencyKey, string receiptId, string outcome) =>
         JsonSerializer.Serialize(new
         {
             contract = FoundryArtifactReadyNoticeClient.Contract,
             receiptId,
-            noticeId = notice.NoticeId,
-            idempotencyKey = notice.Manifest.IdempotencyKey,
+            noticeId,
+            idempotencyKey,
             outcome,
             acceptedAt = "2026-10-31T00:02:00Z"
         });
