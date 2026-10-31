@@ -3,6 +3,40 @@ using System.Text;
 
 namespace TheSingularityWorkshop.CiAi;
 
+/// <summary>Approval source recorded by a trusted host before a gate contract becomes binding.</summary>
+public enum AwaitGateApprovalKind
+{
+    Human = 0,
+    TrustedPolicyAuthority = 1
+}
+
+/// <summary>
+/// Explicit approval metadata for a proposed gate contract. A host must authenticate the approver,
+/// validate the authority policy, and verify the approval reference before constructing a binding contract.
+/// </summary>
+public sealed record AwaitGateApproval
+{
+    public AwaitGateApproval(string approvalReference, string authorityPolicyId,
+        string approverIdentity, AwaitGateApprovalKind kind, DateTimeOffset approvedAt)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(approvalReference);
+        ArgumentException.ThrowIfNullOrWhiteSpace(authorityPolicyId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(approverIdentity);
+        if (!Enum.IsDefined(kind)) throw new ArgumentOutOfRangeException(nameof(kind));
+        ApprovalReference = approvalReference;
+        AuthorityPolicyId = authorityPolicyId;
+        ApproverIdentity = approverIdentity;
+        Kind = kind;
+        ApprovedAt = approvedAt;
+    }
+
+    public string ApprovalReference { get; }
+    public string AuthorityPolicyId { get; }
+    public string ApproverIdentity { get; }
+    public AwaitGateApprovalKind Kind { get; }
+    public DateTimeOffset ApprovedAt { get; }
+}
+
 /// <summary>Evidence mode permitted by an approved gate requirement.</summary>
 public enum AwaitGateEvidenceKind
 {
@@ -53,7 +87,8 @@ public sealed record AwaitGateContract
 {
     public AwaitGateContract(string gateId, int version, string consumerRepository,
         string providerRepository, string providerSourceSha, string manifestDigest,
-        string evaluationPolicyVersion, IReadOnlyList<AwaitGateRequirement> requirements)
+        string evaluationPolicyVersion, AwaitGateApproval approval,
+        IReadOnlyList<AwaitGateRequirement> requirements)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(gateId);
         if (gateId != gateId.Trim())
@@ -65,6 +100,7 @@ public sealed record AwaitGateContract
         ValidateSha(providerSourceSha, nameof(providerSourceSha));
         ValidateDigest(manifestDigest, nameof(manifestDigest));
         ArgumentException.ThrowIfNullOrWhiteSpace(evaluationPolicyVersion);
+        ArgumentNullException.ThrowIfNull(approval);
         if (evaluationPolicyVersion != evaluationPolicyVersion.Trim())
             throw new ArgumentException("Policy version cannot have surrounding whitespace.", nameof(evaluationPolicyVersion));
         ArgumentNullException.ThrowIfNull(requirements);
@@ -82,6 +118,7 @@ public sealed record AwaitGateContract
         ManifestDigest = manifestDigest;
         ContractDigest = contractDigest;
         EvaluationPolicyVersion = evaluationPolicyVersion;
+        Approval = approval;
         Requirements = Array.AsReadOnly(copy);
         ContractDigest = ComputeContractDigest();
     }
@@ -94,6 +131,7 @@ public sealed record AwaitGateContract
     public string ManifestDigest { get; }
     public string ContractDigest { get; }
     public string EvaluationPolicyVersion { get; }
+    public AwaitGateApproval Approval { get; }
     public IReadOnlyList<AwaitGateRequirement> Requirements { get; }
 
     private string ComputeContractDigest()
@@ -103,7 +141,10 @@ public sealed record AwaitGateContract
             "ciai.await-gate-contract.v1", GateId,
             Version.ToString(System.Globalization.CultureInfo.InvariantCulture),
             ConsumerRepository, ProviderRepository, ProviderSourceSha,
-            ManifestDigest.ToLowerInvariant(), EvaluationPolicyVersion
+            ManifestDigest.ToLowerInvariant(), EvaluationPolicyVersion,
+            Approval.ApprovalReference, Approval.AuthorityPolicyId, Approval.ApproverIdentity,
+            Approval.Kind.ToString(),
+            Approval.ApprovedAt.ToUniversalTime().ToString("O", System.Globalization.CultureInfo.InvariantCulture)
         };
         foreach (var requirement in Requirements.OrderBy(item => item.RequirementId, StringComparer.Ordinal))
         {
