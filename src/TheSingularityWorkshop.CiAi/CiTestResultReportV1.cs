@@ -76,9 +76,16 @@ public sealed record CiTestResultReportV1
             MaxCharactersInDocument = MaximumArtifactBytes, MaxCharactersFromEntities = 0,
             IgnoreComments = true, IgnoreProcessingInstructions = true };
         XDocument document;
-        using (var stream = new MemoryStream(artifactBytes, writable: false))
-        using (var reader = XmlReader.Create(stream, settings))
+        try
+        {
+            using var stream = new MemoryStream(artifactBytes, writable: false);
+            using var reader = XmlReader.Create(stream, settings);
             document = XDocument.Load(reader, LoadOptions.None);
+        }
+        catch (XmlException exception)
+        {
+            throw new InvalidDataException("TRX XML is malformed or uses prohibited XML features.", exception);
+        }
 
         var root = document.Root;
         if (root is null || root.Name.LocalName != "TestRun")
