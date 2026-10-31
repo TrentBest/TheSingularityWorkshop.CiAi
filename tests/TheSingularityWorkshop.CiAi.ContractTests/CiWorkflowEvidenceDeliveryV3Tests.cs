@@ -96,7 +96,7 @@ internal static class CiWorkflowEvidenceDeliveryV3Tests
           },
           "checkout": {
             "ref": "refs/heads/development",
-            "sha": "{{eventSha}}"
+            "sha": "__EVENT_SHA__"
           }
         }
         """;
