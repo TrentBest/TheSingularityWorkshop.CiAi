@@ -129,8 +129,7 @@ public sealed class FileCiWorkflowEvidenceReceiptLedgerV3
         var accepted = records.FirstOrDefault(item =>
             string.Equals(item.DeliveryId, receipt.DeliveryId, StringComparison.Ordinal) &&
             item.Outcome is CiWorkflowEvidenceReceiptV3Outcome.Accepted or CiWorkflowEvidenceReceiptV3Outcome.Duplicate);
-        if (accepted is not null &&
-            receipt.Outcome is CiWorkflowEvidenceReceiptV3Outcome.Accepted or CiWorkflowEvidenceReceiptV3Outcome.Duplicate)
+        if (accepted is not null)
             return string.Equals(accepted.ReceiptJson, payload, StringComparison.Ordinal)
                 ? CiWorkflowEvidenceReceiptV3RecordOutcome.Duplicate
                 : CiWorkflowEvidenceReceiptV3RecordOutcome.Conflict;
@@ -184,7 +183,8 @@ public sealed class FileCiWorkflowEvidenceReceiptLedgerV3
                 ?? throw new InvalidDataException("V3 receipt ledger contains an empty record.");
             var receipt = JsonSerializer.Deserialize<CiWorkflowEvidenceRemoteReceiptV3>(item.ReceiptJson, Options())
                 ?? throw new InvalidDataException("V3 receipt ledger contains an empty receipt.");
-            if (!string.Equals(item.RemoteReceiptId, receipt.RemoteReceiptId, StringComparison.Ordinal) ||
+            if (!Enum.IsDefined(item.Outcome) ||
+                !string.Equals(item.RemoteReceiptId, receipt.RemoteReceiptId, StringComparison.Ordinal) ||
                 !string.Equals(item.DeliveryId, receipt.DeliveryId, StringComparison.Ordinal) ||
                 item.Outcome != receipt.Outcome)
                 throw new InvalidDataException("V3 receipt ledger identity does not match its receipt payload.");
