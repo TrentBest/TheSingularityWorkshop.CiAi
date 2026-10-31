@@ -260,6 +260,15 @@ public sealed record AwaitGateEvaluation
         if (gateVersion < 1) throw new ArgumentOutOfRangeException(nameof(gateVersion));
         ArgumentNullException.ThrowIfNull(requirements);
         if (!Enum.IsDefined(state)) throw new ArgumentOutOfRangeException(nameof(state));
+        AwaitGateContract.ValidateDigest(contractDigest, nameof(contractDigest));
+        if (!RepositoryIdentity.IsValid(providerRepository))
+            throw new ArgumentException("Repository must be canonical owner/repository.", nameof(providerRepository));
+        AwaitGateContract.ValidateSha(providerSourceSha, nameof(providerSourceSha));
+        AwaitGateContract.ValidateDigest(manifestDigest, nameof(manifestDigest));
+        ArgumentException.ThrowIfNullOrWhiteSpace(evaluationPolicyVersion);
+        var copy = requirements.ToArray();
+        if (copy.Length == 0 || copy.Any(item => item is null))
+            throw new ArgumentException("Evaluation must contain non-null requirement results.", nameof(requirements));
         GateId = gateId;
         GateVersion = gateVersion;
         ContractDigest = contractDigest;
@@ -268,7 +277,7 @@ public sealed record AwaitGateEvaluation
         ManifestDigest = manifestDigest;
         EvaluationPolicyVersion = evaluationPolicyVersion;
         State = state;
-        Requirements = Array.AsReadOnly(requirements.ToArray());
+        Requirements = Array.AsReadOnly(copy);
     }
 
     public string GateId { get; }
