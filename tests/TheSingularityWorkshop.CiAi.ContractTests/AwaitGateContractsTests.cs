@@ -112,8 +112,8 @@ internal static class AwaitGateContractsTests
             var registration = new AwaitRegistration("await-1", Consumer, "dock-integration",
                 new[]
                 {
-                    new AwaitGateReference("B", 1, Provider),
-                    new AwaitGateReference("C", 1, Provider)
+                    new AwaitGateReference("B", 1, contract.ContractDigest, Provider),
+                    new AwaitGateReference("C", 1, NewContract(gateId: "C").ContractDigest, Provider)
                 });
             var gateB = AwaitGateEvaluator.Evaluate(contract, new[] { machine });
             var gateCContract = NewContract(gateId: "C");
@@ -125,7 +125,8 @@ internal static class AwaitGateContractsTests
         Check("Await rejects duplicate gate references and missing gate declarations", () =>
         {
             Throws<ArgumentException>(() => new AwaitRegistration("await-1", Consumer, "work",
-                new[] { new AwaitGateReference("B", 1, Provider), new AwaitGateReference("B", 1, Provider) }));
+                new[] { new AwaitGateReference("B", 1, contract.ContractDigest, Provider),
+                    new AwaitGateReference("B", 1, contract.ContractDigest, Provider) }));
             Throws<ArgumentException>(() => new AwaitRegistration("await-1", Consumer, "work",
                 Array.Empty<AwaitGateReference>()));
         });
