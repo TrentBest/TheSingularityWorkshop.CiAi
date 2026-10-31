@@ -205,6 +205,8 @@ public static class AwaitGateEvaluator
         ArgumentNullException.ThrowIfNull(contract);
         ArgumentNullException.ThrowIfNull(evidence);
         var supplied = evidence.ToArray();
+        if (supplied.Any(item => item is null))
+            throw new ArgumentException("Evidence cannot contain null entries.", nameof(evidence));
         var results = new List<AwaitGateRequirementResult>();
         foreach (var requirement in contract.Requirements)
         {
@@ -222,8 +224,7 @@ public static class AwaitGateEvaluator
             }
 
             var item = matches[0];
-            if (item is null ||
-                !string.Equals(item.GateId, contract.GateId, StringComparison.Ordinal) ||
+            if (!string.Equals(item.GateId, contract.GateId, StringComparison.Ordinal) ||
                 item.GateVersion != contract.Version ||
                 !string.Equals(item.ContractDigest, contract.ContractDigest, StringComparison.Ordinal) ||
                 !string.Equals(item.ProviderRepository, contract.ProviderRepository, StringComparison.Ordinal) ||
