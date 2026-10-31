@@ -23,9 +23,9 @@ Resolution and verification step names must be distinct. All identity fields are
 
 ## Packet verification
 
-`CiWorkflowEvidencePacket` does not accept a caller-supplied boolean as proof. It derives `CandidateCheckoutVerified` from the raw `CiWorkflowJobObservation` facts. Verification succeeds only when exactly one matching job exists, that job completed successfully, and exactly one matching resolution step and verification step both completed successfully.
+`CiWorkflowEvidencePacket` does not accept a caller-supplied boolean as proof. It derives `CandidateCheckoutVerified` from the raw `CiWorkflowJobObservation` facts. Verification succeeds only when exactly one matching job exists, that job belongs to the packet's exact run/attempt, and exactly one matching resolution step and verification step both completed successfully. The job's later build/test conclusion is deliberately independent: a later test failure does not erase proof that the candidate was checked out.
 
-If any required job or step is absent, skipped, failed, duplicated, or ambiguous, candidate checkout is unverified and the packet cannot be successful. The packet preserves the evidence and exposes `candidate.checkout-unverified` in its blocking reasons.
+If a required job or step is absent, skipped, failed, duplicated, or ambiguous, candidate checkout is unverified. A later job/run failure still makes `IsSuccessful` false even when checkout provenance remains verified. The packet preserves the evidence and exposes `candidate.checkout-unverified` in its blocking reasons.
 
 Separate candidate evidence is only valid when the workflow-definition ref is the trusted `refs/heads/development` ref. The host must still validate the workflow SHA against its trusted workflow revision policy.
 
