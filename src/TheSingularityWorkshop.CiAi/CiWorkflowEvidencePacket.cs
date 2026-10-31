@@ -174,6 +174,60 @@ public sealed record CiWorkflowEvidencePacket
     }
 
     /// <summary>Serializes a stable versioned JSON contract suitable for durable evidence storage.</summary>
+    public static CiWorkflowEvidencePacket FromCollections(
+        CiWorkflowRunCollection runCollection,
+        CiWorkflowJobCollection jobCollection,
+        long runId,
+        int runAttempt,
+        DateTimeOffset observedAt,
+        CiWorkflowCandidateCheckoutEvidence? candidateCheckoutEvidence = null,
+        IReadOnlyList<Uri>? artifactReferences = null)
+    {
+        ArgumentNullException.ThrowIfNull(runCollection);
+        ArgumentNullException.ThrowIfNull(jobCollection);
+        if (runId <= 0) throw new ArgumentOutOfRangeException(nameof(runId));
+        if (runAttempt <= 0) throw new ArgumentOutOfRangeException(nameof(runAttempt));
+
+        if (!string.Equals(runCollection.Repository, jobCollection.Repository, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Run and job collections belong to different repositories.");
+        if (jobCollection.RunId != runId || jobCollection.RunAttempt != runAttempt)
+            throw new InvalidDataException("Job collection does not identify the requested run attempt.");
+
+        var matchingRuns = runCollection.Runs
+            .Where(item => item.Run.RunId == runId && item.RunAttempt == runAttempt)
+            .ToArray();
+        if (matchingRuns.Length != 1)
+            throw new InvalidDataException("Run collection must contain exactly one observation for the requested run attempt.");
+
+        var observation = matchingRuns[0];
+        if (!string.Equals(observation.Run.Repository, runCollection.Repository, StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(observation.Run.HeadSha, runCollection.HeadSha, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Run observation does not match the collection repository and exact workflow SHA.");
+        if (string.IsNullOrWhiteSpace(observation.WorkflowRef))
+            throw new InvalidDataException("GitHub did not provide a workflow-definition ref; candidate evidence cannot be constructed safely.");
+
+        var jobsComplete = !jobCollection.IsTruncated && jobCollection.TotalCount == jobCollection.Jobs.Count;
+        var discoveryComplete = !runCollection.IsTruncated;
+        return new CiWorkflowEvidencePacket(
+            observation.Run.Repository,
+            observation.WorkflowPath,
+            observation.Run.RunId,
+            observation.RunAttempt,
+            observation.WorkflowRef,
+            observation.Run.HeadSha,
+            observation.Event,
+            observation.Run.WorkflowName,
+            observation.Run.Status,
+            observation.Run.Conclusion,
+            observation.Run.EvidenceUrl,
+            observedAt,
+            jobCollection.Jobs,
+            discoveryComplete,
+            jobsComplete,
+            artifactReferences,
+            candidateCheckoutEvidence);
+    }
+
     public string ToJson(bool indented = true) => JsonSerializer.Serialize(this, JsonOptions(indented));
 
     public static CiWorkflowEvidencePacket FromJson(string json)
