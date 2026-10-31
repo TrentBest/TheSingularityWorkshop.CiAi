@@ -7,7 +7,19 @@ namespace TheSingularityWorkshop.CiAi;
 /// <summary>Durable event that tells a host one specific Await dependency changed state.</summary>
 public sealed record AwaitGateEvent
 {
-    public AwaitGateEvent(string eventId, string awaitId, string consumerRepository, AwaitGateEventKind kind,
+    public AwaitGateEvent(string eventId, AwaitRegistration registration, AwaitGateEventKind kind,
+        AwaitGateEvaluation evaluation, DateTimeOffset occurredAt)
+        : this(eventId, GetAwaitId(registration), GetConsumerRepository(registration), kind, evaluation, occurredAt)
+    {
+        if (!registration.RequiredGates.Any(gate =>
+            string.Equals(gate.GateId, evaluation.GateId, StringComparison.Ordinal) &&
+            gate.Version == evaluation.GateVersion &&
+            string.Equals(gate.ContractDigest, evaluation.ContractDigest, StringComparison.Ordinal) &&
+            string.Equals(gate.ProviderRepository, evaluation.ProviderRepository, StringComparison.Ordinal)))
+            throw new ArgumentException("The evaluated gate is not an exact prerequisite of this Await.", nameof(evaluation));
+    }
+
+    internal AwaitGateEvent(string eventId, string awaitId, string consumerRepository, AwaitGateEventKind kind,
         AwaitGateEvaluation evaluation, DateTimeOffset occurredAt)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(eventId);
@@ -53,6 +65,18 @@ public sealed record AwaitGateEvent
     public IReadOnlyList<AwaitGateRequirementResult> RequirementResults { get; }
     public DateTimeOffset OccurredAt { get; }
     public string PayloadDigest { get; }
+
+    private static string GetAwaitId(AwaitRegistration registration)
+    {
+        ArgumentNullException.ThrowIfNull(registration);
+        return registration.AwaitId;
+    }
+
+    private static string GetConsumerRepository(AwaitRegistration registration)
+    {
+        ArgumentNullException.ThrowIfNull(registration);
+        return registration.ConsumerRepository;
+    }
 
     private string ComputePayloadDigest()
     {
