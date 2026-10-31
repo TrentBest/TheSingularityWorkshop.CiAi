@@ -1,0 +1,279 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Xml;
+using TheSingularityWorkshop.CiAi;
+
+internal static class CiTestResultReportTests
+{
+    private const string Repository = "TrentBest/Experiences";
+    private const string CandidateSha = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    private const string WorkflowSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    private const long RunId = 41234078182;
+    private const int RunAttempt = 1;
+    private const long JobId = 124634066027;
+    private const string JobName = "test-minesweeper";
+    private const string JobKey = "test-minesweeper";
+    private static readonly DateTimeOffset CreatedAt = DateTimeOffset.Parse("2026-10-31T01:00:00Z");
+    private static readonly DateTimeOffset ExpiresAt = DateTimeOffset.Parse("2026-11-07T01:00:00Z");
+    private static readonly DateTimeOffset ObservedAt = DateTimeOffset.Parse("2026-10-31T01:05:00Z");
+
+    public static int Run()
+    {
+        var failedTrx = Encoding.UTF8.GetBytes(CreateTrx(
+            ("test-1", "Passes", "Passed", null, null),
+            ("test-2", "RevealingMineLosesAndTerminalActionsAreRejected", "Failed",
+                "Expected: Accepted; Actual: RejectedTerminal", "at Minesweeper.Tests.GameTests.RevealingMineLosesAndTerminalActionsAreRejected() in GameTests.cs:line 42"),
+            ("test-3", "ResetRestoresOriginalFixedMineLayoutAfterFirstRevealRelocation", "Failed",
+                "Expected: Accepted; Actual: RejectedTerminal", "at Minesweeper.Tests.GameTests.ResetRestoresOriginalFixedMineLayoutAfterFirstRevealRelocation() in GameTests.cs:line 88")));
+        var failedPacket = CreatePacket("failure");
+        var failedSource = CreateSource(failedTrx);
+        var actionable = CiTestResultReport.ParseAndValidate(
+            failedTrx, failedPacket, failedSource, CiRequiredCheckStatus.Failed, ObservedAt);
+        Assert(actionable.Verdict == CiTestResultVerdict.ActionableFailure &&
+            actionable.Total == 3 && actionable.Passed == 1 && actionable.Failed == 2 &&
+            actionable.Skipped == 0 && actionable.Results.Count == 3,
+            "multiple failing TRX cases were not normalized with exact counts");
+        Assert(actionable.Repository == Repository && actionable.CandidateSha == CandidateSha &&
+            actionable.RunId == RunId && actionable.RunAttempt == RunAttempt &&
+            actionable.JobId == JobId && actionable.JobName == JobName &&
+            actionable.WorkflowDefinitionSha == WorkflowSha,
+            "normalized report lost exact workflow, checkout, run, attempt, or job provenance");
+        Assert(actionable.Results.Where(item => item.Outcome == CiTestOutcome.Failed)
+            .All(item => !string.IsNullOrWhiteSpace(item.Message) &&
+                !string.IsNullOrWhiteSpace(item.StackTrace) && item.RecordSha256.Length == 64),
+            "failed test identity, assertion, stack trace, or record digest was not retained");
+        Assert(actionable.ToJson().Contains(CiTestResultReport.CurrentSchema, StringComparison.Ordinal),
+            "normalized report did not serialize its versioned schema");
+
+        var passingTrx = Encoding.UTF8.GetBytes(CreateTrx(
+            ("test-1", "FirstPass", "Passed", null, null),
+            ("test-2", "SecondPass", "Passed", null, null),
+            ("test-3", "SkippedCase", "NotExecuted", null, null),
+            total: 3, passed: 2, failed: 0, skipped: 1));
+        var passing = CiTestResultReport.ParseAndValidate(
+            passingTrx, CreatePacket("success"), CreateSource(passingTrx),
+            CiRequiredCheckStatus.Passed, ObservedAt);
+        Assert(passing.Verdict == CiTestResultVerdict.CompletePass &&
+            passing.Passed == 2 && passing.Skipped == 1,
+            "complete successful test evidence did not produce a pass verdict");
+
+        var noDiagnosticTrx = Encoding.UTF8.GetBytes(CreateTrx(
+            ("test-1", "FailureWithoutDiagnostic", "Failed", null, null),
+            total: 1, passed: 0, failed: 1, skipped: 0));
+        var nonActionable = CiTestResultReport.ParseAndValidate(
+            noDiagnosticTrx, CreatePacket("failure"), CreateSource(noDiagnosticTrx),
+            CiRequiredCheckStatus.Failed, ObservedAt);
+        Assert(nonActionable.Verdict == CiTestResultVerdict.NonActionableFailure &&
+            nonActionable.ReasonCodes.Contains("test-results.failure-diagnostics-incomplete"),
+            "failed test without a bounded diagnostic was treated as repairable");
+
+        var noTestFailureButRedJobTrx = Encoding.UTF8.GetBytes(CreateTrx(
+            ("test-1", "PassedBeforeBuildFailure", "Passed", null, null),
+            total: 1, passed: 1, failed: 0, skipped: 0));
+        var jobFailure = CiTestResultReport.ParseAndValidate(
+            noTestFailureButRedJobTrx, CreatePacket("failure"), CreateSource(noTestFailureButRedJobTrx),
+            CiRequiredCheckStatus.Failed, ObservedAt);
+        Assert(jobFailure.Verdict == CiTestResultVerdict.NonActionableFailure &&
+            jobFailure.ReasonCodes.Contains("test-results.check-failed-without-test-failure"),
+            "a red job without a failing test was incorrectly classified as an actionable test failure");
+
+        var inconsistent = CiTestResultReport.ParseAndValidate(
+            failedTrx, failedPacket, failedSource, CiRequiredCheckStatus.Passed, ObservedAt);
+        Assert(inconsistent.Verdict == CiTestResultVerdict.IncompleteOrUntrusted &&
+            inconsistent.ReasonCodes.Contains("test-results.required-check-status-mismatch"),
+            "test failure with a passing required-check verdict was accepted");
+
+        var missing = CiTestResultReport.MissingArtifact(
+            failedPacket, JobId, CiRequiredCheckStatus.Failed, ObservedAt);
+        Assert(missing.Verdict == CiTestResultVerdict.IncompleteOrUntrusted &&
+            missing.ReasonCodes.Contains("test-results.artifact-missing") &&
+            missing.SourceArtifactId is null,
+            "missing TRX artifact was not preserved as incomplete evidence");
+
+        var secretTrx = Encoding.UTF8.GetBytes(CreateTrx(
+            ("test-1", "SecretRedaction", "Failed", "token=ghp_123456789012345678901234567890", "Bearer abcdefghijklmnopqrstuvwxyz0123456789"),
+            total: 1, passed: 0, failed: 1, skipped: 0));
+        var secretReport = CiTestResultReport.ParseAndValidate(
+            secretTrx, CreatePacket("failure"), CreateSource(secretTrx),
+            CiRequiredCheckStatus.Failed, ObservedAt);
+        Assert(secretReport.Results[0].SensitiveContentRedacted &&
+            !secretReport.ToJson().Contains("ghp_123456789012345678901234567890", StringComparison.Ordinal) &&
+            !secretReport.ToJson().Contains("abcdefghijklmnopqrstuvwxyz0123456789", StringComparison.Ordinal),
+            "secret-like values were not redacted from normalized diagnostics");
+
+        var duplicateTrx = Encoding.UTF8.GetBytes(CreateTrx(
+            ("same", "Duplicate", "Passed", null, null),
+            ("same", "Duplicate", "Passed", null, null),
+            total: 2, passed: 2, failed: 0, skipped: 0));
+        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
+            duplicateTrx, CreatePacket("success"), CreateSource(duplicateTrx),
+            CiRequiredCheckStatus.Passed, ObservedAt));
+
+        var wrongCountTrx = Encoding.UTF8.GetBytes(CreateTrx(
+            ("test-1", "OnlyOne", "Passed", null, null),
+            total: 2, passed: 2, failed: 0, skipped: 0));
+        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
+            wrongCountTrx, CreatePacket("success"), CreateSource(wrongCountTrx),
+            CiRequiredCheckStatus.Passed, ObservedAt));
+
+        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
+            failedTrx, failedPacket, CreateSource(failedTrx, repository: "Other/Repo"),
+            CiRequiredCheckStatus.Failed, ObservedAt));
+        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
+            failedTrx, failedPacket, CreateSource(failedTrx, runAttempt: 2),
+            CiRequiredCheckStatus.Failed, ObservedAt));
+        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
+            failedTrx, failedPacket, CreateSource(failedTrx, jobId: JobId + 1),
+            CiRequiredCheckStatus.Failed, ObservedAt));
+        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
+            failedTrx, failedPacket, CreateSource(failedTrx, jobName: "other-job"),
+            CiRequiredCheckStatus.Failed, ObservedAt));
+        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
+            failedTrx, CreatePacket("failure", workflowTrusted: false), failedSource,
+            CiRequiredCheckStatus.Failed, ObservedAt));
+        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
+            failedTrx, CreatePacket("failure", checkoutMatches: false), failedSource,
+            CiRequiredCheckStatus.Failed, ObservedAt));
+        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
+            failedTrx, failedPacket, failedSource, CiRequiredCheckStatus.Failed, ExpiresAt.AddSeconds(1)));
+        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
+            failedTrx, failedPacket, CreateSource(failedTrx, payloadSha256: new string('0', 64)),
+            CiRequiredCheckStatus.Failed, ObservedAt));
+        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
+            failedTrx, failedPacket, failedSource, CiRequiredCheckStatus.Failed, ObservedAt,
+            maximumPayloadBytes: 2));
+        Throws<ArgumentException>(() => CreateSource(failedTrx, archiveDigest: "not-a-digest"));
+        Throws<ArgumentException>(() => CreateSource(failedTrx, artifactName: "wrong-artifact-name"));
+
+        var dtd = Encoding.UTF8.GetBytes("<!DOCTYPE TestRun [<!ENTITY xxe SYSTEM 'file:///etc/passwd'>]><TestRun>&xxe;</TestRun>");
+        Throws<XmlException>(() => CiTestResultReport.ParseAndValidate(
+            dtd, failedPacket, CreateSource(dtd), CiRequiredCheckStatus.Failed, ObservedAt));
+
+        var truncatedTrx = Encoding.UTF8.GetBytes(CreateTrx(
+            ("test-1", "LongDiagnostic", "Failed", new string('x', 5_000), new string('y', 9_000)),
+            total: 1, passed: 0, failed: 1, skipped: 0));
+        var truncated = CiTestResultReport.ParseAndValidate(
+            truncatedTrx, failedPacket, CreateSource(truncatedTrx),
+            CiRequiredCheckStatus.Failed, ObservedAt);
+        Assert(truncated.Results[0].DiagnosticTruncated &&
+            truncated.Results[0].Message!.Length <= 4_020 &&
+            truncated.Results[0].StackTrace!.Length <= 8_020,
+            "diagnostic message or stack trace was not bounded");
+
+        Console.WriteLine("PASS: 22 provenance-bound TRX diagnostic report contract checks.");
+        return 22;
+    }
+
+    private static CiWorkflowEvidencePacketV3 CreatePacket(
+        string conclusion,
+        bool workflowTrusted = true,
+        bool checkoutMatches = true)
+    {
+        var eventRef = "refs/heads/feature/minesweeper-domain-pilot";
+        var provenanceJson = $$"""
+        {
+          "schema": "{{CiWorkflowProvenanceRecord.CurrentSchema}}",
+          "repository": "{{Repository}}",
+          "runId": {{RunId}},
+          "runAttempt": {{RunAttempt}},
+          "workflow": {
+            "ref": "{{Repository}}/.github/workflows/ci.yml@refs/heads/development",
+            "sha": "{{WorkflowSha}}"
+          },
+          "event": {
+            "name": "push",
+            "ref": "{{eventRef}}",
+            "sha": "{{CandidateSha}}",
+            "pullRequest": null
+          },
+          "checkout": {
+            "ref": "{{eventRef}}",
+            "sha": "{{(checkoutMatches ? CandidateSha : new string('c', 40))}}"
+          }
+        }
+        """;
+        var provenanceBytes = Encoding.UTF8.GetBytes(provenanceJson);
+        var provenance = CiWorkflowProvenanceRecord.ParseAndValidate(
+            provenanceBytes, Repository, RunId, RunAttempt,
+            Convert.ToHexString(SHA256.HashData(provenanceBytes)));
+        var job = new CiWorkflowJobObservation(
+            JobId, RunId, RunAttempt, JobName, "completed", conclusion,
+            new Uri($"https://github.com/{Repository}/actions/runs/{RunId}/job/{JobId}"),
+            Array.AsReadOnly(new[]
+            {
+                new CiWorkflowStepObservation(1, "dotnet test", "completed", conclusion,
+                    "2026-10-31T01:03:00Z")
+            }));
+        var observed = new CiWorkflowEvidencePacket(
+            Repository, ".github/workflows/ci.yml", RunId, RunAttempt,
+            "refs/heads/development", CandidateSha, "push", "Validation",
+            CiRunStatus.Completed,
+            conclusion == "success" ? CiRunConclusion.Success : CiRunConclusion.Failure,
+            new Uri($"https://github.com/{Repository}/actions/runs/{RunId}"),
+            ObservedAt, Array.AsReadOnly(new[] { job }), true, true);
+        return CiWorkflowEvidencePacketV3.FromValidatedProvenance(
+            observed, provenance, workflowTrusted);
+    }
+
+    private static CiTestResultArtifactSource CreateSource(
+        byte[] payload,
+        string? repository = null,
+        int? runAttempt = null,
+        long? jobId = null,
+        string? jobName = null,
+        string? artifactName = null,
+        string? archiveDigest = null,
+        string? payloadSha256 = null)
+    {
+        var digest = Convert.ToHexString(SHA256.HashData(payload)).ToLowerInvariant();
+        return new CiTestResultArtifactSource(
+            repository ?? Repository, RunId, runAttempt ?? RunAttempt,
+            jobId ?? JobId, jobName ?? JobName, JobKey,
+            7001, artifactName ?? $"ciai-test-results-{RunId}-{RunAttempt}-{JobKey}",
+            archiveDigest ?? "sha256:" + new string('a', 64), 512,
+            payloadSha256 ?? digest, payload.Length, "xUnit", CreatedAt, ExpiresAt);
+    }
+
+    private static string CreateTrx(
+        (string Id, string Name, string Outcome, string? Message, string? Stack)[] results,
+        int? total = null,
+        int? passed = null,
+        int? failed = null,
+        int? skipped = null)
+    {
+        var actualPassed = results.Count(item => item.Outcome == "Passed");
+        var actualFailed = results.Count(item => item.Outcome is "Failed" or "Error" or "Timeout" or "Aborted");
+        var actualSkipped = results.Length - actualPassed - actualFailed;
+        var xmlResults = string.Join("\n", results.Select(item =>
+            $"<UnitTestResult testId=\"{item.Id}\" testName=\"{item.Name}\" outcome=\"{item.Outcome}\">" +
+            (item.Message is null && item.Stack is null ? "" :
+                "<Output><ErrorInfo>" +
+                (item.Message is null ? "" : $"<Message>{System.Security.SecurityElement.Escape(item.Message)}</Message>") +
+                (item.Stack is null ? "" : $"<StackTrace>{System.Security.SecurityElement.Escape(item.Stack)}</StackTrace>") +
+                "</ErrorInfo></Output>") + "</UnitTestResult>"));
+        return $"""
+        <TestRun>
+          <Results>{xmlResults}</Results>
+          <ResultSummary>
+            <Counters total="{total ?? results.Length}" executed="{results.Length}"
+              passed="{passed ?? actualPassed}" failed="{failed ?? actualFailed}"
+              error="0" timeout="0" aborted="0" inconclusive="0"
+              notExecuted="{skipped ?? actualSkipped}" notRunnable="0" disconnected="0"
+              warning="0" completed="{results.Length}" inProgress="0" pending="0" />
+          </ResultSummary>
+        </TestRun>
+        """;
+    }
+
+    private static void Assert(bool condition, string message)
+    {
+        if (!condition) throw new InvalidOperationException(message);
+    }
+
+    private static void Throws<TException>(Action action) where TException : Exception
+    {
+        try { action(); }
+        catch (TException) { return; }
+        throw new InvalidOperationException($"Expected {typeof(TException).Name}.");
+    }
+}
