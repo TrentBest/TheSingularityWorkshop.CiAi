@@ -17,7 +17,7 @@ public sealed record CiWorkflowEvidenceDelivery
         Packet = packet;
         Payload = packet.ToJson(indented: false);
         PayloadSha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Payload))).ToLowerInvariant();
-        IdempotencyKey = $"{packet.Repository}:{packet.RunId}:{packet.RunAttempt}:{packet.HeadSha}";
+        IdempotencyKey = $"{packet.Repository}:{packet.RunId}:{packet.RunAttempt}:{packet.WorkflowSha}:{packet.CandidateSha}";
     }
 
     public string DeliveryId { get; }
