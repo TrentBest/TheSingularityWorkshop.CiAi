@@ -19,7 +19,7 @@ V3 takes its authoritative provenance from a separately retrieved and validated 
 |---|---|
 | `Provenance.WorkflowRef` / `WorkflowSha` | Exact workflow file ref and workflow-definition commit from `github.workflow_ref` / `github.workflow_sha` |
 | `Provenance.EventName` / `EventRef` / `EventSha` | Triggering event identity from `github.event_name` / `github.ref` / `github.sha` |
-| `Provenance.PullRequest` | PR number, source head ref/SHA, and base ref/SHA, when the event is a pull request |
+| `Provenance.PullRequest` | PR number, source head and base branch names/SHA, when the event is a pull request (GitHub's `pull_request.head.ref` and `pull_request.base.ref` are branch names, not fully qualified `refs/heads/...` values) |
 | `Provenance.CheckoutRef` / `CheckoutSha` | Actual tested checkout, verified by the trusted workflow after checkout |
 
 For a pull request, the event SHA and tested checkout normally identify the synthetic merge commit; the PR source head SHA is a separate fact. For a trusted `workflow_dispatch` run, the workflow definition can remain on `development` while the actual candidate checkout is a feature-branch ref/SHA.
