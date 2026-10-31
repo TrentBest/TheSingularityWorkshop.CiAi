@@ -44,7 +44,7 @@ The five `ciai_*` values are all-or-none. Every `workflow_dispatch` run must use
 
 
 
-Because the trusted workflow run's GitHub `headRef`/`headSha` now identify `development`, they are not the candidate code ref/SHA. The current evidence packet v1 does not yet carry separate candidate provenance fields. Until a versioned packet adds `candidateRef`/`candidateSha` and the host verifies the candidate-checkout provenance step, do not treat trusted-ref dispatch runs as v1 evidence for the candidate SHA.
+Because the trusted workflow run's GitHub `headRef`/`headSha` identify `development`, evidence packet v2 serializes these as `workflowRef`/`workflowSha` and carries `candidateRef`/`candidateSha` separately. `CiWorkflowCandidateCheckoutEvidence` identifies the exact job, branch-resolution step, and checkout-verification step; the packet derives `CandidateCheckoutVerified` from those raw job/step outcomes. Foundry must consume v2 and reconcile both SHA roles. `FromJson` rejects v1 rather than silently treating the workflow SHA as the candidate SHA.
 
 This is the opt-in workflow-side contract only. The authenticated HTTP dispatcher that supplies these inputs, its durable dispatch-intent ledger, and run receipt/reconciliation client are not yet implemented. A caller must not treat a green run summary as accepted evidence until it reconciles the exact repository, workflow, run, attempt, and candidate SHA.
 
