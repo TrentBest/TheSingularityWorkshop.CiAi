@@ -70,8 +70,8 @@ internal static class CiWorkflowEvidencePacketV3Tests
             "untrusted workflow definition was accepted as successful");
 
         var wrongEventShaJson = CreateProvenance().Replace(
-            "        \"name\": \"pull_request\",\n        \"ref\": \"refs/pull/17/merge\",\n        \"sha\": \"" + EventSha + "\"",
-            "        \"name\": \"pull_request\",\n        \"ref\": \"refs/pull/17/merge\",\n        \"sha\": \"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\"",
+            "\"sha\": \"" + EventSha + "\"",
+            "\"sha\": \"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\"",
             StringComparison.Ordinal);
         var wrongEventShaBytes = Encoding.UTF8.GetBytes(wrongEventShaJson);
         var wrongEventShaProvenance = CiWorkflowProvenanceRecord.ParseAndValidate(
