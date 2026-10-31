@@ -40,7 +40,7 @@ public sealed class CiRequiredJobPolicy
             definitions.ToDictionary(item => item.JobKey, item => item.JobName, StringComparer.Ordinal));
     }
 
-    public IReadOnlyCollection<string> RequiredJobKeys => Array.AsReadOnly(_requiredJobs.Keys.Order(StringComparer.Ordinal).ToArray());
+    public IReadOnlyCollection<string> RequiredJobKeys => Array.AsReadOnly(_requiredJobs.Keys.OrderBy(key => key, StringComparer.Ordinal).ToArray());
 
     public CiRequiredCheckStatus Evaluate(
         CiWorkflowEvidencePacketV3 evidence,
@@ -49,6 +49,9 @@ public sealed class CiRequiredJobPolicy
     {
         ArgumentNullException.ThrowIfNull(evidence);
         ArgumentException.ThrowIfNullOrWhiteSpace(jobKey);
+        if (jobKey.Length > 100 ||
+            !jobKey.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_' or '.'))
+            throw new ArgumentException("Workflow job key contains unsupported characters.", nameof(jobKey));
         if (jobId <= 0)
             throw new ArgumentOutOfRangeException(nameof(jobId));
         if (!_requiredJobs.TryGetValue(jobKey, out var expectedJobName))
