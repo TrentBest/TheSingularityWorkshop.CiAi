@@ -1,0 +1,317 @@
+namespace TheSingularityWorkshop.CiAi;
+
+/// <summary>Evidence mode permitted by an approved gate requirement.</summary>
+public enum AwaitGateEvidenceKind
+{
+    Machine = 0,
+    HumanAdjudication = 1
+}
+
+/// <summary>Overall result of evaluating one immutable gate contract against attributed evidence.</summary>
+public enum AwaitGateState
+{
+    Pending = 0,
+    Satisfied = 1,
+    Rejected = 2,
+    Indeterminate = 3,
+    Revoked = 4
+}
+
+/// <summary>Stable identity of a gate requirement and its exact expected value.</summary>
+public sealed record AwaitGateRequirement
+{
+    public AwaitGateRequirement(string requirementId, string description, string expectedValue,
+        AwaitGateEvidenceKind evidenceKind)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(requirementId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(description);
+        ArgumentException.ThrowIfNullOrWhiteSpace(expectedValue);
+        if (!Enum.IsDefined(evidenceKind))
+            throw new ArgumentOutOfRangeException(nameof(evidenceKind));
+        if (requirementId != requirementId.Trim() || expectedValue != expectedValue.Trim())
+            throw new ArgumentException("Requirement identity and expected value cannot have surrounding whitespace.");
+        RequirementId = requirementId;
+        Description = description.Trim();
+        ExpectedValue = expectedValue;
+        EvidenceKind = evidenceKind;
+    }
+
+    public string RequirementId { get; }
+    public string Description { get; }
+    public string ExpectedValue { get; }
+    public AwaitGateEvidenceKind EvidenceKind { get; }
+}
+
+/// <summary>
+/// Approved, versioned acceptance contract for a provider capability. This contract is descriptive;
+/// it does not authenticate a provider or authorize a host to resume work.
+/// </summary>
+public sealed record AwaitGateContract
+{
+    public AwaitGateContract(string gateId, int version, string consumerRepository,
+        string providerRepository, string providerSourceSha, string manifestDigest,
+        string contractDigest, string evaluationPolicyVersion,
+        IReadOnlyList<AwaitGateRequirement> requirements)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(gateId);
+        if (gateId != gateId.Trim())
+            throw new ArgumentException("Gate ID cannot have surrounding whitespace.", nameof(gateId));
+        if (version < 1)
+            throw new ArgumentOutOfRangeException(nameof(version));
+        ValidateRepository(consumerRepository, nameof(consumerRepository));
+        ValidateRepository(providerRepository, nameof(providerRepository));
+        ValidateSha(providerSourceSha, nameof(providerSourceSha));
+        ValidateDigest(manifestDigest, nameof(manifestDigest));
+        ValidateDigest(contractDigest, nameof(contractDigest));
+        ArgumentException.ThrowIfNullOrWhiteSpace(evaluationPolicyVersion);
+        if (evaluationPolicyVersion != evaluationPolicyVersion.Trim())
+            throw new ArgumentException("Policy version cannot have surrounding whitespace.", nameof(evaluationPolicyVersion));
+        ArgumentNullException.ThrowIfNull(requirements);
+        var copy = requirements.ToArray();
+        if (copy.Length == 0 || copy.Any(item => item is null))
+            throw new ArgumentException("A gate requires at least one non-null requirement.", nameof(requirements));
+        if (copy.Select(item => item.RequirementId).Distinct(StringComparer.Ordinal).Count() != copy.Length)
+            throw new ArgumentException("Requirement IDs must be unique within a gate.", nameof(requirements));
+
+        GateId = gateId;
+        Version = version;
+        ConsumerRepository = consumerRepository;
+        ProviderRepository = providerRepository;
+        ProviderSourceSha = providerSourceSha.ToLowerInvariant();
+        ManifestDigest = manifestDigest;
+        ContractDigest = contractDigest;
+        EvaluationPolicyVersion = evaluationPolicyVersion;
+        Requirements = Array.AsReadOnly(copy);
+    }
+
+    public string GateId { get; }
+    public int Version { get; }
+    public string ConsumerRepository { get; }
+    public string ProviderRepository { get; }
+    public string ProviderSourceSha { get; }
+    public string ManifestDigest { get; }
+    public string ContractDigest { get; }
+    public string EvaluationPolicyVersion { get; }
+    public IReadOnlyList<AwaitGateRequirement> Requirements { get; }
+
+    private static void ValidateRepository(string value, string parameter)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
+        if (!RepositoryIdentity.IsValid(value))
+            throw new ArgumentException("Repository must be canonical owner/repository.", parameter);
+    }
+
+    internal static void ValidateSha(string value, string parameter)
+    {
+        if (value is null || value.Length != 40 || !value.All(Uri.IsHexDigit))
+            throw new ArgumentException("A full 40-character source SHA is required.", parameter);
+    }
+
+    internal static void ValidateDigest(string value, string parameter)
+    {
+        if (value is null || value.Length != 64 || !value.All(Uri.IsHexDigit))
+            throw new ArgumentException("A full 64-character SHA-256 digest is required.", parameter);
+    }
+}
+
+/// <summary>
+/// Evidence attributed to a provider artifact or an authorized human decision. Authentication and
+/// protected-policy checks are host responsibilities; callers must supply evidence only after those checks.
+/// </summary>
+public sealed record AwaitGateEvidence
+{
+    public AwaitGateEvidence(string requirementId, string gateId, int gateVersion,
+        string contractDigest, string providerRepository, string providerSourceSha,
+        string manifestDigest, string evidenceDigest, AwaitGateEvidenceKind evidenceKind,
+        string value, string authorityReference, string? workflowRunId = null,
+        int workflowAttempt = 0, string? authorityPolicyId = null, string? adjudicatorId = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(requirementId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(gateId);
+        if (gateVersion < 1) throw new ArgumentOutOfRangeException(nameof(gateVersion));
+        AwaitGateContract.ValidateDigest(contractDigest, nameof(contractDigest));
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerRepository);
+        if (!RepositoryIdentity.IsValid(providerRepository))
+            throw new ArgumentException("Repository must be canonical owner/repository.", nameof(providerRepository));
+        AwaitGateContract.ValidateSha(providerSourceSha, nameof(providerSourceSha));
+        AwaitGateContract.ValidateDigest(manifestDigest, nameof(manifestDigest));
+        AwaitGateContract.ValidateDigest(evidenceDigest, nameof(evidenceDigest));
+        if (!Enum.IsDefined(evidenceKind)) throw new ArgumentOutOfRangeException(nameof(evidenceKind));
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
+        ArgumentException.ThrowIfNullOrWhiteSpace(authorityReference);
+
+        if (evidenceKind == AwaitGateEvidenceKind.Machine &&
+            (string.IsNullOrWhiteSpace(workflowRunId) || workflowAttempt < 1))
+            throw new ArgumentException("Machine evidence requires an exact workflow run ID and positive attempt.");
+        if (evidenceKind == AwaitGateEvidenceKind.HumanAdjudication &&
+            (string.IsNullOrWhiteSpace(authorityPolicyId) || string.IsNullOrWhiteSpace(adjudicatorId)))
+            throw new ArgumentException("Human adjudication requires an authority policy and adjudicator identity.");
+
+        RequirementId = requirementId;
+        GateId = gateId;
+        GateVersion = gateVersion;
+        ContractDigest = contractDigest;
+        ProviderRepository = providerRepository;
+        ProviderSourceSha = providerSourceSha.ToLowerInvariant();
+        ManifestDigest = manifestDigest;
+        EvidenceDigest = evidenceDigest;
+        EvidenceKind = evidenceKind;
+        Value = value;
+        AuthorityReference = authorityReference;
+        WorkflowRunId = workflowRunId;
+        WorkflowAttempt = workflowAttempt;
+        AuthorityPolicyId = authorityPolicyId;
+        AdjudicatorId = adjudicatorId;
+    }
+
+    public string RequirementId { get; }
+    public string GateId { get; }
+    public int GateVersion { get; }
+    public string ContractDigest { get; }
+    public string ProviderRepository { get; }
+    public string ProviderSourceSha { get; }
+    public string ManifestDigest { get; }
+    public string EvidenceDigest { get; }
+    public AwaitGateEvidenceKind EvidenceKind { get; }
+    public string Value { get; }
+    public string AuthorityReference { get; }
+    public string? WorkflowRunId { get; }
+    public int WorkflowAttempt { get; }
+    public string? AuthorityPolicyId { get; }
+    public string? AdjudicatorId { get; }
+}
+
+/// <summary>Deterministic status for one gate requirement.</summary>
+public sealed record AwaitGateRequirementResult(string RequirementId, AwaitGateState State, string ReasonCode);
+
+/// <summary>Deterministic evaluation bound to one gate version, source, manifest, and policy.</summary>
+public sealed record AwaitGateEvaluation(string GateId, int GateVersion, string ContractDigest,
+    string ProviderRepository, string ProviderSourceSha, string ManifestDigest,
+    string EvaluationPolicyVersion, AwaitGateState State,
+    IReadOnlyList<AwaitGateRequirementResult> Requirements)
+{
+    public bool IsSatisfied => State == AwaitGateState.Satisfied;
+}
+
+/// <summary>
+/// Evaluates exact, pre-authenticated evidence without executing work. Missing evidence stays pending;
+/// contradictory or mismatched evidence stays indeterminate; negative evidence rejects the gate.
+/// </summary>
+public static class AwaitGateEvaluator
+{
+    public static AwaitGateEvaluation Evaluate(AwaitGateContract contract,
+        IEnumerable<AwaitGateEvidence> evidence)
+    {
+        ArgumentNullException.ThrowIfNull(contract);
+        ArgumentNullException.ThrowIfNull(evidence);
+        var supplied = evidence.ToArray();
+        var results = new List<AwaitGateRequirementResult>();
+        foreach (var requirement in contract.Requirements)
+        {
+            var matches = supplied.Where(item =>
+                string.Equals(item.RequirementId, requirement.RequirementId, StringComparison.Ordinal)).ToArray();
+            if (matches.Length == 0)
+            {
+                results.Add(new(requirement.RequirementId, AwaitGateState.Pending, "evidence.missing"));
+                continue;
+            }
+            if (matches.Length != 1)
+            {
+                results.Add(new(requirement.RequirementId, AwaitGateState.Indeterminate, "evidence.duplicate"));
+                continue;
+            }
+
+            var item = matches[0];
+            if (item is null ||
+                !string.Equals(item.GateId, contract.GateId, StringComparison.Ordinal) ||
+                item.GateVersion != contract.Version ||
+                !string.Equals(item.ContractDigest, contract.ContractDigest, StringComparison.Ordinal) ||
+                !string.Equals(item.ProviderRepository, contract.ProviderRepository, StringComparison.Ordinal) ||
+                !string.Equals(item.ProviderSourceSha, contract.ProviderSourceSha, StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(item.ManifestDigest, contract.ManifestDigest, StringComparison.OrdinalIgnoreCase))
+            {
+                results.Add(new(requirement.RequirementId, AwaitGateState.Indeterminate, "evidence.provenance-mismatch"));
+                continue;
+            }
+            if (item.EvidenceKind != requirement.EvidenceKind)
+            {
+                results.Add(new(requirement.RequirementId, AwaitGateState.Indeterminate, "evidence.authority-kind-mismatch"));
+                continue;
+            }
+            results.Add(string.Equals(item.Value, requirement.ExpectedValue, StringComparison.Ordinal)
+                ? new(requirement.RequirementId, AwaitGateState.Satisfied, "requirement.satisfied")
+                : new(requirement.RequirementId, AwaitGateState.Rejected, "requirement.value-mismatch"));
+        }
+
+        var state = results.Any(result => result.State == AwaitGateState.Rejected)
+            ? AwaitGateState.Rejected
+            : results.Any(result => result.State == AwaitGateState.Indeterminate)
+                ? AwaitGateState.Indeterminate
+                : results.Any(result => result.State == AwaitGateState.Pending)
+                    ? AwaitGateState.Pending
+                    : AwaitGateState.Satisfied;
+
+        return new(contract.GateId, contract.Version, contract.ContractDigest,
+            contract.ProviderRepository, contract.ProviderSourceSha, contract.ManifestDigest,
+            contract.EvaluationPolicyVersion, state, Array.AsReadOnly(results.ToArray()));
+    }
+}
+
+/// <summary>One durable dependency declaration for a consumer workstream.</summary>
+public sealed record AwaitRegistration
+{
+    public AwaitRegistration(string awaitId, string consumerRepository, string workstreamId,
+        IReadOnlyList<AwaitGateReference> requiredGates)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(awaitId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(workstreamId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(consumerRepository);
+        if (!RepositoryIdentity.IsValid(consumerRepository))
+            throw new ArgumentException("Repository must be canonical owner/repository.", nameof(consumerRepository));
+        ArgumentNullException.ThrowIfNull(requiredGates);
+        var copy = requiredGates.ToArray();
+        if (copy.Length == 0 || copy.Any(item => item is null))
+            throw new ArgumentException("An Await must declare at least one gate.", nameof(requiredGates));
+        if (copy.Select(item => item.Identity).Distinct(StringComparer.Ordinal).Count() != copy.Length)
+            throw new ArgumentException("An Await cannot repeat a gate identity.", nameof(requiredGates));
+        AwaitId = awaitId;
+        ConsumerRepository = consumerRepository;
+        WorkstreamId = workstreamId;
+        RequiredGates = Array.AsReadOnly(copy);
+    }
+
+    public string AwaitId { get; }
+    public string ConsumerRepository { get; }
+    public string WorkstreamId { get; }
+    public IReadOnlyList<AwaitGateReference> RequiredGates { get; }
+    public bool IsReady(IEnumerable<AwaitGateEvaluation> evaluations)
+    {
+        ArgumentNullException.ThrowIfNull(evaluations);
+        var items = evaluations.ToArray();
+        return RequiredGates.All(gate => items.Count(item =>
+            string.Equals(item.GateId, gate.GateId, StringComparison.Ordinal) &&
+            item.GateVersion == gate.Version &&
+            string.Equals(item.ProviderRepository, gate.ProviderRepository, StringComparison.Ordinal) &&
+            item.State == AwaitGateState.Satisfied) == 1);
+    }
+}
+
+/// <summary>Versioned reference to a gate required by one Await registration.</summary>
+public sealed record AwaitGateReference
+{
+    public AwaitGateReference(string gateId, int version, string providerRepository)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(gateId);
+        if (version < 1) throw new ArgumentOutOfRangeException(nameof(version));
+        if (!RepositoryIdentity.IsValid(providerRepository))
+            throw new ArgumentException("Repository must be canonical owner/repository.", nameof(providerRepository));
+        GateId = gateId;
+        Version = version;
+        ProviderRepository = providerRepository;
+    }
+
+    public string GateId { get; }
+    public int Version { get; }
+    public string ProviderRepository { get; }
+    public string Identity => $"{ProviderRepository}:{GateId}:v{Version}";
+}
