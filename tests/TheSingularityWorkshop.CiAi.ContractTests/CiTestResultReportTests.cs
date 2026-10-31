@@ -83,6 +83,20 @@ internal static class CiTestResultReportTests
             inconsistent.ReasonCodes.Contains("test-results.required-check-status-mismatch"),
             "test failure with a passing required-check verdict was accepted");
 
+        var failedTestsInGreenJob = CiTestResultReport.ParseAndValidate(
+            failedTrx, CreatePacket("success"), CreateSource(failedTrx),
+            CiRequiredCheckStatus.Passed, ObservedAt);
+        Assert(failedTestsInGreenJob.Verdict == CiTestResultVerdict.IncompleteOrUntrusted &&
+            failedTestsInGreenJob.ReasonCodes.Contains("test-results.failed-tests-in-green-job"),
+            "failed test records in a green job were accepted as a complete pass");
+
+        var nonRequired = CiTestResultReport.ParseAndValidate(
+            passingTrx, CreatePacket("success"), CreateSource(passingTrx),
+            CiRequiredCheckStatus.NotRequired, ObservedAt);
+        Assert(nonRequired.Verdict == CiTestResultVerdict.IncompleteOrUntrusted &&
+            nonRequired.ReasonCodes.Contains("test-results.check-not-required"),
+            "a non-required job was promoted to the required-check pass verdict");
+
         var missing = CiTestResultReport.MissingArtifact(
             failedPacket, JobId, CiRequiredCheckStatus.Failed, ObservedAt);
         Assert(missing.Verdict == CiTestResultVerdict.IncompleteOrUntrusted &&
@@ -160,8 +174,8 @@ internal static class CiTestResultReportTests
             truncated.Results[0].StackTrace!.Length <= 8_020,
             "diagnostic message or stack trace was not bounded");
 
-        Console.WriteLine("PASS: 22 provenance-bound TRX diagnostic report contract checks.");
-        return 22;
+        Console.WriteLine("PASS: 24 provenance-bound TRX diagnostic report contract checks.");
+        return 24;
     }
 
     private static CiWorkflowEvidencePacketV3 CreatePacket(
