@@ -73,6 +73,8 @@ internal static class FileAwaitRegistrationStoreTests
             "abcdef0123456789abcdef0123456789abcdef01",
             "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             "policy-v1",
+            new AwaitGateApproval("gate-approval-1", "gate-contract-approval-v1", "authorized-owner",
+                AwaitGateApprovalKind.Human, DateTimeOffset.Parse("2026-10-31T16:00:00Z")),
             new[] { new AwaitGateRequirement("dimensions", "Dimensions validated", "valid",
                 AwaitGateEvidenceKind.Machine) }).ContractDigest;
 
