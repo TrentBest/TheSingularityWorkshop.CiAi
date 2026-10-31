@@ -38,6 +38,7 @@ public sealed class ArtifactRetrievalDestinationPolicy
         if (!string.Equals(destination.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
             errors.Add("retrieval.https-required");
         if (!string.IsNullOrEmpty(destination.UserInfo)) errors.Add("retrieval.user-info-rejected");
+        if (!string.IsNullOrEmpty(destination.Query)) errors.Add("retrieval.query-rejected");
         if (!string.IsNullOrEmpty(destination.Fragment)) errors.Add("retrieval.fragment-rejected");
         if (!destination.IsDefaultPort) errors.Add("retrieval.port-not-allowed");
         if (IPAddress.TryParse(destination.Host, out _)) errors.Add("retrieval.ip-literal-rejected");
