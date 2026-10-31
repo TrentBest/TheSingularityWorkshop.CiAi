@@ -116,7 +116,6 @@ public sealed record AwaitGateContract
         ProviderRepository = providerRepository;
         ProviderSourceSha = providerSourceSha.ToLowerInvariant();
         ManifestDigest = manifestDigest;
-        ContractDigest = contractDigest;
         EvaluationPolicyVersion = evaluationPolicyVersion;
         Approval = approval;
         Requirements = Array.AsReadOnly(copy);
