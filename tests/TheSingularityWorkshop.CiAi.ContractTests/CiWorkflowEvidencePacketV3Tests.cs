@@ -69,6 +69,17 @@ internal static class CiWorkflowEvidencePacketV3Tests
             untrusted.BlockingReasons.Contains("workflow.definition-untrusted"),
             "untrusted workflow definition was accepted as successful");
 
+        var wrongEventShaJson = CreateProvenance().Replace(
+            "\"name\": \"pull_request\",\n        \"ref\": \"refs/pull/17/merge\",\n        \"sha\": \"" + EventSha + "\"",
+            "\"name\": \"pull_request\",\n        \"ref\": \"refs/pull/17/merge\",\n        \"sha\": \"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\"",
+            StringComparison.Ordinal);
+        var wrongEventShaBytes = Encoding.UTF8.GetBytes(wrongEventShaJson);
+        var wrongEventShaProvenance = CiWorkflowProvenanceRecord.ParseAndValidate(
+            wrongEventShaBytes, "TrentBest/CiAi", 42, 2,
+            Convert.ToHexString(SHA256.HashData(wrongEventShaBytes)));
+        Throws<InvalidDataException>(() => CiWorkflowEvidencePacketV3.FromValidatedProvenance(
+            CreateObservedRun(), wrongEventShaProvenance, workflowDefinitionTrusted: true));
+
         Throws<InvalidDataException>(() => CiWorkflowEvidencePacketV3.FromValidatedProvenance(
             CreateObservedRun(runId: 43), provenance, workflowDefinitionTrusted: true));
         Throws<InvalidDataException>(() => CiWorkflowEvidencePacketV3.FromValidatedProvenance(
