@@ -255,7 +255,7 @@ jobs:
               echo "- Attempt: \`$CIAI_ATTEMPT_NUMBER\`"
               echo "- Candidate SHA: \`$CIAI_CANDIDATE_SHA\`"
             fi
-            echo "- Policy profile: `$POLICY_PROFILE`"
+            echo "- Policy profile: \`$POLICY_PROFILE\`"
             echo "- Job status: **$JOB_STATUS**"
             echo
             echo "| Required check | Result |"
