@@ -61,7 +61,7 @@ internal static class CiWorkflowProvenanceRecordTests
     }
 
 
-    private static string CreateDispatchJson() => $"""
+    private static string CreateDispatchJson() => $$"""
     {
       "schema": "{{CiWorkflowProvenanceRecord.CurrentSchema}}",
       "repository": "TrentBest/CiAi",
