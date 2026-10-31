@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+
 namespace TheSingularityWorkshop.CiAi;
 
 /// <summary>Evidence mode permitted by an approved gate requirement.</summary>
@@ -50,8 +53,7 @@ public sealed record AwaitGateContract
 {
     public AwaitGateContract(string gateId, int version, string consumerRepository,
         string providerRepository, string providerSourceSha, string manifestDigest,
-        string contractDigest, string evaluationPolicyVersion,
-        IReadOnlyList<AwaitGateRequirement> requirements)
+        string evaluationPolicyVersion, IReadOnlyList<AwaitGateRequirement> requirements)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(gateId);
         if (gateId != gateId.Trim())
@@ -62,7 +64,6 @@ public sealed record AwaitGateContract
         ValidateRepository(providerRepository, nameof(providerRepository));
         ValidateSha(providerSourceSha, nameof(providerSourceSha));
         ValidateDigest(manifestDigest, nameof(manifestDigest));
-        ValidateDigest(contractDigest, nameof(contractDigest));
         ArgumentException.ThrowIfNullOrWhiteSpace(evaluationPolicyVersion);
         if (evaluationPolicyVersion != evaluationPolicyVersion.Trim())
             throw new ArgumentException("Policy version cannot have surrounding whitespace.", nameof(evaluationPolicyVersion));
@@ -82,6 +83,7 @@ public sealed record AwaitGateContract
         ContractDigest = contractDigest;
         EvaluationPolicyVersion = evaluationPolicyVersion;
         Requirements = Array.AsReadOnly(copy);
+        ContractDigest = ComputeContractDigest();
     }
 
     public string GateId { get; }
@@ -93,6 +95,27 @@ public sealed record AwaitGateContract
     public string ContractDigest { get; }
     public string EvaluationPolicyVersion { get; }
     public IReadOnlyList<AwaitGateRequirement> Requirements { get; }
+
+    private string ComputeContractDigest()
+    {
+        var fields = new List<string>
+        {
+            "ciai.await-gate-contract.v1", GateId,
+            Version.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ConsumerRepository, ProviderRepository, ProviderSourceSha,
+            ManifestDigest.ToLowerInvariant(), EvaluationPolicyVersion
+        };
+        foreach (var requirement in Requirements.OrderBy(item => item.RequirementId, StringComparer.Ordinal))
+        {
+            fields.Add(requirement.RequirementId);
+            fields.Add(requirement.Description);
+            fields.Add(requirement.ExpectedValue);
+            fields.Add(requirement.EvidenceKind.ToString());
+        }
+        var canonical = string.Concat(fields.Select(value =>
+            value.Length.ToString(System.Globalization.CultureInfo.InvariantCulture) + ":" + value));
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical))).ToLowerInvariant();
+    }
 
     private static void ValidateRepository(string value, string parameter)
     {
