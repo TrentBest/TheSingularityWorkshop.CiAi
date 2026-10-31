@@ -37,12 +37,10 @@ public sealed record CiWorkflowRerunRequest
             throw new ArgumentException("Repository must be canonical owner/repository identity.", nameof(repository));
         if (headSha.Length != 40 || !headSha.All(Uri.IsHexDigit))
             throw new ArgumentException("Candidate SHA must be a full 40-character hexadecimal commit identifier.", nameof(headSha));
-        if (!headRef.StartsWith("refs/heads/feature/", StringComparison.Ordinal) ||
-            headRef.Any(char.IsControl) || headRef.Contains("..", StringComparison.Ordinal) ||
-            headRef.EndsWith("/", StringComparison.Ordinal))
-            throw new ArgumentException("Reruns are permitted only for an isolated feature branch ref.", nameof(headRef));
+        if (!IsFeatureBranchRef(headRef))
+            throw new ArgumentException("Reruns are permitted only for a well-formed isolated feature branch ref.", nameof(headRef));
         if (!IsWorkflowPath(workflowPath))
-            throw new ArgumentException("Workflow path must identify a .yml or .yaml file under .github/workflows.", nameof(workflowPath));
+            throw new ArgumentException("Workflow path must identify a root-level .yml or .yaml file under .github/workflows.", nameof(workflowPath));
         if (attemptNumber < 1 || maximumAttempts < 1 || maximumAttempts > MaximumAllowedAttempts || attemptNumber > maximumAttempts)
             throw new ArgumentOutOfRangeException(nameof(attemptNumber), "Attempt must fit within the configured maximum of five.");
         if (!string.Equals(idempotencyKey, $"{repository}:{taskId}:{attemptNumber}", StringComparison.Ordinal))
@@ -80,12 +78,41 @@ public sealed record CiWorkflowRerunRequest
     public DateTimeOffset RequestedAt { get; }
     public DateTimeOffset ExpiresAt { get; }
 
-    private static bool IsWorkflowPath(string path) =>
+    internal static bool IsFeatureBranchRef(string headRef)
+    {
+        const string prefix = "refs/heads/feature/";
+        if (string.IsNullOrWhiteSpace(headRef) ||
+            !headRef.StartsWith(prefix, StringComparison.Ordinal) ||
+            headRef.Any(char.IsControl) || headRef.Any(char.IsWhiteSpace) ||
+            headRef.Contains("..", StringComparison.Ordinal) ||
+            headRef.Contains("@{", StringComparison.Ordinal) ||
+            headRef.Contains('\\') || headRef.EndsWith("/", StringComparison.Ordinal) ||
+            headRef.EndsWith(".", StringComparison.Ordinal))
+            return false;
+
+        var branch = headRef["refs/heads/".Length..];
+        if (branch.Length == 0 || branch == "@")
+            return false;
+
+        var invalid = new[] { '~', '^', ':', '?', '*', '[', ']' };
+        if (branch.IndexOfAny(invalid) >= 0)
+            return false;
+
+        return branch.Split('/').All(segment =>
+            segment.Length > 0 && segment != "." && segment != ".." &&
+            !segment.StartsWith(".", StringComparison.Ordinal) &&
+            !segment.EndsWith(".lock", StringComparison.OrdinalIgnoreCase));
+    }
+
+    internal static bool IsWorkflowPath(string path) =>
+        !string.IsNullOrWhiteSpace(path) &&
         path.StartsWith(".github/workflows/", StringComparison.Ordinal) &&
         (path.EndsWith(".yml", StringComparison.OrdinalIgnoreCase) ||
          path.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase)) &&
         !path.Contains("..", StringComparison.Ordinal) &&
-        !path.Contains('\\') && !path.Any(char.IsControl);
+        !path.Contains('\\') && !path.Any(char.IsControl) &&
+        path.Split('/').Length == 3 &&
+        path.Split('/').All(segment => segment.Length > 0);
 
     private static void RequireText(string value, string parameterName, int maximumLength)
     {
@@ -164,12 +191,9 @@ public sealed record CiWorkflowRerunTarget
         ArgumentException.ThrowIfNullOrWhiteSpace(workflowPath);
         if (headSha.Length != 40 || !headSha.All(Uri.IsHexDigit))
             throw new ArgumentException("Target SHA must be a full commit identifier.", nameof(headSha));
-        if (!headRef.StartsWith("refs/heads/feature/", StringComparison.Ordinal))
-            throw new ArgumentException("Target must be an isolated feature branch.", nameof(headRef));
-        if (!workflowPath.StartsWith(".github/workflows/", StringComparison.Ordinal) ||
-            !(workflowPath.EndsWith(".yml", StringComparison.OrdinalIgnoreCase) ||
-              workflowPath.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase)) ||
-            workflowPath.Contains("..", StringComparison.Ordinal))
+        if (!CiWorkflowRerunRequest.IsFeatureBranchRef(headRef))
+            throw new ArgumentException("Target must be a well-formed isolated feature branch.", nameof(headRef));
+        if (!CiWorkflowRerunRequest.IsWorkflowPath(workflowPath))
             throw new ArgumentException("Target workflow path is invalid.", nameof(workflowPath));
         Repository = repository;
         HeadRef = headRef;
