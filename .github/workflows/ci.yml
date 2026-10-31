@@ -172,7 +172,9 @@ jobs:
         id: provenance
         env:
           EXPECTED_SHA: ${{ steps.resolve-target.outputs.sha || github.sha }}
-          TARGET_REF: ${{ inputs.target_branch || github.ref_name }}
+          TARGET_REF: ${{ inputs.target_branch != '' && format('refs/heads/{0}', inputs.target_branch) || github.ref }}
+          WORKFLOW_DEFINITION_REF: ${{ github.ref }}
+          WORKFLOW_DEFINITION_SHA: ${{ github.sha }}
           REPOSITORY: ${{ github.repository }}
         shell: bash
         run: |
@@ -185,6 +187,8 @@ jobs:
           {
             echo "sha=$actual_sha"
             echo "target_ref=$TARGET_REF"
+            echo "workflow_definition_ref=$WORKFLOW_DEFINITION_REF"
+            echo "workflow_definition_sha=$WORKFLOW_DEFINITION_SHA"
             echo "repository=$REPOSITORY"
           } >> "$GITHUB_OUTPUT"
           echo "Verified repository=$REPOSITORY ref=$TARGET_REF sha=$actual_sha"
