@@ -53,31 +53,33 @@ public sealed record CiWorkflowProvenanceRecord
     public string CheckoutSha { get; }
 
     /// <summary>
-    /// Parses a provenance artifact only when its exact bytes match the provider-reported SHA-256
-    /// digest and its repository/run/attempt identity matches the requested workflow attempt.
+    /// Parses the extracted JSON payload only when its exact bytes match the trusted retriever's
+    /// content SHA-256 and its repository/run/attempt identity matches the requested workflow attempt.
+    /// For GitHub Actions artifacts, the host must first verify the provider-reported digest of the
+    /// downloaded ZIP archive, safely extract this exact payload, and compute this content digest.
     /// </summary>
     public static CiWorkflowProvenanceRecord ParseAndValidate(
         ReadOnlyMemory<byte> artifactBytes,
         string expectedRepository,
         long expectedRunId,
         int expectedRunAttempt,
-        string expectedArtifactSha256)
+        string expectedContentSha256)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(expectedRepository);
-        ArgumentException.ThrowIfNullOrWhiteSpace(expectedArtifactSha256);
+        ArgumentException.ThrowIfNullOrWhiteSpace(expectedContentSha256);
         if (!RepositoryIdentity.IsValid(expectedRepository))
             throw new ArgumentException("Expected repository must use canonical owner/repository identifiers.", nameof(expectedRepository));
         if (expectedRunId <= 0) throw new ArgumentOutOfRangeException(nameof(expectedRunId));
         if (expectedRunAttempt <= 0) throw new ArgumentOutOfRangeException(nameof(expectedRunAttempt));
-        if (expectedArtifactSha256.Length != 64 || !expectedArtifactSha256.All(Uri.IsHexDigit))
-            throw new ArgumentException("Expected artifact digest must be a full SHA-256 hexadecimal value.", nameof(expectedArtifactSha256));
+        if (expectedContentSha256.Length != 64 || !expectedContentSha256.All(Uri.IsHexDigit))
+            throw new ArgumentException("Expected artifact digest must be a full SHA-256 hexadecimal value.", nameof(expectedContentSha256));
         if (artifactBytes.IsEmpty)
             throw new InvalidDataException("Workflow provenance artifact is empty.");
 
         var actualDigest = Convert.ToHexString(SHA256.HashData(artifactBytes.Span));
         if (!CryptographicOperations.FixedTimeEquals(
             Convert.FromHexString(actualDigest),
-            Convert.FromHexString(expectedArtifactSha256)))
+            Convert.FromHexString(expectedContentSha256)))
             throw new InvalidDataException("Workflow provenance artifact digest does not match provider metadata.");
 
         using var document = JsonDocument.Parse(artifactBytes);
