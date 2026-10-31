@@ -94,6 +94,7 @@ internal static class CiWorkflowEvidencePacketContractTests
         Throws<ArgumentException>(() => CreatePacket(jobRunId: 43));
         Throws<ArgumentException>(() => CreatePacket(runUrl: new Uri("https://example.com/run/42")));
         Throws<ArgumentException>(() => CreatePacket(workflowPath: "../build.yml"));
+        Throws<ArgumentException>(() => CreatePacket(observedAt: DateTimeOffset.MinValue));
         Throws<ArgumentException>(() => CreateCandidatePacket(workflowRef: "refs/heads/feature/untrusted"));
         Throws<ArgumentException>(() => new CiWorkflowCandidateCheckoutEvidence(
             "refs/heads/master", Sha, "contract", "Resolve candidate", "Verify checkout"));
@@ -103,8 +104,8 @@ internal static class CiWorkflowEvidencePacketContractTests
             json.Replace("\"contractVersion\": 2", "\"contractVersion\": 1", StringComparison.Ordinal)
                 .Replace("ciai.workflow-evidence.v2", "ciai.workflow-evidence.v1", StringComparison.Ordinal)));
 
-        Console.WriteLine("PASS: 24 CI workflow evidence packet v2 contract checks.");
-        return 24;
+        Console.WriteLine("PASS: 25 CI workflow evidence packet v2 contract checks.");
+        return 25;
     }
 
     private static CiWorkflowEvidencePacket CreatePacket(
@@ -115,7 +116,8 @@ internal static class CiWorkflowEvidencePacketContractTests
         int jobAttempt = 2,
         long jobRunId = 42,
         Uri? runUrl = null,
-        string workflowPath = ".github/workflows/ci.yml")
+        string workflowPath = ".github/workflows/ci.yml",
+        DateTimeOffset? observedAt = null)
     {
         var steps = new[]
         {
@@ -132,7 +134,7 @@ internal static class CiWorkflowEvidencePacketContractTests
             "pull_request", "CI", CiRunStatus.Completed,
             runConclusion ?? (jobConclusion == "success" ? CiRunConclusion.Success : CiRunConclusion.Failure),
             runUrl ?? new Uri("https://github.com/TrentBest/SimpleDemos/actions/runs/42"),
-            DateTimeOffset.Parse("2026-10-30T20:01:00Z"),
+            observedAt ?? DateTimeOffset.Parse("2026-10-30T20:01:00Z"),
             Array.AsReadOnly(jobs), discoveryComplete, jobsComplete: true);
     }
 
