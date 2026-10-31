@@ -5,7 +5,7 @@ using TheSingularityWorkshop.CiAi;
 internal static class CiWorkflowEvidencePacketV3Tests
 {
     private const string EventSha = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-    private const string CheckoutSha = EventSha;
+    private const string CheckoutSha = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
     private const string WorkflowSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
     public static int Run()
@@ -38,7 +38,10 @@ internal static class CiWorkflowEvidencePacketV3Tests
             provenance, workflowDefinitionTrusted: true));
 
         var mismatchedCheckoutBytes = Encoding.UTF8.GetBytes(
-            CreateProvenance().Replace(CheckoutSha, "cccccccccccccccccccccccccccccccccccccccc", StringComparison.Ordinal));
+            CreateProvenance().Replace(
+                "\"checkout\": {\n        \"ref\": \"refs/pull/17/merge\",\n        \"sha\": \"" + CheckoutSha + "\"",
+                "\"checkout\": {\n        \"ref\": \"refs/pull/17/merge\",\n        \"sha\": \"cccccccccccccccccccccccccccccccccccccccc\"",
+                StringComparison.Ordinal));
         var mismatchedCheckout = CiWorkflowProvenanceRecord.ParseAndValidate(
             mismatchedCheckoutBytes, "TrentBest/CiAi", 42, 2,
             Convert.ToHexString(SHA256.HashData(mismatchedCheckoutBytes)));
