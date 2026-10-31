@@ -186,6 +186,20 @@ public sealed class FileAwaitGateEventOutbox
         return Read(path);
     }
 
+    /// <summary>Loads every durable event in stable event-ID order; delivery scheduling remains host-owned.</summary>
+    public IReadOnlyList<AwaitGateEvent> ReadAll()
+    {
+        if (!Directory.Exists(_directory)) return Array.Empty<AwaitGateEvent>();
+        var events = new List<AwaitGateEvent>();
+        foreach (var path in Directory.EnumerateFiles(_directory, "*.json").OrderBy(value => value, StringComparer.Ordinal))
+        {
+            using var fileLock = new FileStream(path + ".lock", FileMode.OpenOrCreate,
+                FileAccess.ReadWrite, FileShare.None);
+            events.Add(Read(path));
+        }
+        return Array.AsReadOnly(events.OrderBy(item => item.EventId, StringComparer.Ordinal).ToArray());
+    }
+
     private string GetPath(string eventId) =>
         Path.Combine(_directory, Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(eventId))) + ".json");
 
