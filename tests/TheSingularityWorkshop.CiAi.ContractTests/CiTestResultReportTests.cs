@@ -259,8 +259,8 @@ internal static class CiTestResultReportTests
         var actualPassed = results.Count(item => item.Outcome == "Passed");
         var actualFailed = results.Count(item => item.Outcome is "Failed" or "Error" or "Timeout" or "Aborted");
         var actualSkipped = results.Length - actualPassed - actualFailed;
-        var xmlResults = string.Join("\\n", results.Select(item =>
-            $"<UnitTestResult testId=\\"{item.Id}\\" testName=\\"{item.Name}\\" outcome=\\"{item.Outcome}\\">" +
+        var xmlResults = string.Join("\n", results.Select(item =>
+            $"<UnitTestResult testId=\"{item.Id}\" testName=\"{item.Name}\" outcome=\"{item.Outcome}\">" +
             (item.Message is null && item.Stack is null ? "" :
                 "<Output><ErrorInfo>" +
                 (item.Message is null ? "" : $"<Message>{System.Security.SecurityElement.Escape(item.Message)}</Message>") +
