@@ -40,6 +40,22 @@ internal static class CiWorkflowEvidencePacketV3Tests
             provenance, workflowDefinitionTrusted: true);
         Assert(factoryPacket.IsSuccessful && factoryPacket.Provenance.WorkflowSha == WorkflowSha,
             "v3 collection factory did not bind the exact run attempt to validated provenance");
+
+        var dispatchBytes = Encoding.UTF8.GetBytes(CreateDispatchProvenance());
+        var dispatchProvenance = CiWorkflowProvenanceRecord.ParseAndValidate(
+            dispatchBytes, "TrentBest/CiAi", 42, 2,
+            Convert.ToHexString(SHA256.HashData(dispatchBytes)));
+        var candidateEvidence = new CiWorkflowCandidateCheckoutEvidence(
+            "refs/heads/feature/candidate", "ffffffffffffffffffffffffffffffffffffffff",
+            "contract", "Resolve optional branch target to an immutable commit",
+            "Verify checkout provenance");
+        var dispatchPacket = CiWorkflowEvidencePacketV3.FromValidatedProvenance(
+            CreateDispatchObservedRun(candidateEvidence), dispatchProvenance,
+            workflowDefinitionTrusted: true, candidateEvidence);
+        Assert(dispatchPacket.IsSuccessful &&
+            dispatchPacket.CandidateRef == "refs/heads/feature/candidate" &&
+            dispatchPacket.CandidateSha == "ffffffffffffffffffffffffffffffffffffffff",
+            "trusted dispatch candidate checkout was not independently retained");
         var reloadedWithoutTrust = CiWorkflowEvidencePacketV3.FromJson(
             serialized, "TrentBest/CiAi", 42, 2, packetDigest, workflowDefinitionTrusted: false);
         Assert(!reloadedWithoutTrust.IsSuccessful,
@@ -73,10 +89,58 @@ internal static class CiWorkflowEvidencePacketV3Tests
             failClosed.BlockingReasons.Contains("candidate.checkout-unverified"),
             "checkout SHA differing from event SHA was not failed closed");
 
-        Console.WriteLine("PASS: 9 CI workflow evidence packet v3 contract checks.");
-        return 9;
+        Console.WriteLine("PASS: 10 CI workflow evidence packet v3 contract checks.");
+        return 10;
     }
 
+
+
+    private static CiWorkflowEvidencePacket CreateDispatchObservedRun(
+        CiWorkflowCandidateCheckoutEvidence candidateEvidence)
+    {
+        var steps = new[]
+        {
+            new CiWorkflowStepObservation(1, "Resolve optional branch target to an immutable commit",
+                "completed", "success", "2026-10-31T01:00:10Z"),
+            new CiWorkflowStepObservation(2, "Verify checkout provenance",
+                "completed", "success", "2026-10-31T01:00:20Z")
+        };
+        var job = new CiWorkflowJobObservation(
+            100, 42, 2, "contract", "completed", "success",
+            new Uri("https://github.com/TrentBest/CiAi/actions/runs/42/job/100"),
+            Array.AsReadOnly(steps));
+        return new CiWorkflowEvidencePacket(
+            "TrentBest/CiAi", ".github/workflows/ci.yml", 42, 2,
+            "refs/heads/development", EventSha, "workflow_dispatch", "CI",
+            CiRunStatus.Completed, CiRunConclusion.Success,
+            new Uri("https://github.com/TrentBest/CiAi/actions/runs/42"),
+            DateTimeOffset.Parse("2026-10-31T01:01:00Z"),
+            Array.AsReadOnly(new[] { job }), true, true,
+            candidateCheckoutEvidence: candidateEvidence);
+    }
+
+    private static string CreateDispatchProvenance() => $$"""
+    {
+      "schema": "{{CiWorkflowProvenanceRecord.CurrentSchema}}",
+      "repository": "TrentBest/CiAi",
+      "runId": 42,
+      "runAttempt": 2,
+      "workflow": {
+        "ref": "TrentBest/CiAi/.github/workflows/ci.yml@refs/heads/development",
+        "sha": "{{WorkflowSha}}"
+      },
+      "event": {
+        "name": "workflow_dispatch",
+        "ref": "refs/heads/development",
+        "sha": "{{EventSha}}",
+        "pullRequest": null
+      },
+      "checkout": {
+        "ref": "refs/heads/feature/candidate",
+        "sha": "ffffffffffffffffffffffffffffffffffffffff"
+      }
+    }
+    """;
 
     private static (CiWorkflowRunCollection Runs, CiWorkflowJobCollection Jobs) CreateCollections()
     {
