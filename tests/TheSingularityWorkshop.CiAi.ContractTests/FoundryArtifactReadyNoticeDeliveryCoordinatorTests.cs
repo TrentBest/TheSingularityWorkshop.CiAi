@@ -81,8 +81,36 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
                 Assert(retryCount == 1, "coordinator continued sending after a global back-pressure response");
             }
 
-            Console.WriteLine("PASS: 10 Foundry notice delivery coordinator checks.");
-            return 10;
+            var policyRoot = Path.Combine(root, "policy");
+            Directory.CreateDirectory(policyRoot);
+            var policyOutbox = new FileFoundryArtifactReadyNoticeOutbox(Path.Combine(policyRoot, "notices.jsonl"));
+            var policyLedger = new FileFoundryArtifactIngressReceiptLedger(Path.Combine(policyRoot, "receipts.jsonl"));
+            policyOutbox.Enqueue(new FoundryArtifactReadyNoticeDelivery(CreateNotice("policy-rejected", "policy-request-1")));
+            policyOutbox.Enqueue(new FoundryArtifactReadyNoticeDelivery(CreateNotice("after-policy-rejection", "policy-request-2")));
+            var policySendCount = 0;
+            using (var http = new HttpClient(new StubHandler(async (request, cancellationToken) =>
+            {
+                policySendCount++;
+                var payload = await request.Content!.ReadAsStringAsync(cancellationToken);
+                var notice = FoundryArtifactReadyNoticeClient.DeserializeNotice(payload);
+                return notice.NoticeId == "policy-rejected"
+                    ? Response(HttpStatusCode.UnprocessableEntity, "{\\"code\\":\\"artifact.policy-rejected\\"}")
+                    : Response(HttpStatusCode.Accepted, Receipt(notice, "receipt-" + notice.NoticeId, "accepted"));
+            })))
+            {
+                var coordinator = new FoundryArtifactReadyNoticeDeliveryCoordinator(
+                    policyOutbox, policyLedger, new FoundryArtifactReadyNoticeClient(http, Endpoint(), new FixtureCredentials()));
+                var batch = await coordinator.DeliverPendingAsync();
+                Assert(batch.Attempted == 2 && batch.Acknowledged == 1 && batch.RemainingPending == 1,
+                    "notice-specific policy rejection incorrectly stopped later independent delivery");
+                Assert(batch.Attempts[0].Outcome == FoundryArtifactIngressOutcome.Rejected &&
+                    batch.Attempts[1].ReceiptRecordOutcome == FoundryArtifactIngressReceiptRecordOutcome.Recorded,
+                    "policy rejection or subsequent accepted receipt was misclassified");
+                Assert(policySendCount == 2, "coordinator did not continue after a notice-specific rejection");
+            }
+
+            Console.WriteLine("PASS: 13 Foundry notice delivery coordinator checks.");
+            return 13;
         }
         finally
         {
