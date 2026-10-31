@@ -46,7 +46,11 @@ internal static class AwaitGateEventOutboxTests
 
             Check("event outbox rejects conflicting reuse of an event ID", () =>
             {
-                var changedEvaluation = evaluation with { EvaluationPolicyVersion = "policy-v2" };
+                var changedContract = new AwaitGateContract("B", 1, Consumer, Provider, SourceSha,
+                    ManifestDigest, ContractDigest, "policy-v2",
+                    new[] { new AwaitGateRequirement("dimensions", "Dimensions validated", "valid",
+                        AwaitGateEvidenceKind.Machine) });
+                var changedEvaluation = AwaitGateEvaluator.Evaluate(changedContract, new[] { evidence });
                 var conflict = new AwaitGateEvent("event-1", "await-1", Consumer,
                     AwaitGateEventKind.Satisfied, changedEvaluation,
                     DateTimeOffset.Parse("2026-10-31T17:00:00Z"));
@@ -56,7 +60,10 @@ internal static class AwaitGateEventOutboxTests
 
             Check("outbox enumerates events deterministically for host delivery", () =>
             {
-                var invalidEvaluation = evaluation with { State = AwaitGateState.Revoked };
+                var invalidEvidence = new AwaitGateEvidence("dimensions", "B", 1, ContractDigest, Provider,
+                    SourceSha, ManifestDigest, EvidenceDigest, AwaitGateEvidenceKind.Machine, "invalid",
+                    "workflow-artifact:42:1", "42", 1);
+                var invalidEvaluation = AwaitGateEvaluator.Evaluate(contract, new[] { invalidEvidence });
                 var invalidated = new AwaitGateEvent("event-2", "await-1", Consumer,
                     AwaitGateEventKind.Invalidated, invalidEvaluation,
                     DateTimeOffset.Parse("2026-10-31T17:01:00Z"));
@@ -75,12 +82,15 @@ internal static class AwaitGateEventOutboxTests
 
             Check("invalidation event records revocation without rewriting satisfaction", () =>
             {
-                var revoked = evaluation with { State = AwaitGateState.Revoked };
+                var rejectedEvidence = new AwaitGateEvidence("dimensions", "B", 1, ContractDigest, Provider,
+                    SourceSha, ManifestDigest, EvidenceDigest, AwaitGateEvidenceKind.Machine, "invalid",
+                    "workflow-artifact:42:1", "42", 1);
+                var rejected = AwaitGateEvaluator.Evaluate(contract, new[] { rejectedEvidence });
                 var invalidated = new AwaitGateEvent("event-revoked", "await-1", Consumer,
-                    AwaitGateEventKind.Invalidated, revoked, DateTimeOffset.UtcNow);
+                    AwaitGateEventKind.Invalidated, rejected, DateTimeOffset.UtcNow);
                 Assert(invalidated.Kind == AwaitGateEventKind.Invalidated &&
-                    invalidated.EvaluationState == AwaitGateState.Revoked,
-                    "revocation did not produce a distinct invalidation event");
+                    invalidated.EvaluationState == AwaitGateState.Rejected,
+                    "revocation/rejection did not produce a distinct invalidation event");
             });
 
             Check("receipt ledger accepts exact authenticated-host receipt and suppresses replay", () =>
