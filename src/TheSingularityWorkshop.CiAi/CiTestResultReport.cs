@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
@@ -300,8 +301,12 @@ public sealed record CiTestResultReport
             null, null, null, null, 0, 0, 0, 0, 0, Array.Empty<CiTestResultRecord>(), observedAt);
     }
 
-    public string ToJson(bool indented = true) =>
-        JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = indented });
+    public string ToJson(bool indented = true)
+    {
+        var options = new JsonSerializerOptions { WriteIndented = indented };
+        options.Converters.Add(new JsonStringEnumConverter());
+        return JsonSerializer.Serialize(this, options);
+    }
 
     private static void ValidateEvidenceBinding(
         CiWorkflowEvidencePacketV3 evidence,
@@ -415,7 +420,9 @@ public sealed record CiTestResultReport
         var results = new List<CiTestResultRecord>(resultElements.Length);
         foreach (var element in resultElements)
         {
-            var testId = RequiredAttribute(element, "testId", 200);
+            var rawTestId = RequiredAttribute(element, "testId", 200);
+            var (normalizedTestId, testIdTruncated, testIdRedacted) = NormalizeDiagnostic(rawTestId, 200);
+            var testId = normalizedTestId ?? rawTestId;
             var rawTestName = RequiredAttribute(element, "testName", 512);
             var (normalizedTestName, testNameTruncated, testNameRedacted) = NormalizeDiagnostic(rawTestName, 512);
             var testName = normalizedTestName ?? rawTestName;
@@ -426,8 +433,8 @@ public sealed record CiTestResultReport
             var rawStack = errorInfo?.Elements().FirstOrDefault(child => child.Name.LocalName == "StackTrace")?.Value;
             var (message, messageTruncated, messageRedacted) = NormalizeDiagnostic(rawMessage, MaximumMessageLength);
             var (stackTrace, stackTruncated, stackRedacted) = NormalizeDiagnostic(rawStack, MaximumStackTraceLength);
-            var redacted = testNameRedacted || messageRedacted || stackRedacted;
-            var truncated = testNameTruncated || messageTruncated || stackTruncated;
+            var redacted = testIdRedacted || testNameRedacted || messageRedacted || stackRedacted;
+            var truncated = testIdTruncated || testNameTruncated || messageTruncated || stackTruncated;
             var digestInput = string.Join("\0", testId, testName, outcome.ToString(), message ?? "", stackTrace ?? "",
                 redacted.ToString(CultureInfo.InvariantCulture), truncated.ToString(CultureInfo.InvariantCulture));
             var recordDigest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(digestInput))).ToLowerInvariant();
