@@ -38,6 +38,31 @@ on:
         required: false
         type: string
         default: ""
+      ciai_request_id:
+        description: "Optional CiAi dispatch request identity; enables the correlated exact-SHA dispatch contract."
+        required: false
+        type: string
+        default: ""
+      ciai_correlation_id:
+        description: "CiAi task correlation identity."
+        required: false
+        type: string
+        default: ""
+      ciai_task_id:
+        description: "Foundry task identity."
+        required: false
+        type: string
+        default: ""
+      ciai_candidate_sha:
+        description: "Exact 40-character candidate SHA expected for this dispatch."
+        required: false
+        type: string
+        default: ""
+      ciai_attempt_number:
+        description: "Bounded task attempt number (1-5)."
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -54,11 +79,62 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.sha }}
+      - name: Validate optional CiAi dispatch envelope
+        id: ciai-envelope
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          CIAI_REQUEST_ID: ${{ inputs.ciai_request_id }}
+          CIAI_CORRELATION_ID: ${{ inputs.ciai_correlation_id }}
+          CIAI_TASK_ID: ${{ inputs.ciai_task_id }}
+          CIAI_CANDIDATE_SHA: ${{ inputs.ciai_candidate_sha }}
+          CIAI_ATTEMPT_NUMBER: ${{ inputs.ciai_attempt_number }}
+          TARGET_BRANCH: ${{ inputs.target_branch }}
+          EVENT_REF: ${{ github.ref }}
+          EVENT_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          values=("$CIAI_REQUEST_ID" "$CIAI_CORRELATION_ID" "$CIAI_TASK_ID" "$CIAI_CANDIDATE_SHA" "$CIAI_ATTEMPT_NUMBER")
+          supplied=0
+          for value in "${values[@]}"; do
+            if [ -n "$value" ]; then supplied=$((supplied + 1)); fi
+          done
+          if [ "$supplied" -eq 0 ]; then
+            exit 0
+          fi
+          if [ "$supplied" -ne "${#values[@]}" ]; then
+            echo "::error::CiAi dispatch inputs must be supplied together."
+            exit 1
+          fi
+          for value in "$CIAI_REQUEST_ID" "$CIAI_CORRELATION_ID" "$CIAI_TASK_ID"; do
+            if ! [[ "$value" =~ ^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$ ]]; then
+              echo "::error::CiAi identity input contains unsupported characters or exceeds its bound."
+              exit 1
+            fi
+          done
+          if ! [[ "$CIAI_CANDIDATE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "::error::CiAi candidate SHA must be a full 40-character hexadecimal commit ID."
+            exit 1
+          fi
+          if ! [[ "$CIAI_ATTEMPT_NUMBER" =~ ^[1-5]$ ]]; then
+            echo "::error::CiAi attempt number must be between one and five."
+            exit 1
+          fi
+          if ! [[ "$TARGET_BRANCH" == feature/* ]] || ! git check-ref-format --branch "$TARGET_BRANCH" >/dev/null; then
+            echo "::error::CiAi dispatch must target a valid isolated feature branch."
+            exit 1
+          fi
+          if [ "$EVENT_REF" != "refs/heads/$TARGET_BRANCH" ] || [ "$EVENT_SHA" != "$CIAI_CANDIDATE_SHA" ]; then
+            echo "::error::Dispatch event ref/SHA does not match the requested feature ref/candidate SHA."
+            exit 1
+          fi
       - name: Resolve optional branch target to an immutable commit
         id: resolve-target
         if: github.event_name == 'workflow_dispatch' && inputs.target_branch != ''
         env:
           TARGET_BRANCH: ${{ inputs.target_branch }}
+          CIAI_CANDIDATE_SHA: ${{ inputs.ciai_candidate_sha }}
+          CIAI_REQUEST_ID: ${{ inputs.ciai_request_id }}
         shell: bash
         run: |
           set -euo pipefail
@@ -72,6 +148,10 @@ jobs:
             exit 1
           fi
           sha="$(printf '%s\n' "$matches" | awk '{print $1}')"
+          if [ -n "$CIAI_REQUEST_ID" ] && [ "$sha" != "$CIAI_CANDIDATE_SHA" ]; then
+            echo "::error::Feature branch moved after dispatch; refusing to test a different candidate SHA."
+            exit 1
+          fi
           if ! [[ "$sha" =~ ^[0-9a-f]{40}$ ]]; then
             echo "::error::Resolved target did not produce a full commit SHA."
             exit 1
@@ -145,6 +225,11 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           TARGET_REF: ${{ inputs.target_branch || github.ref_name }}
           TARGET_SHA: ${{ steps.provenance.outputs.sha || steps.resolve-target.outputs.sha || github.sha }}
+          CIAI_REQUEST_ID: ${{ inputs.ciai_request_id }}
+          CIAI_CORRELATION_ID: ${{ inputs.ciai_correlation_id }}
+          CIAI_TASK_ID: ${{ inputs.ciai_task_id }}
+          CIAI_ATTEMPT_NUMBER: ${{ inputs.ciai_attempt_number }}
+          CIAI_CANDIDATE_SHA: ${{ inputs.ciai_candidate_sha }}
           POLICY_PROFILE: ciai-contract-verification-v1
           JOB_STATUS: ${{ job.status }}
           PROVENANCE_STATUS: ${{ steps.provenance.outcome }}
@@ -163,7 +248,14 @@ jobs:
             echo "- Repository: \`$REPOSITORY\`"
             echo "- Requested ref: \`$TARGET_REF\`"
             echo "- Resolved commit: \`$TARGET_SHA\`"
-            echo "- Policy profile: \`$POLICY_PROFILE\`"
+            if [ -n "$CIAI_REQUEST_ID" ]; then
+              echo "- CiAi request: \`$CIAI_REQUEST_ID\`"
+              echo "- Correlation: \`$CIAI_CORRELATION_ID\`"
+              echo "- Task: \`$CIAI_TASK_ID\`"
+              echo "- Attempt: \`$CIAI_ATTEMPT_NUMBER\`"
+              echo "- Candidate SHA: \`$CIAI_CANDIDATE_SHA\`"
+            fi
+            echo "- Policy profile: \`$POLICY_PROFILE\`
             echo "- Job status: **$JOB_STATUS**"
             echo
             echo "| Required check | Result |"
