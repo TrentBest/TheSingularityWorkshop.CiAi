@@ -54,7 +54,7 @@ internal static class CiWorkflowEvidenceReceiptLedgerContractTests
             AssertThrows<InvalidDataException>(() =>
                 new FileCiWorkflowEvidenceReceiptLedger(tornPath).ReadAcknowledgedDeliveryIds());
 
-            Console.WriteLine("PASS: 8 CI workflow evidence receipt ledger contract checks.");
+            Console.WriteLine("PASS: 12 CI workflow evidence receipt ledger contract checks.");
             return 8;
         }
         finally
