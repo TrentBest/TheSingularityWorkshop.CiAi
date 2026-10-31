@@ -169,10 +169,13 @@ public sealed class FileCiWorkflowEvidenceOutboxV3
         return records.ToArray();
     }
 
-    private static bool IsValidIdempotencyKey(string value) =>
-        value.Length == 71 &&
+    private static bool IsValidIdempotencyKey(string? value) =>
+        value is { Length: 71 } &&
         value.StartsWith("sha256:", StringComparison.Ordinal) &&
-        value.AsSpan(7).ToString().All(Uri.IsHexDigit);
+        value.AsSpan(7).ToString().All(IsLowerHex);
+
+    private static bool IsLowerHex(char value) =>
+        value is >= '0' and <= '9' or >= 'a' and <= 'f';
 
     private sealed record OutboxRecord(
         string DeliveryId,
