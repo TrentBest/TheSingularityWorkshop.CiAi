@@ -34,7 +34,7 @@ on:
   workflow_dispatch:
     inputs:
       target_branch:
-        description: "Optional existing branch to gate; blank uses the branch selected for this workflow run."
+        description: "Optional feature branch to test; workflow definition must run from trusted development."
         required: false
         type: string
         default: ""
