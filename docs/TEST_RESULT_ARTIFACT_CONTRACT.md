@@ -9,7 +9,7 @@ CiAi's test-result artifact contract turns a test-run artifact into a bounded, v
 
 The first supported input is Visual Studio Test Results (`.trx`). The normalized output uses schema `ciai.test-results.v1` and preserves:
 
-- Repository, candidate checkout ref/SHA, workflow-definition ref/SHA, and event ref/SHA.
+- Repository, candidate checkout ref/SHA, workflow path/definition ref/SHA, and event ref/SHA. Pull-request number/head/base identities and exact run/job evidence URLs are retained separately.
 - Workflow run ID and attempt, plus the exact producing job ID and name.
 - Provider artifact ID/name, provider-reported ZIP digest, extracted TRX digest, byte sizes, and retention timestamps.
 - Test framework, total/passed/failed/skipped counts, stable test identities, outcomes, bounded assertion messages, and bounded stack traces.
