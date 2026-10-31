@@ -37,8 +37,8 @@ internal static class CiWorkflowDispatchInputContractTests
             AssertThrows<NotSupportedException>(() => mutable[CiWorkflowDispatchInputContract.RequestIdInput] = "changed");
 
         AssertThrows<ArgumentNullException>(() => CiWorkflowDispatchInputContract.CreateInputs(null!));
-        Console.WriteLine("PASS: 9 correlated workflow dispatch input contract checks.");
-        return 9;
+        Console.WriteLine("PASS: 10 correlated workflow dispatch input contract checks.");
+        return 10;
     }
 
     private static void Assert(bool condition, string message)
