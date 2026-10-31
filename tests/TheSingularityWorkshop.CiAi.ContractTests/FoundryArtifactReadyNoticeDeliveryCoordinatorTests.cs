@@ -133,7 +133,7 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
                 var noticeId = document.RootElement.GetProperty("noticeId").GetString()!;
                 var idempotencyKey = document.RootElement.GetProperty("manifest").GetProperty("idempotencyKey").GetString()!;
                 return noticeId == "policy-rejected"
-                    ? Response(HttpStatusCode.UnprocessableEntity, "{\\"code\\":\\"artifact.policy-rejected\\"}")
+                    ? Response(HttpStatusCode.UnprocessableEntity, "{\"code\":\"artifact.policy-rejected\"}")
                     : Response(HttpStatusCode.Accepted,
                         Receipt(noticeId, idempotencyKey, "receipt-" + noticeId, "accepted"));
             })))
