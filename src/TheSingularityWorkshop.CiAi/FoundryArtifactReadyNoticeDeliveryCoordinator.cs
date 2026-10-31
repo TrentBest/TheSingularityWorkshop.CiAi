@@ -4,6 +4,8 @@ namespace TheSingularityWorkshop.CiAi;
 public sealed record FoundryArtifactReadyNoticeDeliveryAttempt(
     string NoticeId,
     FoundryArtifactIngressOutcome Outcome,
+    System.Net.HttpStatusCode? StatusCode,
+    FoundryArtifactIngressReceipt? Receipt,
     FoundryArtifactIngressReceiptRecordOutcome? ReceiptRecordOutcome,
     string? ErrorCode,
     TimeSpan? RetryAfter);
@@ -85,7 +87,8 @@ public sealed class FoundryArtifactReadyNoticeDeliveryCoordinator
             }
 
             attempts.Add(new FoundryArtifactReadyNoticeDeliveryAttempt(
-                delivery.NoticeId, outcome, receiptOutcome, errorCode, result.RetryAfter));
+                delivery.NoticeId, outcome, result.StatusCode, result.Receipt,
+                receiptOutcome, errorCode, result.RetryAfter));
 
             // These outcomes are global transport/authorization/back-pressure signals. A policy rejection is notice-specific, so later independent notices may still be attempted.
             // Leave all remaining notices pending for a later, policy-controlled invocation.
