@@ -21,7 +21,7 @@ internal static class CiWorkflowProvenanceRecordTests
             record.PullRequest is { HeadSha: var headSha, BaseSha: var baseSha } &&
             headSha == PrHeadSha && baseSha == PrBaseSha && record.CheckoutSha == CheckoutSha,
             "workflow, event, PR source/base, and tested checkout identities were conflated");
-        Assert(record.WorkflowRef ==
+        Assert(record.WorkflowPath == ".github/workflows/ci.yml" && record.WorkflowRef ==
             "TrentBest/CiAi/.github/workflows/ci.yml@refs/heads/development",
             "full github.workflow_ref value was not preserved");
         Assert(record.EventRef == "refs/pull/17/merge" &&
@@ -36,6 +36,12 @@ internal static class CiWorkflowProvenanceRecordTests
             bytes, "TrentBest/Other", 42, 2, digest));
         Throws<InvalidDataException>(() => CiWorkflowProvenanceRecord.ParseAndValidate(
             bytes, "TrentBest/CiAi", 42, 2, new string('0', 64)));
+
+        var foreignWorkflowRepository = Encoding.UTF8.GetBytes(CreatePullRequestJson()
+            .Replace("TrentBest/CiAi/.github/workflows/ci.yml", "Other/Repo/.github/workflows/ci.yml", StringComparison.Ordinal));
+        Throws<InvalidDataException>(() => CiWorkflowProvenanceRecord.ParseAndValidate(
+            foreignWorkflowRepository, "TrentBest/CiAi", 42, 2,
+            Convert.ToHexString(SHA256.HashData(foreignWorkflowRepository))));
 
         var wrongSchema = Encoding.UTF8.GetBytes(CreatePullRequestJson()
             .Replace(CiWorkflowProvenanceRecord.CurrentSchema, "ciai.workflow-provenance.v99", StringComparison.Ordinal));
@@ -62,8 +68,8 @@ internal static class CiWorkflowProvenanceRecordTests
         Assert(dispatchRecord.PullRequest is null && dispatchRecord.EventName == "workflow_dispatch",
             "workflow_dispatch provenance with no PR was not accepted");
 
-        Console.WriteLine("PASS: 11 workflow provenance artifact contract checks.");
-        return 11;
+        Console.WriteLine("PASS: 12 workflow provenance artifact contract checks.");
+        return 12;
     }
 
 
