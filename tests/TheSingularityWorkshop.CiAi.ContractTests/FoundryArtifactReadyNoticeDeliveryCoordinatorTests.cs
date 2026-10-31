@@ -58,6 +58,38 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
                 AssertThrows<ArgumentOutOfRangeException>(() => coordinator.DeliverPendingAsync(101).GetAwaiter().GetResult());
             }
 
+            var mixedRoot = Path.Combine(root, "mixed");
+            Directory.CreateDirectory(mixedRoot);
+            var mixedOutbox = new FileFoundryArtifactReadyNoticeOutbox(Path.Combine(mixedRoot, "notices.jsonl"));
+            var mixedLedger = new FileFoundryArtifactIngressReceiptLedger(Path.Combine(mixedRoot, "receipts.jsonl"));
+            mixedOutbox.Enqueue(new FoundryArtifactReadyNoticeDelivery(CreateNotice("invalid-1", "invalid-request-1")));
+            mixedOutbox.Enqueue(new FoundryArtifactReadyNoticeDelivery(CreateNotice("valid-2", "valid-request-2")));
+            var mixedCount = 0;
+            using (var http = new HttpClient(new StubHandler(async (request, cancellationToken) =>
+            {
+                mixedCount++;
+                if (mixedCount == 1)
+                    return Response(HttpStatusCode.BadRequest, "{\\"code\\":\\"notice.policy-rejected\\"}");
+                var payload = await request.Content!.ReadAsStringAsync(cancellationToken);
+                using var document = JsonDocument.Parse(payload);
+                var noticeId = document.RootElement.GetProperty("noticeId").GetString()!;
+                var idempotencyKey = document.RootElement.GetProperty("manifest").GetProperty("idempotencyKey").GetString()!;
+                return Response(HttpStatusCode.Accepted,
+                    Receipt(noticeId, idempotencyKey, "receipt-" + noticeId, "accepted"));
+            })))
+            {
+                var coordinator = new FoundryArtifactReadyNoticeDeliveryCoordinator(
+                    mixedOutbox, mixedLedger, new FoundryArtifactReadyNoticeClient(http, Endpoint(), new FixtureCredentials()));
+                var batch = await coordinator.DeliverPendingAsync();
+                Assert(batch.Attempted == 2 && batch.Acknowledged == 1 && batch.RemainingPending == 1 &&
+                    batch.Attempts[0].Outcome == FoundryArtifactIngressOutcome.InvalidRequest &&
+                    batch.Attempts[1].Outcome == FoundryArtifactIngressOutcome.Accepted,
+                    "notice-specific rejection incorrectly blocked an independent pending notice");
+                Assert(mixedCount == 2 && mixedLedger.ReadAcknowledgedNoticeIds().Contains("valid-2") &&
+                    !mixedLedger.ReadAcknowledgedNoticeIds().Contains("invalid-1"),
+                    "coordinator did not persist only the independently accepted notice");
+            }
+
             var retryRoot = Path.Combine(root, "retry");
             Directory.CreateDirectory(retryRoot);
             var retryOutbox = new FileFoundryArtifactReadyNoticeOutbox(Path.Combine(retryRoot, "notices.jsonl"));
