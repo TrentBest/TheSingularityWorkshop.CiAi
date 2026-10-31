@@ -40,9 +40,11 @@ The existing GitHub Actions run and job collectors remain read-only and retain e
 - The workflow-attempt idempotency key also deduplicates an identical packet submitted under a different delivery ID; reusing that attempt key with different packet content returns `Conflict`.
 - Reusing a delivery ID for different packet content returns `Conflict`; the original evidence is not overwritten.
 - `ReadPending` rehydrates and revalidates packet schema, payload digest, and run-attempt identity after restart.
-- The caller supplies acknowledged delivery IDs when reading pending entries. This deliberately keeps remote acknowledgement authority outside the evidence store; until the caller has durable receipt evidence, the packet remains replayable.
+- The caller supplies acknowledged delivery IDs when reading pending entries. `FileCiWorkflowEvidenceReceiptLedger.ReadAcknowledgedDeliveryIds()` can supply this set after a remote receipt has been authenticated and reconciled by the host. Until a durable accepted/duplicate receipt exists, the packet remains replayable.
 - A malformed or torn final record fails closed rather than silently discarding potentially valuable evidence.
 
-The file lock serializes writers across processes. This is a local filesystem outbox, not a network transport, authenticated webhook receiver, distributed consensus store, or guarantee of remote delivery. Hosts must protect the outbox path and persist consumer acknowledgements independently.
+The file lock serializes outbox writers across processes. `FileCiWorkflowEvidenceReceiptLedger` separately journals remote receipt records and binds each receipt to the exact delivery ID, idempotency key, and payload digest. Accepted and duplicate receipts acknowledge a delivery; rejected receipts remain visible and retryable. Exact receipt retries deduplicate, conflicting reuse of a receipt ID is rejected, and torn receipt journals fail closed. Receipt reads and writes share a process-wide file lock so readers do not observe an in-progress append.
+
+This is still a local filesystem outbox and receipt journal, not a network transport, authenticated webhook receiver, distributed consensus store, or guarantee of remote delivery. **The host must authenticate and validate the remote response before calling `Record`; the ledger verifies correlation, not cryptographic authenticity.** Hosts must protect both journal paths and retain the remote transport's authentication and endpoint policy outside model-visible evidence.
 
 ![The Singularity Workshop](../../Avatar.jpg)
