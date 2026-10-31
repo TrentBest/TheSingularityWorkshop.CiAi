@@ -54,6 +54,10 @@ public sealed record CiWorkflowEvidencePacket
         if ((status == CiRunStatus.Completed) == (conclusion == CiRunConclusion.None))
             throw new ArgumentException("Completed runs require a conclusion; non-completed runs must not have one.", nameof(conclusion));
 
+        if (candidateCheckoutEvidence is not null &&
+            !string.Equals(workflowRef, CiWorkflowDispatchInputContract.TrustedWorkflowRef, StringComparison.Ordinal))
+            throw new ArgumentException("Separate candidate checkout evidence requires the trusted workflow-definition ref.", nameof(workflowRef));
+
         var expectedRunPath = $"/{repository}/actions/runs/{runId}";
         if (!IsSafeGitHubUrl(runEvidenceUrl) ||
             !string.Equals(runEvidenceUrl.AbsolutePath, expectedRunPath, StringComparison.OrdinalIgnoreCase))
