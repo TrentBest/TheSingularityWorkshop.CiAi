@@ -12,6 +12,12 @@ internal static class CiWorkflowEvidenceDeliveryV3Tests
         {
             var packet = CreatePacket();
             var delivery = new CiWorkflowEvidenceDeliveryV3("v3-delivery-1", packet);
+            Assert(delivery.IdempotencyKey.Length == 71 &&
+                delivery.IdempotencyKey.StartsWith("sha256:", StringComparison.Ordinal) &&
+                delivery.IdempotencyKey.All(Uri.IsHexDigit) == false,
+                "v3 idempotency identity was not encoded as a bounded SHA-256 key");
+            Assert(new CiWorkflowEvidenceDeliveryV3("v3-delivery-stable", packet).IdempotencyKey ==
+                delivery.IdempotencyKey, "identical v3 provenance produced an unstable idempotency key");
             var outbox = new FileCiWorkflowEvidenceOutboxV3(Path.Combine(root, "v3-outbox.jsonl"));
             Assert(outbox.Enqueue(delivery) == CiWorkflowEvidenceEnqueueV3Outcome.Enqueued,
                 "first v3 enqueue was not persisted");
