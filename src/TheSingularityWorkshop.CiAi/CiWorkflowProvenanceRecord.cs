@@ -15,6 +15,7 @@ public sealed record CiWorkflowProvenanceRecord
         string repository,
         long runId,
         int runAttempt,
+        string workflowPath,
         string workflowRef,
         string workflowSha,
         string eventName,
@@ -27,6 +28,7 @@ public sealed record CiWorkflowProvenanceRecord
         Repository = repository;
         RunId = runId;
         RunAttempt = runAttempt;
+        WorkflowPath = workflowPath;
         WorkflowRef = workflowRef;
         WorkflowSha = workflowSha.ToLowerInvariant();
         EventName = eventName;
@@ -40,6 +42,7 @@ public sealed record CiWorkflowProvenanceRecord
     public string Repository { get; }
     public long RunId { get; }
     public int RunAttempt { get; }
+    public string WorkflowPath { get; }
     public string WorkflowRef { get; }
     public string WorkflowSha { get; }
     public string EventName { get; }
@@ -91,7 +94,9 @@ public sealed record CiWorkflowProvenanceRecord
             throw new InvalidDataException("Workflow provenance belongs to a different repository, run, or attempt.");
 
         var workflow = RequiredObject(root, "workflow");
-        var workflowRef = RequiredWorkflowRef(workflow, "ref");
+        var workflowRef = RequiredWorkflowRef(workflow, "ref", expectedRepository);
+        var workflowSeparator = workflowRef.LastIndexOf('@');
+        var workflowPath = workflowRef[(expectedRepository.Length + 1)..workflowSeparator];
         var workflowSha = RequiredSha(workflow, "sha");
 
         var @event = RequiredObject(root, "event");
@@ -121,7 +126,7 @@ public sealed record CiWorkflowProvenanceRecord
             throw new InvalidDataException("Pull-request event identity and pull-request provenance are inconsistent.");
 
         return new CiWorkflowProvenanceRecord(
-            repository, runId, runAttempt, workflowRef, workflowSha,
+            repository, runId, runAttempt, workflowPath, workflowRef, workflowSha,
             eventName, eventRef, eventSha, pullRequest, checkoutRef, checkoutSha);
     }
 
@@ -148,13 +153,15 @@ public sealed record CiWorkflowProvenanceRecord
         return value;
     }
 
-    private static string RequiredWorkflowRef(JsonElement parent, string property)
+    private static string RequiredWorkflowRef(JsonElement parent, string property, string expectedRepository)
     {
         var value = RequiredString(parent, property);
         var separator = value.LastIndexOf('@');
         if (value.Length > 1024 || value.Any(char.IsControl) || value.Any(char.IsWhiteSpace) ||
             separator <= 0 || !value[(separator + 1)..].StartsWith("refs/", StringComparison.Ordinal) ||
-            !value[..separator].Contains(".github/workflows/", StringComparison.Ordinal))
+            !value[..separator].StartsWith(expectedRepository + "/.github/workflows/", StringComparison.Ordinal) ||
+            !(value[..separator].EndsWith(".yml", StringComparison.Ordinal) ||
+              value[..separator].EndsWith(".yaml", StringComparison.Ordinal)))
             throw new InvalidDataException("Workflow definition ref is invalid.");
         return value;
     }
