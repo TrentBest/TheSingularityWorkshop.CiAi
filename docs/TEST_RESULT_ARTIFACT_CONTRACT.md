@@ -7,7 +7,7 @@
 
 CiAi's test-result artifact contract turns a test-run artifact into a bounded, versioned diagnostic report for one exact GitHub Actions workflow attempt.
 
-The first supported input is Visual Studio Test Results (\`.trx\`). The normalized output uses schema \`ciai.test-results.v1\` and preserves:
+The first supported input is Visual Studio Test Results (`.trx`). The normalized output uses schema `ciai.test-results.v1` and preserves:
 
 - Repository, candidate checkout ref/SHA, workflow-definition ref/SHA, and event ref/SHA.
 - Workflow run ID and attempt, plus the exact producing job ID and name.
@@ -19,16 +19,16 @@ The verdict is one of:
 
 | Verdict | Meaning |
 |---|---|
-| \`CompletePass\` | The required check passed and the complete TRX contains no failed tests. |
-| \`ActionableFailure\` | The required check failed and every failed test has a bounded diagnostic. |
-| \`IncompleteOrUntrusted\` | Provenance, required-check status, artifact availability, or result consistency is incomplete or untrusted. |
-| \`NonActionableFailure\` | The required check failed, but test diagnostics do not identify a repairable test failure. |
+| `CompletePass` | The required check passed and the complete TRX contains no failed tests. |
+| `ActionableFailure` | The required check failed and every failed test has a bounded diagnostic. |
+| `IncompleteOrUntrusted` | Provenance, required-check status, artifact availability, or result consistency is incomplete or untrusted. |
+| `NonActionableFailure` | The required check failed, but test diagnostics do not identify a repairable test failure. |
 
 A report is evidence, not permission. It gives HeadlessAi structured context; it does not authorize repository writes, reruns, merges, releases, or publication.
 
 ## 02 — Why
 
-A normal CI job often stops at the first nonzero \`dotnet test\` exit code. That can prevent the workflow from uploading the very TRX file needed to explain the failure. The alternative—turning \`continue-on-error\` into a green job—destroys the meaning of the required check.
+A normal CI job often stops at the first nonzero `dotnet test` exit code. That can prevent the workflow from uploading the very TRX file needed to explain the failure. The alternative—turning `continue-on-error` into a green job—destroys the meaning of the required check.
 
 The contract therefore separates three facts:
 
@@ -46,7 +46,7 @@ All test messages and stack traces are untrusted diagnostic data. Known token-li
 
 The opt-in .NET workflow must preserve the test exit code, upload TRX even after test failure, and then restore the failing exit code. The following is an illustrative job-step pattern; adapt the solution path and shell to the consumer repository.
 
-\`\`\`yaml
+```yaml
 - name: Run tests and retain TRX
   id: tests
   shell: bash
@@ -63,7 +63,7 @@ The opt-in .NET workflow must preserve the test exit code, upload TRX even after
   if: always()
   uses: actions/upload-artifact@v4
   with:
-    name: ciai-test-results-\${{ github.run_id }}-\${{ github.run_attempt }}-\${{ github.job }}
+    name: ciai-test-results-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
     path: ./TestResults/**/*.trx
     if-no-files-found: error
     retention-days: 7
@@ -72,9 +72,9 @@ The opt-in .NET workflow must preserve the test exit code, upload TRX even after
   if: always()
   shell: bash
   env:
-    TEST_EXIT_CODE: \${{ steps.tests.outputs.exit_code }}
+    TEST_EXIT_CODE: ${{ steps.tests.outputs.exit_code }}
   run: exit "\${TEST_EXIT_CODE:-1}"
-\`\`\`
+```
 
 The artifact name binds the run, attempt, and workflow job key. The trusted host must map that job key to the numeric GitHub job ID and exact job name from the run's job inventory. If the TRX is absent or upload fails, the required job remains red and CiAi records incomplete evidence.
 
@@ -86,10 +86,10 @@ The artifact name binds the run, attempt, and workflow job key. The trusted host
 4. Safely extract only the expected TRX payload. Reject path traversal, unexpected entries, oversized archives, duplicate payloads, and malformed manifests.
 5. Compute the extracted TRX SHA-256 and byte length. Bind the artifact ID/name/digests to the exact repository, run, attempt, numeric job ID, job name, and job key.
 6. Parse the extracted bytes with DTD processing disabled and strict size/record limits.
-7. Supply \`CiRequiredCheckStatus\` only from CiAi's configured required-check policy for that exact job. Do not infer required status from a caller's raw boolean or from the TRX file alone.
+7. Supply `CiRequiredCheckStatus` only from CiAi's configured required-check policy for that exact job. Do not infer required status from a caller's raw boolean or from the TRX file alone.
 8. Preserve the normalized report and its source digests for the next bounded HeadlessAi turn.
 
-\`CiTestResultReport.ParseAndValidate\` verifies the extracted payload digest and size, the v3 workflow/event/checkout provenance, and the exact job binding. It does not download the ZIP, verify the provider ZIP digest, or perform ZIP extraction. Those are trusted-host responsibilities and must be completed before constructing \`CiTestResultArtifactSource\`.
+`CiTestResultReport.ParseAndValidate` verifies the extracted payload digest and size, the v3 workflow/event/checkout provenance, and the exact job binding. It does not download the ZIP, verify the provider ZIP digest, or perform ZIP extraction. Those are trusted-host responsibilities and must be completed before constructing `CiTestResultArtifactSource`.
 
 ### Trust and ownership
 
@@ -103,9 +103,9 @@ The artifact name binds the run, attempt, and workflow job key. The trusted host
 
 ### Contract usage
 
-The following is a source-checked API sketch. \`v3Packet\`, \`verifiedTrxBytes\`, and \`source\` must come from the trusted collection/retrieval path described above.
+The following is a source-checked API sketch. `v3Packet`, `verifiedTrxBytes`, and `source` must come from the trusted collection/retrieval path described above.
 
-\`\`\`csharp
+```csharp
 var report = CiTestResultReport.ParseAndValidate(
     verifiedTrxBytes,
     v3Packet,
@@ -118,20 +118,20 @@ if (report.Verdict == CiTestResultVerdict.ActionableFailure)
     // Deliver this immutable, provenance-bound report as untrusted LLM context.
     // A proposed repair still requires host-authorized repository capabilities.
 }
-\`\`\`
+```
 
 ### Concrete failure fixture
 
 The Experiences Minesweeper acceptance scenario records a historical red run with 9 passing tests and 2 failures:
 
-- \`RevealingMineLosesAndTerminalActionsAreRejected\`
-- \`ResetRestoresOriginalFixedMineLayoutAfterFirstRevealRelocation\`
+- `RevealingMineLosesAndTerminalActionsAreRejected`
+- `ResetRestoresOriginalFixedMineLayoutAfterFirstRevealRelocation`
 
-Both assertions reported expected \`Accepted\` and actual \`RejectedTerminal\`. The historical run did not upload a machine-readable TRX artifact. It is a fixture for the contract, not proof that CiAi already ingested or repaired that run.
+Both assertions reported expected `Accepted` and actual `RejectedTerminal`. The historical run did not upload a machine-readable TRX artifact. It is a fixture for the contract, not proof that CiAi already ingested or repaired that run.
 
 ### Verification status
 
-The new contract checks are registered in \`TheSingularityWorkshop.CiAi.ContractTests\`. They cover multi-failure normalization, exact provenance/job binding, digest and size mismatch, missing artifacts, pass/failure/non-actionable verdicts, redaction, bounded diagnostics, duplicate identities, inconsistent counters, and DTD rejection.
+The new contract checks are registered in `TheSingularityWorkshop.CiAi.ContractTests`. They cover multi-failure normalization, exact provenance/job binding, digest and size mismatch, missing artifacts, pass/failure/non-actionable verdicts, redaction, bounded diagnostics, duplicate identities, inconsistent counters, and DTD rejection.
 
 **Execution status:** source and test changes are committed on the feature branch. A .NET SDK was not available in this editing environment, so no local build/test result is claimed. Exact-head CI evidence is still required before this implementation can be considered validated.
 
