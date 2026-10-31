@@ -6,7 +6,6 @@ internal static class AwaitGateEventOutboxTests
     private const string Provider = "TrentBest/MyVR";
     private const string SourceSha = "abcdef0123456789abcdef0123456789abcdef01";
     private const string ManifestDigest = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    private const string ContractDigest = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
     private const string EvidenceDigest = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
 
     public static int Run()
@@ -16,10 +15,10 @@ internal static class AwaitGateEventOutboxTests
         try
         {
             var contract = new AwaitGateContract("B", 1, Consumer, Provider, SourceSha,
-                ManifestDigest, ContractDigest, "policy-v1",
+                ManifestDigest, "policy-v1",
                 new[] { new AwaitGateRequirement("dimensions", "Dimensions validated", "valid",
                     AwaitGateEvidenceKind.Machine) });
-            var evidence = new AwaitGateEvidence("dimensions", "B", 1, ContractDigest, Provider,
+            var evidence = new AwaitGateEvidence("dimensions", "B", 1, contract.ContractDigest, Provider,
                 SourceSha, ManifestDigest, EvidenceDigest, AwaitGateEvidenceKind.Machine, "valid",
                 "workflow-artifact:42:1", "42", 1);
             var evaluation = AwaitGateEvaluator.Evaluate(contract, new[] { evidence });
@@ -47,7 +46,7 @@ internal static class AwaitGateEventOutboxTests
             Check("event outbox rejects conflicting reuse of an event ID", () =>
             {
                 var changedContract = new AwaitGateContract("B", 1, Consumer, Provider, SourceSha,
-                    ManifestDigest, ContractDigest, "policy-v2",
+                    ManifestDigest, "policy-v2",
                     new[] { new AwaitGateRequirement("dimensions", "Dimensions validated", "valid",
                         AwaitGateEvidenceKind.Machine) });
                 var changedEvaluation = AwaitGateEvaluator.Evaluate(changedContract, new[] { evidence });
@@ -60,7 +59,7 @@ internal static class AwaitGateEventOutboxTests
 
             Check("outbox enumerates events deterministically for host delivery", () =>
             {
-                var invalidEvidence = new AwaitGateEvidence("dimensions", "B", 1, ContractDigest, Provider,
+                var invalidEvidence = new AwaitGateEvidence("dimensions", "B", 1, contract.ContractDigest, Provider,
                     SourceSha, ManifestDigest, EvidenceDigest, AwaitGateEvidenceKind.Machine, "invalid",
                     "workflow-artifact:42:1", "42", 1);
                 var invalidEvaluation = AwaitGateEvaluator.Evaluate(contract, new[] { invalidEvidence });
@@ -82,7 +81,7 @@ internal static class AwaitGateEventOutboxTests
 
             Check("invalidation event records revocation without rewriting satisfaction", () =>
             {
-                var rejectedEvidence = new AwaitGateEvidence("dimensions", "B", 1, ContractDigest, Provider,
+                var rejectedEvidence = new AwaitGateEvidence("dimensions", "B", 1, contract.ContractDigest, Provider,
                     SourceSha, ManifestDigest, EvidenceDigest, AwaitGateEvidenceKind.Machine, "invalid",
                     "workflow-artifact:42:1", "42", 1);
                 var rejected = AwaitGateEvaluator.Evaluate(contract, new[] { rejectedEvidence });
