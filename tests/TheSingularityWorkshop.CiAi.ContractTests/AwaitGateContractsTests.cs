@@ -81,6 +81,17 @@ internal static class AwaitGateContractsTests
                 "evidence for another artifact manifest was accepted");
         });
 
+        Check("evidence for an undeclared requirement makes the evaluation indeterminate", () =>
+        {
+            var unknown = new AwaitGateEvidence("unknown-requirement", "B", 1, contract.ContractDigest,
+                Provider, SourceSha, ManifestDigest, EvidenceDigest, AwaitGateEvidenceKind.Machine,
+                "valid", "workflow-artifact:run-42:attempt-1", "42", 1);
+            var result = AwaitGateEvaluator.Evaluate(contract, new[] { machine, unknown });
+            Assert(result.State == AwaitGateState.Indeterminate &&
+                result.Requirements.Any(item => item.ReasonCode == "evidence.requirement-unknown"),
+                "undeclared evidence was silently ignored");
+        });
+
         Check("negative evidence rejects rather than silently waiting", () =>
         {
             var rejected = NewEvidence(value: "invalid");
