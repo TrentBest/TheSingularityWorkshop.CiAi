@@ -24,6 +24,7 @@ public sealed record CiWorkflowEvidenceDeliveryV3
         // contains punctuation that would otherwise collide with the separator.
         var identity = JsonSerializer.SerializeToUtf8Bytes(new
         {
+            schema = CiWorkflowEvidencePacketV3.CurrentSchema,
             repository = packet.ObservedRun.Repository,
             runId = packet.ObservedRun.RunId,
             runAttempt = packet.ObservedRun.RunAttempt,
@@ -148,7 +149,7 @@ public sealed class FileCiWorkflowEvidenceOutboxV3
             var record = JsonSerializer.Deserialize<OutboxRecord>(line)
                 ?? throw new InvalidDataException("V3 evidence outbox contains an empty record.");
             if (string.IsNullOrWhiteSpace(record.DeliveryId) ||
-                string.IsNullOrWhiteSpace(record.IdempotencyKey) ||
+                !IsValidIdempotencyKey(record.IdempotencyKey) ||
                 !RepositoryIdentity.IsValid(record.Repository) ||
                 record.RunId <= 0 || record.RunAttempt <= 0 ||
                 string.IsNullOrWhiteSpace(record.Payload) ||
@@ -167,6 +168,11 @@ public sealed class FileCiWorkflowEvidenceOutboxV3
             throw new InvalidDataException("V3 evidence outbox contains duplicate delivery or attempt identities.");
         return records.ToArray();
     }
+
+    private static bool IsValidIdempotencyKey(string value) =>
+        value.Length == 71 &&
+        value.StartsWith("sha256:", StringComparison.Ordinal) &&
+        value.AsSpan(7).ToString().All(Uri.IsHexDigit);
 
     private sealed record OutboxRecord(
         string DeliveryId,
