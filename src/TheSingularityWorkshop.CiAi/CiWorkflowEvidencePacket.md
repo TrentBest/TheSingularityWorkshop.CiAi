@@ -30,6 +30,10 @@ A missing, skipped, failed, duplicate, or ambiguous step makes candidate checkou
 
 The workflow-definition ref for separate candidate evidence must be the trusted `refs/heads/development` ref. The host must additionally validate the workflow SHA against its trusted workflow revision policy. `IsSuccessful` is a CI outcome, not a workflow-trust verdict: even a successful packet must be rejected as authoritative CODE RED evidence when its workflow-definition ref/SHA is not approved by the host. A candidate-controlled workflow must never be allowed to evaluate itself.
 
+## Building from observed GitHub collections
+
+`CiWorkflowEvidencePacket.FromCollections` is the preferred adapter from `CiWorkflowRunCollection` and `CiWorkflowJobCollection`. It requires one exact run identity and matching repository/workflow/run/attempt values, then carries collection truncation/completeness into the packet. Pass `CiWorkflowCandidateCheckoutEvidence` only when the trusted workflow checked out a separate candidate ref/SHA. The packet constructor and JSON reader both recompute checkout verification from the raw job/step observations.
+
 ## Remaining evidence facts
 
 The packet also carries repository, workflow path, run ID/attempt, event, workflow name, run URL, observation timestamp, job/step facts, discovery completeness, job completeness, and artifact references.
