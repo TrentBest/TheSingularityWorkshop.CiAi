@@ -19,7 +19,7 @@ It does not create notices, transfer artifact bytes, schedule retries, or author
 4. Persist only authenticated `Accepted` or `Duplicate` receipts returned by `FoundryArtifactReadyNoticeClient`.
 5. Re-read pending notices and return attempted, acknowledged, and remaining counts with per-notice outcomes.
 
-The coordinator stops the batch on authentication failure, authorization denial, rate limiting, retryable transport failure, or rejected response. It preserves `RetryAfter` for the caller and leaves unacknowledged notices pending. Notice-specific conflicts and invalid requests remain visible in the result; later notices may still be attempted.
+The coordinator stops the batch on authentication failure, authorization denial, rate limiting, or retryable transport failure. It preserves `RetryAfter` for the caller and leaves unacknowledged notices pending. A notice-specific policy rejection, conflict, or invalid request remains visible in the result but does not prevent later independent notices from being attempted.
 
 ## Recovery and concurrency
 
