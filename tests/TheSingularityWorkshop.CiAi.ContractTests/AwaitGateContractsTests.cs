@@ -20,7 +20,7 @@ internal static class AwaitGateContractsTests
                 ManifestDigest, "policy-v1",
                 new[] { new AwaitGateRequirement("dimensions", "Dimensions are validated", "valid", AwaitGateEvidenceKind.Machine) }));
             Throws<ArgumentException>(() => new AwaitGateContract("B", 1, Consumer, Provider, SourceSha,
-                "not-a-digest", ContractDigest, "policy-v1",
+                "not-a-digest", "policy-v1",
                 new[] { new AwaitGateRequirement("dimensions", "Dimensions are validated", "valid", AwaitGateEvidenceKind.Machine) }));
         });
 
