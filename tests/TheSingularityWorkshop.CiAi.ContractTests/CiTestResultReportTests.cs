@@ -64,6 +64,15 @@ internal static class CiTestResultReportTests
             actionable.JobId == JobId && actionable.JobName == JobName &&
             actionable.WorkflowPath == WorkflowPath && actionable.WorkflowDefinitionSha == WorkflowSha,
             "normalized report lost exact workflow, checkout, run, attempt, or job provenance");
+
+        Assert(actionable.RequiredCheckStatus == CiRequiredCheckStatus.Failed &&
+            actionable.SourceArtifactId == 7001 && actionable.SourceArtifactName ==
+                $"ciai-test-results-{RunId}-{RunAttempt}-{JobKey}" &&
+            actionable.SourceJobKey == JobKey && actionable.ProviderArchiveDigest ==
+                "sha256:" + new string('a', 64) && actionable.ArchiveSizeBytes == 512 &&
+            actionable.ArtifactCreatedAt == CreatedAt && actionable.ArtifactExpiresAt == ExpiresAt &&
+            actionable.PayloadSha256?.Length == 64 && actionable.PayloadSizeBytes == failedTrx.Length,
+            "report omitted exact artifact identity, provider/payload digests, size, or retention metadata");
         Assert(actionable.Results.Where(item => item.Outcome == CiTestOutcome.Failed)
             .All(item => !string.IsNullOrWhiteSpace(item.Message) &&
                 !string.IsNullOrWhiteSpace(item.StackTrace) && item.RecordSha256.Length == 64),
@@ -207,8 +216,8 @@ internal static class CiTestResultReportTests
             truncated.Results[0].StackTrace!.Length <= 8_020,
             "diagnostic message or stack trace was not bounded");
 
-        Console.WriteLine("PASS: 33 provenance-bound TRX diagnostic report contract checks.");
-        return 33;
+        Console.WriteLine("PASS: 34 provenance-bound TRX diagnostic report contract checks.");
+        return 34;
     }
 
     private static CiWorkflowEvidencePacketV3 CreatePacket(
