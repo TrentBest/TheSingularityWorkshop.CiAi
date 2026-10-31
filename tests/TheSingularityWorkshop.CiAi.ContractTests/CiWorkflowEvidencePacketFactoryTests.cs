@@ -51,8 +51,8 @@ internal static class CiWorkflowEvidencePacketFactoryTests
         Assert(!incompleteJobs.JobsComplete && !incompleteJobs.EvidenceComplete,
             "truncated job collection was treated as complete evidence");
 
-        Console.WriteLine("PASS: 6 CI workflow evidence packet factory checks.");
-        return 6;
+        Console.WriteLine("PASS: 8 CI workflow evidence packet factory checks.");
+        return 8;
     }
 
     private static (CiWorkflowRunCollection Runs, CiWorkflowJobCollection Jobs) CreateCollections(
