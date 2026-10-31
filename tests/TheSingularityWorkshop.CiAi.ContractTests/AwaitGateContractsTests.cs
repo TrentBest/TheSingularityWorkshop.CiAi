@@ -24,6 +24,17 @@ internal static class AwaitGateContractsTests
                 new[] { new AwaitGateRequirement("dimensions", "Dimensions are validated", "valid", AwaitGateEvidenceKind.Machine) }));
         });
 
+        Check("gate binding requires explicit recognized approval metadata", () =>
+        {
+            Throws<ArgumentNullException>(() => new AwaitGateContract("B", 1, Consumer, Provider,
+                SourceSha, ManifestDigest, "policy-v1", null!, new[] { MachineRequirement() }));
+            Throws<ArgumentOutOfRangeException>(() => new AwaitGateApproval("approval", "policy",
+                "approver", (AwaitGateApprovalKind)99, DateTimeOffset.UtcNow));
+            Throws<ArgumentOutOfRangeException>(() => new AwaitGateEvidence("dimensions", "B", 1,
+                contract.ContractDigest, Provider, SourceSha, ManifestDigest, EvidenceDigest,
+                (AwaitGateEvidenceKind)99, "valid", "evidence-reference", "42", 1));
+        });
+
         Check("gate contract rejects duplicate requirement identities", () =>
             Throws<ArgumentException>(() => NewContract(new[]
             {
