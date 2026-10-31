@@ -20,7 +20,7 @@ internal static class FoundryArtifactReadyNoticeClientTests
             capturedAuthorizationScheme = request.Headers.Authorization?.Scheme;
             capturedAuthorizationParameter = request.Headers.Authorization?.Parameter;
             capturedBody = await request.Content!.ReadAsStringAsync(cancellationToken);
-            return new HttpResponseMessage(HttpStatusCode.Accepted
+            return new HttpResponseMessage(HttpStatusCode.Accepted)
             {
                 Content = new StringContent(Receipt(notice, "accepted"), Encoding.UTF8, "application/json")
             });
@@ -41,7 +41,7 @@ internal static class FoundryArtifactReadyNoticeClientTests
             Assert(body.Contains("\"contractVersion\":1", StringComparison.Ordinal) &&
                 body.Contains("\"retrievalUri\":", StringComparison.Ordinal),
                 "metadata-only notice was not serialized using the v1 camelCase wire shape");
-            Assert(!body.Contains("host-issued-short-lived-token", StringComparison.Ordinal),
+            Assert(!body.Contains("fixture-token-value", StringComparison.Ordinal),
                 "credential leaked into the request body");
         }
 
