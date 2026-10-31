@@ -1,3 +1,6 @@
+<!-- The Singularity Workshop moniker -->
+<p align="center"><a href="https://github.com/TrentBest"><img src="https://raw.githubusercontent.com/TrentBest/TheSingularityWorkshop.Visualize/development/docs/assets/moniker.svg" alt="The Singularity Workshop animated moniker" width="720" /></a></p>
+
 # CI workflow rerun request contract
 
 The rerun request contract defines the bounded instruction a trusted coordinator may submit when it needs CiAi to revalidate one exact candidate commit. It is a policy boundary, not a network endpoint and not a GitHub Actions dispatcher.
@@ -57,3 +60,8 @@ The ledger records acceptance, not execution. A caller still owns dispatch state
 ## Not implemented by this contract
 
 This slice does not expose an HTTP callback, validate cryptographic credentials, retrieve GitHub branch state, dispatch `workflow_dispatch`, wait for a run, or deliver the resulting evidence packet. Those operations belong in a trusted host adapter and must retain GitHub provenance. No rerun request authorizes code changes, merge, publication, deployment, or release.
+
+---
+
+<!-- THE SINGULARITY WORKSHOP FOOTER -->
+<p align="center"><img src="https://raw.githubusercontent.com/TrentBest/FSM_API/master/Documentation/Branding/TheSingularityWorkshop.png" alt="The Singularity Workshop" width="200" /></p>
