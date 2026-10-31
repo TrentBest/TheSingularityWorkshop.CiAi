@@ -9,6 +9,7 @@ namespace TheSingularityWorkshop.CiAi;
 /// </summary>
 public static class CiWorkflowDispatchInputContract
 {
+    public const string TrustedWorkflowRef = "refs/heads/development";
     public const string TargetBranchInput = "target_branch";
     public const string RequestIdInput = "ciai_request_id";
     public const string CorrelationIdInput = "ciai_correlation_id";
