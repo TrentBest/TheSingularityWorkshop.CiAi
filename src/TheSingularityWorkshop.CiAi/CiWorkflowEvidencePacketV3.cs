@@ -1,0 +1,118 @@
+using System.Collections.ObjectModel;
+
+namespace TheSingularityWorkshop.CiAi;
+
+/// <summary>
+/// Version 3 evidence envelope. Unlike v2, this contract requires a separately parsed,
+/// repository/run/attempt-bound workflow provenance artifact. The legacy packet is retained
+/// only as the job/run outcome observation; its v2 workflow/candidate SHA aliases are not
+/// authoritative in this envelope.
+/// </summary>
+public sealed record CiWorkflowEvidencePacketV3
+{
+    public const int CurrentContractVersion = 3;
+    public const string CurrentSchema = "ciai.workflow-evidence.v3";
+
+    private CiWorkflowEvidencePacketV3(
+        CiWorkflowEvidencePacket observedRun,
+        CiWorkflowProvenanceRecord provenance,
+        bool workflowDefinitionTrusted,
+        bool checkoutVerified)
+    {
+        ObservedRun = observedRun;
+        Provenance = provenance;
+        WorkflowDefinitionTrusted = workflowDefinitionTrusted;
+        CheckoutVerified = checkoutVerified;
+        CandidateRef = provenance.CheckoutRef;
+        CandidateSha = provenance.CheckoutSha;
+        BlockingReasons = Array.AsReadOnly(BuildBlockingReasons().ToArray());
+    }
+
+    /// <summary>
+    /// Creates v3 only from exact-run provenance already parsed by the trusted artifact retriever.
+    /// The host must set workflowDefinitionTrusted only after independently matching WorkflowRef
+    /// and WorkflowSha against its protected control-plane policy. This flag is not a substitute
+    /// for that host-side verification.
+    /// </summary>
+    public static CiWorkflowEvidencePacketV3 FromValidatedProvenance(
+        CiWorkflowEvidencePacket observedRun,
+        CiWorkflowProvenanceRecord provenance,
+        bool workflowDefinitionTrusted,
+        CiWorkflowCandidateCheckoutEvidence? candidateCheckoutEvidence = null)
+    {
+        ArgumentNullException.ThrowIfNull(observedRun);
+        ArgumentNullException.ThrowIfNull(provenance);
+
+        if (!string.Equals(observedRun.Repository, provenance.Repository, StringComparison.OrdinalIgnoreCase) ||
+            observedRun.RunId != provenance.RunId ||
+            observedRun.RunAttempt != provenance.RunAttempt)
+            throw new InvalidDataException("Workflow provenance does not identify the exact observed repository, run, and attempt.");
+
+        if (!string.Equals(observedRun.WorkflowPath, provenance.WorkflowPath, StringComparison.Ordinal))
+            throw new InvalidDataException("Workflow provenance path does not match the observed workflow path.");
+
+        if (!string.Equals(observedRun.Event, provenance.EventName, StringComparison.Ordinal))
+            throw new InvalidDataException("Workflow provenance event name does not match the observed run event.");
+
+        bool checkoutVerified;
+        if (string.Equals(provenance.EventName, "workflow_dispatch", StringComparison.Ordinal) &&
+            candidateCheckoutEvidence is not null)
+        {
+            if (!string.Equals(candidateCheckoutEvidence.CandidateRef, provenance.CheckoutRef, StringComparison.Ordinal) ||
+                !string.Equals(candidateCheckoutEvidence.CandidateSha, provenance.CheckoutSha, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("Candidate checkout evidence does not match the independently recorded checkout ref and SHA.");
+
+            // The v2 job observation is used only to corroborate the named resolution and
+            // verification steps. The actual ref/SHA comes exclusively from the v1 provenance artifact.
+            checkoutVerified = observedRun.CandidateCheckoutVerified;
+        }
+        else
+        {
+            if (candidateCheckoutEvidence is not null)
+                throw new InvalidDataException("Separate candidate checkout evidence is valid only for workflow_dispatch.");
+
+            // For ordinary push/PR runs the actual checkout must equal the event commit.
+            // PR event SHA is normally the merge commit, not the PR source head SHA.
+            checkoutVerified =
+                string.Equals(provenance.CheckoutRef, provenance.EventRef, StringComparison.Ordinal) &&
+                string.Equals(provenance.CheckoutSha, provenance.EventSha, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return new CiWorkflowEvidencePacketV3(
+            observedRun, provenance, workflowDefinitionTrusted, checkoutVerified);
+    }
+
+    public int ContractVersion => CurrentContractVersion;
+    public string Schema => CurrentSchema;
+    public CiWorkflowEvidencePacket ObservedRun { get; }
+    public CiWorkflowProvenanceRecord Provenance { get; }
+    public bool WorkflowDefinitionTrusted { get; }
+    public string CandidateRef { get; }
+    public string CandidateSha { get; }
+    public bool CheckoutVerified { get; }
+    public bool EvidenceComplete => ObservedRun.EvidenceComplete;
+    public bool IsSuccessful =>
+        WorkflowDefinitionTrusted &&
+        CheckoutVerified &&
+        EvidenceComplete &&
+        ObservedRun.Conclusion == CiRunConclusion.Success &&
+        ObservedRun.Jobs.All(job => job.Status == "completed" && job.Conclusion == "success");
+
+    public IReadOnlyList<string> BlockingReasons { get; }
+
+    private IEnumerable<string> BuildBlockingReasons()
+    {
+        foreach (var reason in ObservedRun.BlockingReasons)
+        {
+            // v2's candidate checkout bit is not authoritative for v3; replace it with
+            // the independently checked provenance result below.
+            if (!string.Equals(reason, "candidate.checkout-unverified", StringComparison.Ordinal))
+                yield return reason;
+        }
+
+        if (!WorkflowDefinitionTrusted)
+            yield return "workflow.definition-untrusted";
+        if (!CheckoutVerified)
+            yield return "candidate.checkout-unverified";
+    }
+}
