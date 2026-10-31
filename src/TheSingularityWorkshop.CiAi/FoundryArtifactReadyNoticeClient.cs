@@ -148,7 +148,7 @@ public sealed class FoundryArtifactReadyNoticeClient
         {
             var status = response.StatusCode;
             if (status is HttpStatusCode.Accepted or HttpStatusCode.OK)
-                return await ReadReceiptAsync(response, notice, payload, cancellationToken).ConfigureAwait(false);
+                return await ReadReceiptAsync(response, notice, cancellationToken).ConfigureAwait(false);
 
             if ((int)status is >= 300 and < 400)
                 return new FoundryArtifactIngressResult(FoundryArtifactIngressOutcome.Rejected, status,
@@ -165,8 +165,8 @@ public sealed class FoundryArtifactReadyNoticeClient
             if (status == HttpStatusCode.TooManyRequests)
                 return new FoundryArtifactIngressResult(FoundryArtifactIngressOutcome.RateLimited, status,
                     ErrorCode: "receiver.rate-limited", RetryAfter: GetRetryAfter(response));
-            if (status is HttpStatusCode.BadRequest or HttpStatusCode.RequestEntityTooLarge or
-                HttpStatusCode.UnsupportedMediaType or HttpStatusCode.UnprocessableEntity)
+            if (status == HttpStatusCode.BadRequest || (int)status == 413 ||
+                status == HttpStatusCode.UnsupportedMediaType || (int)status == 422)
                 return new FoundryArtifactIngressResult(FoundryArtifactIngressOutcome.InvalidRequest, status,
                     ErrorCode: await ReadSafeErrorCodeAsync(response, cancellationToken).ConfigureAwait(false));
             if ((int)status >= 500)
@@ -181,14 +181,10 @@ public sealed class FoundryArtifactReadyNoticeClient
     private static async Task<FoundryArtifactIngressResult> ReadReceiptAsync(
         HttpResponseMessage response,
         ArtifactReadyNotice notice,
-        byte[] payload,
         CancellationToken cancellationToken)
     {
-        if (response.Content.Headers.ContentLength is > MaximumNoticeBytes)
-            return InvalidReceipt(response.StatusCode, "receipt.exceeds-response-limit");
-
-        var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
-        if (bytes.Length > MaximumNoticeBytes)
+        var bytes = await ReadBoundedContentAsync(response.Content, MaximumNoticeBytes, cancellationToken).ConfigureAwait(false);
+        if (bytes is null)
             return InvalidReceipt(response.StatusCode, "receipt.exceeds-response-limit");
 
         try
@@ -240,9 +236,8 @@ public sealed class FoundryArtifactReadyNoticeClient
     {
         try
         {
-            if (response.Content.Headers.ContentLength is > 8192) return "receiver.invalid-request";
-            var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
-            if (bytes.Length > 8192) return "receiver.invalid-request";
+            var bytes = await ReadBoundedContentAsync(response.Content, 8192, cancellationToken).ConfigureAwait(false);
+            if (bytes is null) return "receiver.invalid-request";
             using var document = JsonDocument.Parse(bytes);
             return document.RootElement.TryGetProperty("code", out var code) &&
                 code.ValueKind == JsonValueKind.String &&
@@ -255,6 +250,27 @@ public sealed class FoundryArtifactReadyNoticeClient
         catch (Exception exception) when (exception is JsonException or InvalidOperationException)
         {
             return "receiver.invalid-request";
+        }
+    }
+
+
+    private static async Task<byte[]?> ReadBoundedContentAsync(
+        HttpContent content,
+        int maximumBytes,
+        CancellationToken cancellationToken)
+    {
+        if (content.Headers.ContentLength is { } length && length > maximumBytes)
+            return null;
+
+        await using var source = await content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        using var buffer = new MemoryStream(Math.Min(maximumBytes, 4096));
+        var chunk = new byte[4096];
+        while (true)
+        {
+            var read = await source.ReadAsync(chunk.AsMemory(0, chunk.Length), cancellationToken).ConfigureAwait(false);
+            if (read == 0) return buffer.ToArray();
+            if (buffer.Length + read > maximumBytes) return null;
+            await buffer.WriteAsync(chunk.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
         }
     }
 
