@@ -15,7 +15,7 @@ internal static class AwaitGateEventOutboxTests
         try
         {
             var contract = new AwaitGateContract("B", 1, Consumer, Provider, SourceSha,
-                ManifestDigest, "policy-v1",
+                ManifestDigest, "policy-v1", Approval(),
                 new[] { new AwaitGateRequirement("dimensions", "Dimensions validated", "valid",
                     AwaitGateEvidenceKind.Machine) });
             var evidence = new AwaitGateEvidence("dimensions", "B", 1, contract.ContractDigest, Provider,
@@ -46,7 +46,7 @@ internal static class AwaitGateEventOutboxTests
             Check("event outbox rejects conflicting reuse of an event ID", () =>
             {
                 var changedContract = new AwaitGateContract("B", 1, Consumer, Provider, SourceSha,
-                    ManifestDigest, "policy-v2",
+                    ManifestDigest, "policy-v2", Approval(),
                     new[] { new AwaitGateRequirement("dimensions", "Dimensions validated", "valid",
                         AwaitGateEvidenceKind.Machine) });
                 var changedEvidence = new AwaitGateEvidence("dimensions", "B", 1, changedContract.ContractDigest,
@@ -149,6 +149,10 @@ internal static class AwaitGateEventOutboxTests
             Console.WriteLine($"PASS Await/Gate outbox {passed}: {name}");
         }
     }
+
+    private static AwaitGateApproval Approval() =>
+        new("gate-approval-1", "gate-contract-approval-v1", "authorized-owner",
+            AwaitGateApprovalKind.Human, DateTimeOffset.Parse("2026-10-31T16:00:00Z"));
 
     private static void Assert(bool condition, string message)
     {
