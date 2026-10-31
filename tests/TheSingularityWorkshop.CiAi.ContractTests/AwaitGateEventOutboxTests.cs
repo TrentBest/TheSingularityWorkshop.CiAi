@@ -49,7 +49,10 @@ internal static class AwaitGateEventOutboxTests
                     ManifestDigest, "policy-v2",
                     new[] { new AwaitGateRequirement("dimensions", "Dimensions validated", "valid",
                         AwaitGateEvidenceKind.Machine) });
-                var changedEvaluation = AwaitGateEvaluator.Evaluate(changedContract, new[] { evidence });
+                var changedEvidence = new AwaitGateEvidence("dimensions", "B", 1, changedContract.ContractDigest,
+                    Provider, SourceSha, ManifestDigest, EvidenceDigest, AwaitGateEvidenceKind.Machine, "valid",
+                    "workflow-artifact:42:1", "42", 1);
+                var changedEvaluation = AwaitGateEvaluator.Evaluate(changedContract, new[] { changedEvidence });
                 var conflict = new AwaitGateEvent("event-1", "await-1", Consumer,
                     AwaitGateEventKind.Satisfied, changedEvaluation,
                     DateTimeOffset.Parse("2026-10-31T17:00:00Z"));
@@ -76,7 +79,8 @@ internal static class AwaitGateEventOutboxTests
 
             Check("satisfied event requires satisfied evaluation", () =>
                 Throws<ArgumentException>(() => new AwaitGateEvent("bad", "await-1", Consumer,
-                    AwaitGateEventKind.Satisfied, evaluation with { State = AwaitGateState.Pending },
+                    AwaitGateEventKind.Satisfied,
+                    AwaitGateEvaluator.Evaluate(contract, Array.Empty<AwaitGateEvidence>()),
                     DateTimeOffset.UtcNow)));
 
             Check("invalidation event records revocation without rewriting satisfaction", () =>
