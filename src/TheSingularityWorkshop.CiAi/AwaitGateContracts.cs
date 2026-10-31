@@ -185,11 +185,37 @@ public sealed record AwaitGateEvidence
 public sealed record AwaitGateRequirementResult(string RequirementId, AwaitGateState State, string ReasonCode);
 
 /// <summary>Deterministic evaluation bound to one gate version, source, manifest, and policy.</summary>
-public sealed record AwaitGateEvaluation(string GateId, int GateVersion, string ContractDigest,
-    string ProviderRepository, string ProviderSourceSha, string ManifestDigest,
-    string EvaluationPolicyVersion, AwaitGateState State,
-    IReadOnlyList<AwaitGateRequirementResult> Requirements)
+public sealed record AwaitGateEvaluation
 {
+    internal AwaitGateEvaluation(string gateId, int gateVersion, string contractDigest,
+        string providerRepository, string providerSourceSha, string manifestDigest,
+        string evaluationPolicyVersion, AwaitGateState state,
+        IReadOnlyList<AwaitGateRequirementResult> requirements)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(gateId);
+        if (gateVersion < 1) throw new ArgumentOutOfRangeException(nameof(gateVersion));
+        ArgumentNullException.ThrowIfNull(requirements);
+        if (!Enum.IsDefined(state)) throw new ArgumentOutOfRangeException(nameof(state));
+        GateId = gateId;
+        GateVersion = gateVersion;
+        ContractDigest = contractDigest;
+        ProviderRepository = providerRepository;
+        ProviderSourceSha = providerSourceSha;
+        ManifestDigest = manifestDigest;
+        EvaluationPolicyVersion = evaluationPolicyVersion;
+        State = state;
+        Requirements = Array.AsReadOnly(requirements.ToArray());
+    }
+
+    public string GateId { get; }
+    public int GateVersion { get; }
+    public string ContractDigest { get; }
+    public string ProviderRepository { get; }
+    public string ProviderSourceSha { get; }
+    public string ManifestDigest { get; }
+    public string EvaluationPolicyVersion { get; }
+    public AwaitGateState State { get; }
+    public IReadOnlyList<AwaitGateRequirementResult> Requirements { get; }
     public bool IsSatisfied => State == AwaitGateState.Satisfied;
 }
 
