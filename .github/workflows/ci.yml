@@ -17,7 +17,7 @@ on:
       - ".github/workflows/observe-release-candidate.yml"
       - ".github/workflows/serialization-benchmark-dispatch.yml"
   pull_request:
-    branches: [development, master, feature/ciai-trx-diagnostic-verdict]
+    branches: [development, master, feature/ciai-workflow-checkout-provenance]
     paths:
       - "src/**"
       - "tests/**"
