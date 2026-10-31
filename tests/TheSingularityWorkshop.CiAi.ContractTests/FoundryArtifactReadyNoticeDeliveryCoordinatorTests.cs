@@ -69,7 +69,7 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
             {
                 mixedCount++;
                 if (mixedCount == 1)
-                    return Response(HttpStatusCode.BadRequest, "{\\"code\\":\\"notice.policy-rejected\\"}");
+                    return Response(HttpStatusCode.BadRequest, "{\"code\":\"notice.policy-rejected\"}");
                 var payload = await request.Content!.ReadAsStringAsync(cancellationToken);
                 using var document = JsonDocument.Parse(payload);
                 var noticeId = document.RootElement.GetProperty("noticeId").GetString()!;
