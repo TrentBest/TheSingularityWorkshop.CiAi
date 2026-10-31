@@ -89,7 +89,7 @@ public sealed class FileAwaitRegistrationStore
         {
             return new AwaitRegistration(stored.AwaitId, stored.ConsumerRepository, stored.WorkstreamId,
                 stored.RequiredGates.Select(gate => new AwaitGateReference(
-                    gate.GateId, gate.Version, gate.ProviderRepository)).ToArray());
+                    gate.GateId, gate.Version, gate.ContractDigest, gate.ProviderRepository)).ToArray());
         }
         catch (ArgumentException exception)
         {
@@ -109,10 +109,10 @@ public sealed class FileAwaitRegistrationStore
         public static StoredRegistration From(AwaitRegistration item) => new(1, item.AwaitId,
             item.ConsumerRepository, item.WorkstreamId,
             item.RequiredGates.Select(gate => new StoredGateReference(
-                gate.GateId, gate.Version, gate.ProviderRepository)).ToArray());
+                gate.GateId, gate.Version, gate.ContractDigest, gate.ProviderRepository)).ToArray());
     }
 
-    private sealed record StoredGateReference(string GateId, int Version, string ProviderRepository);
+    private sealed record StoredGateReference(string GateId, int Version, string ContractDigest, string ProviderRepository);
 }
 
 /// <summary>Result of persisting an immutable Await registration.</summary>
