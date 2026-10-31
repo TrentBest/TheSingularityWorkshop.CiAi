@@ -81,7 +81,11 @@ The packet also carries repository, workflow path, run ID/attempt, event, workfl
 
 ## Durable evidence outbox
 
-`CiWorkflowEvidenceDelivery` and the current file outbox remain v2 compatibility paths. They have not yet been migrated to accept and persist V3 envelopes. Do not use a v2 outbox delivery's success bit as authoritative workflow-definition or checkout provenance. A future v3 outbox integration must bind the exact provenance and packet digest.
+V2 and V3 use separate durable contracts. Do not mix their serialized records or infer v3 provenance from a v2 delivery.
+
+### V2 compatibility outbox
+
+`CiWorkflowEvidenceDelivery` and `FileCiWorkflowEvidenceOutbox` remain the v2 compatibility path. Do not use a v2 outbox delivery's success bit as authoritative workflow-definition or checkout provenance.
 
 `FileCiWorkflowEvidenceOutbox` provides an append-only local journal:
 
@@ -94,6 +98,18 @@ The packet also carries repository, workflow path, run ID/attempt, event, workfl
 - A malformed or torn final record fails closed rather than silently discarding potentially valuable evidence.
 
 The file lock serializes outbox writers across processes. `FileCiWorkflowEvidenceReceiptLedger` separately journals remote receipt records and binds each receipt to the exact delivery ID, idempotency key, and payload digest. Accepted and duplicate receipts acknowledge a delivery; rejected receipts remain visible and retryable. Exact receipt retries deduplicate, conflicting reuse of a receipt ID is rejected, and torn receipt journals fail closed. Receipt reads and writes share a process-wide file lock so readers do not observe an in-progress append.
+
+### V3 provenance outbox and receipt ledger
+
+`CiWorkflowEvidenceDeliveryV3`, `FileCiWorkflowEvidenceOutboxV3`, and `FileCiWorkflowEvidenceReceiptLedgerV3` are separate v3 contracts:
+
+- The idempotency identity is a structured, schema-scoped tuple of repository, run ID, attempt, workflow-definition ref/SHA, and tested-checkout ref/SHA. Its SHA-256 representation is the canonical lowercase `sha256:<64 hex>` form.
+- Enqueueing the same delivery or attempt identity with the same payload is idempotent; reusing either identity with different payload content returns `Conflict`.
+- V3 outbox records persist the exact v3 packet payload and its SHA-256 digest. On reload, the packet digest and idempotency identity are recomputed and checked.
+- Reload deliberately sets workflow-definition trust to false. The host must re-evaluate the full workflow ref/SHA against protected control-plane policy before treating the packet as successful.
+- A remote receipt must match the exact delivery ID, idempotency key, and payload digest. Accepted/duplicate receipts acknowledge that delivery; rejected receipts are retained but do not suppress replay.
+- Receipt correlation is not authentication. The host must authenticate the remote response and validate its contract before recording it.
+- These v3 journals are not yet connected to the Foundry transport/delivery coordinator. They provide durable local contracts, not a live end-to-end v3 delivery path.
 
 This is still a local filesystem outbox and receipt journal, not a network transport, authenticated webhook receiver, distributed consensus store, or guarantee of remote delivery. **The host must authenticate and validate the remote response before calling `Record`; the ledger verifies correlation, not cryptographic authenticity.** Hosts must protect both journal paths and retain the remote transport's authentication and endpoint policy outside model-visible evidence.
 
