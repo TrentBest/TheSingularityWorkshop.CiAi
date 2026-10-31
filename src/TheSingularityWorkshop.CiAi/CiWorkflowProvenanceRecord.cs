@@ -204,11 +204,11 @@ public sealed record CiWorkflowProvenanceRecord
         var value = RequiredString(parent, property);
         var segments = value.Split('/');
         if (value.Length > 512 || value.Any(char.IsControl) || value.Any(char.IsWhiteSpace) ||
-            value.Contains('\\\\') || value.Contains("..", StringComparison.Ordinal) ||
+            value.Contains('\\') || value.Contains("..", StringComparison.Ordinal) ||
             value.Contains("@{", StringComparison.Ordinal) || value.Contains("//", StringComparison.Ordinal) ||
             value.IndexOfAny(new[] { '~', '^', ':', '?', '*', '[', ']' }) >= 0 ||
-            value.StartsWith('/', StringComparison.Ordinal) || value.EndsWith('/', StringComparison.Ordinal) ||
-            segments.Any(segment => segment.Length == 0 || segment.StartsWith('.', StringComparison.Ordinal) ||
+            value.StartsWith("/", StringComparison.Ordinal) || value.EndsWith('/', StringComparison.Ordinal) ||
+            segments.Any(segment => segment.Length == 0 || segment.StartsWith(".", StringComparison.Ordinal) ||
                 segment.EndsWith(".lock", StringComparison.OrdinalIgnoreCase)))
             throw new InvalidDataException($"Workflow provenance branch name '{property}' is invalid.");
         return value;
