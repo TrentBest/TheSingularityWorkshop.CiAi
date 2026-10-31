@@ -85,6 +85,8 @@ public sealed class FileAwaitRegistrationStore
             ?? throw new InvalidDataException("Await registration snapshot is empty.");
         if (stored.SchemaVersion != CurrentSchemaVersion)
             throw new InvalidDataException("Await registration schema version is unsupported.");
+        if (stored.RequiredGates is null || stored.RequiredGates.Any(item => item is null))
+            throw new InvalidDataException("Await registration snapshot is incomplete.");
         try
         {
             return new AwaitRegistration(stored.AwaitId, stored.ConsumerRepository, stored.WorkstreamId,
