@@ -190,8 +190,29 @@ public sealed record CiWorkflowEvidencePacket
             !string.Equals(schema.GetString(), CurrentSchema, StringComparison.Ordinal))
             throw new InvalidDataException("Evidence packet contract version or schema is unsupported.");
 
-        return JsonSerializer.Deserialize<CiWorkflowEvidencePacket>(json, JsonOptions(false))
+        var packet = JsonSerializer.Deserialize<CiWorkflowEvidencePacket>(json, JsonOptions(false))
             ?? throw new InvalidDataException("Evidence packet JSON produced no packet.");
+        if (!HasMatchingString(root, "workflowRef", packet.WorkflowRef, ignoreCase: false) ||
+            !HasMatchingString(root, "workflowSha", packet.WorkflowSha, ignoreCase: true) ||
+            !HasMatchingString(root, "candidateRef", packet.CandidateRef, ignoreCase: false) ||
+            !HasMatchingString(root, "candidateSha", packet.CandidateSha, ignoreCase: true) ||
+            !root.TryGetProperty("candidateCheckoutVerified", out var verified) ||
+            verified.ValueKind is not (JsonValueKind.True or JsonValueKind.False) ||
+            verified.GetBoolean() != packet.CandidateCheckoutVerified)
+            throw new InvalidDataException("Evidence packet flattened workflow/candidate provenance does not match its validated nested evidence.");
+        return packet;
+    }
+
+    private static bool HasMatchingString(
+        JsonElement root,
+        string propertyName,
+        string expected,
+        bool ignoreCase)
+    {
+        if (!root.TryGetProperty(propertyName, out var value) || value.ValueKind != JsonValueKind.String)
+            return false;
+        return string.Equals(value.GetString(), expected,
+            ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
     }
 
     private static bool IsCandidateCheckoutVerified(
