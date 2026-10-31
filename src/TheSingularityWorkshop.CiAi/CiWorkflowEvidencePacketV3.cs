@@ -119,6 +119,12 @@ public sealed record CiWorkflowEvidencePacketV3
             observedRun.RunAttempt != provenance.RunAttempt)
             throw new InvalidDataException("Workflow provenance does not identify the exact observed repository, run, and attempt.");
 
+        // The v2 compatibility packet's WorkflowSha slot is retained here only as the
+        // run API's triggering/head SHA observation. Bind the workflow-side event SHA to
+        // that independent provider observation before accepting the v3 envelope.
+        if (!string.Equals(observedRun.WorkflowSha, provenance.EventSha, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Workflow provenance event SHA does not match the exact observed run SHA.");
+
         if (!string.Equals(observedRun.WorkflowPath, provenance.WorkflowPath, StringComparison.Ordinal))
             throw new InvalidDataException("Workflow provenance path does not match the observed workflow path.");
 
