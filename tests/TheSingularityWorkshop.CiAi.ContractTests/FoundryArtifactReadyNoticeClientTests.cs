@@ -8,28 +8,36 @@ internal static class FoundryArtifactReadyNoticeClientTests
     public static async Task<int> RunAsync()
     {
         var notice = CreateNotice();
-        HttpRequestMessage? captured = null;
-        using (var http = new HttpClient(new StubHandler((request, _) =>
+        string? capturedBody = null;
+        string? capturedAuthorizationScheme = null;
+        string? capturedAuthorizationParameter = null;
+        Uri? capturedUri = null;
+        HttpMethod? capturedMethod = null;
+        using (var http = new HttpClient(new StubHandler(async (request, cancellationToken) =>
         {
-            captured = request;
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Accepted)
+            capturedUri = request.RequestUri;
+            capturedMethod = request.Method;
+            capturedAuthorizationScheme = request.Headers.Authorization?.Scheme;
+            capturedAuthorizationParameter = request.Headers.Authorization?.Parameter;
+            capturedBody = await request.Content!.ReadAsStringAsync(cancellationToken);
+            return new HttpResponseMessage(HttpStatusCode.Accepted
             {
                 Content = new StringContent(Receipt(notice, "accepted"), Encoding.UTF8, "application/json")
             });
         })))
         {
             var sender = new FoundryArtifactReadyNoticeClient(http, Endpoint(),
-                new FixtureCredentials("host-issued-short-lived-token"));
+                new FixtureCredentials("fixture-token-value"));
             var result = await sender.SendAsync(notice);
             Assert(result.Outcome == FoundryArtifactIngressOutcome.Accepted && result.IsAcknowledged,
                 "202 durable receipt was not accepted");
             Assert(result.Receipt?.ReceiptId == "receipt-1", "receipt identity was not retained");
-            Assert(captured?.Method == HttpMethod.Post && captured.RequestUri == Endpoint(),
+            Assert(capturedMethod == HttpMethod.Post && capturedUri == Endpoint(),
                 "sender did not POST to the configured Foundry route");
-            Assert(captured?.Headers.Authorization?.Scheme == "Bearer" &&
-                captured.Headers.Authorization.Parameter == "host-issued-short-lived-token",
-                "host-managed bearer token was not sent in the Authorization header");
-            var body = await captured!.Content!.ReadAsStringAsync();
+            Assert(capturedAuthorizationScheme == "Bearer" &&
+                capturedAuthorizationParameter == "fixture-token-value",
+                "host-managed token was not sent in the Authorization header");
+            var body = capturedBody ?? string.Empty;
             Assert(body.Contains("\"contractVersion\":1", StringComparison.Ordinal) &&
                 body.Contains("\"retrievalUri\":", StringComparison.Ordinal),
                 "metadata-only notice was not serialized using the v1 camelCase wire shape");
@@ -102,7 +110,7 @@ internal static class FoundryArtifactReadyNoticeClientTests
             new HttpClient(), new Uri("https://foundry.example/api/v1/other"),
             new FixtureCredentials("token")));
 
-        Console.WriteLine("PASS: 8 Foundry artifact-ready ingress client contract checks.");
+        Console.WriteLine("PASS: 9 Foundry artifact-ready ingress client contract checks.");
         return 8;
     }
 
