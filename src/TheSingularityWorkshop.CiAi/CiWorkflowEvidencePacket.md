@@ -23,11 +23,11 @@ For ordinary CI runs, candidate provenance defaults to the workflow event ref/SH
 `CandidateCheckoutVerified` is derived from the raw job/step observations; it is not a caller-supplied success flag. It is true for a normal run where the candidate is the workflow event commit. For a separately checked-out candidate, it is true only when:
 
 - exactly one job matches the registered job name;
-- that job completed successfully;
+- exactly one job matches the registered job name and belongs to the packet's exact run/attempt;
 - exactly one branch-resolution step with the registered name completed successfully; and
 - exactly one checkout-verification step with the registered name completed successfully.
 
-A missing, skipped, failed, duplicate, or ambiguous step makes candidate checkout unverified. `IsSuccessful` requires `CandidateCheckoutVerified`; `BlockingReasons` then includes `candidate.checkout-unverified`. A successful workflow run on `development` alone is not evidence that a feature-branch candidate passed.
+A missing, skipped, failed, duplicate, or ambiguous step makes candidate checkout unverified. Checkout verification is independent of later build/test outcome: if those two steps succeeded and a later test fails, the packet still proves which candidate was checked out, while `IsSuccessful` remains false because the workflow/job failed. `IsSuccessful` requires `CandidateCheckoutVerified`; `BlockingReasons` then includes `candidate.checkout-unverified` only when checkout proof itself is missing or failed. A successful workflow run on `development` alone is not evidence that a feature-branch candidate passed.
 
 The workflow-definition ref for separate candidate evidence must be the trusted `refs/heads/development` ref. The host must additionally validate the workflow SHA against its trusted workflow revision policy.
 
