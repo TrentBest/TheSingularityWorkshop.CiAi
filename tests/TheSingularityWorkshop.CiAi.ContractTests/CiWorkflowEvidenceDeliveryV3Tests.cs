@@ -78,20 +78,20 @@ internal static class CiWorkflowEvidenceDeliveryV3Tests
     {
         const string eventSha = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
         const string workflowSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-        var json = $"""
+        var json = """
         {
-          "schema": "{{CiWorkflowProvenanceRecord.CurrentSchema}}",
+          "schema": "__SCHEMA__",
           "repository": "TrentBest/SimpleDemos",
-          "runId": {{runId}},
+          "runId": __RUN_ID__,
           "runAttempt": 1,
           "workflow": {
             "ref": "TrentBest/SimpleDemos/.github/workflows/ci.yml@refs/heads/development",
-            "sha": "{{workflowSha}}"
+            "sha": "__WORKFLOW_SHA__"
           },
           "event": {
             "name": "push",
             "ref": "refs/heads/development",
-            "sha": "{{eventSha}}",
+            "sha": "__EVENT_SHA__",
             "pullRequest": null
           },
           "checkout": {
@@ -100,6 +100,10 @@ internal static class CiWorkflowEvidenceDeliveryV3Tests
           }
         }
         """;
+        json = json.Replace("__SCHEMA__", CiWorkflowProvenanceRecord.CurrentSchema, StringComparison.Ordinal)
+            .Replace("__RUN_ID__", runId.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal)
+            .Replace("__WORKFLOW_SHA__", workflowSha, StringComparison.Ordinal)
+            .Replace("__EVENT_SHA__", eventSha, StringComparison.Ordinal);
         var bytes = Encoding.UTF8.GetBytes(json);
         var provenance = CiWorkflowProvenanceRecord.ParseAndValidate(
             bytes, "TrentBest/SimpleDemos", runId, 1,
