@@ -10,7 +10,7 @@
 
 - Sends GET requests to GitHub's workflow-run collection endpoint with an explicit `head_sha`, page size, and page.
 - Independently validates the returned repository and exact full SHA on every row.
-- Preserves run ID, retry attempt, workflow name/path, workflow-definition ref (when GitHub supplies the path suffix), event, PR numbers, status, conclusion, update time, and evidence URL. Workflow-definition ref is kept separate from the run's head SHA.
+- Preserves run ID, retry attempt, workflow name/path, the workflow-path ref suffix when present, event, PR numbers, status, conclusion, update time, and evidence URL. The legacy path suffix is only a ref hint: it is not the full `github.workflow_ref` value and does not provide `github.workflow_sha`.
 - Does not collapse repeated run IDs or attempts; callers must reconcile retries deliberately.
 - Bounds requests to 1–10 pages and 1–100 rows per page. `IsTruncated` means discovery is incomplete and cannot support a complete release report.
 - Unknown workflow statuses, malformed provider data, mismatched repository/SHA, invalid attempts, and inconsistent lifecycle fields fail closed.
@@ -45,7 +45,7 @@ classDiagram
     CiWorkflowRunObservation --> CiRunSnapshot : normalized facts
 ```
 
-**Trust boundary:** For a `workflow_dispatch` candidate run, the workflow path suffix identifies the workflow-definition ref (for example `refs/heads/development`); the run's `head_sha` remains the commit associated with the run. Consumers must not infer candidate SHA from the workflow-definition ref. Missing workflow-ref suffix remains explicit as null; `CiWorkflowEvidencePacket.FromCollections` fails closed until a trusted source supplies the workflow-definition ref.
+**Trust boundary:** This collector discovers run metadata only; it does not download or validate provenance artifacts. Its workflow-path suffix may identify a ref such as `refs/heads/development`, but it is not sufficient workflow-definition provenance and must not be promoted to a trust verdict. The trusted host must retrieve the exact run-attempt provenance artifact, verify the provider ZIP digest, safely extract the expected JSON, compute its content digest, and parse it with `CiWorkflowProvenanceRecord`. `CiWorkflowEvidencePacketV3.FromCollections` uses that validated full workflow ref/SHA and does not depend on the legacy path suffix. The v2 factory remains a compatibility path only.
 
 **Use case:** An operator supplies `TrentBest/TheSingularityWorkshop.FSM_COS` and a full candidate SHA. CiAi discovers only runs for that exact SHA, validates every returned record, reports whether discovery was truncated, and leaves release authorization with the owner.
 
