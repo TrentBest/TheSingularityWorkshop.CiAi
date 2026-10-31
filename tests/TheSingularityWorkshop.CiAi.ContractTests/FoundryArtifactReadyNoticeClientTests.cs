@@ -23,7 +23,7 @@ internal static class FoundryArtifactReadyNoticeClientTests
             return new HttpResponseMessage(HttpStatusCode.Accepted)
             {
                 Content = new StringContent(Receipt(notice, "accepted"), Encoding.UTF8, "application/json")
-            });
+            };
         })))
         {
             var sender = new FoundryArtifactReadyNoticeClient(http, Endpoint(),
@@ -111,7 +111,7 @@ internal static class FoundryArtifactReadyNoticeClientTests
             new FixtureCredentials("token")));
 
         Console.WriteLine("PASS: 9 Foundry artifact-ready ingress client contract checks.");
-        return 8;
+        return 9;
     }
 
     private static HttpClient ResponseClient(HttpStatusCode status, string body) =>
