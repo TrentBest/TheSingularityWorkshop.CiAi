@@ -51,8 +51,8 @@ internal static class CiWorkflowProvenanceRecordTests
             Convert.ToHexString(SHA256.HashData(traversalWorkflowPath))));
 
         var duplicateProperty = Encoding.UTF8.GetBytes(CreatePullRequestJson()
-            .Replace($"\\"sha\\": \\"{CheckoutSha}\\"",
-                $"\\"sha\\": \\"{CheckoutSha}\\", \\"sha\\": \\"{CheckoutSha}\\"",
+            .Replace($"\"sha\": \"{CheckoutSha}\"",
+                $"\"sha\": \"{CheckoutSha}\", \"sha\": \"{CheckoutSha}\"",
                 StringComparison.Ordinal));
         Throws<InvalidDataException>(() => CiWorkflowProvenanceRecord.ParseAndValidate(
             duplicateProperty, "TrentBest/CiAi", 42, 2,
