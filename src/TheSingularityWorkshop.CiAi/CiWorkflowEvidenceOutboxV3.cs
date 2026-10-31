@@ -140,6 +140,7 @@ public sealed class FileCiWorkflowEvidenceOutboxV3
                 !RepositoryIdentity.IsValid(record.Repository) ||
                 record.RunId <= 0 || record.RunAttempt <= 0 ||
                 string.IsNullOrWhiteSpace(record.Payload) ||
+                string.IsNullOrWhiteSpace(record.PayloadSha256) ||
                 record.PayloadSha256.Length != 64 || !record.PayloadSha256.All(Uri.IsHexDigit))
                 throw new InvalidDataException("V3 evidence outbox contains an invalid record.");
             var actual = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(record.Payload)));
