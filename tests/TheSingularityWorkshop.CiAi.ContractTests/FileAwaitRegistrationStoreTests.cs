@@ -9,8 +9,10 @@ internal static class FileAwaitRegistrationStoreTests
         var registration = new AwaitRegistration("await-1", "TrentBest/The", "dock-integration",
             new[]
             {
-                new AwaitGateReference("B", 1, "TrentBest/MyVR"),
-                new AwaitGateReference("C", 2, "TrentBest/FSM_COS")
+                new AwaitGateReference("B", 1, ContractDigest("TrentBest/The", "TrentBest/MyVR", "B"),
+                    "TrentBest/MyVR"),
+                new AwaitGateReference("C", 2, ContractDigest("TrentBest/The", "TrentBest/FSM_COS", "C"),
+                    "TrentBest/FSM_COS")
             });
         try
         {
@@ -33,7 +35,8 @@ internal static class FileAwaitRegistrationStoreTests
             Check("Await ID cannot be reused for another workstream or gate set", () =>
             {
                 var changed = new AwaitRegistration("await-1", "TrentBest/The", "different-workstream",
-                    new[] { new AwaitGateReference("B", 1, "TrentBest/MyVR") });
+                    new[] { new AwaitGateReference("B", 1,
+                        ContractDigest("TrentBest/OtherConsumer", "TrentBest/MyVR", "B"), "TrentBest/MyVR") });
                 Assert(new FileAwaitRegistrationStore(root).Save(changed) == AwaitRegistrationStoreOutcome.Conflict,
                     "conflicting Await registration overwrote the original");
             });
@@ -63,6 +66,14 @@ internal static class FileAwaitRegistrationStoreTests
             Console.WriteLine($"PASS Await registration store {passed}: {name}");
         }
     }
+
+    private static string ContractDigest(string consumer, string provider, string gateId) =>
+        new AwaitGateContract(gateId, 1, consumer, provider,
+            "abcdef0123456789abcdef0123456789abcdef01",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "policy-v1",
+            new[] { new AwaitGateRequirement("dimensions", "Dimensions validated", "valid",
+                AwaitGateEvidenceKind.Machine) }).ContractDigest;
 
     private static void Assert(bool condition, string message)
     {
