@@ -22,7 +22,6 @@ For ordinary CI runs, candidate provenance defaults to the workflow event ref/SH
 
 `CandidateCheckoutVerified` is derived from the raw job/step observations; it is not a caller-supplied success flag. It is true for a normal run where the candidate is the workflow event commit. For a separately checked-out candidate, it is true only when:
 
-- exactly one job matches the registered job name;
 - exactly one job matches the registered job name and belongs to the packet's exact run/attempt;
 - exactly one branch-resolution step with the registered name completed successfully; and
 - exactly one checkout-verification step with the registered name completed successfully.
