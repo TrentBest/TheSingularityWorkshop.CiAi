@@ -8,6 +8,7 @@ using System.Xml.Linq;
 
 namespace TheSingularityWorkshop.CiAi;
 
+/// <summary>Outcome from CiAi's configured required-check policy, not a caller inference from raw job status.</summary>
 public enum CiRequiredCheckStatus
 {
     Passed,
@@ -150,9 +151,13 @@ public sealed record CiTestResultReport
         CiTestResultVerdict verdict,
         IReadOnlyList<string> reasonCodes,
         string? testFramework,
-        string? sourceArtifactId,
+        long? sourceArtifactId,
         string? sourceArtifactName,
+        string? sourceJobKey,
         string? providerArchiveDigest,
+        long? archiveSizeBytes,
+        DateTimeOffset? artifactCreatedAt,
+        DateTimeOffset? artifactExpiresAt,
         string? payloadSha256,
         long payloadSizeBytes,
         int total,
@@ -185,7 +190,11 @@ public sealed record CiTestResultReport
         Format = "trx";
         SourceArtifactId = sourceArtifactId;
         SourceArtifactName = sourceArtifactName;
+        SourceJobKey = sourceJobKey;
         ProviderArchiveDigest = providerArchiveDigest;
+        ArchiveSizeBytes = archiveSizeBytes;
+        ArtifactCreatedAt = artifactCreatedAt;
+        ArtifactExpiresAt = artifactExpiresAt;
         PayloadSha256 = payloadSha256;
         PayloadSizeBytes = payloadSizeBytes;
         Total = total;
@@ -217,9 +226,13 @@ public sealed record CiTestResultReport
     public IReadOnlyList<string> ReasonCodes { get; }
     public string? TestFramework { get; }
     public string Format { get; }
-    public string? SourceArtifactId { get; }
+    public long? SourceArtifactId { get; }
     public string? SourceArtifactName { get; }
+    public string? SourceJobKey { get; }
     public string? ProviderArchiveDigest { get; }
+    public long? ArchiveSizeBytes { get; }
+    public DateTimeOffset? ArtifactCreatedAt { get; }
+    public DateTimeOffset? ArtifactExpiresAt { get; }
     public string? PayloadSha256 { get; }
     public long PayloadSizeBytes { get; }
     public int Total { get; }
@@ -260,8 +273,9 @@ public sealed record CiTestResultReport
         var verdict = EvaluateVerdict(job, requiredCheckStatus, parsed, reasons);
         return new CiTestResultReport(
             evidence, job, requiredCheckStatus, verdict, reasons, source.TestFramework,
-            source.ArtifactId.ToString(CultureInfo.InvariantCulture), source.ArtifactName,
-            source.ProviderArchiveDigest, payloadDigest, trxBytes.Length,
+            source.ArtifactId, source.ArtifactName, source.JobKey,
+            source.ProviderArchiveDigest, source.ArchiveSizeBytes, source.CreatedAt, source.ExpiresAt,
+            payloadDigest, trxBytes.Length,
             parsed.Total, parsed.Passed, parsed.Failed, parsed.Skipped, parsed.Results, observedAt);
     }
 
@@ -283,7 +297,7 @@ public sealed record CiTestResultReport
         return new CiTestResultReport(
             evidence, matches[0], requiredCheckStatus, CiTestResultVerdict.IncompleteOrUntrusted,
             new[] { "test-results.artifact-missing" }, null, null, null, null, null,
-            0, 0, 0, 0, 0, Array.Empty<CiTestResultRecord>(), observedAt);
+            null, null, null, 0, 0, 0, 0, 0, Array.Empty<CiTestResultRecord>(), observedAt);
     }
 
     public string ToJson(bool indented = true) =>
