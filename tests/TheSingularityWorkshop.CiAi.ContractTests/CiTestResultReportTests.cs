@@ -32,6 +32,20 @@ internal static class CiTestResultReportTests
                 "Expected: Accepted; Actual: RejectedTerminal", "at Minesweeper.Tests.GameTests.ResetRestoresOriginalFixedMineLayoutAfterFirstRevealRelocation() in GameTests.cs:line 88")));
         var failedPacket = CreatePacket("failure");
         var failedSource = CreateSource(failedTrx);
+
+        Assert(RequiredPolicy.Evaluate(failedPacket, JobId, JobKey) == CiRequiredCheckStatus.Failed &&
+            RequiredPolicy.Evaluate(CreatePacket("success"), JobId, JobKey) == CiRequiredCheckStatus.Passed,
+            "CiAi required-job policy did not derive the exact observed job outcome");
+        Assert(RequiredPolicy.Evaluate(failedPacket, JobId, "optional-job") == CiRequiredCheckStatus.NotRequired,
+            "unconfigured workflow job was treated as a required check");
+        Assert(RequiredPolicy.Evaluate(failedPacket, JobId + 1, JobKey) == CiRequiredCheckStatus.Incomplete,
+            "required-job policy accepted a missing numeric job identity");
+        Throws<ArgumentException>(() => new CiRequiredJobPolicy(new[]
+        {
+            new CiRequiredJobDefinition(JobKey, JobName),
+            new CiRequiredJobDefinition(JobKey, "duplicate")
+        }));
+        Throws<ArgumentException>(() => new CiRequiredJobDefinition("../unsafe", JobName));
         var actionable = CiTestResultReport.ParseAndValidate(
             failedTrx, failedPacket, failedSource, RequiredPolicy, ObservedAt);
         Assert(actionable.Verdict == CiTestResultVerdict.ActionableFailure &&
@@ -109,7 +123,7 @@ internal static class CiTestResultReportTests
             "a non-required job was promoted to the required-check pass verdict");
 
         var missing = CiTestResultReport.MissingArtifact(
-            failedPacket, JobId, RequiredPolicy, ObservedAt);
+            failedPacket, JobId, JobKey, RequiredPolicy, ObservedAt);
         Assert(missing.Verdict == CiTestResultVerdict.IncompleteOrUntrusted &&
             missing.ReasonCodes.Contains("test-results.artifact-missing") &&
             missing.SourceArtifactId is null,
@@ -186,8 +200,8 @@ internal static class CiTestResultReportTests
             truncated.Results[0].StackTrace!.Length <= 8_020,
             "diagnostic message or stack trace was not bounded");
 
-        Console.WriteLine("PASS: 27 provenance-bound TRX diagnostic report contract checks.");
-        return 27;
+        Console.WriteLine("PASS: 32 provenance-bound TRX diagnostic report contract checks.");
+        return 32;
     }
 
     private static CiWorkflowEvidencePacketV3 CreatePacket(
