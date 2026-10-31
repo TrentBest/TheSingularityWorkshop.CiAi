@@ -3,6 +3,7 @@ using TheSingularityWorkshop.CiAi;
 
 var passed = 0;
 passed += CiWorkflowProvenanceRecordTests.Run();
+passed += CiWorkflowEvidencePacketV3Tests.Run();
 passed += CiWorkflowEvidencePacketContractTests.Run();
 passed += CiWorkflowEvidencePacketFactoryTests.Run();
 passed += CiWorkflowEvidenceOutboxContractTests.Run();
