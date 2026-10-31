@@ -43,8 +43,8 @@ internal static class CiWorkflowEvidenceDeliveryV3Tests
                 new FileCiWorkflowEvidenceOutboxV3(uppercaseKeyPath).ReadPending());
             var nullKeyPath = Path.Combine(root, "v3-outbox-null-key.jsonl");
             File.WriteAllText(nullKeyPath, persistedOutbox.Replace(
-                $"\\\"IdempotencyKey\\\":\\\"{delivery.IdempotencyKey}\\\"",
-                "\\\"IdempotencyKey\\\":null", StringComparison.Ordinal));
+                "\"IdempotencyKey\":\"" + delivery.IdempotencyKey + "\"",
+                "\"IdempotencyKey\":null", StringComparison.Ordinal));
             AssertThrows<InvalidDataException>(() =>
                 new FileCiWorkflowEvidenceOutboxV3(nullKeyPath).ReadPending());
 
