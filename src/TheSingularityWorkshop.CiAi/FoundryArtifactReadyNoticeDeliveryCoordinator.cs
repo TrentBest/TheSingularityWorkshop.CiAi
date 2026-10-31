@@ -95,7 +95,8 @@ public sealed class FoundryArtifactReadyNoticeDeliveryCoordinator
             if (outcome is FoundryArtifactIngressOutcome.AuthenticationRequired
                 or FoundryArtifactIngressOutcome.AuthorizationDenied
                 or FoundryArtifactIngressOutcome.RateLimited
-                or FoundryArtifactIngressOutcome.RetryableFailure)
+                or FoundryArtifactIngressOutcome.RetryableFailure
+                or FoundryArtifactIngressOutcome.Rejected)
                 break;
         }
 
