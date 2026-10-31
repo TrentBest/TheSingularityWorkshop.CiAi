@@ -360,6 +360,11 @@ public sealed record CiTestResultReport
             reasons.Add("test-results.check-failed-without-test-failure");
             return CiTestResultVerdict.NonActionableFailure;
         }
+        if (jobPassed)
+        {
+            reasons.Add("test-results.failed-tests-in-green-job");
+            return CiTestResultVerdict.IncompleteOrUntrusted;
+        }
 
         var failedResults = parsed.Results.Where(result => result.Outcome == CiTestOutcome.Failed).ToArray();
         if (jobFailed && failedResults.Length == parsed.Failed &&
@@ -411,7 +416,8 @@ public sealed record CiTestResultReport
         foreach (var element in resultElements)
         {
             var testId = RequiredAttribute(element, "testId", 200);
-            var testName = RequiredAttribute(element, "testName", 512);
+            var rawTestName = RequiredAttribute(element, "testName", 512);
+            var (testName, testNameTruncated, testNameRedacted) = NormalizeDiagnostic(rawTestName, 512);
             var outcomeText = RequiredAttribute(element, "outcome", 100);
             var outcome = MapOutcome(outcomeText);
             var errorInfo = element.Descendants().FirstOrDefault(child => child.Name.LocalName == "ErrorInfo");
@@ -419,8 +425,8 @@ public sealed record CiTestResultReport
             var rawStack = errorInfo?.Elements().FirstOrDefault(child => child.Name.LocalName == "StackTrace")?.Value;
             var (message, messageTruncated, messageRedacted) = NormalizeDiagnostic(rawMessage, MaximumMessageLength);
             var (stackTrace, stackTruncated, stackRedacted) = NormalizeDiagnostic(rawStack, MaximumStackTraceLength);
-            var redacted = messageRedacted || stackRedacted;
-            var truncated = messageTruncated || stackTruncated;
+            var redacted = testNameRedacted || messageRedacted || stackRedacted;
+            var truncated = testNameTruncated || messageTruncated || stackTruncated;
             var digestInput = string.Join("\0", testId, testName, outcome.ToString(), message ?? "", stackTrace ?? "",
                 redacted.ToString(CultureInfo.InvariantCulture), truncated.ToString(CultureInfo.InvariantCulture));
             var recordDigest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(digestInput))).ToLowerInvariant();
