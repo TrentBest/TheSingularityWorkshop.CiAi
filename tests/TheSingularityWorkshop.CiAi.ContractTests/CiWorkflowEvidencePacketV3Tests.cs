@@ -33,6 +33,13 @@ internal static class CiWorkflowEvidencePacketV3Tests
         Assert(roundTrip.IsSuccessful && roundTrip.Provenance.WorkflowSha == WorkflowSha &&
             roundTrip.CandidateSha == CheckoutSha,
             "v3 durable round-trip lost validated provenance");
+
+        var (runCollection, jobCollection) = CreateCollections();
+        var factoryPacket = CiWorkflowEvidencePacketV3.FromCollections(
+            runCollection, jobCollection, 42, 2, DateTimeOffset.Parse("2026-10-31T01:02:00Z"),
+            provenance, workflowDefinitionTrusted: true);
+        Assert(factoryPacket.IsSuccessful && factoryPacket.Provenance.WorkflowSha == WorkflowSha,
+            "v3 collection factory did not bind the exact run attempt to validated provenance");
         var reloadedWithoutTrust = CiWorkflowEvidencePacketV3.FromJson(
             serialized, "TrentBest/CiAi", 42, 2, packetDigest, workflowDefinitionTrusted: false);
         Assert(!reloadedWithoutTrust.IsSuccessful,
@@ -66,8 +73,32 @@ internal static class CiWorkflowEvidencePacketV3Tests
             failClosed.BlockingReasons.Contains("candidate.checkout-unverified"),
             "checkout SHA differing from event SHA was not failed closed");
 
-        Console.WriteLine("PASS: 8 CI workflow evidence packet v3 contract checks.");
-        return 8;
+        Console.WriteLine("PASS: 9 CI workflow evidence packet v3 contract checks.");
+        return 9;
+    }
+
+
+    private static (CiWorkflowRunCollection Runs, CiWorkflowJobCollection Jobs) CreateCollections()
+    {
+        var snapshot = new CiRunSnapshot(
+            "TrentBest/CiAi", 42, "CI", EventSha,
+            CiRunStatus.Completed, CiRunConclusion.Success,
+            new Uri("https://github.com/TrentBest/CiAi/actions/runs/42"),
+            DateTimeOffset.Parse("2026-10-31T01:00:00Z"));
+        var observation = new CiWorkflowRunObservation(
+            snapshot, 2, ".github/workflows/ci.yml", "pull_request",
+            Array.Empty<int>()) { WorkflowRef = "refs/heads/development" };
+        var runs = new CiWorkflowRunCollection(
+            "TrentBest/CiAi", EventSha, new[] { observation }, 1, 1, false);
+        var job = new CiWorkflowJobObservation(
+            100, 42, 2, "build-and-test", "completed", "success",
+            new Uri("https://github.com/TrentBest/CiAi/actions/runs/42/job/100"),
+            Array.AsReadOnly(new[]
+            {
+                new CiWorkflowStepObservation(1, "Build and test", "completed", "success", "2026-10-31T01:00:30Z")
+            }));
+        var jobs = new CiWorkflowJobCollection("TrentBest/CiAi", 42, 2, new[] { job }, 1, 1, false);
+        return (runs, jobs);
     }
 
     private static CiWorkflowEvidencePacket CreateObservedRun(
