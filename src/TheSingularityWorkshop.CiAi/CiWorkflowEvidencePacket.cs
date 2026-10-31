@@ -57,6 +57,9 @@ public sealed record CiWorkflowEvidencePacket
         if (candidateCheckoutEvidence is not null &&
             !string.Equals(workflowRef, CiWorkflowDispatchInputContract.TrustedWorkflowRef, StringComparison.Ordinal))
             throw new ArgumentException("Separate candidate checkout evidence requires the trusted workflow-definition ref.", nameof(workflowRef));
+        if (candidateCheckoutEvidence is not null &&
+            !string.Equals(@event, "workflow_dispatch", StringComparison.Ordinal))
+            throw new ArgumentException("Separate candidate checkout evidence requires a trusted workflow_dispatch run.", nameof(@event));
 
         var expectedRunPath = $"/{repository}/actions/runs/{runId}";
         if (!IsSafeGitHubUrl(runEvidenceUrl) ||
@@ -204,8 +207,8 @@ public sealed record CiWorkflowEvidencePacket
             return false;
 
         var job = matchingJobs[0];
-        if (job.Status != "completed" || job.Conclusion != "success")
-            return false;
+        // Checkout provenance is independent from later build/test outcome. A failed or
+        // cancelled job can still prove which candidate was checked out before the failure.
 
         var resolutionSteps = job.Steps.Where(step =>
             string.Equals(step.Name, evidence.ResolutionStepName, StringComparison.Ordinal)).ToArray();
