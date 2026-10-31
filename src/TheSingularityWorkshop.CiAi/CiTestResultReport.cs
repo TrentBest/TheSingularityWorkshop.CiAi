@@ -297,7 +297,7 @@ public sealed record CiTestResultReport
         return new CiTestResultReport(
             evidence, matches[0], requiredCheckStatus, CiTestResultVerdict.IncompleteOrUntrusted,
             new[] { "test-results.artifact-missing" }, null, null, null, null, null,
-            null, null, null, 0, 0, 0, 0, 0, Array.Empty<CiTestResultRecord>(), observedAt);
+            null, null, null, null, 0, 0, 0, 0, 0, Array.Empty<CiTestResultRecord>(), observedAt);
     }
 
     public string ToJson(bool indented = true) =>
