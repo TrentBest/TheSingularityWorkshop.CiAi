@@ -24,9 +24,11 @@ V3 takes its authoritative provenance from a separately retrieved and validated 
 
 For a pull request, the event SHA and tested checkout normally identify the synthetic merge commit; the PR source head SHA is a separate fact. For a trusted `workflow_dispatch` run, the workflow definition can remain on `development` while the actual candidate checkout is a feature-branch ref/SHA.
 
-## Candidate checkout verification
+## V2 candidate checkout verification (compatibility semantics)
 
-`CandidateCheckoutVerified` is derived from the raw job/step observations; it is not a caller-supplied success flag. It is true for a normal run where the candidate is the workflow event commit. For a separately checked-out candidate, it is true only when:
+The following rules describe the frozen v2 packet only. They do not establish trusted workflow-definition provenance. V3 uses the independent artifact rules in the next section.
+
+`CandidateCheckoutVerified` in v2 is derived from the raw job/step observations; it is not a caller-supplied success flag. It is true for a normal run where the candidate is the workflow event commit. For a separately checked-out candidate, it is true only when:
 
 - exactly one job matches the registered job name and belongs to the packet's exact run/attempt;
 - exactly one branch-resolution step with the registered name completed successfully; and
@@ -44,7 +46,7 @@ For ordinary event runs, V3 marks checkout verified only when the actual checkou
 
 V3 success additionally requires the host to set `workflowDefinitionTrusted` only after independently matching the full workflow-definition ref/SHA against protected control-plane policy. This is a host assertion, not a self-certifying packet field. The trust decision is deliberately omitted from `ToJson`; `FromJson` requires the trusted durable-store SHA-256, exact repository/run/attempt identity, and a fresh host workflow-policy decision. A packet digest must come from the trusted store, not be computed from the untrusted JSON being loaded.
 
-The v3 envelope retains the v2 packet only as run/job outcome observations. Its v2 workflow/candidate aliases are not authoritative in V3.
+The v3 envelope retains the v2 packet only as run/job outcome observations. Its v2 workflow/candidate aliases are not authoritative in V3. GitHub's artifact metadata digest covers the downloaded ZIP archive, not the extracted JSON file: the trusted host retriever must verify the ZIP digest, safely extract only the expected JSON entry, compute the extracted JSON content digest, and pass those exact bytes and digest to `CiWorkflowProvenanceRecord.ParseAndValidate`.
 
 ## Building from observed GitHub collections
 
@@ -74,8 +76,8 @@ The packet also carries repository, workflow path, run ID/attempt, event, workfl
 - Serialization uses camelCase property names and string enum values.
 - V2 `FromJson` rejects unsupported versions; callers must not silently reinterpret old run-head SHA values as workflow-definition or checkout provenance. No implicit in-place migration is performed.
 - V3 `FromJson` requires the expected repository/run/attempt, a trusted durable-store packet SHA-256, and a fresh host workflow-definition trust decision. It does not restore trust from serialized JSON.
-- `FromJson` recomputes candidate provenance from nested checkout evidence and raw job/step observations, then rejects JSON whose flattened workflow/candidate refs, SHAs, or `candidateCheckoutVerified` value disagree with that recomputation.
-- The legacy source aliases `HeadRef` and `HeadSha` refer only to workflow execution provenance and are not serialized in v2.
+- V2 `FromJson` recomputes its compatibility candidate fields from nested checkout evidence and raw job/step observations, then rejects JSON whose flattened workflow/candidate refs, SHAs, or `candidateCheckoutVerified` value disagree with that recomputation.
+- The legacy v2 source aliases `HeadRef` and `HeadSha` expose only the historical v2 workflow/candidate values; they must not be interpreted as `github.workflow_ref` / `github.workflow_sha`.
 
 ## Durable evidence outbox
 
