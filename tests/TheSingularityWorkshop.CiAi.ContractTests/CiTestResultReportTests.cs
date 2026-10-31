@@ -49,7 +49,7 @@ internal static class CiTestResultReportTests
             "required-job policy accepted a missing numeric job identity");
         Throws<ArgumentException>(() => new CiRequiredJobPolicy(new[]
         {
-            new CiRequiredJobDefinition(JobKey, JobName),
+            new CiRequiredJobDefinition(WorkflowPath, JobKey, JobName),
             new CiRequiredJobDefinition(WorkflowPath, JobKey, "duplicate")
         }));
         Throws<ArgumentException>(() => new CiRequiredJobDefinition(WorkflowPath, "../unsafe", JobName));
