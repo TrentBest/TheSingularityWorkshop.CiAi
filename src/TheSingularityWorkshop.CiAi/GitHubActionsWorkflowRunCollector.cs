@@ -93,8 +93,14 @@ public sealed class GitHubActionsWorkflowRunCollector
             foreach (var item in pageRuns.EnumerateArray())
                 runs.Add(ParseObservation(item, repository, headSha));
 
-            if (pageRuns.GetArrayLength() < perPage)
+            if (runs.Count >= totalCount)
                 break;
+
+            if (pageRuns.GetArrayLength() < perPage)
+            {
+                truncated = runs.Count < totalCount;
+                break;
+            }
 
             if (page == maxPages)
                 truncated = runs.Count < totalCount;
