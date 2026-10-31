@@ -20,7 +20,7 @@
 | `ciai_candidate_sha` | normalized full `HeadSha` |
 | `ciai_attempt_number` | invariant-culture decimal `AttemptNumber` |
 
-All six values are emitted together. The result is read-only so a caller cannot silently change the validated mapping after creation. Credentials, scopes, tokens, and authorization claims are never workflow inputs.
+All six values are emitted together. The request, correlation, and task IDs must also match the workflow's bounded ASCII identity grammar; the mapper rejects values that the shell-side guard would reject instead of producing a dispatch that can only fail after it starts. The result is read-only so a caller cannot silently change the validated mapping after creation. Credentials, scopes, tokens, and authorization claims are never workflow inputs.
 
 ## Workflow-side exact-SHA guard
 
