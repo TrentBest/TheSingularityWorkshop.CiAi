@@ -35,11 +35,11 @@ Only a valid HTTP 202 **accepted** receipt or HTTP 200 **duplicate** receipt ack
 | 429 | RateLimited; preserve Retry-After |
 | 5xx / transport interruption / incomplete receipt | RetryableFailure; retry the exact same notice |
 
-The client performs one HTTP attempt. The caller owns durable notice persistence, retry scheduling, expiry/budget enforcement, and re-authentication. It must reuse the same notice ID, manifest, and idempotency key on retry; it must not create a new identity to escape a failed delivery.
+The client performs one HTTP attempt. **FileFoundryArtifactReadyNoticeOutbox** persists the exact serialized notice and digest before sending, then replays those same bytes after restart. **FileFoundryArtifactIngressReceiptLedger** binds a validated remote receipt to the exact notice ID, idempotency key, and local payload digest. Only accepted/duplicate receipts suppress replay; rejected, missing, or mismatched receipts leave the notice pending. The caller still owns retry scheduling, expiry/budget enforcement, credential refresh, and calling the receipt ledger only after the authenticated sender validates the response. It must reuse the same notice ID, manifest, and idempotency key on retry; it must not create a new identity to escape a failed delivery.
 
 ## Current boundary
 
-This is a transport adapter, not yet a complete remote artifact handoff. CiAi still needs an immutable artifact publisher/hosting adapter, a durable notice outbox that survives process restart, a host-managed credential integration, and the provider-side authenticated receipt acknowledgement sender. Foundry separately owns ingress hosting, JWT validation, durable receiver receipts, safe artifact retrieval, evidence reconciliation, and task orchestration.
+This is a durable sender-side notice pipeline, not yet a complete remote artifact handoff. CiAi still needs an immutable artifact publisher/hosting adapter, a concrete host-managed credential integration, and the provider-side authenticated receipt acknowledgement sender. The credential provider remains an injected host boundary; CiAi does not mint or store JWTs. Foundry separately owns ingress hosting, JWT validation, durable receiver receipts, safe artifact retrieval, evidence reconciliation, and task orchestration.
 
 A 202 receipt means only that Foundry durably recorded the notice. It does not prove artifact retrieval, digest verification, packet acceptance, successful CI, review readiness, or authorization to change a repository.
 
