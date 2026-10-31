@@ -40,6 +40,9 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
                 Assert(firstPass.Attempts[0].ReceiptRecordOutcome == FoundryArtifactIngressReceiptRecordOutcome.Recorded &&
                     ledger.ReadAcknowledgedNoticeIds().Contains(first.NoticeId),
                     "accepted receipt was not persisted against the exact first notice");
+                Assert(firstPass.Attempts[0].StatusCode == HttpStatusCode.Accepted &&
+                    firstPass.Attempts[0].Receipt?.ReceiptId == "receipt-" + first.NoticeId,
+                    "delivery result did not preserve exact HTTP status and receiver receipt");
 
                 var secondPass = await coordinator.DeliverPendingAsync(maximumDeliveries: 10);
                 Assert(secondPass.PendingAtStart == 1 && secondPass.Attempted == 1 &&
@@ -78,6 +81,8 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
                     batch.Attempts[0].Outcome == FoundryArtifactIngressOutcome.RateLimited &&
                     batch.Attempts[0].RetryAfter == TimeSpan.FromSeconds(9),
                     "rate limit did not stop the batch and preserve Retry-After");
+                Assert(batch.Attempts[0].StatusCode == HttpStatusCode.TooManyRequests,
+                    "rate-limit HTTP status was not preserved in the attempt result");
                 Assert(retryCount == 1, "coordinator continued sending after a global back-pressure response");
             }
 
