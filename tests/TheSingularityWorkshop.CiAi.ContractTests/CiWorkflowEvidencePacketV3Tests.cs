@@ -69,10 +69,12 @@ internal static class CiWorkflowEvidencePacketV3Tests
             untrusted.BlockingReasons.Contains("workflow.definition-untrusted"),
             "untrusted workflow definition was accepted as successful");
 
-        var wrongEventShaJson = CreateProvenance().Replace(
-            "\"sha\": \"" + EventSha + "\"",
-            "\"sha\": \"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\"",
-            StringComparison.Ordinal);
+        var wrongEventShaJson = CreateProvenance();
+        var eventStart = wrongEventShaJson.IndexOf("\"event\": {", StringComparison.Ordinal);
+        var eventShaToken = "\"sha\": \"" + EventSha + "\"";
+        var eventShaStart = wrongEventShaJson.IndexOf(eventShaToken, eventStart, StringComparison.Ordinal);
+        wrongEventShaJson = wrongEventShaJson.Remove(eventShaStart, eventShaToken.Length)
+            .Insert(eventShaStart, "\"sha\": \"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\"");
         var wrongEventShaBytes = Encoding.UTF8.GetBytes(wrongEventShaJson);
         var wrongEventShaProvenance = CiWorkflowProvenanceRecord.ParseAndValidate(
             wrongEventShaBytes, "TrentBest/CiAi", 42, 2,
@@ -86,11 +88,13 @@ internal static class CiWorkflowEvidencePacketV3Tests
             CreateObservedRun(workflowPath: ".github/workflows/other.yml"),
             provenance, workflowDefinitionTrusted: true));
 
-        var mismatchedCheckoutBytes = Encoding.UTF8.GetBytes(
-            CreateProvenance().Replace(
-                "\"checkout\": {\n        \"ref\": \"refs/pull/17/merge\",\n        \"sha\": \"" + CheckoutSha + "\"",
-                "\"checkout\": {\n        \"ref\": \"refs/pull/17/merge\",\n        \"sha\": \"cccccccccccccccccccccccccccccccccccccccc\"",
-                StringComparison.Ordinal));
+        var mismatchedCheckoutJson = CreateProvenance();
+        var checkoutStart = mismatchedCheckoutJson.IndexOf("\"checkout\": {", StringComparison.Ordinal);
+        var checkoutShaToken = "\"sha\": \"" + CheckoutSha + "\"";
+        var checkoutShaStart = mismatchedCheckoutJson.IndexOf(checkoutShaToken, checkoutStart, StringComparison.Ordinal);
+        mismatchedCheckoutJson = mismatchedCheckoutJson.Remove(checkoutShaStart, checkoutShaToken.Length)
+            .Insert(checkoutShaStart, "\"sha\": \"cccccccccccccccccccccccccccccccccccccccc\"");
+        var mismatchedCheckoutBytes = Encoding.UTF8.GetBytes(mismatchedCheckoutJson);
         var mismatchedCheckout = CiWorkflowProvenanceRecord.ParseAndValidate(
             mismatchedCheckoutBytes, "TrentBest/CiAi", 42, 2,
             Convert.ToHexString(SHA256.HashData(mismatchedCheckoutBytes)));
