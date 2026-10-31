@@ -22,7 +22,9 @@ internal static class AwaitGateEventOutboxTests
                 SourceSha, ManifestDigest, EvidenceDigest, AwaitGateEvidenceKind.Machine, "valid",
                 "workflow-artifact:42:1", "42", 1);
             var evaluation = AwaitGateEvaluator.Evaluate(contract, new[] { evidence });
-            var evt = new AwaitGateEvent("event-1", "await-1", Consumer, AwaitGateEventKind.Satisfied,
+            var registration = new AwaitRegistration("await-1", Consumer, "ship-integration",
+                new[] { new AwaitGateReference("B", 1, contract.ContractDigest, Provider) });
+            var evt = new AwaitGateEvent("event-1", registration, AwaitGateEventKind.Satisfied,
                 evaluation, DateTimeOffset.Parse("2026-10-31T17:00:00Z"));
 
             Check("event outbox persists and reloads exact source-bound event", () =>
@@ -53,7 +55,9 @@ internal static class AwaitGateEventOutboxTests
                     Provider, SourceSha, ManifestDigest, EvidenceDigest, AwaitGateEvidenceKind.Machine, "valid",
                     "workflow-artifact:42:1", "42", 1);
                 var changedEvaluation = AwaitGateEvaluator.Evaluate(changedContract, new[] { changedEvidence });
-                var conflict = new AwaitGateEvent("event-1", "await-1", Consumer,
+                var changedRegistration = new AwaitRegistration("await-1", Consumer, "ship-integration",
+                    new[] { new AwaitGateReference("B", 1, changedContract.ContractDigest, Provider) });
+                var conflict = new AwaitGateEvent("event-1", changedRegistration,
                     AwaitGateEventKind.Satisfied, changedEvaluation,
                     DateTimeOffset.Parse("2026-10-31T17:00:00Z"));
                 Assert(new FileAwaitGateEventOutbox(Path.Combine(root, "outbox")).Enqueue(conflict) ==
@@ -66,7 +70,7 @@ internal static class AwaitGateEventOutboxTests
                     SourceSha, ManifestDigest, EvidenceDigest, AwaitGateEvidenceKind.Machine, "invalid",
                     "workflow-artifact:42:1", "42", 1);
                 var invalidEvaluation = AwaitGateEvaluator.Evaluate(contract, new[] { invalidEvidence });
-                var invalidated = new AwaitGateEvent("event-2", "await-1", Consumer,
+                var invalidated = new AwaitGateEvent("event-2", registration,
                     AwaitGateEventKind.Invalidated, invalidEvaluation,
                     DateTimeOffset.Parse("2026-10-31T17:01:00Z"));
                 var outbox = new FileAwaitGateEventOutbox(Path.Combine(root, "outbox"));
@@ -78,7 +82,7 @@ internal static class AwaitGateEventOutboxTests
             });
 
             Check("satisfied event requires satisfied evaluation", () =>
-                Throws<ArgumentException>(() => new AwaitGateEvent("bad", "await-1", Consumer,
+                Throws<ArgumentException>(() => new AwaitGateEvent("bad", registration,
                     AwaitGateEventKind.Satisfied,
                     AwaitGateEvaluator.Evaluate(contract, Array.Empty<AwaitGateEvidence>()),
                     DateTimeOffset.UtcNow)));
@@ -86,7 +90,7 @@ internal static class AwaitGateEventOutboxTests
             Check("authorized revocation emits a distinct invalidation without rewriting history", () =>
             {
                 var revoked = AwaitGateEvaluator.Revoke(contract, "evidence.withdrawn");
-                var invalidated = new AwaitGateEvent("event-revoked", "await-1", Consumer,
+                var invalidated = new AwaitGateEvent("event-revoked", registration,
                     AwaitGateEventKind.Invalidated, revoked, DateTimeOffset.UtcNow);
                 Assert(invalidated.Kind == AwaitGateEventKind.Invalidated &&
                     invalidated.EvaluationState == AwaitGateState.Revoked &&
