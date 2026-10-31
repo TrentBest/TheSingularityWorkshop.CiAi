@@ -59,6 +59,12 @@ internal static class CiWorkflowProvenanceRecordTests
             duplicateProperty, "TrentBest/CiAi", 42, 2,
             Convert.ToHexString(SHA256.HashData(duplicateProperty))));
 
+        var duplicateRunIdentity = Encoding.UTF8.GetBytes(CreatePullRequestJson()
+            .Replace("\"runId\": 42,", "\"runId\": 42, \"runId\": 42,", StringComparison.Ordinal));
+        Throws<InvalidDataException>(() => CiWorkflowProvenanceRecord.ParseAndValidate(
+            duplicateRunIdentity, "TrentBest/CiAi", 42, 2,
+            Convert.ToHexString(SHA256.HashData(duplicateRunIdentity))));
+
         var wrongSchema = Encoding.UTF8.GetBytes(CreatePullRequestJson()
             .Replace(CiWorkflowProvenanceRecord.CurrentSchema, "ciai.workflow-provenance.v99", StringComparison.Ordinal));
         Throws<InvalidDataException>(() => CiWorkflowProvenanceRecord.ParseAndValidate(
@@ -90,8 +96,8 @@ internal static class CiWorkflowProvenanceRecordTests
         Assert(dispatchRecord.PullRequest is null && dispatchRecord.EventName == "workflow_dispatch",
             "workflow_dispatch provenance with no PR was not accepted");
 
-        Console.WriteLine("PASS: 15 workflow provenance artifact contract checks.");
-        return 15;
+        Console.WriteLine("PASS: 16 workflow provenance artifact contract checks.");
+        return 16;
     }
 
 
