@@ -47,7 +47,7 @@ internal static class CiWorkflowDispatchInputContractTests
             "refs/heads/feature/agent-fix",
             "ABCDEF0123456789ABCDEF0123456789ABCDEF01",
             ".github/workflows/ci.yml",
-            "TrentBest/SimpleDemos:task-1:2",
+            "TrentBest/SimpleDemos:" + taskId + ":2",
             2, 5,
             DateTimeOffset.Parse("2026-10-31T00:00:00Z"),
             DateTimeOffset.Parse("2026-10-31T00:10:00Z"));
