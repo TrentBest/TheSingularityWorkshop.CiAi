@@ -7,11 +7,13 @@ namespace TheSingularityWorkshop.CiAi;
 /// <summary>Durable event that tells a host one specific Await dependency changed state.</summary>
 public sealed record AwaitGateEvent
 {
-    public AwaitGateEvent(string eventId, string awaitId, AwaitGateEventKind kind,
+    public AwaitGateEvent(string eventId, string awaitId, string consumerRepository, AwaitGateEventKind kind,
         AwaitGateEvaluation evaluation, DateTimeOffset occurredAt)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(eventId);
         ArgumentException.ThrowIfNullOrWhiteSpace(awaitId);
+        if (!RepositoryIdentity.IsValid(consumerRepository))
+            throw new ArgumentException("Consumer repository must be canonical owner/repository.", nameof(consumerRepository));
         ArgumentNullException.ThrowIfNull(evaluation);
         if (!Enum.IsDefined(kind)) throw new ArgumentOutOfRangeException(nameof(kind));
         if (kind == AwaitGateEventKind.Satisfied && evaluation.State != AwaitGateState.Satisfied)
@@ -21,6 +23,7 @@ public sealed record AwaitGateEvent
 
         EventId = eventId;
         AwaitId = awaitId;
+        ConsumerRepository = consumerRepository;
         Kind = kind;
         GateId = evaluation.GateId;
         GateVersion = evaluation.GateVersion;
@@ -37,6 +40,7 @@ public sealed record AwaitGateEvent
 
     public string EventId { get; }
     public string AwaitId { get; }
+    public string ConsumerRepository { get; }
     public AwaitGateEventKind Kind { get; }
     public string GateId { get; }
     public int GateVersion { get; }
@@ -54,7 +58,7 @@ public sealed record AwaitGateEvent
     {
         var canonical = string.Join("\n", new[]
         {
-            "ciai.await-gate-event.v1", EventId, AwaitId, Kind.ToString(), GateId,
+            "ciai.await-gate-event.v1", EventId, AwaitId, ConsumerRepository, Kind.ToString(), GateId,
             GateVersion.ToString(System.Globalization.CultureInfo.InvariantCulture),
             ContractDigest, ProviderRepository, ProviderSourceSha, ManifestDigest,
             EvaluationPolicyVersion, EvaluationState.ToString(),
@@ -196,19 +200,19 @@ public sealed class FileAwaitGateEventOutbox
             stored.ProviderRepository, stored.ProviderSourceSha, stored.ManifestDigest,
             stored.EvaluationPolicyVersion, stored.EvaluationState,
             Array.AsReadOnly(stored.RequirementResults));
-        var restored = new AwaitGateEvent(stored.EventId, stored.AwaitId, stored.Kind, evaluation, stored.OccurredAt);
+        var restored = new AwaitGateEvent(stored.EventId, stored.AwaitId, stored.ConsumerRepository, stored.Kind, evaluation, stored.OccurredAt);
         if (!string.Equals(restored.PayloadDigest, stored.PayloadDigest, StringComparison.Ordinal))
             throw new InvalidDataException("Await gate event payload digest does not match its contents.");
         return restored;
     }
 
-    private sealed record StoredEvent(int SchemaVersion, string EventId, string AwaitId,
+    private sealed record StoredEvent(int SchemaVersion, string EventId, string AwaitId, string ConsumerRepository,
         AwaitGateEventKind Kind, string GateId, int GateVersion, string ContractDigest,
         string ProviderRepository, string ProviderSourceSha, string ManifestDigest,
         string EvaluationPolicyVersion, AwaitGateState EvaluationState,
         AwaitGateRequirementResult[] RequirementResults, DateTimeOffset OccurredAt, string PayloadDigest)
     {
-        public static StoredEvent From(AwaitGateEvent item) => new(1, item.EventId, item.AwaitId,
+        public static StoredEvent From(AwaitGateEvent item) => new(1, item.EventId, item.AwaitId, item.ConsumerRepository,
             item.Kind, item.GateId, item.GateVersion, item.ContractDigest, item.ProviderRepository,
             item.ProviderSourceSha, item.ManifestDigest, item.EvaluationPolicyVersion,
             item.EvaluationState, item.RequirementResults.ToArray(), item.OccurredAt, item.PayloadDigest);
