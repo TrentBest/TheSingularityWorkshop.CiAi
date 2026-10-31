@@ -5,15 +5,7 @@ internal static class CiWorkflowDispatchInputContractTests
 {
     public static int Run()
     {
-        var request = new CiWorkflowRerunRequest(
-            "request-1", "correlation-1", "task-1", "TrentBest/SimpleDemos",
-            "refs/heads/feature/agent-fix",
-            "ABCDEF0123456789ABCDEF0123456789ABCDEF01",
-            ".github/workflows/ci.yml",
-            "TrentBest/SimpleDemos:task-1:2",
-            2, 5,
-            DateTimeOffset.Parse("2026-10-31T00:00:00Z"),
-            DateTimeOffset.Parse("2026-10-31T00:10:00Z"));
+        var request = CreateRequest();
 
         var inputs = CiWorkflowDispatchInputContract.CreateInputs(request);
         Assert(inputs.Count == 6, "dispatch mapping did not produce the exact six-input contract");
@@ -37,9 +29,28 @@ internal static class CiWorkflowDispatchInputContractTests
             AssertThrows<NotSupportedException>(() => mutable[CiWorkflowDispatchInputContract.RequestIdInput] = "changed");
 
         AssertThrows<ArgumentNullException>(() => CiWorkflowDispatchInputContract.CreateInputs(null!));
-        Console.WriteLine("PASS: 10 correlated workflow dispatch input contract checks.");
-        return 10;
+        AssertThrows<ArgumentException>(() => CiWorkflowDispatchInputContract.CreateInputs(
+            CreateRequest(requestId: "request id")));
+        AssertThrows<ArgumentException>(() => CiWorkflowDispatchInputContract.CreateInputs(
+            CreateRequest(correlationId: "correlation/unsafe")));
+        AssertThrows<ArgumentException>(() => CiWorkflowDispatchInputContract.CreateInputs(
+            CreateRequest(taskId: "tâsk-1")));
+        Console.WriteLine("PASS: 13 correlated workflow dispatch input contract checks.");
+        return 13;
     }
+
+    private static CiWorkflowRerunRequest CreateRequest(
+        string requestId = "request-1",
+        string correlationId = "correlation-1",
+        string taskId = "task-1") =>
+        new(requestId, correlationId, taskId, "TrentBest/SimpleDemos",
+            "refs/heads/feature/agent-fix",
+            "ABCDEF0123456789ABCDEF0123456789ABCDEF01",
+            ".github/workflows/ci.yml",
+            "TrentBest/SimpleDemos:task-1:2",
+            2, 5,
+            DateTimeOffset.Parse("2026-10-31T00:00:00Z"),
+            DateTimeOffset.Parse("2026-10-31T00:10:00Z"));
 
     private static void Assert(bool condition, string message)
     {
