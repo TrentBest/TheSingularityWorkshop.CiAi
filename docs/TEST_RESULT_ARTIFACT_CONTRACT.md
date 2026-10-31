@@ -86,7 +86,7 @@ The artifact name binds the run, attempt, and workflow job key. The trusted host
 4. Safely extract only the expected TRX payload. Reject path traversal, unexpected entries, oversized archives, duplicate payloads, and malformed manifests.
 5. Compute the extracted TRX SHA-256 and byte length. Bind the artifact ID/name/digests to the exact repository, run, attempt, numeric job ID, job name, and job key.
 6. Parse the extracted bytes with DTD processing disabled and strict size/record limits.
-7. Supply `CiRequiredCheckStatus` only from CiAi's configured required-check policy for that exact job. Do not infer required status from a caller's raw boolean or from the TRX file alone.
+7. Configure `CiRequiredJobPolicy` with the exact workflow job key/name pairs that CiAi considers required. The report derives `CiRequiredCheckStatus` from that policy and the validated v3 job observation; do not accept a caller's raw boolean or an externally supplied verdict.
 8. Preserve the normalized report and its source digests for the next bounded HeadlessAi turn.
 
 `CiTestResultReport.ParseAndValidate` verifies the extracted payload digest and size, the v3 workflow/event/checkout provenance, and the exact job binding. It does not download the ZIP, verify the provider ZIP digest, or perform ZIP extraction. Those are trusted-host responsibilities and must be completed before constructing `CiTestResultArtifactSource`.
@@ -106,11 +106,16 @@ The artifact name binds the run, attempt, and workflow job key. The trusted host
 The following is a source-checked API sketch. `v3Packet`, `verifiedTrxBytes`, and `source` must come from the trusted collection/retrieval path described above.
 
 ```csharp
+var requiredJobs = new CiRequiredJobPolicy(new[]
+{
+    new CiRequiredJobDefinition("test-minesweeper", "test-minesweeper")
+});
+
 var report = CiTestResultReport.ParseAndValidate(
     verifiedTrxBytes,
     v3Packet,
     source,
-    CiRequiredCheckStatus.Failed,
+    requiredJobs,
     observedAt);
 
 if (report.Verdict == CiTestResultVerdict.ActionableFailure)
@@ -131,7 +136,7 @@ Both assertions reported expected `Accepted` and actual `RejectedTerminal`. The 
 
 ### Verification status
 
-The new contract checks are registered in `TheSingularityWorkshop.CiAi.ContractTests`. They cover multi-failure normalization, exact provenance/job binding, digest and size mismatch, missing artifacts, pass/failure/non-actionable verdicts, redaction, bounded diagnostics, duplicate identities, inconsistent counters, and DTD rejection.
+The new contract checks are registered in `TheSingularityWorkshop.CiAi.ContractTests` (32 focused checks in the TRX report test group). They cover multi-failure normalization, exact provenance/job binding, digest and size mismatch, missing artifacts, pass/failure/non-actionable verdicts, redaction, bounded diagnostics, duplicate identities, inconsistent counters, and DTD rejection.
 
 **Execution status:** source and test changes are committed on the feature branch. A .NET SDK was not available in this editing environment, so no local build/test result is claimed. Exact-head CI evidence is still required before this implementation can be considered validated.
 
