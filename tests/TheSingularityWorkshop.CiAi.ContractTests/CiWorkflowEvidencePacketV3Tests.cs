@@ -39,7 +39,7 @@ internal static class CiWorkflowEvidencePacketV3Tests
             runCollection, jobCollection, 42, 2, DateTimeOffset.Parse("2026-10-31T01:02:00Z"),
             provenance, workflowDefinitionTrusted: true);
         Assert(factoryPacket.IsSuccessful && factoryPacket.Provenance.WorkflowSha == WorkflowSha,
-            "v3 collection factory did not bind the exact run attempt to validated provenance");
+            "v3 collection factory depended on the legacy workflow-ref suffix instead of validated provenance");
 
         var dispatchBytes = Encoding.UTF8.GetBytes(CreateDispatchProvenance());
         var dispatchProvenance = CiWorkflowProvenanceRecord.ParseAndValidate(
@@ -151,7 +151,7 @@ internal static class CiWorkflowEvidencePacketV3Tests
             DateTimeOffset.Parse("2026-10-31T01:00:00Z"));
         var observation = new CiWorkflowRunObservation(
             snapshot, 2, ".github/workflows/ci.yml", "pull_request",
-            Array.Empty<int>()) { WorkflowRef = "refs/heads/development" };
+            Array.Empty<int>()) { WorkflowRef = null };
         var runs = new CiWorkflowRunCollection(
             "TrentBest/CiAi", EventSha, new[] { observation }, 1, 1, false);
         var job = new CiWorkflowJobObservation(
