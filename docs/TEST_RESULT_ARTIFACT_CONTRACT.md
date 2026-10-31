@@ -136,7 +136,7 @@ Both assertions reported expected `Accepted` and actual `RejectedTerminal`. The 
 
 ### Verification status
 
-The new contract checks are registered in `TheSingularityWorkshop.CiAi.ContractTests` (34 focused checks in the TRX report test group). They cover multi-failure normalization, exact provenance/job binding, digest and size mismatch, missing artifacts, pass/failure/non-actionable verdicts, redaction, bounded diagnostics, duplicate identities, inconsistent counters, and DTD rejection.
+The new contract checks are registered in `TheSingularityWorkshop.CiAi.ContractTests` (35 focused checks in the TRX report test group). They cover multi-failure normalization, exact provenance/job binding, digest and size mismatch, missing artifacts, pass/failure/non-actionable verdicts, redaction, bounded diagnostics, duplicate identities, inconsistent counters, and DTD rejection.
 
 **Execution status:** source and test changes are committed on the feature branch. A .NET SDK was not available in this editing environment, so no local build/test result is claimed. Exact-head CI evidence is still required before this implementation can be considered validated.
 
