@@ -42,8 +42,9 @@ internal static class CiTestResultReportTests
             .All(item => !string.IsNullOrWhiteSpace(item.Message) &&
                 !string.IsNullOrWhiteSpace(item.StackTrace) && item.RecordSha256.Length == 64),
             "failed test identity, assertion, stack trace, or record digest was not retained");
-        Assert(actionable.ToJson().Contains(CiTestResultReport.CurrentSchema, StringComparison.Ordinal),
-            "normalized report did not serialize its versioned schema");
+        Assert(actionable.ToJson().Contains(CiTestResultReport.CurrentSchema, StringComparison.Ordinal) &&
+            actionable.ToJson().Contains("ActionableFailure", StringComparison.Ordinal),
+            "normalized report did not serialize its versioned schema and named verdict");
 
         var passingTrx = Encoding.UTF8.GetBytes(CreateTrx(
             ("test-1", "FirstPass", "Passed", null, null),
@@ -105,12 +106,13 @@ internal static class CiTestResultReportTests
             "missing TRX artifact was not preserved as incomplete evidence");
 
         var secretTrx = Encoding.UTF8.GetBytes(CreateTrx(
-            ("test-1", "SecretRedaction", "Failed", "token=ghp_123456789012345678901234567890", "Bearer abcdefghijklmnopqrstuvwxyz0123456789"),
+            ("ghp_123456789012345678901234567890", "SecretRedaction", "Failed", "token=ghp_123456789012345678901234567890", "Bearer abcdefghijklmnopqrstuvwxyz0123456789"),
             total: 1, passed: 0, failed: 1, skipped: 0));
         var secretReport = CiTestResultReport.ParseAndValidate(
             secretTrx, CreatePacket("failure"), CreateSource(secretTrx),
             CiRequiredCheckStatus.Failed, ObservedAt);
         Assert(secretReport.Results[0].SensitiveContentRedacted &&
+            secretReport.Results[0].TestId == "[REDACTED]" &&
             !secretReport.ToJson().Contains("ghp_123456789012345678901234567890", StringComparison.Ordinal) &&
             !secretReport.ToJson().Contains("abcdefghijklmnopqrstuvwxyz0123456789", StringComparison.Ordinal),
             "secret-like values were not redacted from normalized diagnostics");
@@ -174,8 +176,8 @@ internal static class CiTestResultReportTests
             truncated.Results[0].StackTrace!.Length <= 8_020,
             "diagnostic message or stack trace was not bounded");
 
-        Console.WriteLine("PASS: 24 provenance-bound TRX diagnostic report contract checks.");
-        return 24;
+        Console.WriteLine("PASS: 27 provenance-bound TRX diagnostic report contract checks.");
+        return 27;
     }
 
     private static CiWorkflowEvidencePacketV3 CreatePacket(
