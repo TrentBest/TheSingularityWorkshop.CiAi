@@ -212,8 +212,8 @@ internal static class CiWorkflowEvidencePacketV3Tests
         "sha": "{{EventSha}}",
         "pullRequest": {
           "number": 17,
-          "head": { "ref": "refs/heads/feature/fix", "sha": "cccccccccccccccccccccccccccccccccccccccc" },
-          "base": { "ref": "refs/heads/development", "sha": "dddddddddddddddddddddddddddddddddddddddd" }
+          "head": { "ref": "feature/fix", "sha": "cccccccccccccccccccccccccccccccccccccccc" },
+          "base": { "ref": "development", "sha": "dddddddddddddddddddddddddddddddddddddddd" }
         }
       },
       "checkout": {
