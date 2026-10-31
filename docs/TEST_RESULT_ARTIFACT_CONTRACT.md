@@ -73,7 +73,7 @@ The opt-in .NET workflow must preserve the test exit code, upload TRX even after
   shell: bash
   env:
     TEST_EXIT_CODE: ${{ steps.tests.outputs.exit_code }}
-  run: exit "\${TEST_EXIT_CODE:-1}"
+  run: exit "${TEST_EXIT_CODE:-1}"
 ```
 
 The artifact name binds the run, attempt, and workflow job key. The trusted host must map that job key to the numeric GitHub job ID and exact job name from the run's job inventory. If the TRX is absent or upload fails, the required job remains red and CiAi records incomplete evidence.
@@ -93,7 +93,7 @@ The artifact name binds the run, attempt, and workflow job key. The trusted host
 
 ### Trust and ownership
 
-- **CiAi:** exact-run evidence, required-check policy, test-result normalization, verdict, reason codes, and durable attempt preservation.
+- **CiAi:** exact-run evidence, required-check policy, test-result normalization, verdict, reason codes, and per-attempt report preservation.
 - **Trusted host:** provider authentication, artifact ZIP digest verification, safe extraction, workflow-definition trust policy, and mapping the artifact to the exact GitHub job.
 - **HeadlessAi:** delivers the bounded report as untrusted context to the assigned LLM; it does not decide CI success.
 - **Foundry:** correlates the report to the task, applies lifecycle and retry/time/cost budgets, and mediates authorized handoffs. It does not reinterpret test output or become a second CI verdict engine.
@@ -136,7 +136,7 @@ Both assertions reported expected `Accepted` and actual `RejectedTerminal`. The 
 
 ### Verification status
 
-The new contract checks are registered in `TheSingularityWorkshop.CiAi.ContractTests` (32 focused checks in the TRX report test group). They cover multi-failure normalization, exact provenance/job binding, digest and size mismatch, missing artifacts, pass/failure/non-actionable verdicts, redaction, bounded diagnostics, duplicate identities, inconsistent counters, and DTD rejection.
+The new contract checks are registered in `TheSingularityWorkshop.CiAi.ContractTests` (34 focused checks in the TRX report test group). They cover multi-failure normalization, exact provenance/job binding, digest and size mismatch, missing artifacts, pass/failure/non-actionable verdicts, redaction, bounded diagnostics, duplicate identities, inconsistent counters, and DTD rejection.
 
 **Execution status:** source and test changes are committed on the feature branch. A .NET SDK was not available in this editing environment, so no local build/test result is claimed. Exact-head CI evidence is still required before this implementation can be considered validated.
 
