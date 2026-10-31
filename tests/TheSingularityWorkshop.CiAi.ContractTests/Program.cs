@@ -8,6 +8,7 @@ passed += CiWorkflowEvidenceReceiptLedgerContractTests.Run();
 passed += await FoundryArtifactReadyNoticeClientTests.RunAsync();
 passed += FoundryArtifactReadyNoticeOutboxTests.Run();
 passed += CiWorkflowRerunRequestContractTests.Run();
+passed += CiWorkflowDispatchInputContractTests.Run();
 passed += CiWorkflowRerunRequestLedgerContractTests.Run();
 passed += CiPipelineDefinitionContractTests.Run();
 passed += CiWorkflowDomainCatalogContractTests.Run();
