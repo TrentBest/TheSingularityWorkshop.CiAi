@@ -8,6 +8,8 @@ internal static class CiWorkflowDispatchInputContractTests
         var request = CreateRequest();
 
         var inputs = CiWorkflowDispatchInputContract.CreateInputs(request);
+        Assert(CiWorkflowDispatchInputContract.TrustedWorkflowRef == "refs/heads/development",
+            "dispatch did not pin the workflow definition to trusted development");
         Assert(inputs.Count == 6, "dispatch mapping did not produce the exact six-input contract");
         Assert(inputs[CiWorkflowDispatchInputContract.TargetBranchInput] == "feature/agent-fix",
             "full Git ref was not converted to the workflow branch input");
@@ -35,8 +37,8 @@ internal static class CiWorkflowDispatchInputContractTests
             CreateRequest(correlationId: "correlation/unsafe")));
         AssertThrows<ArgumentException>(() => CiWorkflowDispatchInputContract.CreateInputs(
             CreateRequest(taskId: "tâsk-1")));
-        Console.WriteLine("PASS: 13 correlated workflow dispatch input contract checks.");
-        return 13;
+        Console.WriteLine("PASS: 14 correlated workflow dispatch input contract checks.");
+        return 14;
     }
 
     private static CiWorkflowRerunRequest CreateRequest(
