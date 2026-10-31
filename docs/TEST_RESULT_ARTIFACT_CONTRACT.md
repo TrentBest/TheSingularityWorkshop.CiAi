@@ -12,7 +12,7 @@ The first supported input is Visual Studio Test Results (`.trx`). The normalized
 - Repository, candidate checkout ref/SHA, workflow path/definition ref/SHA, and event ref/SHA. Pull-request number/head/base identities and exact run/job evidence URLs are retained separately.
 - Workflow run ID and attempt, plus the exact producing job ID and name.
 - Provider artifact ID/name, provider-reported ZIP digest, extracted TRX digest, byte sizes, and retention timestamps.
-- Test framework, total/passed/failed/skipped counts, stable test identities, outcomes, bounded assertion messages, and bounded stack traces.
+- Test framework, total/passed/failed/skipped/other counts, stable test identities, bounded raw outcome values, normalized outcomes, bounded assertion messages, and bounded stack traces.
 - A CiAi-owned verdict and stable reason codes.
 
 The verdict is one of:
@@ -136,7 +136,7 @@ Both assertions reported expected `Accepted` and actual `RejectedTerminal`. The 
 
 ### Verification status
 
-The new contract checks are registered in `TheSingularityWorkshop.CiAi.ContractTests` (36 focused checks in the TRX report test group). They cover multi-failure normalization, exact provenance/job binding, digest and size mismatch, missing artifacts, pass/failure/non-actionable verdicts, redaction, bounded diagnostics, duplicate identities, inconsistent counters, and DTD rejection.
+The new contract checks are registered in `TheSingularityWorkshop.CiAi.ContractTests` (36 focused checks in the TRX report test group). They cover multi-failure normalization, exact provenance/job binding, digest and size mismatch, missing artifacts, pass/failure/non-actionable verdicts, unknown-outcome preservation, raw outcome digest binding, redaction, bounded diagnostics, duplicate identities, inconsistent counters, and DTD rejection.
 
 **Execution status:** source and test changes are committed on the feature branch. A .NET SDK was not available in this editing environment, so no local build/test result is claimed. Exact-head CI evidence is still required before this implementation can be considered validated.
 
