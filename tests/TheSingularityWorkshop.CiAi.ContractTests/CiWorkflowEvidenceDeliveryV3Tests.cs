@@ -14,7 +14,7 @@ internal static class CiWorkflowEvidenceDeliveryV3Tests
             var delivery = new CiWorkflowEvidenceDeliveryV3("v3-delivery-1", packet);
             Assert(delivery.IdempotencyKey.Length == 71 &&
                 delivery.IdempotencyKey.StartsWith("sha256:", StringComparison.Ordinal) &&
-                delivery.IdempotencyKey.All(Uri.IsHexDigit) == false,
+                delivery.IdempotencyKey.AsSpan(7).ToString().All(Uri.IsHexDigit),
                 "v3 idempotency identity was not encoded as a bounded SHA-256 key");
             Assert(new CiWorkflowEvidenceDeliveryV3("v3-delivery-stable", packet).IdempotencyKey ==
                 delivery.IdempotencyKey, "identical v3 provenance produced an unstable idempotency key");
