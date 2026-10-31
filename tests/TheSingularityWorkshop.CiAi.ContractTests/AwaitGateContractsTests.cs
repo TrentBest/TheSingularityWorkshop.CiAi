@@ -17,7 +17,7 @@ internal static class AwaitGateContractsTests
         Check("gate contract requires an exact provider source and SHA-256 identities", () =>
         {
             Throws<ArgumentException>(() => new AwaitGateContract("B", 1, Consumer, Provider, "short",
-                ManifestDigest, "policy-v1",
+                ManifestDigest, "policy-v1", Approval(),
                 new[] { new AwaitGateRequirement("dimensions", "Dimensions are validated", "valid", AwaitGateEvidenceKind.Machine) }));
             Throws<ArgumentException>(() => new AwaitGateContract("B", 1, Consumer, Provider, SourceSha,
                 "not-a-digest", "policy-v1",
@@ -147,8 +147,12 @@ internal static class AwaitGateContractsTests
 
     private static AwaitGateContract NewContract(IReadOnlyList<AwaitGateRequirement>? requirements = null,
         string gateId = "B") =>
-        new(gateId, 1, Consumer, Provider, SourceSha, ManifestDigest, "policy-v1",
+        new(gateId, 1, Consumer, Provider, SourceSha, ManifestDigest, "policy-v1", Approval(),
             requirements ?? new[] { MachineRequirement() });
+
+    private static AwaitGateApproval Approval() =>
+        new("gate-approval-1", "gate-contract-approval-v1", "authorized-owner",
+            AwaitGateApprovalKind.Human, DateTimeOffset.Parse("2026-10-31T16:00:00Z"));
 
     private static AwaitGateRequirement MachineRequirement() =>
         new("dimensions", "Ship dimensions and weight are validated", "valid", AwaitGateEvidenceKind.Machine);
