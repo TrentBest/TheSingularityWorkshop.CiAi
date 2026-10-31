@@ -14,7 +14,7 @@ A version 1 request carries:
 - attempt number and configured maximum (hard-capped at five);
 - request and expiry timestamps (hard-capped at 30 minutes).
 
-The contract rejects `master`, `development`, tags, malformed refs, non-workflow paths, incomplete SHAs, and unbounded retry windows.
+The contract rejects `master`, `development`, tags, malformed Git refs (including empty/dot path components, `.lock` suffixes, control/space characters, and Git-special syntax), nested workflow paths, non-workflow paths, incomplete SHAs, and unbounded retry windows. Workflow identities are restricted to root-level files directly under `.github/workflows`, matching GitHub Actions' workflow discovery layout.
 
 ## Trusted host authorization
 
