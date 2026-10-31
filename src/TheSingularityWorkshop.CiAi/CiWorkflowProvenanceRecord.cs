@@ -72,7 +72,7 @@ public sealed record CiWorkflowProvenanceRecord
         if (expectedRunId <= 0) throw new ArgumentOutOfRangeException(nameof(expectedRunId));
         if (expectedRunAttempt <= 0) throw new ArgumentOutOfRangeException(nameof(expectedRunAttempt));
         if (expectedContentSha256.Length != 64 || !expectedContentSha256.All(Uri.IsHexDigit))
-            throw new ArgumentException("Expected artifact digest must be a full SHA-256 hexadecimal value.", nameof(expectedContentSha256));
+            throw new ArgumentException("Expected content digest must be a full SHA-256 hexadecimal value.", nameof(expectedContentSha256));
         if (artifactBytes.IsEmpty)
             throw new InvalidDataException("Workflow provenance artifact is empty.");
 
@@ -80,7 +80,7 @@ public sealed record CiWorkflowProvenanceRecord
         if (!CryptographicOperations.FixedTimeEquals(
             Convert.FromHexString(actualDigest),
             Convert.FromHexString(expectedContentSha256)))
-            throw new InvalidDataException("Workflow provenance artifact digest does not match provider metadata.");
+            throw new InvalidDataException("Workflow provenance content digest does not match the trusted retriever's value.");
 
         using var document = JsonDocument.Parse(artifactBytes);
         var root = document.RootElement;
