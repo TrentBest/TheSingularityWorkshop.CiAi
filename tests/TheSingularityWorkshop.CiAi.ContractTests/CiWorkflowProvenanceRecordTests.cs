@@ -78,7 +78,7 @@ internal static class CiWorkflowProvenanceRecordTests
             Convert.ToHexString(SHA256.HashData(missingCheckoutSha))));
 
         var invalidBranch = Encoding.UTF8.GetBytes(CreatePullRequestJson()
-            .Replace("\\"feature/fix\\"", "\\"../feature/fix\\"", StringComparison.Ordinal));
+            .Replace("feature/fix", "../feature/fix", StringComparison.Ordinal));
         Throws<InvalidDataException>(() => CiWorkflowProvenanceRecord.ParseAndValidate(
             invalidBranch, "TrentBest/CiAi", 42, 2,
             Convert.ToHexString(SHA256.HashData(invalidBranch))));
