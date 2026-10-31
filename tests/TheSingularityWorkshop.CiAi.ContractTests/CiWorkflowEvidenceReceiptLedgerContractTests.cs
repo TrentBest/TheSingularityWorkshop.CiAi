@@ -31,6 +31,22 @@ internal static class CiWorkflowEvidenceReceiptLedgerContractTests
                 reopened.ReadAcknowledgedDeliveryIds().Contains(delivery.DeliveryId),
                 "receipt history or acknowledgement did not survive reopen");
 
+            var outbox = new FileCiWorkflowEvidenceOutbox(Path.Combine(root, "outbox.jsonl"));
+            Assert(outbox.Enqueue(delivery) == CiWorkflowEvidenceEnqueueOutcome.Enqueued,
+                "accepted-delivery outbox fixture was not enqueued");
+            Assert(outbox.ReadPending(reopened.ReadAcknowledgedDeliveryIds()).Count == 0,
+                "durable accepted receipt did not suppress outbox replay");
+
+            var rejectedOnlyDelivery = CreateDelivery("delivery-rejected-only", 44);
+            Assert(outbox.Enqueue(rejectedOnlyDelivery) == CiWorkflowEvidenceEnqueueOutcome.Enqueued,
+                "rejected-delivery outbox fixture was not enqueued");
+            var rejectedOnlyReceipt = CreateReceipt(rejectedOnlyDelivery, "receipt-rejected-only",
+                CiWorkflowEvidenceReceiptOutcome.Rejected, "policy.denied");
+            Assert(reopened.Record(rejectedOnlyReceipt, rejectedOnlyDelivery) == CiWorkflowEvidenceReceiptRecordOutcome.Recorded,
+                "rejected-only receipt was not recorded");
+            Assert(outbox.ReadPending(reopened.ReadAcknowledgedDeliveryIds()).Single().DeliveryId == rejectedOnlyDelivery.DeliveryId,
+                "rejected receipt incorrectly suppressed retryable outbox delivery");
+
             var wrongDigest = new CiWorkflowEvidenceRemoteReceipt(1, "receipt-wrong", delivery.DeliveryId,
                 delivery.IdempotencyKey, new string('0', 64), CiWorkflowEvidenceReceiptOutcome.Accepted,
                 DateTimeOffset.Parse("2026-10-30T23:00:00Z"));
@@ -54,8 +70,8 @@ internal static class CiWorkflowEvidenceReceiptLedgerContractTests
             AssertThrows<InvalidDataException>(() =>
                 new FileCiWorkflowEvidenceReceiptLedger(tornPath).ReadAcknowledgedDeliveryIds());
 
-            Console.WriteLine("PASS: 12 CI workflow evidence receipt ledger contract checks.");
-            return 8;
+            Console.WriteLine("PASS: 14 CI workflow evidence receipt ledger contract checks.");
+            return 14;
         }
         finally
         {
