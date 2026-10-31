@@ -25,6 +25,36 @@ internal static class CiWorkflowRerunRequestContractTests
             Throws<ArgumentException>(() => NewRequest(workflowPath: "../build.yml"));
             Throws<ArgumentException>(() => NewRequest(workflowPath: ".github/workflows/../build.yml"));
         });
+
+        Check("request and fresh target reject malformed Git feature refs", () =>
+        {
+            var invalidRefs = new[]
+            {
+                "refs/heads/feature/../main",
+                "refs/heads/feature//empty",
+                "refs/heads/feature/name.lock",
+                "refs/heads/feature/a@{b}",
+                "refs/heads/feature/white space",
+                "refs/heads/feature/branch.",
+                "refs/heads/feature/.hidden",
+                "refs/heads/feature/name\\\\with-backslash"
+            };
+            foreach (var invalidRef in invalidRefs)
+            {
+                Throws<ArgumentException>(() => NewRequest(headRef: invalidRef));
+                Throws<ArgumentException>(() => new CiWorkflowRerunTarget(
+                    "TrentBest/TheSingularityWorkshop.CiAi", invalidRef,
+                    "abcdef0123456789abcdef0123456789abcdef01",
+                    ".github/workflows/contract-verification.yml"));
+            }
+        });
+        Check("rerun workflow identity is a root-level GitHub Actions file", () =>
+        {
+            Throws<ArgumentException>(() => NewRequest(workflowPath: ".github/workflows/nested/ci.yml"));
+            Throws<ArgumentException>(() => new CiWorkflowRerunTarget(
+                "TrentBest/TheSingularityWorkshop.CiAi", "refs/heads/feature/agent-fix",
+                "abcdef0123456789abcdef0123456789abcdef01", ".github/workflows/nested/ci.yml"));
+        });
         Check("rerun request bounds attempts to five", () =>
         {
             Throws<ArgumentOutOfRangeException>(() => NewRequest(maximumAttempts: 6));
