@@ -240,7 +240,7 @@ public sealed record CiTestResultReport
     public long JobId { get; }
     public string JobName { get; }
     public string JobStatus { get; }
-    public string JobConclusion { get; }
+    public string? JobConclusion { get; }
     public CiRequiredCheckStatus RequiredCheckStatus { get; }
     public CiTestResultVerdict Verdict { get; }
     public IReadOnlyList<string> ReasonCodes { get; }
