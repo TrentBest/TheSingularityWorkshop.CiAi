@@ -173,6 +173,7 @@ public sealed record CiTestResultReport
         Repository = evidence.Provenance.Repository;
         CandidateRef = evidence.CandidateRef;
         CandidateSha = evidence.CandidateSha;
+        WorkflowPath = evidence.Provenance.WorkflowPath;
         WorkflowDefinitionRef = evidence.Provenance.WorkflowRef;
         WorkflowDefinitionSha = evidence.Provenance.WorkflowSha;
         EventName = evidence.Provenance.EventName;
@@ -211,6 +212,7 @@ public sealed record CiTestResultReport
     public string Repository { get; }
     public string CandidateRef { get; }
     public string CandidateSha { get; }
+    public string WorkflowPath { get; }
     public string WorkflowDefinitionRef { get; }
     public string WorkflowDefinitionSha { get; }
     public string EventName { get; }
