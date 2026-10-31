@@ -22,7 +22,7 @@ It implements the sender side of [Foundry's normative callback contract](https:/
 
 ## Receipt and retry behavior
 
-Only a valid HTTP 202 **accepted** receipt or HTTP 200 **duplicate** receipt acknowledges the notice. The response must identify the exact contract, notice ID, idempotency key, stable receipt ID, and acceptance time. Mismatched, malformed, oversized, or unsupported responses are not acknowledgements.
+Only a valid HTTP 202 **accepted** receipt or HTTP 200 **duplicate** receipt acknowledges the notice. The response must use the application/json media type and identify the exact contract, notice ID, idempotency key, stable receipt ID, and acceptance time. Mismatched, malformed, oversized, or unsupported responses are not acknowledgements.
 
 | Response | Client outcome |
 |---|---|
@@ -35,7 +35,7 @@ Only a valid HTTP 202 **accepted** receipt or HTTP 200 **duplicate** receipt ack
 | 429 | RateLimited; preserve Retry-After |
 | 5xx / transport interruption / incomplete receipt | RetryableFailure; retry the exact same notice |
 
-The client performs one HTTP attempt. **FileFoundryArtifactReadyNoticeOutbox** persists the exact serialized notice and digest before sending, then replays those same bytes after restart. **FileFoundryArtifactIngressReceiptLedger** binds a validated remote receipt to the exact notice ID, idempotency key, and local payload digest. Only accepted/duplicate receipts suppress replay; rejected, missing, or mismatched receipts leave the notice pending. The caller still owns retry scheduling, expiry/budget enforcement, credential refresh, and calling the receipt ledger only after the authenticated sender validates the response. It must reuse the same notice ID, manifest, and idempotency key on retry; it must not create a new identity to escape a failed delivery.
+The client performs one HTTP attempt and has ten focused transport contract checks covering accepted/duplicate receipts, mismatched identity, media type, authentication, rate limiting, transient server failure, malformed responses, and endpoint validation. **FileFoundryArtifactReadyNoticeOutbox** persists the exact serialized notice and digest before sending, then replays those same bytes after restart. **FileFoundryArtifactIngressReceiptLedger** binds a validated remote receipt to the exact notice ID, idempotency key, and local payload digest. Only accepted/duplicate receipts suppress replay; rejected, missing, or mismatched receipts leave the notice pending. The caller still owns retry scheduling, expiry/budget enforcement, credential refresh, and calling the receipt ledger only after the authenticated sender validates the response. It must reuse the same notice ID, manifest, and idempotency key on retry; it must not create a new identity to escape a failed delivery.
 
 ## Current boundary
 
