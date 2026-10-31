@@ -234,6 +234,8 @@ public sealed class FileAwaitGateEventOutbox
             ?? throw new InvalidDataException("Await gate event snapshot is empty.");
         if (stored.SchemaVersion != CurrentSchemaVersion)
             throw new InvalidDataException("Await gate event schema version is unsupported.");
+        if (stored.RequirementResults is null || stored.RequirementResults.Any(item => item is null))
+            throw new InvalidDataException("Await gate event snapshot is incomplete.");
         var evaluation = new AwaitGateEvaluation(stored.GateId, stored.GateVersion, stored.ContractDigest,
             stored.ProviderRepository, stored.ProviderSourceSha, stored.ManifestDigest,
             stored.EvaluationPolicyVersion, stored.EvaluationState,
