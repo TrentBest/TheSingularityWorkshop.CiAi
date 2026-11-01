@@ -8,7 +8,7 @@ internal static class AiCiBuilderContractTests
     public static int Run()
     {
         _passed = 0;
-        Check("builder emits all six initial repository operation identities", () =>
+        Check("builder emits all six repository operation identities with complete atomic metadata", () =>
         {
             var proposal = NewBuilder()
                 .CreateProject("Minesweeper")
@@ -19,11 +19,17 @@ internal static class AiCiBuilderContractTests
                 .RequestTests()
                 .Build();
             Assert(proposal.ProtocolVersion == CommandProposal.CurrentProtocolVersion, "wrong CommandAi protocol");
+            Assert(proposal.ProtocolVersion == "CommandAi/2", "proposal did not use CommandAi/2");
             Assert(proposal.Commands.Select(c => c.ActionId).SequenceEqual(new ulong[] {
                 AiCiCommandCatalog.CreateProject, AiCiCommandCatalog.AddProjectFile,
                 AiCiCommandCatalog.ModifyProjectFile, AiCiCommandCatalog.AddDependency,
                 AiCiCommandCatalog.RequestBuild, AiCiCommandCatalog.RequestTests }),
                 "command order or identities changed");
+            Assert(proposal.Commands.All(c => c.CommandId != Guid.Empty), "command identity missing");
+            Assert(proposal.Commands.All(c => !string.IsNullOrWhiteSpace(c.Target.Text)), "target missing");
+            Assert(proposal.Commands.All(c => !string.IsNullOrWhiteSpace(c.Scope.Text)), "scope missing");
+            Assert(proposal.Commands.All(c => !string.IsNullOrWhiteSpace(c.IdempotencyKey)), "idempotency key missing");
+            Assert(proposal.Commands.All(c => c.OutcomeContract.OutcomeId > 0 && c.OutcomeContract.Fields.Count > 0), "outcome contract missing");
         });
 
         Check("equivalent builder calls encode deterministically and round-trip through CommandAi", () =>
@@ -41,8 +47,8 @@ internal static class AiCiBuilderContractTests
             var proposal = NewBuilder().CreateProject("Game").RequestBuild().Build();
             foreach (var command in proposal.Commands)
             {
-                Assert(Text(command, AiCiCommandCatalog.Repository) == "TrentBest/Minesweeper", "repository binding missing");
-                Assert(Text(command, AiCiCommandCatalog.Branch) == "feature/repair-board", "feature branch binding missing");
+                Assert(command.Target.Text == "TrentBest/Minesweeper", "repository target missing");
+                Assert(command.Scope.Text == "feature/repair-board", "feature branch scope missing");
                 Assert(Text(command, AiCiCommandCatalog.BaseSha) == new string('a', 40), "base SHA binding missing");
             }
         });
