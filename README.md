@@ -65,16 +65,19 @@ Track the coordinated acceptance path:
 - [CommandAi proposal composition through AiCi](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/37)
 - [Experiences Minesweeper pilot](https://github.com/TrentBest/TheSingularityWorkshop.Experiences/issues/37)
 
-## 03 — Secondary consumer pilot: AnyApp
+## 03 — First self-building consumer: AnyApp
 
-AnyApp remains a useful source-based consumer and later desktop proving surface, but it is secondary to the agentic-development loop. It keeps GitHub Actions as the authoritative build/test executor and uses CiAi to observe the exact AnyApp commit, run attempt, jobs, and steps. The integration also produces a Windows x64 single-file executable as a development artifact; it does not publish a NuGet package or create a GitHub Release.
+AnyApp is the first repository being wired to build, evaluate, and ultimately improve itself through CiAi. Its existing GitHub Actions workflow remains the authoritative Windows build/test executor; CiAi must evaluate exact-run evidence and diagnostics, while Foundry/host independently authorizes any proposed repository mutation. The first vertical slice is producer-side: AnyApp emits workflow provenance and TRX test artifacts so failures can become structured CiAi diagnostics. The full red → bounded repair → green loop is not yet live.
 
+This makes AnyApp the first self-building consumer and practical host-boundary proving surface. The manifest-driven Minesweeper Experience remains the broader end-to-end domain acceptance target for the CODE RED pipeline; these are complementary milestones, not competing ownership claims.
+
+- [AnyApp self-building consumer PR #37](https://github.com/TrentBest/AnyApp/pull/37)
 - [AnyApp consumer walkthrough and evidence-lane map](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/Samples/AnyApp.md)
 - [AnyApp CiAi evidence workflow](https://github.com/TrentBest/AnyApp/blob/development/.github/workflows/ciai-evidence.yml)
 - [AnyApp executable build workflow](https://github.com/TrentBest/AnyApp/blob/development/.github/workflows/dotnet.yml)
 - [AnyApp evidence integration documentation](https://github.com/TrentBest/AnyApp/blob/development/docs/CIAI_EVIDENCE_INTEGRATION.md)
 
-The pilot is read-only and advisory. Treat it as a live example under validation, not as proof that the full evidence or agentic-development path is complete.
+The consumer pilot is under active validation. It is not proof that artifact ingestion, HeadlessAi repair, host-authorized application, or the complete agentic-development path is operational.
 
 ## 04 — Gate an existing branch on demand
 
