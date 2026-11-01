@@ -38,7 +38,7 @@ var proposal = AiCi.ForRepository(
     .Build();
 ```
 
-The result is a CommandAi `CommandProposal` using the pinned CommandAi source contract. It can be inspected or encoded with `CommandAiTextCodec`; these operations have no repository side effects.
+The result is a CommandAi/2 `CommandProposal` using the pinned CommandAi source contract. Every command has its own identity, repository target, feature-branch scope, idempotency key, and declared outcome contract. The base commit and operation-specific values remain typed parameters. The proposal can be inspected or encoded with `CommandAiTextCodec`; these operations have no repository side effects.
 
 ### Initial command vocabulary
 
@@ -51,7 +51,7 @@ The result is a CommandAi `CommandProposal` using the pinned CommandAi source co
 | `RequestBuild` | Request host build validation | None |
 | `RequestTests` | Request host test validation | None |
 
-Action and parameter IDs are stable numeric identities in `AiCiCommandCatalog`. Every instruction also carries repository, branch, and base-SHA bindings. The builder does not interpret package versions, install dependencies, run tests, or mutate a repository.
+Action and parameter IDs are stable numeric identities in `AiCiCommandCatalog`. The repository is the command target and the isolated feature branch is its scope; the exact base SHA is an explicit argument. Command identity and idempotency identity are derived deterministically from the complete action binding so equivalent proposals can be compared and retried. Each operation declares a generic expected outcome shape. The builder does not interpret package versions, install dependencies, run tests, or mutate a repository.
 
 ### Composition constraints
 
@@ -59,7 +59,7 @@ Action and parameter IDs are stable numeric identities in `AiCiCommandCatalog`. 
 - The target must be an isolated branch; canonical `master` and `development` targets are rejected.
 - The base commit must be a full hexadecimal SHA-1 commit identity.
 - Paths must be bounded, repository-relative, and free of roots, traversal segments, backslashes, colons, and control characters.
-- A modification requires the expected full 64-character SHA-256 digest of the current file content. This is a source precondition, not proof that the host has checked it.
+- A modification carries the expected full 64-character SHA-256 digest of the current file content as a typed parameter. The host must independently verify this digest before applying the operation. It is not proof that the host has checked it.
 - Literal content is bounded by CommandAi's published-in-source `CommandLimits`; command count is bounded by the same contract.
 - Empty proposals are rejected. Equivalent calls produce deterministic CommandAi text encoding.
 
@@ -77,7 +77,7 @@ The exact PR head must pass both **CiAi Contract Verification** and **Cog Ecosys
 
 This slice does **not** implement:
 
-- GrammarAi schema registration or ProtocolAi envelope integration.
+- GrammarAi schema registration for repository-specific precondition expressions or ProtocolAi envelope integration.
 - Foundry's host-side capability registry, policy evaluation, approval enforcement, or repository mutation adapter.
 - GitHub branch/file writes, workflow dispatch, build/test execution, or evidence callback delivery.
 - A complete failed-CI → model repair → guarded mutation → exact-SHA green-CI demonstration.
