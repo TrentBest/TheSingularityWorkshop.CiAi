@@ -29,7 +29,8 @@ public static class AiCiCommandCatalog
 public sealed class AiCiRepositoryBuilder
 {
     private static readonly Regex RepositoryPattern = new("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", RegexOptions.CultureInvariant);
-    private static readonly Regex ShaPattern = new("^[0-9a-fA-F]{40}$", RegexOptions.CultureInvariant);
+    private static readonly Regex CommitShaPattern = new("^[0-9a-fA-F]{40}$", RegexOptions.CultureInvariant);
+    private static readonly Regex SourceSha256Pattern = new("^[0-9a-fA-F]{64}$", RegexOptions.CultureInvariant);
     private readonly string _repository;
     private readonly string _branch;
     private readonly string _baseSha;
@@ -47,7 +48,7 @@ public sealed class AiCiRepositoryBuilder
             branch.StartsWith("refs/", StringComparison.OrdinalIgnoreCase) ||
             branch.Split('/').Any(part => part is "" or "." or ".."))
             throw new ArgumentException("Target must be an isolated feature branch, never master or development.", nameof(branch));
-        if (string.IsNullOrWhiteSpace(baseSha) || !ShaPattern.IsMatch(baseSha))
+        if (string.IsNullOrWhiteSpace(baseSha) || !CommitShaPattern.IsMatch(baseSha))
             throw new ArgumentException("Base commit must be a full 40-character hexadecimal SHA.", nameof(baseSha));
 
         _repository = repository;
@@ -82,8 +83,8 @@ public sealed class AiCiRepositoryBuilder
     public AiCiRepositoryBuilder ModifyProjectFile(string path, string expectedSourceSha256, string patch)
     {
         ValidatePath(path);
-        if (string.IsNullOrWhiteSpace(expectedSourceSha256) || !ShaPattern.IsMatch(expectedSourceSha256))
-            throw new ArgumentException("Modify operations require the expected full 40-character source identity supplied by the host contract.", nameof(expectedSourceSha256));
+        if (string.IsNullOrWhiteSpace(expectedSourceSha256) || !SourceSha256Pattern.IsMatch(expectedSourceSha256))
+            throw new ArgumentException("Modify operations require the expected full 64-character SHA-256 digest of the current file content.", nameof(expectedSourceSha256));
         ValidatePayload(patch, nameof(patch));
         Add(AiCiCommandCatalog.ModifyProjectFile,
             (AiCiCommandCatalog.NameOrPath, path),

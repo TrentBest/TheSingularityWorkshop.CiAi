@@ -13,7 +13,7 @@ internal static class AiCiBuilderContractTests
             var proposal = NewBuilder()
                 .CreateProject("Minesweeper")
                 .AddScript("Game/MinesweeperGame.cs", "public sealed class MinesweeperGame {}")
-                .ModifyScript("Game/Board.cs", new string('a', 40), "replacement")
+                .ModifyScript("Game/Board.cs", new string('a', 64), "replacement")
                 .AddDependency("FSM_API", "1.0.13")
                 .RequestBuild()
                 .RequestTests()
