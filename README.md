@@ -41,18 +41,42 @@ dotnet run --project tests/TheSingularityWorkshop.CiAi.ContractTests --configura
 dotnet pack src/TheSingularityWorkshop.CiAi/TheSingularityWorkshop.CiAi.csproj --configuration Release
 ```
 
-## 02 — First real consumer: AnyApp
+## 02 — Agentic development: CODE RED
 
-AnyApp is CiAi's first source-based consumer pilot. It keeps GitHub Actions as the authoritative build/test/publish executor and uses CiAi to observe the exact AnyApp commit, run attempt, jobs, and steps. The integration also produces a Windows x64 single-file executable as a development artifact; it does not publish a NuGet package or create a GitHub Release.
+**The primary product direction is CiAi-driven, turn-stepped AI development.** An LLM is the developer under test: it receives bounded task context, proposes a typed repository operation, and must earn a fresh CiAi verdict for the exact candidate commit. A green CI result is evidence, not permission to mutate a repository.
+
+The intended responsibility split is:
+
+- **CiAi:** compose repository-development operations over CommandAi's generic proposal model; define required CI policy; validate exact-run provenance and test diagnostics; issue the authoritative evidence verdict.
+- **CommandAi:** own the generic versioned atomic command representation and codec. CiAi must consume its public types rather than copy them.
+- **GrammarAi / ProtocolAi:** validate structural form and carry interoperable correlation, provenance, and idempotency. Neither grants authority.
+- **HeadlessAi:** own bounded, resumable LLM/repair turns. Model output remains untrusted input.
+- **Foundry / host:** independently authenticate and authorize each proposed operation, enforce branch/base-SHA/path/capability/budget limits, and retain human approval at the host boundary.
+- **GitHub Actions:** remain the source of truth for workflow runs, exact checked-out commits, jobs, and test artifacts.
+
+The first proof target is the manifest-driven Minesweeper Experience: a failing exact-SHA test artifact must become a provenance-bound diagnostic report, drive a bounded repair proposal for the same task, pass independent host authorization before any isolated-branch change, and then produce a new exact-candidate green verdict. Only after that loop works should the local manifest be loaded and played as an Experience.
+
+**Implementation status:** the repository currently has draft provenance/evidence and TRX diagnostic slices; CommandAi has a separate generic proposal contract; Foundry has draft ingress, report-consumer, and secure-transport foundations. These are not yet a live connected pipeline. The AiCi proposal builder and clean-CI CommandAi source dependency are still being established. No end-to-end red → repair → green CODE RED run is claimed.
+
+Track the coordinated acceptance path:
+- [CODE RED umbrella and acceptance criteria](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/27)
+- [AgentDevelop product path](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/26)
+- [Provenance-bound test diagnostics](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/34)
+- [CommandAi proposal composition through AiCi](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/37)
+- [Experiences Minesweeper pilot](https://github.com/TrentBest/TheSingularityWorkshop.Experiences/issues/37)
+
+## 03 — Secondary consumer pilot: AnyApp
+
+AnyApp remains a useful source-based consumer and later desktop proving surface, but it is secondary to the agentic-development loop. It keeps GitHub Actions as the authoritative build/test executor and uses CiAi to observe the exact AnyApp commit, run attempt, jobs, and steps. The integration also produces a Windows x64 single-file executable as a development artifact; it does not publish a NuGet package or create a GitHub Release.
 
 - [AnyApp consumer walkthrough and evidence-lane map](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/Samples/AnyApp.md)
 - [AnyApp CiAi evidence workflow](https://github.com/TrentBest/AnyApp/blob/development/.github/workflows/ciai-evidence.yml)
 - [AnyApp executable build workflow](https://github.com/TrentBest/AnyApp/blob/development/.github/workflows/dotnet.yml)
 - [AnyApp evidence integration documentation](https://github.com/TrentBest/AnyApp/blob/development/docs/CIAI_EVIDENCE_INTEGRATION.md)
 
-The pilot is read-only and advisory. Its first real runs are also exercising CiAi's failure-evidence path; the report must preserve a failed test lane even when the source build itself compiles. Treat this as a live example under validation, not as a claim that all evidence lanes or artifact retrieval are complete.
+The pilot is read-only and advisory. Treat it as a live example under validation, not as proof that the full evidence or agentic-development path is complete.
 
-## 03 — Gate an existing branch on demand
+## 04 — Gate an existing branch on demand
 
 The normal push and pull-request triggers remain limited to `master` and `development`. To run the same contract gate against another **existing branch** without editing workflow source:
 
@@ -65,7 +89,7 @@ For a supplied target, the workflow validates the branch name, resolves exactly 
 
 This is an initial branch-targeting entry point for **CiAi's own contract workflow**, not yet a universal registry or GitHub Actions host adapter for every ecosystem repository. Consumer repositories still need their own triggers/dispatch wiring until the adapter is proven and adopted. A successful run is evidence for the resolved commit, not release authorization. The dispatch path still needs an end-to-end run against a third branch before this capability is considered verified.
 
-## 04 — Package
+## 05 — Package
 
 - Package ID: `TheSingularityWorkshop.CiAi`
 - Current candidate: `0.1.0-alpha.1`
@@ -75,7 +99,7 @@ This is an initial branch-targeting entry point for **CiAi's own contract workfl
 
 The package candidate is configured with repository metadata, release notes, symbols, and this README embedded in the NuGet package. The dependency-update evaluator uses Microsoft's `NuGet.Versioning` library rather than a hand-maintained approximation of NuGet version semantics. CI builds, runs contract checks, and packs the library. A passing pack job is not a NuGet publication.
 
-## 05 — Architecture and trust boundary
+## 06 — Architecture and trust boundary
 
 - **CI provider:** source of truth for repository identity, workflow run state, commit SHA, conclusion, and run evidence.
 - **CiAi:** validates and normalizes CI facts; the current GitHub Actions client is read-only.
@@ -86,7 +110,7 @@ The package candidate is configured with repository metadata, release notes, sym
 
 The read-only GitHub Actions client validates provider identity and preserves unknown conclusions instead of treating them as success. Separately, `CiPipelineExecutor` on `development` can execute registered in-process delegates sequentially, blocks privileged capabilities, and records step outcomes; `CiRequiredEvidenceEvaluator` checks required facts against an exact repository and full commit SHA. These are bounded building blocks, not yet an end-to-end CI policy host: the executor report includes wall-clock timestamps; `bool false` and `CiStepResult.Failure(...)` fail a step, while `CiStepResult.Success()` explicitly succeeds. Other returned values are outputs, not status codes, and no GitHub Actions adapter yet makes this executor the authority for consumer build/test/coverage/docs/benchmark gates. Do not use the prototype executor for operations that report failure through integer exit codes or other non-boolean values unless an adapter maps them to `CiStepResult`. The observer client itself remains read-only and does not dispatch work, cancel runs, publish packages, or deploy applications.
 
-## 06 — Source-derived contract documentation
+## 07 — Source-derived contract documentation
 
 - [Workflow domain map: 22 workflow families and cross-cutting contracts](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/CI_WORKFLOW_DOMAIN_MAP.md)
 - [Declarative workflow plan validation: stable IDs, domain references, dependency graphs, and deterministic recipes](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/CI_WORKFLOW_DOMAIN_MAP.md#validated-workflow-plans)
