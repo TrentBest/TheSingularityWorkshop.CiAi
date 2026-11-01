@@ -1,3 +1,6 @@
+<!-- The Singularity Workshop animated moniker -->
+<p align="center"><a href="https://github.com/TrentBest"><img src="https://raw.githubusercontent.com/TrentBest/TheSingularityWorkshop.Visualize/development/docs/assets/moniker.svg" alt="The Singularity Workshop animated moniker" width="720" /></a></p>
+
 # The Singularity Workshop CiAi
 
 **CiAi exposes CI to AI. It is not an AI-powered CI runner.** The lowercase `i` is intentional: CiAi supplies bounded capabilities and verified facts that an LLM can use.
@@ -38,7 +41,18 @@ dotnet run --project tests/TheSingularityWorkshop.CiAi.ContractTests --configura
 dotnet pack src/TheSingularityWorkshop.CiAi/TheSingularityWorkshop.CiAi.csproj --configuration Release
 ```
 
-## 02 — Gate an existing branch on demand
+## 02 — First real consumer: AnyApp
+
+AnyApp is CiAi's first source-based consumer pilot. It keeps GitHub Actions as the authoritative build/test/publish executor and uses CiAi to observe the exact AnyApp commit, run attempt, jobs, and steps. The integration also produces a Windows x64 single-file executable as a development artifact; it does not publish a NuGet package or create a GitHub Release.
+
+- [AnyApp consumer walkthrough and evidence-lane map](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/Samples/AnyApp.md)
+- [AnyApp CiAi evidence workflow](https://github.com/TrentBest/AnyApp/blob/development/.github/workflows/ciai-evidence.yml)
+- [AnyApp executable build workflow](https://github.com/TrentBest/AnyApp/blob/development/.github/workflows/dotnet.yml)
+- [AnyApp evidence integration documentation](https://github.com/TrentBest/AnyApp/blob/development/docs/CIAI_EVIDENCE_INTEGRATION.md)
+
+The pilot is read-only and advisory. Its first real runs are also exercising CiAi's failure-evidence path; the report must preserve a failed test lane even when the source build itself compiles. Treat this as a live example under validation, not as a claim that all evidence lanes or artifact retrieval are complete.
+
+## 03 — Gate an existing branch on demand
 
 The normal push and pull-request triggers remain limited to `master` and `development`. To run the same contract gate against another **existing branch** without editing workflow source:
 
@@ -51,7 +65,7 @@ For a supplied target, the workflow validates the branch name, resolves exactly 
 
 This is an initial branch-targeting entry point for **CiAi's own contract workflow**, not yet a universal registry or GitHub Actions host adapter for every ecosystem repository. Consumer repositories still need their own triggers/dispatch wiring until the adapter is proven and adopted. A successful run is evidence for the resolved commit, not release authorization. The dispatch path still needs an end-to-end run against a third branch before this capability is considered verified.
 
-## 03 — Package
+## 04 — Package
 
 - Package ID: `TheSingularityWorkshop.CiAi`
 - Current candidate: `0.1.0-alpha.1`
@@ -61,7 +75,7 @@ This is an initial branch-targeting entry point for **CiAi's own contract workfl
 
 The package candidate is configured with repository metadata, release notes, symbols, and this README embedded in the NuGet package. The dependency-update evaluator uses Microsoft's `NuGet.Versioning` library rather than a hand-maintained approximation of NuGet version semantics. CI builds, runs contract checks, and packs the library. A passing pack job is not a NuGet publication.
 
-## 04 — Architecture and trust boundary
+## 05 — Architecture and trust boundary
 
 - **CI provider:** source of truth for repository identity, workflow run state, commit SHA, conclusion, and run evidence.
 - **CiAi:** validates and normalizes CI facts; the current GitHub Actions client is read-only.
@@ -72,7 +86,7 @@ The package candidate is configured with repository metadata, release notes, sym
 
 The read-only GitHub Actions client validates provider identity and preserves unknown conclusions instead of treating them as success. Separately, `CiPipelineExecutor` on `development` can execute registered in-process delegates sequentially, blocks privileged capabilities, and records step outcomes; `CiRequiredEvidenceEvaluator` checks required facts against an exact repository and full commit SHA. These are bounded building blocks, not yet an end-to-end CI policy host: the executor report includes wall-clock timestamps; `bool false` and `CiStepResult.Failure(...)` fail a step, while `CiStepResult.Success()` explicitly succeeds. Other returned values are outputs, not status codes, and no GitHub Actions adapter yet makes this executor the authority for consumer build/test/coverage/docs/benchmark gates. Do not use the prototype executor for operations that report failure through integer exit codes or other non-boolean values unless an adapter maps them to `CiStepResult`. The observer client itself remains read-only and does not dispatch work, cancel runs, publish packages, or deploy applications.
 
-## 05 — Source-derived contract documentation
+## 06 — Source-derived contract documentation
 
 - [Workflow domain map: 22 workflow families and cross-cutting contracts](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/CI_WORKFLOW_DOMAIN_MAP.md)
 - [Declarative workflow plan validation: stable IDs, domain references, dependency graphs, and deterministic recipes](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/CI_WORKFLOW_DOMAIN_MAP.md#validated-workflow-plans)
@@ -84,3 +98,6 @@ The read-only GitHub Actions client validates provider identity and preserves un
 - [CiRunEvidenceVerifier class companion](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/src/TheSingularityWorkshop.CiAi/CiRunEvidenceVerifier.md)
 - [Evidence reconciliation UML and use case](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/UML/CiRunEvidenceVerifierUML.md)
 - [Artifact handoff contract types and use case](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/UML/ArtifactHandoffContractsUML.md)
+
+
+<p align="center"><img src="https://raw.githubusercontent.com/TrentBest/FSM_API/master/Documentation/Branding/TheSingularityWorkshop.png" alt="The Singularity Workshop avatar" width="200" /></p>
