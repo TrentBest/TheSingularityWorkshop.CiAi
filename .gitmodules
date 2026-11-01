@@ -1,0 +1,3 @@
+[submodule "external/CommandAi"]
+	path = external/CommandAi
+	url = https://github.com/TrentBest/TheSingularityWorkshop.CommandAi.git
