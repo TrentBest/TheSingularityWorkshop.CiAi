@@ -22,6 +22,23 @@ On a push to AnyApp development, the consumer workflow waits for the authoritati
 
 The observer uses the repository-scoped GitHub token with read-only Actions and contents permissions. It does not execute AnyApp's build and does not receive permission to merge, publish, create releases, or deploy.
 
+## First verified observation
+
+The first completed consumer observation is [CiAi run 41281306728](https://github.com/TrentBest/AnyApp/actions/runs/41281306728), for AnyApp commit `4d40f584fa4011179a731962afdd755fa85e8063`. It produced the artifact `CiAi-AnyApp-evidence-4d40f584fa4011179a731962afdd755fa85e8063`.
+
+The observer correlated authoritative AnyApp run [41281306660, attempt 1](https://github.com/TrentBest/AnyApp/actions/runs/41281306660) and reported:
+
+- Discovery complete: true
+- Required evidence complete: true
+- Workflow terminal: true
+- Workflow successful: false
+- Required-workflow state: failed
+- Overall evidence policy complete: false
+
+It retained the exact repository, source SHA, workflow path, run ID/attempt, job ID, job conclusion, step results, and authoritative run/job URLs. The observer workflow itself completed successfully because it is advisory; its report correctly says the AnyApp build/test lane failed. This is the intended distinction between successfully collecting evidence and the observed workflow being successful.
+
+The first observed .NET run built AnyApp but failed two integration tests before EXE publishing. A later AnyApp workflow revision now attempts a diagnostic executable publish after test failure, without changing the failed CI verdict. That diagnostic behavior remains pending a completed run.
+
 ## What the first vertical slice proves
 
 - A consumer can use CiAi from pinned source without depending on an unpublished NuGet package.
