@@ -132,13 +132,13 @@ The Experiences Minesweeper acceptance scenario records a historical red run wit
 - `RevealingMineLosesAndTerminalActionsAreRejected`
 - `ResetRestoresOriginalFixedMineLayoutAfterFirstRevealRelocation`
 
-Both assertions reported expected `Accepted` and actual `RejectedTerminal`. The historical run did not upload a machine-readable TRX artifact. It is a fixture for the contract, not proof that CiAi already ingested or repaired that run.
+Both assertions reported expected `Accepted` and actual `RejectedTerminal`. The historical run did not upload a machine-readable TRX artifact. It is a fixture for the contract, not proof that CiAi already ingested or repaired that run. The current trusted producer workflow in Experiences PR #41 now names its candidate artifact `ciai-test-results-{runId}-{runAttempt}-test-minesweeper`, matching this contract's run/attempt/job-key convention. That alignment is present in the proposed workflow source, but remains unproven at runtime until the trusted candidate workflow is activated and an artifact is retrieved and validated.
 
 ### Verification status
 
 The new contract checks are registered in `TheSingularityWorkshop.CiAi.ContractTests` (36 focused checks in the TRX report test group). They cover multi-failure normalization, exact provenance/job binding, digest and size mismatch, missing artifacts, pass/failure/non-actionable verdicts, unknown-outcome preservation, raw outcome digest binding, redaction, bounded diagnostics, duplicate identities, inconsistent counters, and DTD rejection.
 
-**Execution status:** GitHub Actions run [#560](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/41250787691) completed successfully on the exact PR head `ea601b2db5185dd9840a93dae469b7a0ebaf7a9a`. This is the exact-head CI validation result; it does not imply a local build was run. Separately, a .NET SDK was not available in the editing environment, so no local build/test result is claimed.
+**Execution status:** GitHub Actions run [#41274930395](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/41274930395) completed successfully on the current PR head `47198829c15453951ff5795b8f3eff91115dbd6c`. Checkout provenance, restore, build, all contract checks, package creation, package validation, and artifact upload passed. The earlier run #560 passed on its then-current implementation head, but is historical rather than the current-head result. No local build/test result is claimed; the editing environment did not have a .NET SDK.
 
 ## 05 — Choose your next step
 
