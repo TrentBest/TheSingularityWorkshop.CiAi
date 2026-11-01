@@ -114,9 +114,22 @@ jobs:
       - name: Build
         id: build
         run: dotnet build CiAi.slnx --configuration Release --no-restore
-      - name: Run contract checks
+      - name: Install .NET coverage tool
+        run: dotnet tool install --global dotnet-coverage
+      - name: Run contract checks with coverage
         id: contract-tests
-        run: dotnet run --project tests/TheSingularityWorkshop.CiAi.ContractTests --configuration Release --no-build
+        run: |
+          mkdir -p TestResults
+          dotnet-coverage collect "dotnet run --project tests/TheSingularityWorkshop.CiAi.ContractTests --configuration Release --no-build" --format cobertura --output TestResults/coverage.cobertura.xml
+      - name: Upload coverage to Codecov
+        id: codecov
+        uses: codecov/codecov-action@v6
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: TrentBest/TheSingularityWorkshop.CiAi
+          files: TestResults/coverage.cobertura.xml
+          fail_ci_if_error: true
+          verbose: true
       - name: Pack NuGet package
         id: pack
         run: dotnet pack src/TheSingularityWorkshop.CiAi/TheSingularityWorkshop.CiAi.csproj --configuration Release --no-build --output artifacts/packages
