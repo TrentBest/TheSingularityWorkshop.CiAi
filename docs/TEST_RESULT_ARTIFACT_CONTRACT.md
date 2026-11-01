@@ -138,7 +138,7 @@ Both assertions reported expected `Accepted` and actual `RejectedTerminal`. The 
 
 The new contract checks are registered in `TheSingularityWorkshop.CiAi.ContractTests` (36 focused checks in the TRX report test group). They cover multi-failure normalization, exact provenance/job binding, digest and size mismatch, missing artifacts, pass/failure/non-actionable verdicts, unknown-outcome preservation, raw outcome digest binding, redaction, bounded diagnostics, duplicate identities, inconsistent counters, and DTD rejection.
 
-**Execution status:** source and test changes are committed on the feature branch. A .NET SDK was not available in this editing environment, so no local build/test result is claimed. Exact-head CI evidence is still required before this implementation can be considered validated.
+**Execution status:** GitHub Actions run [#560](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/41250787691) completed successfully on the exact PR head `ea601b2db5185dd9840a93dae469b7a0ebaf7a9a`. This is the exact-head CI validation result; it does not imply a local build was run. Separately, a .NET SDK was not available in the editing environment, so no local build/test result is claimed.
 
 ## 05 — Choose your next step
 
