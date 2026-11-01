@@ -1,9 +1,11 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using TheSingularityWorkshop.CommandAi;
 
 namespace TheSingularityWorkshop.CiAi.RepositoryCommands;
 
-/// <summary>Stable CiAi action and parameter identities carried by CommandAi/1 proposals.</summary>
+/// <summary>Stable CiAi action and parameter identities carried by CommandAi/2 proposals.</summary>
 /// <remarks>These identities describe repository-development intent only. They are not host capabilities or authorization.</remarks>
 public static class AiCiCommandCatalog
 {
@@ -14,8 +16,6 @@ public static class AiCiCommandCatalog
     public const ulong RequestBuild = 1005;
     public const ulong RequestTests = 1006;
 
-    public const ulong Repository = 1;
-    public const ulong Branch = 2;
     public const ulong BaseSha = 3;
     public const ulong NameOrPath = 4;
     public const ulong ContentOrExpectedSha = 5;
@@ -56,16 +56,13 @@ public sealed class AiCiRepositoryBuilder
         _baseSha = baseSha.ToLowerInvariant();
     }
 
-    /// <summary>Adds a project-creation intent.</summary>
     public AiCiRepositoryBuilder CreateProject(string projectName)
     {
         ValidateText(projectName, nameof(projectName));
-        Add(AiCiCommandCatalog.CreateProject,
-            (AiCiCommandCatalog.NameOrPath, projectName));
+        Add(AiCiCommandCatalog.CreateProject, (AiCiCommandCatalog.NameOrPath, projectName));
         return this;
     }
 
-    /// <summary>Adds a new bounded project file.</summary>
     public AiCiRepositoryBuilder AddProjectFile(string path, string content)
     {
         ValidatePath(path);
@@ -76,10 +73,8 @@ public sealed class AiCiRepositoryBuilder
         return this;
     }
 
-    /// <summary>Adds a new script file; an alias for AddProjectFile.</summary>
     public AiCiRepositoryBuilder AddScript(string path, string source) => AddProjectFile(path, source);
 
-    /// <summary>Proposes replacing a file only when its current content matches the expected SHA-256.</summary>
     public AiCiRepositoryBuilder ModifyProjectFile(string path, string expectedSourceSha256, string patch)
     {
         ValidatePath(path);
@@ -93,11 +88,9 @@ public sealed class AiCiRepositoryBuilder
         return this;
     }
 
-    /// <summary>Compatibility name for ModifyProjectFile.</summary>
     public AiCiRepositoryBuilder ModifyScript(string path, string expectedSourceSha, string patch)
         => ModifyProjectFile(path, expectedSourceSha, patch);
 
-    /// <summary>Adds a package dependency intent; this does not restore or install it.</summary>
     public AiCiRepositoryBuilder AddDependency(string packageId, string version)
     {
         ValidateText(packageId, nameof(packageId));
@@ -108,21 +101,19 @@ public sealed class AiCiRepositoryBuilder
         return this;
     }
 
-    /// <summary>Requests a build from the authorized host.</summary>
     public AiCiRepositoryBuilder RequestBuild()
     {
         Add(AiCiCommandCatalog.RequestBuild);
         return this;
     }
 
-    /// <summary>Requests tests from the authorized host.</summary>
     public AiCiRepositoryBuilder RequestTests()
     {
         Add(AiCiCommandCatalog.RequestTests);
         return this;
     }
 
-    /// <summary>Returns an immutable CommandAi/1 proposal snapshot.</summary>
+    /// <summary>Returns an immutable CommandAi/2 proposal snapshot.</summary>
     public CommandProposal Build()
     {
         if (_commands.Count == 0)
@@ -134,14 +125,41 @@ public sealed class AiCiRepositoryBuilder
     {
         if (_commands.Count >= CommandLimits.MaxCommands)
             throw new InvalidOperationException($"A proposal cannot contain more than {CommandLimits.MaxCommands} commands.");
-        var args = new List<CommandArgument>
+
+        var arguments = new List<CommandArgument>
         {
-            new(AiCiCommandCatalog.Repository, CommandValue.FromText(_repository)),
-            new(AiCiCommandCatalog.Branch, CommandValue.FromText(_branch)),
             new(AiCiCommandCatalog.BaseSha, CommandValue.FromText(_baseSha))
         };
-        args.AddRange(values.Select(item => new CommandArgument(item.Id, CommandValue.FromText(item.Value))));
-        _commands.Add(new CommandInstruction(actionId, args));
+        arguments.AddRange(values.Select(item => new CommandArgument(item.Id, CommandValue.FromText(item.Value))));
+
+        var identityMaterial = new StringBuilder()
+            .Append(actionId).Append('|')
+            .Append(_repository.Length).Append(':').Append(_repository)
+            .Append(_branch.Length).Append(':').Append(_branch)
+            .Append(_baseSha.Length).Append(':').Append(_baseSha);
+        foreach (var argument in arguments)
+        {
+            var value = argument.Value.Text!;
+            identityMaterial.Append(argument.ParameterId).Append(':')
+                .Append(value.Length).Append(':').Append(value);
+        }
+
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(identityMaterial.ToString()));
+        var idempotencyKey = "aici:" + Convert.ToHexString(hash).ToLowerInvariant();
+        var commandIdHash = SHA256.HashData(Encoding.UTF8.GetBytes("command:" + idempotencyKey));
+        var commandId = new Guid(commandIdHash.AsSpan(0, 16));
+        var outcomeContract = new CommandOutcomeContract(actionId + 10_000, [
+            new CommandOutcomeField(actionId + 20_000, CommandValueKind.LiteralText)
+        ]);
+
+        _commands.Add(new CommandInstruction(
+            commandId,
+            actionId,
+            CommandValue.FromText(_repository),
+            CommandValue.FromText(_branch),
+            idempotencyKey,
+            outcomeContract,
+            arguments));
     }
 
     private static void ValidatePath(string path)
