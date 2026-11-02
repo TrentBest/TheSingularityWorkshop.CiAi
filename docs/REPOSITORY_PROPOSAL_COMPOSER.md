@@ -3,11 +3,11 @@
 
 # AiCi repository proposal composer
 
-**Status: implemented proposal-composition slice. Host-side validation, authorization, and execution remain separate responsibilities.**
+**Status: implemented proposal-composition slice. Host-side validation, authorization, approval, and execution remain separate responsibilities.**
 
 ## 1. Theory: intent is not authority
 
-An LLM should describe a bounded set of repository-development intentions in a stable, inspectable format. It should not receive an unrestricted Git client, shell, or ambient repository credentials merely because it produced a syntactically valid answer.
+An LLM should describe bounded repository-development intentions in a stable, inspectable format. It should not receive an unrestricted Git client, shell, or ambient repository credentials merely because it produced a syntactically valid answer.
 
 The responsibility chain is:
 
@@ -18,11 +18,11 @@ The responsibility chain is:
 5. **Foundry / trusted host adapter** independently validates repository identity, task scope, registered capabilities, branch and base SHA, allowed paths, budgets, expiry, and authenticated human approval where required.
 6. **GitHub** remains authoritative for refs, commits, pull requests, workflow runs, and CI evidence. CiAi evaluates evidence against the exact candidate SHA.
 
-A proposal is therefore a request for host consideration, not an executable script, capability grant, or approval receipt. If a required identity, precondition, policy, or authorization is missing or ambiguous, the host must reject the operation.
+A proposal is a request for host consideration, not an executable script, capability grant, or approval receipt. Missing or ambiguous identity, precondition, policy, or authorization must cause host rejection.
 
 ## 2. Implementation: composing a proposal
 
-The public entry point is `AiCi.ForRepository(repository, featureBranch, baseSha)`. The builder binds each command to the same repository identity, isolated feature branch, and full 40-character base commit SHA.
+The public entry point is `AiCi.ForRepository(repository, featureBranch, baseSha)`.
 
 ```csharp
 var proposal = AiCi.ForRepository(
@@ -38,7 +38,7 @@ var proposal = AiCi.ForRepository(
     .Build();
 ```
 
-The result is a CommandAi/2 `CommandProposal` using the pinned CommandAi source contract. Every command has its own identity, repository target, feature-branch scope, idempotency key, and declared outcome contract. The base commit and operation-specific values remain typed parameters. The proposal can be inspected or encoded with `CommandAiTextCodec`; these operations have no repository side effects.
+The result is an immutable **CommandAi/1** `CommandProposal`. The /1 contract has only ordered action identities and ordered typed arguments; it does not define command IDs, targets, scopes, idempotency keys, or outcome contracts. CiAi therefore carries the repository, isolated feature branch, and full base commit SHA as explicit typed arguments on every command. Operation-specific values follow those context arguments.
 
 ### Initial command vocabulary
 
@@ -51,7 +51,7 @@ The result is a CommandAi/2 `CommandProposal` using the pinned CommandAi source 
 | `RequestBuild` | Request host build validation | None |
 | `RequestTests` | Request host test validation | None |
 
-Action and parameter IDs are stable numeric identities in `AiCiCommandCatalog`. The repository is the command target and the isolated feature branch is its scope; the exact base SHA is an explicit argument. Command identity and idempotency identity are derived deterministically from the complete action binding so equivalent proposals can be compared and retried. Each operation declares a generic expected outcome shape. The builder does not interpret package versions, install dependencies, run tests, or mutate a repository.
+Action and parameter IDs are stable numeric identities in `AiCiCommandCatalog`. They are application vocabulary, not CommandAi capabilities. Equivalent builder calls produce deterministic ordered proposal data and deterministic CommandAi text encoding. The builder does not interpret package versions, install dependencies, run tests, or mutate a repository.
 
 ### Composition constraints
 
@@ -59,9 +59,9 @@ Action and parameter IDs are stable numeric identities in `AiCiCommandCatalog`. 
 - The target must be an isolated branch; canonical `master` and `development` targets are rejected.
 - The base commit must be a full hexadecimal SHA-1 commit identity.
 - Paths must be bounded, repository-relative, and free of roots, traversal segments, backslashes, colons, and control characters.
-- A modification carries the expected full 64-character SHA-256 digest of the current file content as a typed parameter. The host must independently verify this digest before applying the operation. It is not proof that the host has checked it.
-- Literal content is bounded by CommandAi's published-in-source `CommandLimits`; command count is bounded by the same contract.
-- Empty proposals are rejected. Equivalent calls produce deterministic CommandAi text encoding.
+- A modification carries the expected full 64-character SHA-256 digest of the current file content as a typed argument. The host must independently verify this digest before applying the operation; the proposal is not proof that the check occurred.
+- Literal content and command count are bounded by CommandAi's `CommandLimits`.
+- Empty proposals are rejected.
 
 ### Source and clean CI
 
@@ -78,10 +78,10 @@ The exact PR head must pass both **CiAi Contract Verification** and **Cog Ecosys
 This slice does **not** implement:
 
 - GrammarAi schema registration for repository-specific precondition expressions or ProtocolAi envelope integration.
-- Foundry's host-side capability registry, policy evaluation, approval enforcement, or repository mutation adapter.
+- Foundry's host-side capability registry, policy evaluation, authenticated approval enforcement, or repository mutation adapter.
 - GitHub branch/file writes, workflow dispatch, build/test execution, or evidence callback delivery.
 - A complete failed-CI → model repair → guarded mutation → exact-SHA green-CI demonstration.
 
-Those responsibilities remain with their designated owners and existing CODE RED issues. The next meaningful acceptance is a host-authorized, isolated-feature-branch application of a bounded proposal, followed by CiAi evidence evaluation for that exact candidate SHA and a provenance-bound repair turn when validation fails.
+Those responsibilities remain with their designated owners and existing CODE RED issues. The next acceptance is a host-authorized, isolated-feature-branch application of a bounded proposal, followed by CiAi evidence evaluation for that exact candidate SHA and a provenance-bound repair turn when validation fails.
 
 <p align="center"><img src="https://raw.githubusercontent.com/TrentBest/FSM_API/master/Documentation/Branding/TheSingularityWorkshop.png" alt="The Singularity Workshop" width="200" /></p>
