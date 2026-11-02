@@ -76,8 +76,8 @@ internal static class CiTestResultArtifactArchiveTests
         Throws<InvalidDataException>(() => CiTestResultArtifactArchive.Read(
             compressionBomb, bombDigest, "minesweeper.trx", "provenance.json"));
 
-        Console.WriteLine("PASS: 10 verified test-artifact ZIP boundary checks.");
-        return 10;
+        Console.WriteLine("PASS: 12 verified test-artifact ZIP boundary checks.");
+        return 12;
     }
 
     private static byte[] CreateArchive(params (string Name, byte[] Bytes)[] entries)
