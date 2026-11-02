@@ -56,7 +56,7 @@ internal static class CiTestResultArtifactArchiveTests
 
         var symlink = CreateArchive(
             ("minesweeper.trx", trx, 0xA000 << 16),
-            ("provenance.json", provenance));
+            ("provenance.json", provenance, 0));
         var symlinkDigest = "sha256:" + Convert.ToHexString(SHA256.HashData(symlink)).ToLowerInvariant();
         Throws<InvalidDataException>(() => CiTestResultArtifactArchive.Read(
             symlink, symlinkDigest, "minesweeper.trx", "provenance.json"));
