@@ -1,3 +1,6 @@
+<!-- The Singularity Workshop moniker -->
+<p align="center"><a href="https://github.com/TrentBest"><img src="https://raw.githubusercontent.com/TrentBest/TheSingularityWorkshop.Visualize/development/docs/assets/moniker.svg" alt="The Singularity Workshop animated moniker" width="720" /></a></p>
+
 # CI Workflow Implementation Audit
 
 **Trent Best · The Singularity Workshop**
@@ -12,8 +15,8 @@ This audit measures the implementation of the 22 workflow families in the CiAi d
 |---|---:|
 | Workflow families defined in the catalog | 22 |
 | Fully implemented end-to-end families | 0 |
-| Partially implemented families with relevant building blocks | 11 |
-| Catalog-only families without a meaningful family-specific implementation in CiAi core | 11 |
+| Partially implemented families with relevant building blocks | 12 |
+| Catalog-only families without a meaningful family-specific implementation in CiAi core | 10 |
 
 **Interpretation:** 22 is the size of the domain vocabulary, not the number of implemented CI types. The shared foundations are real and useful, but no family currently meets the strict end-to-end completion bar. “Catalog-only” does not mean a user's GitHub Actions workflow cannot perform that work; it means CiAi does not yet provide the corresponding family-specific capability as a complete product feature.
 
@@ -39,7 +42,7 @@ This audit measures the implementation of the 22 workflow families in the CiAi d
 | `concurrency` | Partial | Sequential execution and cancellation-aware step boundaries | Concurrency keys, duplicate suppression, bounded parallelism, supersession, and tested race behavior |
 | `recovery` | Catalog only | Basic failure/skip/cancel outcomes and receipt deduplication primitives exist, but no general recovery family | Retry classification, replay policy, durable idempotency, compensation, and rollback |
 | `multi-repository` | Partial | Exact repository/revision evidence patterns and Cog ecosystem contract coverage | General dependency graph, cross-repository orchestration engine, and aggregate failure/evidence semantics |
-| `matrix` | Catalog only | Domain ID and evidence vocabulary exist | Bounded expansion, per-cell lifecycle/evidence, required-cell policy, and matrix completeness |
+| `matrix` | Partial | Bounded Cartesian expansion, explicit exclusions/reasons, stable definition/cell identities, exact-cell aggregation, deterministic reports | Provider execution/ingestion, include/override and conditional expansion, optional-cell policy, and durable cross-run evidence |
 | `observability` | Partial | Run/job/step observations, typed outcomes, and Markdown report renderers | Unified lifecycle timeline, timeout/unknown normalization, evidence links, and end-to-end diagnostics |
 | `repository-hygiene` | Catalog only | Domain ID and evidence vocabulary exist | Configurable repository-policy checks and a normalized policy report |
 | `smoke` | Catalog only | Domain ID and evidence vocabulary exist; external CI may run build checks | Dedicated minimal-output verifier and a tested source-to-output smoke evidence path |
@@ -48,9 +51,10 @@ This audit measures the implementation of the 22 workflow families in the CiAi d
 
 - **Domain catalog:** 22 stable IDs, descriptions, and evidence-kind vocabularies.
 - **Evidence evaluation:** fail-closed evaluation of supplied facts, bound to canonical repository identity and a full commit SHA; missing, duplicate, mismatched, or non-passing required facts do not pass.
-- **Plan validation:** stable IDs, domain references, dependencies, cycles, and deterministic topological order. Conditions are descriptive; runtime condition scheduling is not implemented by the plan validator.
+- **Plan validation and scheduling:** stable IDs, domain references, dependencies, cycles, and deterministic topological order; a separate pure scheduler evaluates declared dependency conditions without executing operations.
 - **Recipe execution:** an in-process sequential executor exists for ordinary steps, with failure/skip/cancel reporting. Privileged steps are blocked by this executor. This does not make the entire declarative plan model executable.
 - **GitHub Actions observation:** bounded, read-only run and job/step collection with exact-revision/attempt identity checks and explicit truncation.
+- **Matrix contracts:** bounded deterministic Cartesian expansion, explicit exclusions, stable definition/cell digests, fail-closed required-cell aggregation, and deterministic JSON/Markdown reports. Provider execution and job ingestion remain unimplemented.
 - **Artifact and release foundations:** package inventory checks, artifact digest verification/receipt tracking, release evidence reports, and a guarded benchmark dispatch path.
 - **Safety boundary:** publication and deployment are not enabled merely because a workflow is green or a catalog entry exists.
 
@@ -68,4 +72,4 @@ A family should be marked **implemented** only after all of the following are pr
 
 Re-audit the table after substantive implementation changes. Do not increase the completed-family count just because an ID, interface, workflow YAML, or shared primitive has been added.
 
-![The Singularity Workshop](../Avatar.jpg)
+<p align="center"><img src="https://raw.githubusercontent.com/TrentBest/FSM_API/master/Documentation/Branding/TheSingularityWorkshop.png" alt="The Singularity Workshop" width="480" /></p>
