@@ -126,7 +126,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p artifacts/local-feed
-          dotnet pack external/CommandAi/TheSingularityWorkshop.CommandAi.csproj --configuration Release --no-build --output artifacts/local-feed
+          dotnet pack external/CommandAi/TheSingularityWorkshop.CommandAi.csproj --configuration Release --no-restore --output artifacts/local-feed
           dotnet pack src/TheSingularityWorkshop.CiAi/TheSingularityWorkshop.CiAi.csproj --configuration Release --no-build --output artifacts/local-feed
       - name: Restore and build an external package consumer
         id: package-consumer
