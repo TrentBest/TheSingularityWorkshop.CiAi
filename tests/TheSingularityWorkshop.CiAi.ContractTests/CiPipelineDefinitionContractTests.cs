@@ -239,6 +239,21 @@ internal static class CiPipelineDefinitionContractTests
             Assert(report.IsSuccessful, "completed non-generic task was not successful");
         });
 
+        Check("executor evaluates generic task results instead of task completion alone", () =>
+        {
+            var laterCalled = false;
+            var definition = new CiPipelineBuilder("TrentBest/TheSingularityWorkshop.CiAi")
+                .On(CiPipelineTrigger.Manual)
+                .Add<Task<bool>>("async false", () => Task.FromResult(false))
+                .Add<bool>("later", () => { laterCalled = true; return true; })
+                .Build();
+            var report = new CiPipelineExecutor().ExecuteAsync(definition,
+                "abcdef0123456789abcdef0123456789abcdef01", "plan-async-failure").GetAwaiter().GetResult();
+            Assert(!report.IsSuccessful && !laterCalled &&
+                report.Steps[0].Outcome == CiStepOutcome.Failed,
+                "generic Task<bool> failure was not preserved");
+        });
+
         Check("canonical execution JSON excludes wall-clock timestamps", () =>
         {
             var definition = new CiPipelineBuilder("TrentBest/TheSingularityWorkshop.CiAi")
