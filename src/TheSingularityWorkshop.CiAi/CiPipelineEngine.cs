@@ -7,9 +7,11 @@ namespace TheSingularityWorkshop.CiAi;
 public enum CiStepOutcome { Succeeded, Failed, Skipped, Cancelled, Blocked, Indeterminate }
 
 /// <summary>Explicit status returned by a step when a boolean alone is too limiting.</summary>
-public sealed record CiStepResult(bool Succeeded, string? Diagnostic = null)
+public sealed record CiStepResult(bool Succeeded, string? Diagnostic = null, object? Value = null)
 {
     public static CiStepResult Success() => new(true);
+
+    public static CiStepResult Success(object? value) => new(true, Value: value);
 
     public static CiStepResult Failure(string? diagnostic = null) => new(false, diagnostic);
 }
@@ -215,15 +217,26 @@ public sealed class CiPipelineExecutor
                 if (result is Task task)
                 {
                     await task.ConfigureAwait(false);
-                    if (task.GetType().IsGenericType)
-                        result = task.GetType().GetProperty("Result")?.GetValue(task);
-                    else
+                    if (step.ResultType == typeof(Task) ||
+                        (typeof(Task).IsAssignableFrom(step.ResultType) && !step.ResultType.IsGenericType))
+                    {
                         taskWithoutResult = true;
+                    }
+                    else if (step.ResultType.IsGenericType &&
+                        step.ResultType.GetGenericTypeDefinition() == typeof(Task<>))
+                    {
+                        result = task.GetType().GetProperty("Result")?.GetValue(task);
+                    }
+                    else
+                    {
+                        result = null;
+                    }
                 }
 
                 if (taskWithoutResult || result is CiStepResult { Succeeded: true } || result is true)
                 {
-                    values[step.Id] = result;
+                    var output = result is CiStepResult successfulResult ? successfulResult.Value : result;
+                    values[step.Id] = taskWithoutResult ? null : output;
                     records.Add(new(step.Id, step.Name, CiStepOutcome.Succeeded, stepStarted, DateTimeOffset.UtcNow));
                     continue;
                 }
