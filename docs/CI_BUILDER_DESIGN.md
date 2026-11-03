@@ -1,3 +1,6 @@
+<!-- The Singularity Workshop moniker -->
+<p align="center"><a href="https://github.com/TrentBest"><img src="https://raw.githubusercontent.com/TrentBest/TheSingularityWorkshop.Visualize/development/docs/assets/moniker.svg" alt="The Singularity Workshop animated moniker" width="720" /></a></p>
+
 # CiAi Declarative Pipeline Builder — Design Proposal
 
 **Status:** Phase 1 definition model, an initial Phase 2 in-process executor, and an initial required-evidence evaluator exist on `development`. Phase 2 is not complete: normalized result semantics and canonical deterministic reporting need more contract coverage; the GitHub Actions host adapter and publishing adapter are not implemented. The broader architecture remains in progress.  
@@ -232,10 +235,11 @@ Still outstanding in Phase 1: trigger-scoped fluent recipe ergonomics, dependenc
 
 ### Phase 2 — deterministic in-process execution for safe steps
 
-- Initial implementation exists in `CiPipelineExecutor` on `development`: sequential execution, a step context, cancellation checks, bounded exception diagnostics, and explicit succeeded/failed/skipped/cancelled/blocked outcomes. The executor blocks privileged capabilities by default.
-- Contract tests cover definition non-execution, step order, false results, exceptions, skipped later work, and privileged-step blocking.
-- Result semantics in this prototype are explicit for `bool` and `CiStepResult`: `false` and `CiStepResult.Failure(...)` fail the step; `CiStepResult.Success()` succeeds; exceptions fail it. Other returned values are retained as step outputs, not interpreted as status codes. A non-boolean value (including an integer exit code) is **not** interpreted as success/failure. Do not use this executor to wrap commands whose failure is encoded in a non-boolean result unless the adapter maps that status to `CiStepResult`.
-- Remaining Phase 2 work: extend normalized result semantics to skipped/indeterminate outcomes, test cancellation and diagnostic bounds, define canonical report rendering that excludes wall-clock timestamps, and test task/result edge cases.
+- The in-process `CiPipelineExecutor` executes registered ordinary steps sequentially and blocks privileged capabilities. Steps may use a zero-argument delegate or receive `CiExecutionContext`, which binds the exact repository, full candidate SHA, plan ID, and read-only prior-step outputs.
+- Result classification is fail-closed: `true`, `CiStepResult.Success(...)`, and completed non-generic `Task` are successful; `false`, `CiStepResult.Failure(...)`, and exceptions are failures; unsupported return types are `Indeterminate` and stop subsequent work. Pre-cancelled and in-flight cancellation are distinct `Cancelled` outcomes. `CiStepResult.Success(value)` carries a typed output into later context-aware steps.
+- `CiPipelineExecutionReportRenderer.RenderJson` emits `ciai.pipeline-execution.v1` canonical JSON without wall-clock timestamps. The report remains an in-process recipe result, not provider evidence, release authorization, or proof that a remote workflow ran.
+- Contract tests cover context and output propagation, unsupported integer exit codes, cancellation, non-generic tasks, deterministic rendering, failure/exception behavior, and privileged-step blocking.
+- Remaining Phase 2 work: explicit dependency/condition scheduling, richer retry/timeout semantics, and a provider adapter. These must be modeled and tested before being described as supported; no shell execution or publishing is added by this slice.
 - Keep provider-specific operations behind adapters. Do not add publish capability in this phase.
 
 ### Phase 3 — evidence evaluation
@@ -272,3 +276,5 @@ These evaluators decide only whether the next verification stage may proceed or 
 - Privileged steps cannot execute without an explicit, candidate-bound approval decision.
 - Tests prove that a passing observer report and a successful boolean step do not bypass approval.
 - Publishing is not part of the read-only alpha; it remains a future opt-in capability.
+
+<p align="center"><img src="https://raw.githubusercontent.com/TrentBest/FSM_API/master/Documentation/Branding/TheSingularityWorkshop.png" alt="The Singularity Workshop" width="480" /></p>
