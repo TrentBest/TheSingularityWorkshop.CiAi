@@ -65,7 +65,7 @@ Action and parameter IDs are stable numeric identities in `AiCiCommandCatalog`. 
 
 ### Source and clean CI
 
-CiAi pins CommandAi as a Git submodule at an explicit commit and references that project directly. This keeps the shared source contract authoritative without relying on an unpublished or floating NuGet package. Both CiAi's contract workflow and the Cog ecosystem integration workflow initialize submodules recursively.
+CiAi pins CommandAi as a Git submodule at an explicit commit and references that project directly. Repository builds therefore compile against the pinned source without requiring a package-feed lookup. **Packing is different:** NuGet translates this public project reference into a dependency on `TheSingularityWorkshop.CommandAi` at the referenced project version. A distributed CiAi package therefore requires that CommandAi package to be available from the consumer's configured feeds. The contract workflow packs both projects into an isolated local feed and restores/builds a separate consumer project against that feed; this proves package metadata and public API dependency resolution without publishing either package. External publication remains a separately authorized, dependency-ordered release decision. Both CiAi's contract workflow and the Cog ecosystem integration workflow initialize submodules recursively.
 
 ### Verification
 
