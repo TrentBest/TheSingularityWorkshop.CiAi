@@ -390,7 +390,7 @@ For each example, record source URL/revision, workflow family, intended outcome,
 
 ## Implementation honesty
 
-The names and examples in this document are **proposed vocabulary**, not a statement that the corresponding methods exist. CiAi currently has read-only GitHub Actions observation and evidence/reporting components, a definition-only pipeline-builder slice, and an initial local NuGet artifact-inventory verifier. It does not yet provide a complete fluent CI DSL, general workflow executor, full automated archive/provenance inspection, or a publishing/deployment engine.
+The names and examples in this document are **proposed vocabulary**, not a statement that the corresponding methods exist. CiAi currently has read-only GitHub Actions observation and evidence/reporting components, a definition-only pipeline-builder slice, an initial local NuGet artifact-inventory verifier, and (in this matrix implementation branch) bounded provider-neutral matrix expansion and fail-closed required-cell aggregation. It does not yet provide a complete fluent CI DSL, provider-hosted general workflow execution, full automated archive/provenance ingestion, or a publishing/deployment engine.
 
 The release readiness tracker remains the authority for verified implementation status. No publication or deployment is implied by this catalog.
 
