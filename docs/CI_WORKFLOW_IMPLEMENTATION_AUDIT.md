@@ -51,7 +51,7 @@ This audit measures the implementation of the 22 workflow families in the CiAi d
 
 - **Domain catalog:** 22 stable IDs, descriptions, and evidence-kind vocabularies.
 - **Evidence evaluation:** fail-closed evaluation of supplied facts, bound to canonical repository identity and a full commit SHA; missing, duplicate, mismatched, or non-passing required facts do not pass.
-- **Plan validation and scheduling:** stable IDs, domain references, dependencies, cycles, and deterministic topological order; a separate pure scheduler evaluates declared dependency conditions without executing operations.
+- **Plan validation:** stable IDs, domain references, dependencies, cycles, and deterministic topological order. Conditions are descriptive; runtime condition scheduling is not implemented on the `development` baseline audited here.
 - **Recipe execution:** an in-process sequential executor exists for ordinary steps, with failure/skip/cancel reporting. Privileged steps are blocked by this executor. This does not make the entire declarative plan model executable.
 - **GitHub Actions observation:** bounded, read-only run and job/step collection with exact-revision/attempt identity checks and explicit truncation.
 - **Matrix contracts:** bounded deterministic Cartesian expansion, explicit exclusions, stable definition/cell digests, fail-closed required-cell aggregation, and deterministic JSON/Markdown reports. Provider execution and job ingestion remain unimplemented.
