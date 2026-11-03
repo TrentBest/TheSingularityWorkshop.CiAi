@@ -95,7 +95,7 @@ internal static class CiPipelineDefinitionContractTests
             var definition = new CiPipelineBuilder("TrentBest/TheSingularityWorkshop.CiAi")
                 .On(CiPipelineTrigger.Manual)
                 .Add<bool>("first", () => { order.Add(1); return true; })
-                .Add<string>("second", () => { order.Add(2); return "ok"; })
+                .Add<CiStepResult>("second", () => { order.Add(2); return CiStepResult.Success(); })
                 .Build();
             var report = new CiPipelineExecutor().ExecuteAsync(definition,
                 "abcdef0123456789abcdef0123456789abcdef01", "plan-1").GetAwaiter().GetResult();
@@ -175,6 +175,87 @@ internal static class CiPipelineDefinitionContractTests
             Assert(!called && report.Steps[0].Outcome == CiStepOutcome.Blocked,
                 "privileged delegate ran without the dedicated authorization protocol");
             Assert(report.Steps[1].Outcome == CiStepOutcome.Skipped, "work continued after a privileged step was blocked");
+        });
+
+        Check("executor supplies candidate context and prior step outputs", () =>
+        {
+            string? observed = null;
+            var definition = new CiPipelineBuilder("TrentBest/TheSingularityWorkshop.CiAi")
+                .On(CiPipelineTrigger.Manual)
+                .Add<string>("source", () => "built")
+                .Add<CiStepResult>("consume", context =>
+                {
+                    observed = $"{context.Repository}|{context.CommitSha}|{context.PlanId}|{context.Values["source"]}";
+                    return CiStepResult.Success();
+                })
+                .Build();
+            var report = new CiPipelineExecutor().ExecuteAsync(definition,
+                "abcdef0123456789abcdef0123456789abcdef01", "plan-context").GetAwaiter().GetResult();
+            Assert(report.IsSuccessful, "context-aware operation did not succeed");
+            Assert(observed == "TrentBest/TheSingularityWorkshop.CiAi|abcdef0123456789abcdef0123456789abcdef01|plan-context|built",
+                "execution context did not expose the exact candidate and prior output");
+        });
+
+        Check("executor treats unsupported result types as indeterminate and stops", () =>
+        {
+            var laterCalled = false;
+            var definition = new CiPipelineBuilder("TrentBest/TheSingularityWorkshop.CiAi")
+                .On(CiPipelineTrigger.Manual)
+                .Add<int>("unknown exit code", () => 0)
+                .Add<bool>("later", () => { laterCalled = true; return true; })
+                .Build();
+            var report = new CiPipelineExecutor().ExecuteAsync(definition,
+                "abcdef0123456789abcdef0123456789abcdef01", "plan-indeterminate").GetAwaiter().GetResult();
+            Assert(!report.IsSuccessful && !laterCalled, "unknown result was accepted or execution continued");
+            Assert(report.Steps[0].Outcome == CiStepOutcome.Indeterminate,
+                "unsupported result did not produce an indeterminate outcome");
+        });
+
+        Check("executor reports pre-cancelled work without invoking delegates", () =>
+        {
+            var called = false;
+            using var cancellation = new CancellationTokenSource();
+            cancellation.Cancel();
+            var definition = new CiPipelineBuilder("TrentBest/TheSingularityWorkshop.CiAi")
+                .On(CiPipelineTrigger.Manual)
+                .Add<bool>("not started", () => { called = true; return true; })
+                .Add<bool>("also not started", () => true)
+                .Build();
+            var report = new CiPipelineExecutor().ExecuteAsync(definition,
+                "abcdef0123456789abcdef0123456789abcdef01", "plan-cancelled", cancellation.Token).GetAwaiter().GetResult();
+            Assert(!called && report.Steps[0].Outcome == CiStepOutcome.Cancelled &&
+                report.Steps[1].Outcome == CiStepOutcome.Skipped,
+                "cancellation did not stop work with distinct outcomes");
+        });
+
+        Check("non-generic task completion is a successful explicit completion", () =>
+        {
+            var definition = new CiPipelineBuilder("TrentBest/TheSingularityWorkshop.CiAi")
+                .On(CiPipelineTrigger.Manual)
+                .Add<Task>("async", () => Task.CompletedTask)
+                .Build();
+            var report = new CiPipelineExecutor().ExecuteAsync(definition,
+                "abcdef0123456789abcdef0123456789abcdef01", "plan-async").GetAwaiter().GetResult();
+            Assert(report.IsSuccessful, "completed non-generic task was not successful");
+        });
+
+        Check("canonical execution JSON excludes wall-clock timestamps", () =>
+        {
+            var definition = new CiPipelineBuilder("TrentBest/TheSingularityWorkshop.CiAi")
+                .On(CiPipelineTrigger.Manual)
+                .Add<CiStepResult>("safe", () => CiStepResult.Success())
+                .Build();
+            var executor = new CiPipelineExecutor();
+            var first = executor.ExecuteAsync(definition, "abcdef0123456789abcdef0123456789abcdef01", "plan-stable").GetAwaiter().GetResult();
+            var second = executor.ExecuteAsync(definition, "abcdef0123456789abcdef0123456789abcdef01", "plan-stable").GetAwaiter().GetResult();
+            var firstJson = CiPipelineExecutionReportRenderer.RenderJson(first);
+            var secondJson = CiPipelineExecutionReportRenderer.RenderJson(second);
+            Assert(firstJson == secondJson, "identical outcomes produced different canonical JSON");
+            Assert(firstJson.Contains("\"schema\": \"ciai.pipeline-execution.v1\"", StringComparison.Ordinal),
+                "canonical report omitted its schema identity");
+            Assert(!firstJson.Contains("StartedAt", StringComparison.Ordinal) &&
+                !firstJson.Contains("FinishedAt", StringComparison.Ordinal),
+                "canonical report included nondeterministic wall-clock values");
         });
 
         Check("required evidence evaluator passes only exact identity and passing state", () =>
