@@ -39,15 +39,19 @@ public sealed class AiCiRepositoryBuilder
     internal AiCiRepositoryBuilder(string repository, string branch, string baseSha)
     {
         if (string.IsNullOrWhiteSpace(repository) || !RepositoryPattern.IsMatch(repository) ||
-            repository.Contains("..", StringComparison.Ordinal))
+            repository.Contains("..", StringComparison.Ordinal) ||
+            repository.Split('/').Any(part => part.StartsWith('.') || part.EndsWith('.')))
             throw new ArgumentException("Repository must be an owner/repository identity.", nameof(repository));
+        var branchParts = branch?.Split('/') ?? [];
         if (string.IsNullOrWhiteSpace(branch) ||
             !Regex.IsMatch(branch, "^[A-Za-z0-9][A-Za-z0-9._/-]{0,119}$", RegexOptions.CultureInvariant) ||
             branch.Equals("master", StringComparison.OrdinalIgnoreCase) ||
             branch.Equals("development", StringComparison.OrdinalIgnoreCase) ||
             branch.StartsWith("refs/", StringComparison.OrdinalIgnoreCase) ||
-            branch.Split('/').Any(part => part is "" or "." or ".."))
-            throw new ArgumentException("Target must be an isolated feature branch, never master or development.", nameof(branch));
+            branch.Contains("..", StringComparison.Ordinal) ||
+            branchParts.Any(part => part.Length == 0 || part.StartsWith('.') || part.EndsWith('.') ||
+                part.EndsWith(".lock", StringComparison.OrdinalIgnoreCase)))
+            throw new ArgumentException("Target must be a valid isolated feature branch, never master or development.", nameof(branch));
         if (string.IsNullOrWhiteSpace(baseSha) || !CommitShaPattern.IsMatch(baseSha))
             throw new ArgumentException("Base commit must be a full 40-character hexadecimal SHA.", nameof(baseSha));
 
@@ -141,11 +145,13 @@ public sealed class AiCiRepositoryBuilder
     private static void ValidatePath(string path)
     {
         ValidateText(path, nameof(path));
+        var segments = path.Split('/');
         if (path.Length > 240 || path.StartsWith("/", StringComparison.Ordinal) ||
             path.StartsWith("\\", StringComparison.Ordinal) || path.Contains('\\') ||
-            path.Contains(':') || path.Split('/').Any(part => part is "" or "." or "..") ||
+            path.Contains(':') || segments.Any(part => part is "" or "." or ".." ||
+                part.Equals(".git", StringComparison.OrdinalIgnoreCase)) ||
             path.Any(char.IsControl))
-            throw new ArgumentException("Path must be a bounded, normalized repository-relative path without traversal or platform-specific roots.", nameof(path));
+            throw new ArgumentException("Path must be a bounded, normalized repository-relative path without traversal, Git metadata, or platform-specific roots.", nameof(path));
     }
 
     private static void ValidatePayload(string value, string parameterName)
