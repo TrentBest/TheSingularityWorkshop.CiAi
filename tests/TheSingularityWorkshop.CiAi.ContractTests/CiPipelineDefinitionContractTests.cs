@@ -182,7 +182,7 @@ internal static class CiPipelineDefinitionContractTests
             string? observed = null;
             var definition = new CiPipelineBuilder("TrentBest/TheSingularityWorkshop.CiAi")
                 .On(CiPipelineTrigger.Manual)
-                .Add<string>("source", () => "built")
+                .Add<CiStepResult>("source", () => CiStepResult.Success("built"))
                 .Add<CiStepResult>("consume", context =>
                 {
                     observed = $"{context.Repository}|{context.CommitSha}|{context.PlanId}|{context.Values["source"]}";
