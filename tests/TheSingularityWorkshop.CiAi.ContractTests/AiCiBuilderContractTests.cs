@@ -92,6 +92,22 @@ internal static class AiCiBuilderContractTests
             Assert(first == second && proposal.Commands.Count == 1, "inspection mutated or executed the proposal");
         });
 
+        Check("Build returns an immutable proposal snapshot when the builder continues", () =>
+        {
+            var builder = NewBuilder().CreateProject("Initial");
+            var firstSnapshot = builder.Build();
+            builder.RequestBuild();
+            var secondSnapshot = builder.Build();
+
+            Assert(firstSnapshot.Commands.Count == 1,
+                "a later builder operation mutated an earlier proposal snapshot");
+            Assert(secondSnapshot.Commands.Count == 2,
+                "the later proposal did not include the newly appended operation");
+            Assert(firstSnapshot.Commands[0].ActionId == AiCiCommandCatalog.CreateProject &&
+                secondSnapshot.Commands[1].ActionId == AiCiCommandCatalog.RequestBuild,
+                "proposal snapshots did not preserve their respective command order");
+        });
+
         return _passed;
     }
 
