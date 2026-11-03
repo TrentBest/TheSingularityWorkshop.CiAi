@@ -32,6 +32,9 @@ public sealed class CiMatrixCell
     public IReadOnlyDictionary<string, string> Values { get; }
 }
 
+/// <summary>One validated, human-readable exclusion rule retained in the expansion record.</summary>
+public sealed record CiMatrixExclusion(IReadOnlyDictionary<string, string> Match, string Reason);
+
 /// <summary>Immutable expansion of one validated matrix definition.</summary>
 public sealed class CiMatrixExpansionReport
 {
@@ -40,12 +43,14 @@ public sealed class CiMatrixExpansionReport
         string definitionDigest,
         int cartesianCombinationCount,
         int excludedCombinationCount,
+        IReadOnlyList<CiMatrixExclusion> exclusions,
         IReadOnlyList<CiMatrixCell> cells)
     {
         MatrixId = matrixId;
         DefinitionDigest = definitionDigest;
         CartesianCombinationCount = cartesianCombinationCount;
         ExcludedCombinationCount = excludedCombinationCount;
+        Exclusions = exclusions;
         Cells = cells;
     }
 
@@ -53,6 +58,7 @@ public sealed class CiMatrixExpansionReport
     public string DefinitionDigest { get; }
     public int CartesianCombinationCount { get; }
     public int ExcludedCombinationCount { get; }
+    public IReadOnlyList<CiMatrixExclusion> Exclusions { get; }
     public IReadOnlyList<CiMatrixCell> Cells { get; }
     public int RequiredCellCount => Cells.Count;
 }
@@ -168,6 +174,8 @@ public static class CiMatrixExpander
             definitionDigest,
             (int)cartesianCount,
             (int)cartesianCount - cells.Count,
+            Array.AsReadOnly(validatedExclusions.Select(exclusion =>
+                new CiMatrixExclusion(exclusion.Match, exclusion.Reason)).ToArray()),
             Array.AsReadOnly(cells.ToArray()));
 
         void ExpandDimension(int dimensionIndex)
@@ -257,7 +265,7 @@ public static class CiMatrixResultAggregator
 
         var knownCells = expansion.Cells.ToDictionary(cell => cell.CellId, StringComparer.Ordinal);
         var errors = new List<string>();
-        foreach (var unknown in supplied.Where(result => !knownCells.ContainsKey(result.CellId)))
+        foreach (var unknown in supplied.Where(result => string.IsNullOrWhiteSpace(result.CellId) || !knownCells.ContainsKey(result.CellId)))
             errors.Add("matrix.result-unknown-cell:" + (unknown.CellId ?? "<null>"));
 
         var evaluations = new List<CiMatrixCellEvaluation>(expansion.RequiredCellCount);
@@ -323,3 +331,91 @@ public static class CiMatrixResultAggregator
             ? diagnostic
             : diagnostic[..MaximumDiagnosticLength];
 }
+/// <summary>Deterministic machine-readable and human-readable matrix reports.</summary>
+public static class CiMatrixReportRenderer
+{
+    public static string RenderExpansionJson(CiMatrixExpansionReport expansion)
+    {
+        ArgumentNullException.ThrowIfNull(expansion);
+        var payload = new
+        {
+            schema = "ciai.matrix-expansion.v1",
+            matrixId = expansion.MatrixId,
+            definitionDigest = expansion.DefinitionDigest,
+            cartesianCombinationCount = expansion.CartesianCombinationCount,
+            excludedCombinationCount = expansion.ExcludedCombinationCount,
+            requiredCellCount = expansion.RequiredCellCount,
+            exclusions = expansion.Exclusions.Select(exclusion => new
+            {
+                match = exclusion.Match.OrderBy(pair => pair.Key, StringComparer.Ordinal)
+                    .Select(pair => new { name = pair.Key, value = pair.Value }).ToArray(),
+                reason = exclusion.Reason
+            }).ToArray(),
+            cells = expansion.Cells.Select(cell => new
+            {
+                id = cell.CellId,
+                values = cell.Values.OrderBy(pair => pair.Key, StringComparer.Ordinal)
+                    .Select(pair => new { name = pair.Key, value = pair.Value }).ToArray()
+            }).ToArray()
+        };
+        return JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    public static string RenderEvaluationJson(CiMatrixEvaluationReport report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+        var payload = new
+        {
+            schema = "ciai.matrix-evaluation.v1",
+            matrixId = report.MatrixId,
+            definitionDigest = report.DefinitionDigest,
+            requiredCellCount = report.RequiredCellCount,
+            passing = report.IsPassing,
+            cells = report.Cells.Select(cell => new
+            {
+                id = cell.CellId,
+                status = cell.Status.ToString(),
+                observedOutcome = cell.ObservedOutcome?.ToString(),
+                reasonCode = cell.ReasonCode,
+                diagnostic = cell.Diagnostic
+            }).ToArray(),
+            errors = report.Errors
+        };
+        return JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    public static string RenderEvaluationMarkdown(CiMatrixEvaluationReport report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+        var lines = new List<string>
+        {
+            $"# Matrix evaluation: {report.MatrixId}",
+            string.Empty,
+            $"- Definition digest: `{report.DefinitionDigest}`",
+            $"- Required cells: {report.RequiredCellCount}",
+            $"- Passing: {(report.IsPassing ? "yes" : "no")}",
+            string.Empty,
+            "| Cell | Status | Outcome | Reason | Diagnostic |",
+            "|---|---|---|---|---|"
+        };
+        foreach (var cell in report.Cells)
+        {
+            lines.Add($"| `{cell.CellId}` | **{cell.Status}** | {cell.ObservedOutcome?.ToString() ?? "—"} | {Escape(cell.ReasonCode)} | {Escape(cell.Diagnostic ?? string.Empty)} |");
+        }
+        if (report.Errors.Count > 0)
+        {
+            lines.Add(string.Empty);
+            lines.Add("## Errors");
+            lines.AddRange(report.Errors.Select(error => "- " + Escape(error)));
+        }
+        lines.Add(string.Empty);
+        lines.Add("This report evaluates matrix evidence; it does not execute jobs or authorize publication.");
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    private static string Escape(string value) =>
+        value.Replace("|", "\\|", StringComparison.Ordinal)
+            .Replace("\r", " ", StringComparison.Ordinal)
+            .Replace("\n", " ", StringComparison.Ordinal);
+}
+
