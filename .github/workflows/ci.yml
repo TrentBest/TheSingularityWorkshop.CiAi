@@ -54,6 +54,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.sha }}
+          submodules: recursive
       - name: Resolve optional branch target to an immutable commit
         id: resolve-target
         if: github.event_name == 'workflow_dispatch' && inputs.target_branch != ''
@@ -133,6 +134,19 @@ jobs:
       - name: Pack NuGet package
         id: pack
         run: dotnet pack src/TheSingularityWorkshop.CiAi/TheSingularityWorkshop.CiAi.csproj --configuration Release --no-build --output artifacts/packages
+      - name: Pack dependency and CiAi into an isolated local feed
+        id: package-local-feed
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/local-feed
+          dotnet pack external/CommandAi/TheSingularityWorkshop.CommandAi.csproj --configuration Release --no-restore --output artifacts/local-feed
+          dotnet pack src/TheSingularityWorkshop.CiAi/TheSingularityWorkshop.CiAi.csproj --configuration Release --no-build --output artifacts/local-feed
+      - name: Restore and build an external package consumer
+        id: package-consumer
+        run: |
+          set -euo pipefail
+          dotnet restore tests/PackageConsumerSmoke/PackageConsumerSmoke.csproj --source artifacts/local-feed --source https://api.nuget.org/v3/index.json
+          dotnet build tests/PackageConsumerSmoke/PackageConsumerSmoke.csproj --configuration Release --no-restore
       - name: Validate packed artifacts
         id: validate-package
         shell: bash
@@ -167,6 +181,7 @@ jobs:
           PACK_STATUS: ${{ steps.pack.outcome }}
           PACKAGE_STATUS: ${{ steps.validate-package.outcome }}
           ARTIFACT_STATUS: ${{ steps.upload-artifacts.outcome }}
+          CONSUMER_STATUS: ${{ steps.package-consumer.outcome }}
         shell: bash
         run: |
           set -euo pipefail
@@ -188,8 +203,9 @@ jobs:
             echo "| Package creation | $PACK_STATUS |"
             echo "| Package validation | $PACKAGE_STATUS |"
             echo "| Evidence artifact upload | $ARTIFACT_STATUS |"
+            echo "| External package consumer restore/build | $CONSUMER_STATUS |"
             echo
-            if [ "$JOB_STATUS" = "success" ] && [ "$PROVENANCE_STATUS" = "success" ] && [ "$RESTORE_STATUS" = "success" ] && [ "$BUILD_STATUS" = "success" ] && [ "$CONTRACT_STATUS" = "success" ] && [ "$PACK_STATUS" = "success" ] && [ "$PACKAGE_STATUS" = "success" ] && [ "$ARTIFACT_STATUS" = "success" ]; then
+            if [ "$JOB_STATUS" = "success" ] && [ "$PROVENANCE_STATUS" = "success" ] && [ "$RESTORE_STATUS" = "success" ] && [ "$BUILD_STATUS" = "success" ] && [ "$CONTRACT_STATUS" = "success" ] && [ "$PACK_STATUS" = "success" ] && [ "$PACKAGE_STATUS" = "success" ] && [ "$ARTIFACT_STATUS" = "success" ] && [ "$CONSUMER_STATUS" = "success" ]; then
               echo "**Evidence completeness: complete** — all required gate steps succeeded for the resolved commit."
             else
               echo "**Evidence completeness: incomplete** — at least one required gate step did not succeed."
