@@ -49,19 +49,27 @@ internal static class AiCiBuilderContractTests
             }
         });
 
-        Check("builder rejects canonical branches and malformed base identity", () =>
+        Check("builder rejects canonical and malformed Git branch refs", () =>
         {
             Throws<ArgumentException>(() => AiCi.ForRepository("TrentBest/Game", "development", new string('a', 40)));
             Throws<ArgumentException>(() => AiCi.ForRepository("TrentBest/Game", "master", new string('a', 40)));
+            Throws<ArgumentException>(() => AiCi.ForRepository("TrentBest/Game", "feature/x..y", new string('a', 40)));
+            Throws<ArgumentException>(() => AiCi.ForRepository("TrentBest/Game", "feature/.hidden", new string('a', 40)));
+            Throws<ArgumentException>(() => AiCi.ForRepository("TrentBest/Game", "feature/x.", new string('a', 40)));
+            Throws<ArgumentException>(() => AiCi.ForRepository("TrentBest/Game", "feature/x.lock", new string('a', 40)));
+            Throws<ArgumentException>(() => AiCi.ForRepository("TrentBest/Game", "feature//x", new string('a', 40)));
             Throws<ArgumentException>(() => AiCi.ForRepository("TrentBest/Game", "feature/x", "abc"));
             Throws<ArgumentException>(() => AiCi.ForRepository("../Game", "feature/x", new string('a', 40)));
+            Throws<ArgumentException>(() => AiCi.ForRepository("TrentBest/.", "feature/x", new string('a', 40)));
         });
 
-        Check("builder rejects path traversal and rooted paths", () =>
+        Check("builder rejects path traversal, Git metadata, and rooted paths", () =>
         {
             Throws<ArgumentException>(() => NewBuilder().AddProjectFile("../outside.cs", "class X {}"));
             Throws<ArgumentException>(() => NewBuilder().AddProjectFile("/rooted.cs", "class X {}"));
             Throws<ArgumentException>(() => NewBuilder().AddProjectFile("Game\\escape.cs", "class X {}"));
+            Throws<ArgumentException>(() => NewBuilder().AddProjectFile(".git/config", "unsafe"));
+            Throws<ArgumentException>(() => NewBuilder().AddProjectFile("Game/.GIT/config", "unsafe"));
         });
 
         Check("modify operation requires an expected source digest", () =>
