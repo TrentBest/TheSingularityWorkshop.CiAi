@@ -1,3 +1,6 @@
+using System.Collections.ObjectModel;
+using System.Text.Json;
+
 namespace TheSingularityWorkshop.CiAi;
 
 /// <summary>Observable lifecycle outcome for one executed pipeline step.</summary>
@@ -37,6 +40,31 @@ public sealed record CiPipelineExecutionReport(
     DateTimeOffset FinishedAt)
 {
     public bool IsSuccessful => Steps.Count > 0 && Steps.All(s => s.Outcome == CiStepOutcome.Succeeded);
+}
+
+/// <summary>Renders a canonical report that excludes wall-clock timestamps and is stable for identical outcomes.</summary>
+public static class CiPipelineExecutionReportRenderer
+{
+    public static string RenderJson(CiPipelineExecutionReport report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+        var payload = new
+        {
+            schema = "ciai.pipeline-execution.v1",
+            repository = report.Repository,
+            commitSha = report.CommitSha,
+            planId = report.PlanId,
+            successful = report.IsSuccessful,
+            steps = report.Steps.Select(step => new
+            {
+                id = step.StepId,
+                name = step.StepName,
+                outcome = step.Outcome.ToString(),
+                diagnostic = step.Diagnostic
+            }).ToArray()
+        };
+        return JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
+    }
 }
 
 /// <summary>Host-owned authorization for one exact candidate and plan.</summary>
@@ -152,7 +180,8 @@ public sealed class CiPipelineExecutor
         var started = DateTimeOffset.UtcNow;
         var records = new List<CiStepExecutionRecord>();
         var values = new Dictionary<string, object?>(StringComparer.Ordinal);
-        var context = new CiExecutionContext(definition.Repository, commitSha.ToLowerInvariant(), planId, values);
+        var context = new CiExecutionContext(definition.Repository, commitSha.ToLowerInvariant(), planId,
+            new ReadOnlyDictionary<string, object?>(values));
         var blocked = false;
 
         foreach (var step in definition.Steps)
@@ -180,32 +209,44 @@ public sealed class CiPipelineExecutor
 
             try
             {
-                var result = step.Operation.DynamicInvoke();
+                var parameters = step.Operation.Method.GetParameters();
+                var result = step.Operation.DynamicInvoke(parameters.Length == 0 ? null : new object?[] { context });
+                var taskWithoutResult = false;
                 if (result is Task task)
                 {
                     await task.ConfigureAwait(false);
-                    result = task.GetType().IsGenericType ? task.GetType().GetProperty("Result")?.GetValue(task) : null;
+                    if (task.GetType().IsGenericType)
+                        result = task.GetType().GetProperty("Result")?.GetValue(task);
+                    else
+                        taskWithoutResult = true;
                 }
-                if (result is bool boolean && !boolean)
+
+                if (taskWithoutResult || result is CiStepResult { Succeeded: true } || result is true)
                 {
-                    records.Add(new(step.Id, step.Name, CiStepOutcome.Failed, stepStarted, DateTimeOffset.UtcNow, "Operation returned false."));
-                    blocked = true;
+                    values[step.Id] = result;
+                    records.Add(new(step.Id, step.Name, CiStepOutcome.Succeeded, stepStarted, DateTimeOffset.UtcNow));
                     continue;
                 }
-                if (result is CiStepResult stepResult && !stepResult.Succeeded)
+
+                if (result is false || result is CiStepResult { Succeeded: false })
                 {
-                    var diagnostic = string.IsNullOrWhiteSpace(stepResult.Diagnostic)
-                        ? "Operation returned a failed CiStepResult."
-                        : stepResult.Diagnostic;
+                    var diagnostic = result is CiStepResult stepResult
+                        ? string.IsNullOrWhiteSpace(stepResult.Diagnostic)
+                            ? "Operation returned a failed CiStepResult."
+                            : stepResult.Diagnostic
+                        : "Operation returned false.";
                     if (diagnostic.Length > MaxDiagnosticLength) diagnostic = diagnostic[..MaxDiagnosticLength];
                     records.Add(new(step.Id, step.Name, CiStepOutcome.Failed, stepStarted, DateTimeOffset.UtcNow, diagnostic));
                     blocked = true;
                     continue;
                 }
-                values[step.Id] = result;
-                records.Add(new(step.Id, step.Name, CiStepOutcome.Succeeded, stepStarted, DateTimeOffset.UtcNow));
+
+                var resultType = result?.GetType().FullName ?? "null";
+                records.Add(new(step.Id, step.Name, CiStepOutcome.Indeterminate, stepStarted, DateTimeOffset.UtcNow,
+                    $"step.result-indeterminate:{resultType}"));
+                blocked = true;
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException)
             {
                 records.Add(new(step.Id, step.Name, CiStepOutcome.Cancelled, stepStarted, DateTimeOffset.UtcNow, "Operation cancelled."));
                 blocked = true;
