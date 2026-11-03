@@ -7,7 +7,7 @@
 
 This audit measures the implementation of the 22 workflow families in the CiAi domain catalog. It distinguishes a catalog entry from a family-specific, end-to-end capability.
 
-**Audit basis:** source tree on `development` at `54915fcfcf951c63bb2824a5ab97dadeaa1e9068`. This is a source-level audit, not a claim that every behavior was executed in a fresh test run.
+**Audit basis:** the `development` baseline plus the matrix implementation proposed in [draft PR #49](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/pull/49). The matrix row is partial only on that proposal branch until it is integrated; this is a source-level audit, not a claim that every behavior was executed in a fresh test run.
 
 ## Result
 
