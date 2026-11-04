@@ -108,4 +108,4 @@ The builder declares a shared expected repository-operation outcome shape. It do
 See [AiCi repository command contract](docs/AI_CI_REPOSITORY_COMMANDS.md) and the [enriched CommandAi/1 decision](https://github.com/TrentBest/TheSingularityWorkshop.CommandAi/issues/1).
 
 
-<p align="center"><img src="https://raw.githubusercontent.com/TrentBest/FSM_API/master/Documentation/Branding/TheSingularityWorkshop.png" alt="The Singularity Workshop avatar" width="200" /></p>
+<p align="center"><img src="https://raw.githubusercontent.com/TrentBest/FSM_API/master/Documentation/Branding/TheSingularityWorkshop.png" alt="The Singularity Workshop" width="200" /></p>
