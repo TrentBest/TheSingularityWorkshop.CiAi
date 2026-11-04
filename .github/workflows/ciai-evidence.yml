@@ -14,6 +14,10 @@ on:
       - "NuGet.config"
       - ".config/**"
       - ".github/workflows/ci.yml"
+      - ".github/workflows/observe-release-candidate.yml"
+      - ".github/workflows/serialization-benchmark-dispatch.yml"
+      - ".gitmodules"
+      - "external/**"
       - ".github/workflows/ciai-evidence.yml"
 
 permissions:
