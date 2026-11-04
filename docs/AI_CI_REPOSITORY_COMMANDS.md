@@ -9,6 +9,26 @@ AiCi composes repository-development intent into enriched CommandAi/1 atomic com
 
 ## Field mapping
 
+## Example
+
+~~~csharp
+var proposal = AiCi.ForRepository(
+        "TrentBest/Minesweeper",
+        "feature/repair-board",
+        "0123456789abcdef0123456789abcdef01234567")
+    .AddScript("Game/Main.cs", "public sealed class MainGame {}")
+    .ModifyScript(
+        "Game/Board.cs",
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "replace this file")
+    .RequestBuild()
+    .Build();
+
+var encoded = CommandAiTextCodec.Encode(proposal);
+~~~
+
+The exact repository, feature branch, and base SHA above are illustrative values. A caller must supply a real isolated branch and exact full base commit. Encoding does not perform a checkout or mutate a repository.
+
 | Repository operation data | CommandAi field |
 |---|---|
 | owner/repository identity | Target (typed literal text) |
