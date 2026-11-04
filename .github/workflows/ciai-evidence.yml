@@ -1,0 +1,194 @@
+name: CiAi Exact Commit Evidence
+
+on:
+  push:
+    branches: [development, master]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "samples/**"
+      - "README.md"
+      - "CiAi.slnx"
+      - "Directory.Build.*"
+      - "global.json"
+      - "NuGet.config"
+      - ".config/**"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/ciai-evidence.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ciai-evidence-${{ github.repository }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  observe:
+    name: Observe exact source CI run
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Validate source identity
+        id: source
+        shell: bash
+        env:
+          TARGET_REPOSITORY: ${{ github.repository }}
+          TARGET_BRANCH: ${{ github.ref_name }}
+          TARGET_SHA: ${{ github.sha }}
+          PUSHED_BRANCH: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_REPOSITORY" == "TrentBest/TheSingularityWorkshop.CiAi" ]]
+          [[ "$TARGET_BRANCH" == "development" || "$TARGET_BRANCH" == "master" ]]
+          [[ "$PUSHED_BRANCH" == "refs/heads/$TARGET_BRANCH" ]]
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
+          {
+            echo "repository=$TARGET_REPOSITORY"
+            echo "branch=$TARGET_BRANCH"
+            echo "sha=$TARGET_SHA"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Resolve the exact authoritative CI run and attempt
+        id: source-run
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_REPOSITORY: ${{ steps.source.outputs.repository }}
+          TARGET_BRANCH: ${{ steps.source.outputs.branch }}
+          TARGET_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/$TARGET_REPOSITORY/actions/workflows/ci.yml/runs"
+          for attempt in $(seq 1 90); do
+            response="$(curl --fail --silent --show-error \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "$api?branch=$TARGET_BRANCH&event=push&head_sha=$TARGET_SHA&per_page=100")"
+            matches="$(jq --arg repo "$TARGET_REPOSITORY" --arg branch "$TARGET_BRANCH" --arg sha "$TARGET_SHA" '
+              [.workflow_runs[]
+                | select(.head_sha == $sha)
+                | select(.event == "push" and .head_branch == $branch)
+                | select((.path | split("@")[0]) == ".github/workflows/ci.yml")
+                | select(.head_repository.full_name == $repo)]
+            ' <<< "$response")"
+            count="$(jq 'length' <<< "$matches")"
+            if [ "$count" -gt 1 ]; then
+              echo "::error::More than one authoritative ci.yml push run matches this exact source SHA."
+              jq -r '.[] | "run_id=\(.id) attempt=\(.run_attempt) status=\(.status)"' <<< "$matches"
+              exit 1
+            fi
+            if [ "$count" -eq 1 ]; then
+              status="$(jq -r '.[0].status' <<< "$matches")"
+              if [ "$status" = "completed" ]; then
+                run_id="$(jq -r '.[0].id' <<< "$matches")"
+                run_attempt="$(jq -r '.[0].run_attempt' <<< "$matches")"
+                conclusion="$(jq -r '.[0].conclusion // "null"' <<< "$matches")"
+                [[ "$run_id" =~ ^[1-9][0-9]*$ ]]
+                [[ "$run_attempt" =~ ^[1-9][0-9]*$ ]]
+                {
+                  echo "run_id=$run_id"
+                  echo "run_attempt=$run_attempt"
+                  echo "conclusion=$conclusion"
+                } >> "$GITHUB_OUTPUT"
+                echo "Resolved exact source run $run_id attempt $run_attempt ($conclusion)."
+                exit 0
+              fi
+            fi
+            echo "Waiting for the exact ci.yml run (poll $attempt/90; matches=$count)."
+            sleep 20
+          done
+          echo "::error::Timed out waiting for the exact ci.yml push run for $TARGET_SHA."
+          exit 1
+
+      - name: Check out pinned CiAi observer source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: TrentBest/TheSingularityWorkshop.CiAi
+          ref: 49a802fcab60fa7411b01892072d7e2c8a2c72a9
+          path: ciai
+          submodules: recursive
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore pinned observer
+        working-directory: ciai
+        run: dotnet restore samples/TheSingularityWorkshop.CiAi.ObserveRun/TheSingularityWorkshop.CiAi.ObserveRun.csproj
+
+      - name: Build pinned observer
+        working-directory: ciai
+        run: dotnet build samples/TheSingularityWorkshop.CiAi.ObserveRun/TheSingularityWorkshop.CiAi.ObserveRun.csproj --configuration Release --no-restore
+
+      - name: Observe and validate exact source evidence
+        working-directory: ciai
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CIAI_GITHUB_TOKEN: ${{ github.token }}
+          CIAI_REQUIRED_WORKFLOW_PATHS: .github/workflows/ci.yml#${{ steps.source-run.outputs.run_id }}#${{ steps.source-run.outputs.run_attempt }}
+          TARGET_REPOSITORY: ${{ steps.source.outputs.repository }}
+          TARGET_SHA: ${{ steps.source.outputs.sha }}
+          SOURCE_RUN_ID: ${{ steps.source-run.outputs.run_id }}
+          SOURCE_RUN_ATTEMPT: ${{ steps.source-run.outputs.run_attempt }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          dotnet run --project samples/TheSingularityWorkshop.CiAi.ObserveRun --configuration Release --no-build -- \
+            "$TARGET_REPOSITORY" "$TARGET_SHA" artifacts/commit-observation.json
+          expected=".github/workflows/ci.yml#$SOURCE_RUN_ID#$SOURCE_RUN_ATTEMPT"
+          jq -e --arg repo "$TARGET_REPOSITORY" --arg sha "$TARGET_SHA" --arg expected "$expected" '
+            .schema == "ciai.commit-observation.v2" and
+            .repository == $repo and
+            .headSha == $sha and
+            .discoveryComplete == true and
+            .complete == true and
+            (.requiredWorkflowResults | length) == 1 and
+            .requiredWorkflowResults[0].WorkflowPath == $expected and
+            .requiredWorkflowResults[0].State == "passed" and
+            .requiredWorkflowResults[0].EvidenceComplete == true and
+            .requiredWorkflowResults[0].Terminal == true and
+            .requiredWorkflowResults[0].Successful == true
+          ' artifacts/commit-observation.json >/dev/null
+          echo "CiAi verified exact source run $SOURCE_RUN_ID attempt $SOURCE_RUN_ATTEMPT for $TARGET_SHA."
+
+      - name: Retain JSON and Markdown evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: ciai-commit-evidence-${{ github.sha }}
+          path: |
+            ciai/artifacts/commit-observation.json
+            ciai/artifacts/commit-observation.md
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Summarize exact-run provenance
+        if: ${{ always() }}
+        env:
+          REPOSITORY: ${{ steps.source.outputs.repository }}
+          BRANCH: ${{ steps.source.outputs.branch }}
+          SHA: ${{ steps.source.outputs.sha }}
+          RUN_ID: ${{ steps.source-run.outputs.run_id }}
+          RUN_ATTEMPT: ${{ steps.source-run.outputs.run_attempt }}
+          CONCLUSION: ${{ steps.source-run.outputs.conclusion }}
+          OBSERVER_STATUS: ${{ job.status }}
+        shell: bash
+        run: |
+          {
+            echo "## CiAi exact commit evidence"
+            echo
+            echo "- Repository: `$REPOSITORY`"
+            echo "- Branch: `$BRANCH`"
+            echo "- Source SHA: `$SHA`"
+            echo "- Authoritative workflow: `.github/workflows/ci.yml`"
+            echo "- Source run / attempt: `$RUN_ID` / `$RUN_ATTEMPT`"
+            echo "- Source conclusion: **$CONCLUSION**"
+            echo "- CiAi evidence lane: **$OBSERVER_STATUS**"
+            echo
+            echo "This is read-only evidence. It does not authorize merge, package publication, release, or deployment."
+          } >> "$GITHUB_STEP_SUMMARY"
