@@ -5,9 +5,9 @@
 
 ## Purpose
 
-AnyApp is the first source-based consumer pilot for CiAi. It exercises the existing read-only GitHub Actions observer against a real .NET desktop application that builds, tests, and publishes a Windows x64 single-file executable during development CI.
+AnyApp is the first self-building consumer being wired to CiAi. The first slice is a source-based, read-only observer; the next slice makes AnyApp's existing Windows CI produce exact-run workflow provenance and TRX diagnostics so CiAi can normalize real test failures. GitHub Actions remains the authoritative build/test executor.
 
-This is now an implemented integration scaffold on AnyApp's development branch, not merely a proposed sample. Its first workflow run is the verification step; do not describe the pilot as proven until a real evidence artifact has been inspected.
+This is a staged integration, not a completed self-repair loop. AnyApp PR #37 contains the producer-side provenance/TRX change. Its first PR workflow run has already emitted a provenance artifact; the test lane and TRX artifact remain under runtime validation. Do not claim a repair cycle until trusted ingestion, HeadlessAi proposal, host authorization/application, and exact-candidate revalidation have all been exercised.
 
 ## Live consumer integration
 
@@ -21,6 +21,17 @@ This is now an implemented integration scaffold on AnyApp's development branch, 
 On a push to AnyApp development, the consumer workflow waits for the authoritative .NET workflow to complete for the same full commit SHA. It resolves the exact run and attempt when unambiguous, checks out CiAi at the immutable commit above, invokes the existing observer, and uploads JSON/Markdown evidence reports.
 
 The observer uses the repository-scoped GitHub token with read-only Actions and contents permissions. It does not execute AnyApp's build and does not receive permission to merge, publish, create releases, or deploy.
+
+## Provenance and TRX producer slice
+
+AnyApp PR [#37 — Add provenance-bound test diagnostics for CiAi](https://github.com/TrentBest/AnyApp/pull/37) updates the existing .NET workflow to emit:
+
+- `ciai-workflow-provenance-{runId}-{runAttempt}`, containing schema `ciai.workflow-provenance.v1` with repository, run/attempt, workflow-definition ref/SHA, event identity, PR head/base when applicable, and actual checkout SHA.
+- `ciai-test-results-{runId}-{runAttempt}-build`, containing the AnyApp test project's TRX output.
+
+The TRX upload runs with `if: always()`; the original test command's nonzero exit code remains authoritative. Missing TRX is incomplete evidence, not a pass. The producer does not download artifacts, verify provider ZIP digests, extract archives, or assert workflow-definition trust.
+
+The first producer execution is [AnyApp PR run 41282827626](https://github.com/TrentBest/AnyApp/actions/runs/41282827626). It successfully uploaded provenance artifact ID `13073991348` with provider digest `sha256:d9f51a7bef119a3fdd9c30d35163693534475dfd7d24a19fc3201ec292def6d8`. The downloaded ZIP contained the expected JSON schema and exact run/attempt/checkout identities. Because this was a pull-request event, its workflow ref was `refs/pull/37/merge`; it proves artifact production, not trusted workflow authority. The host must validate workflow ref/SHA against protected control-plane policy.
 
 ## First verified observation
 
@@ -73,8 +84,10 @@ The source SHA in the report must match the AnyApp commit. A report for another 
 2. Correlate all declared lanes (build/test, publish baseline, release candidate) without pretending untriggered lanes failed.
 3. Capture and report resolved SHAs for AnyApp's sibling source checkouts, not only the AnyApp source SHA.
 4. Make provider evidence and artifact links easy to consume in a stable JSON/Markdown report contract.
-5. Keep the observer read-only and the integration non-blocking until evidence semantics have been exercised against real consumer runs.
+5. Connect the trusted host artifact retriever to CiAi's provenance/TRX parser; verify provider ZIP digests, safe extraction, exact job ID/name binding, and workflow-definition trust.
+6. Deliver the normalized diagnostic report into the same Foundry task, then drive a bounded HeadlessAi proposal through independent host authorization and exact-SHA revalidation.
+7. Keep the observer read-only and the integration non-blocking until evidence semantics have been exercised against real consumer runs.
 
-This is a source-based pilot, not a completed reusable GitHub Actions host adapter. AnyApp's build/test workflow remains authoritative. No NuGet package publication, GitHub Release, deployment, or merge is part of this example.
+This is a source-based consumer and diagnostic-producer pilot, not a completed reusable GitHub Actions host adapter or self-repair loop. AnyApp's build/test workflow remains authoritative. No NuGet package publication, GitHub Release, deployment, or merge is part of this example.
 
 <p align="center"><img src="https://raw.githubusercontent.com/TrentBest/FSM_API/master/Documentation/Branding/TheSingularityWorkshop.png" alt="The Singularity Workshop avatar" width="200" /></p>
