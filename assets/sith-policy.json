@@ -1,0 +1,35 @@
+{
+  "repository": "TrentBest/TheSingularityWorkshop.CiAi",
+  "policy": "exactly-master-and-development",
+  "required_branches": [
+    "development",
+    "master"
+  ],
+  "actual_branches": [
+    "development",
+    "docs/ciai-code-red-primary-path",
+    "experiment/http-projection-architecture",
+    "experiment/read-only-ci-evidence-pilot",
+    "feature/await-gate-contracts-31",
+    "feature/ciai-commandai-proposal-composer",
+    "feature/ciai-trusted-trx-archive-reader",
+    "feature/ciai-trx-diagnostic-verdict",
+    "feature/ciai-versioned-ci-evidence-packet",
+    "feature/ciai-workflow-checkout-provenance",
+    "feature/trx-diagnostics-34",
+    "fix/ciai-commandai-v1-consumer",
+    "fix/commandai-v1-deterministic-encoding-pin",
+    "fix/observer-job-pagination-contract",
+    "fix/stacked-feature-pr-ci-trigger",
+    "master",
+    "work/ciai-executor-result-contract",
+    "work/ciai-matrix-contracts",
+    "work/ciai-self-observation-lane",
+    "work/ecosystem-graph-performance-contract"
+  ],
+  "branch_count": 20,
+  "status": "NON-COMPLIANT",
+  "evaluated_at": "2026-11-05T04:36:24Z",
+  "workflow_run": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/41968837720",
+  "triggering_commit": "38f0449dbd904e488a98f5f8b9f049e5de5bf266"
+}
