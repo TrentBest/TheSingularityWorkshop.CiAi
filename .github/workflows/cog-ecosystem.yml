@@ -10,6 +10,10 @@ on:
       - "Directory.Build.targets"
       - "global.json"
       - "docs/COGS_VS_CAPABILITIES.md"
+      - "external/CommandAi"
+      - "external/ProtocolAi"
+      - "external/GrammarAi"
+      - ".gitmodules"
       - ".github/workflows/cog-ecosystem.yml"
   pull_request:
     branches: [development, master]
@@ -21,6 +25,10 @@ on:
       - "Directory.Build.targets"
       - "global.json"
       - "docs/COGS_VS_CAPABILITIES.md"
+      - "external/CommandAi"
+      - "external/ProtocolAi"
+      - "external/GrammarAi"
+      - ".gitmodules"
       - ".github/workflows/cog-ecosystem.yml"
   workflow_dispatch:
 permissions:

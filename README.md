@@ -81,7 +81,8 @@ The package candidate is configured with repository metadata, release notes, sym
 - **CI provider:** source of truth for repository identity, workflow run state, commit SHA, conclusion, and run evidence.
 - **CiAi:** validates and normalizes CI facts; the current GitHub Actions client is read-only.
 - **HeadlessAi:** provider-neutral HTTP/LLM integration is a future CiAi integration, not yet called by this package.
-- **ProtocolAi:** controlled vocabulary integration is not yet wired into CiAi.
+- **ProtocolAi:** CiAi now defines pinned, source-based semantic categories for workflow fields, repositories, triggers, step kinds, conditions, workflow domains, evidence kinds, actions, and outcome states. Each `ProtocolDefinition` is one category; member IDs are qualified by that definition identity. The repository category starts empty so unregistered repository names remain literals. These identities describe meaning; they do not execute or authorize operations.
+- **GrammarAi:** CiAi now defines an initial workflow-recipe production grammar over protocol-qualified terminals from multiple categories and resolves them through the host-supplied resolver. This is not a text parser, typed structural workflow-map adapter, or complete CI plan evaluator. A configured per-session category/member view remains separate work.
 - **FSM_API:** optional lifecycle coordination; not CI transport, persistence, or a distributed scheduler.
 - **SimpleDemos:** contains a separate live provider-ingestion proof; it does not prove an end-to-end LLM-driven CiAi workflow.
 
@@ -89,6 +90,7 @@ The read-only GitHub Actions client validates provider identity and preserves un
 
 ## 06 — Source-derived contract documentation
 
+- [CiAi semantic stack: ProtocolAi vocabulary, GrammarAi grammar, and ownership boundaries](docs/CI_SEMANTIC_STACK.md)
 - [Workflow domain map: 22 workflow families and cross-cutting contracts](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/CI_WORKFLOW_DOMAIN_MAP.md)
 - [Declarative workflow plan validation: stable IDs, domain references, dependency graphs, and deterministic recipes](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/CI_WORKFLOW_DOMAIN_MAP.md#validated-workflow-plans)
 - [Declarative CI builder and publication-authorization design](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/CI_BUILDER_DESIGN.md) — recipe-style pipeline direction. The definition builder, bounded in-process executor, and fail-closed required-evidence evaluator now exist on `development`; canonical deterministic reporting, provider-host integration, and publication remain incomplete.

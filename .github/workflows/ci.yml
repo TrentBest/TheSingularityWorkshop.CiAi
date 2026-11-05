@@ -13,6 +13,10 @@ on:
       - "global.json"
       - "NuGet.config"
       - ".config/**"
+      - "external/CommandAi"
+      - "external/ProtocolAi"
+      - "external/GrammarAi"
+      - ".gitmodules"
       - ".github/workflows/ci.yml"
       - ".github/workflows/observe-release-candidate.yml"
       - ".github/workflows/serialization-benchmark-dispatch.yml"
@@ -28,6 +32,10 @@ on:
       - "global.json"
       - "NuGet.config"
       - ".config/**"
+      - "external/CommandAi"
+      - "external/ProtocolAi"
+      - "external/GrammarAi"
+      - ".gitmodules"
       - ".github/workflows/ci.yml"
       - ".github/workflows/observe-release-candidate.yml"
       - ".github/workflows/serialization-benchmark-dispatch.yml"
@@ -140,6 +148,8 @@ jobs:
           set -euo pipefail
           mkdir -p artifacts/local-feed
           dotnet pack external/CommandAi/TheSingularityWorkshop.CommandAi.csproj --configuration Release --no-restore --output artifacts/local-feed
+          dotnet pack external/ProtocolAi/TheSingularityWorkshop.ProtocolAi.csproj --configuration Release --no-restore --output artifacts/local-feed
+          dotnet pack external/GrammarAi/TheSingularityWorkshop.GrammarAi.csproj --configuration Release --no-restore --output artifacts/local-feed
           dotnet pack src/TheSingularityWorkshop.CiAi/TheSingularityWorkshop.CiAi.csproj --configuration Release --no-build --output artifacts/local-feed
       - name: Restore and build an external package consumer
         id: package-consumer

@@ -1,3 +1,4 @@
+using TheSingularityWorkshop.CiAi;
 using TheSingularityWorkshop.CiAi.RepositoryCommands;
 using TheSingularityWorkshop.CommandAi;
 
@@ -11,4 +12,9 @@ var proposal = AiCi.ForRepository(
 if (proposal.ProtocolVersion != CommandProposal.CurrentProtocolVersion)
     throw new InvalidOperationException("The transitive CommandAi contract was not resolved.");
 
-Console.WriteLine($"Restored and compiled CiAi package with {proposal.ProtocolVersion}.");
+var protocol = CiWorkflowProtocolCatalog.Create();
+var grammar = CiWorkflowGrammarCatalog.Create(protocol);
+if (CiWorkflowGrammarCatalog.FindUnresolvedProtocolReferences(grammar, protocol).Count != 0)
+    throw new InvalidOperationException("The packaged CiAi semantic grammar has unresolved protocol references.");
+
+Console.WriteLine($"Restored and compiled CiAi package with {proposal.ProtocolVersion} and {protocol.Definitions.Sum(category => category.Symbols.Count)} CI vocabulary symbols.");
