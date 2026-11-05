@@ -11,6 +11,8 @@ on:
       - "global.json"
       - "docs/COGS_VS_CAPABILITIES.md"
       - ".github/workflows/cog-ecosystem.yml"
+      - "external/CommandAi"
+      - ".gitmodules"
   pull_request:
     branches: [development, master]
     paths:
@@ -22,6 +24,8 @@ on:
       - "global.json"
       - "docs/COGS_VS_CAPABILITIES.md"
       - ".github/workflows/cog-ecosystem.yml"
+      - "external/CommandAi"
+      - ".gitmodules"
   workflow_dispatch:
 permissions:
   contents: read
