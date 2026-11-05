@@ -1,3 +1,11 @@
 [submodule "external/CommandAi"]
 	path = external/CommandAi
 	url = https://github.com/TrentBest/TheSingularityWorkshop.CommandAi.git
+
+[submodule "external/ProtocolAi"]
+	path = external/ProtocolAi
+	url = https://github.com/TrentBest/TheSingularityWorkshop.ProtocolAi.git
+
+[submodule "external/GrammarAi"]
+	path = external/GrammarAi
+	url = https://github.com/TrentBest/TheSingularityWorkshop.GrammarAi.git
