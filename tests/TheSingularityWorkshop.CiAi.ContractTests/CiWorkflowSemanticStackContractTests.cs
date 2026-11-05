@@ -20,6 +20,9 @@ internal static class CiWorkflowSemanticStackContractTests
                 "protocol symbol names are not unique");
             Assert(protocol.Symbols.Select(x => x.Value).Distinct(StringComparer.Ordinal).Count() == protocol.Symbols.Count,
                 "protocol symbol values are not unique");
+            Assert(protocol.Reference("Domain_build-test").SymbolId == CiWorkflowProtocolCatalog.DomainBuildTest &&
+                protocol.Reference("Domain_smoke").SymbolId == CiWorkflowProtocolCatalog.DomainSmoke,
+                "domain symbol identities changed with catalog ordering");
         });
 
         Check("ProtocolAi distinguishes known CI vocabulary from application literals", () =>
