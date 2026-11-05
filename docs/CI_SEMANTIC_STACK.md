@@ -38,7 +38,14 @@ This first semantic-stack slice does **not yet** translate a GrammarAi grammar i
 
 ## Source revisions
 
-CiAi pins the ProtocolAi and GrammarAi development source revisions as Git submodules so development and CI consume explicit commits rather than an unbounded floating dependency. The project and package-consumer smoke test reference both dependencies. CI packs the three source dependencies into an isolated local feed before restoring the external CiAi package consumer.
+CiAi pins the ProtocolAi and GrammarAi source revisions as Git submodules so development and CI consume explicit commits rather than an unbounded floating dependency:
+
+| Dependency | Exact source commit | Purpose |
+|---|---|---|
+| ProtocolAi | `0585a4d25861b75bb6caa1d3584ec97d5375ea76` | Stable CI vocabulary identities |
+| GrammarAi | `968c2ad0e9c9788c088367b131933bb41cf41e20` | Production grammar and host-resolved protocol terminals |
+
+The GrammarAi pin is the owner-verified source revision; the three later `development` commits only update Sith Policy and README material. The project and package-consumer smoke test reference both dependencies. CI packs the three source dependencies into an isolated local feed before restoring the external CiAi package consumer.
 
 ## Trust boundary
 
