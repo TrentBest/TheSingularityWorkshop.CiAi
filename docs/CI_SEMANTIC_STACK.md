@@ -18,7 +18,9 @@ The dependency direction is intentional:
 
 ## Protocol vocabulary
 
-`CiWorkflowProtocolCatalog` creates the CiAi-owned `ProtocolDefinition`. Stable symbol IDs identify workflow concepts and values including triggers, step conditions, actions, evidence outcomes, and the 22 workflow domains in `CiWorkflowDomainCatalog`.
+`CiWorkflowProtocolCatalog` creates a set of CiAi-owned `ProtocolDefinition` instances. **Each definition is one semantic category**; its `ProtocolSymbol` IDs are local to that category, and `ProtocolReference` carries both the definition ID and member ID. The current categories are workflow fields, repositories, triggers, workflow steps, conditions, workflow domains, evidence kinds, actions, and outcome states. This permits two categories to use the same local member ID without ambiguity.
+
+The repository category starts empty: a repository name supplied by an application remains a literal until the host registers it. The full CiAi category set is not yet a configuration-selected per-session view; host/session exposure and disabled-member filtering remain separate work.
 
 Known vocabulary values encode as integer references. Unrecognized application data, such as a repository identity, remains a literal; it is not silently promoted into a new stable symbol. Symbol IDs are owned by CiAi and must not be reassigned to a different meaning.
 
@@ -26,9 +28,9 @@ The vocabulary is descriptive. The identity `publish` does not grant publication
 
 ## Workflow grammar
 
-`CiWorkflowGrammarCatalog` builds a GrammarAi `GrammarDefinition` over protocol-qualified terminals. The grammar represents the initial recipe token structure: workflow identity and trigger, a sequence of steps, conditions, workflow domains, dependencies, evidence declarations, and action kinds.
+`CiWorkflowGrammarCatalog` builds a GrammarAi `GrammarDefinition` over protocol-qualified terminals from multiple semantic categories. The grammar represents the initial recipe token structure: workflow fields, trigger values, a sequence of step kinds, conditions, workflow domains, dependencies, evidence kinds, and action kinds.
 
-GrammarAi does not parse arbitrary text. The grammar is a structural contract over known vocabulary terminals; dynamic values and CI-specific rules remain CiAi-owned. The host supplies the resolver that calls `CiWorkflowProtocolCatalog.Resolves` against the exact active protocol definition. A missing protocol or symbol identity is reported as unresolved; successful identity resolution does not prove semantic compatibility.
+GrammarAi does not parse arbitrary text. The grammar is a structural contract over known vocabulary terminals; dynamic values and CI-specific rules remain CiAi-owned. The host supplies the resolver that calls `CiWorkflowProtocolCatalog.Resolves` against the exact active category set. A missing category or member identity is reported as unresolved; successful identity resolution does not prove semantic compatibility or session exposure.
 
 ## Domain validation remains CiAi-owned
 
