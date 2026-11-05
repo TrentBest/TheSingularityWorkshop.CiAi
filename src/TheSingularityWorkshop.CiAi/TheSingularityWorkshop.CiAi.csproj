@@ -25,6 +25,8 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../external/CommandAi/TheSingularityWorkshop.CommandAi.csproj" />
+    <ProjectReference Include="../../external/ProtocolAi/TheSingularityWorkshop.ProtocolAi.csproj" />
+    <ProjectReference Include="../../external/GrammarAi/TheSingularityWorkshop.GrammarAi.csproj" />
     <PackageReference Include="NuGet.Versioning" Version="7.9.0" />
     <None Include="../../README.md" Pack="true" PackagePath="/" Link="README.md" />
   </ItemGroup>
