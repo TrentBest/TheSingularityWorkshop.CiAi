@@ -80,8 +80,8 @@ The package candidate is configured with repository metadata, release notes, sym
 
 - **CI provider:** source of truth for repository identity, workflow run state, commit SHA, conclusion, and run evidence.
 - **CiAi:** validates and normalizes CI facts; the current GitHub Actions client is read-only.
-- **HeadlessAi:** provider-neutral HTTP/LLM integration is a future CiAi integration, not yet called by this package.
-- **ProtocolAi:** controlled vocabulary integration is not yet wired into CiAi.
+- **GrammarAi:** CiAi now defines an initial workflow-recipe grammar over its ProtocolAi vocabulary and resolves protocol-terminal identities through the host-supplied resolver. This is a structural grammar contract, not a text parser or complete CI plan evaluator.
+- **ProtocolAi:** CiAi now defines a pinned, source-based workflow vocabulary for workflow, repository, trigger, step, dependency, condition, domain, evidence, action, artifact, candidate, policy, source revision, benchmark observation, approval requirement, and distinct outcome states. These identities describe meaning; they do not execute or authorize operations.
 - **FSM_API:** optional lifecycle coordination; not CI transport, persistence, or a distributed scheduler.
 - **SimpleDemos:** contains a separate live provider-ingestion proof; it does not prove an end-to-end LLM-driven CiAi workflow.
 
