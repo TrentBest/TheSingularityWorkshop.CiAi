@@ -17,4 +17,4 @@ var grammar = CiWorkflowGrammarCatalog.Create(protocol);
 if (CiWorkflowGrammarCatalog.FindUnresolvedProtocolReferences(grammar, protocol).Count != 0)
     throw new InvalidOperationException("The packaged CiAi semantic grammar has unresolved protocol references.");
 
-Console.WriteLine($"Restored and compiled CiAi package with {proposal.ProtocolVersion} and {protocol.Symbols.Count} CI vocabulary symbols.");
+Console.WriteLine($"Restored and compiled CiAi package with {proposal.ProtocolVersion} and {protocol.Definitions.Sum(category => category.Symbols.Count)} CI vocabulary symbols.");
