@@ -14,7 +14,12 @@ on:
       - "NuGet.config"
       - ".config/**"
       - ".github/workflows/ci.yml"
+      - ".gitmodules"
+      - "external/**"
+      - ".gitmodules"
+      - "external/**"
       - ".github/workflows/observe-release-candidate.yml"
+      - ".github/workflows/ciai-evidence.yml"
       - ".github/workflows/serialization-benchmark-dispatch.yml"
   pull_request:
     branches: [development, master]
@@ -29,7 +34,10 @@ on:
       - "NuGet.config"
       - ".config/**"
       - ".github/workflows/ci.yml"
+      - ".gitmodules"
+      - "external/**"
       - ".github/workflows/observe-release-candidate.yml"
+      - ".github/workflows/ciai-evidence.yml"
       - ".github/workflows/serialization-benchmark-dispatch.yml"
   workflow_dispatch:
     inputs:
