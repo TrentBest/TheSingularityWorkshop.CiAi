@@ -52,6 +52,55 @@ public static class CiWorkflowProtocolCatalog
     public const ulong OutcomeFailed = 1406;
     public const ulong OutcomeSucceeded = 1407;
 
+    public const ulong DomainBuildTest = 1201;
+    public const ulong DomainCodeQuality = 1202;
+    public const ulong DomainSecurity = 1203;
+    public const ulong DomainCompatibility = 1204;
+    public const ulong DomainDocumentation = 1205;
+    public const ulong DomainPackage = 1206;
+    public const ulong DomainReleaseCandidate = 1207;
+    public const ulong DomainPublication = 1208;
+    public const ulong DomainDeployment = 1209;
+    public const ulong DomainDeploymentValidation = 1210;
+    public const ulong DomainPerformance = 1211;
+    public const ulong DomainIntegration = 1212;
+    public const ulong DomainArtifactHandoff = 1213;
+    public const ulong DomainProvenance = 1214;
+    public const ulong DomainScheduledMaintenance = 1215;
+    public const ulong DomainConcurrency = 1216;
+    public const ulong DomainRecovery = 1217;
+    public const ulong DomainMultiRepository = 1218;
+    public const ulong DomainMatrix = 1219;
+    public const ulong DomainObservability = 1220;
+    public const ulong DomainRepositoryHygiene = 1221;
+    public const ulong DomainSmoke = 1222;
+
+    private static readonly (ulong SymbolId, string DomainId)[] DomainSymbols =
+    [
+        (DomainBuildTest, "build-test"),
+        (DomainCodeQuality, "code-quality"),
+        (DomainSecurity, "security"),
+        (DomainCompatibility, "compatibility"),
+        (DomainDocumentation, "documentation"),
+        (DomainPackage, "package"),
+        (DomainReleaseCandidate, "release-candidate"),
+        (DomainPublication, "publication"),
+        (DomainDeployment, "deployment"),
+        (DomainDeploymentValidation, "deployment-validation"),
+        (DomainPerformance, "performance"),
+        (DomainIntegration, "integration"),
+        (DomainArtifactHandoff, "artifact-handoff"),
+        (DomainProvenance, "provenance"),
+        (DomainScheduledMaintenance, "scheduled-maintenance"),
+        (DomainConcurrency, "concurrency"),
+        (DomainRecovery, "recovery"),
+        (DomainMultiRepository, "multi-repository"),
+        (DomainMatrix, "matrix"),
+        (DomainObservability, "observability"),
+        (DomainRepositoryHygiene, "repository-hygiene"),
+        (DomainSmoke, "smoke")
+    ];
+
     /// <summary>Creates the immutable CiAi-owned vocabulary definition.</summary>
     public static ProtocolDefinition Create()
     {
@@ -105,8 +154,17 @@ public static class CiWorkflowProtocolCatalog
 
     private static void AddDomains(ProtocolBuilder builder)
     {
-        var domains = CiWorkflowDomainCatalog.All;
-        for (var i = 0; i < domains.Count; i++)
-            builder.Define(1201UL + (ulong)i, "Domain_" + domains[i].Id, domains[i].Id);
+        var remaining = CiWorkflowDomainCatalog.All.Select(domain => domain.Id)
+            .ToHashSet(StringComparer.Ordinal);
+        foreach (var (symbolId, domainId) in DomainSymbols)
+        {
+            if (!remaining.Remove(domainId))
+                throw new InvalidOperationException($"CiAi domain '{domainId}' is missing or duplicated.");
+            builder.Define(symbolId, "Domain_" + domainId, domainId);
+        }
+
+        if (remaining.Count > 0)
+            throw new InvalidOperationException(
+                "CiAi ProtocolAi domain identities are incomplete: " + string.Join(", ", remaining.OrderBy(x => x, StringComparer.Ordinal)));
     }
 }
