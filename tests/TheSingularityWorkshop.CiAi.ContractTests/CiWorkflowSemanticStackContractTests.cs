@@ -64,6 +64,34 @@ internal static class CiWorkflowSemanticStackContractTests
                 .Build());
         });
 
+        Check("CiAi resolver rejects foreign and unknown protocol identities", () =>
+        {
+            Assert(!CiWorkflowProtocolCatalog.Resolves(protocol, protocol.Id + 1, CiWorkflowProtocolCatalog.Workflow),
+                "foreign protocol identity was accepted");
+            Assert(!CiWorkflowProtocolCatalog.Resolves(protocol, protocol.Id, ulong.MaxValue),
+                "unknown symbol identity was accepted");
+            Assert(CiWorkflowProtocolCatalog.Resolves(protocol, protocol.Id, CiWorkflowProtocolCatalog.Workflow),
+                "known protocol symbol was not resolved");
+            Throws<ArgumentNullException>(() => CiWorkflowProtocolCatalog.Resolves(null!, protocol.Id,
+                CiWorkflowProtocolCatalog.Workflow));
+        });
+
+        Check("CiAi grammar rejects a foreign or incomplete protocol definition", () =>
+        {
+            var foreign = new ProtocolBuilder(9005, "Foreign").Define(1, "Workflow", "workflow").Build();
+            var incomplete = new ProtocolBuilder(CiWorkflowProtocolCatalog.ProtocolId, "Incomplete")
+                .Define(CiWorkflowProtocolCatalog.Workflow, "Workflow", "workflow")
+                .Build();
+            Throws<ArgumentException>(() => CiWorkflowGrammarCatalog.Create(foreign));
+            Throws<ArgumentException>(() => CiWorkflowGrammarCatalog.Create(incomplete));
+        });
+
+        Check("CiAi grammar resolver validates required inputs", () =>
+        {
+            Throws<ArgumentNullException>(() => CiWorkflowGrammarCatalog.FindUnresolvedProtocolReferences(null!, protocol));
+            Throws<ArgumentNullException>(() => CiWorkflowGrammarCatalog.FindUnresolvedProtocolReferences(grammar, null!));
+        });
+
         return passed;
 
         void Check(string name, Action action)
