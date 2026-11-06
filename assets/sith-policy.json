@@ -25,11 +25,12 @@
     "work/ciai-executor-result-contract",
     "work/ciai-matrix-contracts",
     "work/ciai-self-observation-lane",
+    "work/ciai-semantic-stack-foundation",
     "work/ecosystem-graph-performance-contract"
   ],
-  "branch_count": 20,
+  "branch_count": 21,
   "status": "NON-COMPLIANT",
-  "evaluated_at": "2026-11-05T04:36:36Z",
-  "workflow_run": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/41968841147",
-  "triggering_commit": "100beabeed3f16dbb5902f01281857b0ad5841a3"
+  "evaluated_at": "2026-11-06T12:06:32Z",
+  "workflow_run": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/42215137388",
+  "triggering_commit": "0999c9d0ba2f4f2241944a304ba5eacdb2b09c90"
 }
