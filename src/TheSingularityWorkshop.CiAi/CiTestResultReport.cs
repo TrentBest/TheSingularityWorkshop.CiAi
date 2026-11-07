@@ -303,6 +303,70 @@ public sealed record CiTestResultReport
             parsed.Total, parsed.Passed, parsed.Failed, parsed.Skipped, parsed.Other, parsed.Results, observedAt);
     }
 
+    /// <summary>
+    /// Verifies the complete provider archive, parses its embedded provenance, binds that provenance
+    /// to the already trusted workflow evidence, and only then produces normalized test diagnostics.
+    /// This is the preferred end-to-end entry point for provider-downloaded test-result artifacts.
+    /// </summary>
+    public static CiTestResultReport ParseAndValidate(
+        CiTestResultArtifactArchive archive,
+        CiWorkflowEvidencePacketV3 evidence,
+        CiTestResultArtifactSource source,
+        CiRequiredJobPolicy requiredJobPolicy,
+        DateTimeOffset observedAt,
+        long maximumPayloadBytes = DefaultMaximumPayloadBytes)
+    {
+        ArgumentNullException.ThrowIfNull(archive);
+        ArgumentNullException.ThrowIfNull(evidence);
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(requiredJobPolicy);
+
+        if (!string.Equals(archive.ProviderArchiveDigest, source.ProviderArchiveDigest, StringComparison.OrdinalIgnoreCase) ||
+            archive.ArchiveSizeBytes != source.ArchiveSizeBytes)
+            throw new InvalidDataException("Verified ZIP archive identity does not match the trusted provider artifact manifest.");
+        if (!string.Equals(archive.TrxSha256, source.PayloadSha256, StringComparison.OrdinalIgnoreCase) ||
+            archive.TrxBytes.Length != source.PayloadSizeBytes)
+            throw new InvalidDataException("Verified TRX payload identity does not match the trusted artifact manifest.");
+
+        var embeddedProvenance = CiWorkflowProvenanceRecord.ParseAndValidate(
+            archive.ProvenanceBytes, source.Repository, source.RunId, source.RunAttempt, archive.ProvenanceSha256);
+        if (!HasSameProvenance(embeddedProvenance, evidence.Provenance))
+            throw new InvalidDataException("Embedded artifact provenance does not match the trusted workflow evidence packet.");
+
+        return ParseAndValidate(
+            archive.TrxBytes, evidence, source, requiredJobPolicy, observedAt, maximumPayloadBytes);
+    }
+
+    private static bool HasSameProvenance(
+        CiWorkflowProvenanceRecord left,
+        CiWorkflowProvenanceRecord right)
+    {
+        return string.Equals(left.Repository, right.Repository, StringComparison.OrdinalIgnoreCase) &&
+            left.RunId == right.RunId &&
+            left.RunAttempt == right.RunAttempt &&
+            string.Equals(left.WorkflowPath, right.WorkflowPath, StringComparison.Ordinal) &&
+            string.Equals(left.WorkflowRef, right.WorkflowRef, StringComparison.Ordinal) &&
+            string.Equals(left.WorkflowSha, right.WorkflowSha, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(left.EventName, right.EventName, StringComparison.Ordinal) &&
+            string.Equals(left.EventRef, right.EventRef, StringComparison.Ordinal) &&
+            string.Equals(left.EventSha, right.EventSha, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(left.CheckoutRef, right.CheckoutRef, StringComparison.Ordinal) &&
+            string.Equals(left.CheckoutSha, right.CheckoutSha, StringComparison.OrdinalIgnoreCase) &&
+            SamePullRequest(left.PullRequest, right.PullRequest);
+    }
+
+    private static bool SamePullRequest(
+        CiWorkflowPullRequestProvenance? left,
+        CiWorkflowPullRequestProvenance? right)
+    {
+        if (left is null || right is null) return left is null && right is null;
+        return left.Number == right.Number &&
+            string.Equals(left.HeadRef, right.HeadRef, StringComparison.Ordinal) &&
+            string.Equals(left.HeadSha, right.HeadSha, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(left.BaseRef, right.BaseRef, StringComparison.Ordinal) &&
+            string.Equals(left.BaseSha, right.BaseSha, StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>Creates explicit incomplete evidence when the exact required test artifact is absent.</summary>
     public static CiTestResultReport MissingArtifact(
         CiWorkflowEvidencePacketV3 evidence,
