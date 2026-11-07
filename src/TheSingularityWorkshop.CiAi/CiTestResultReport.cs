@@ -324,6 +324,12 @@ public sealed record CiTestResultReport
         if (!string.Equals(archive.ProviderArchiveDigest, source.ProviderArchiveDigest, StringComparison.OrdinalIgnoreCase) ||
             archive.ArchiveSizeBytes != source.ArchiveSizeBytes)
             throw new InvalidDataException("Verified ZIP archive identity does not match the trusted provider artifact manifest.");
+        var actualTrxDigest = SHA256.HashData(archive.TrxBytes.Span);
+        var actualProvenanceDigest = SHA256.HashData(archive.ProvenanceBytes.Span);
+        if (!CryptographicOperations.FixedTimeEquals(actualTrxDigest, Convert.FromHexString(archive.TrxSha256)) ||
+            !CryptographicOperations.FixedTimeEquals(actualProvenanceDigest, Convert.FromHexString(archive.ProvenanceSha256)))
+            throw new InvalidDataException("Verified archive payload bytes changed after extraction.");
+
         if (!string.Equals(archive.TrxSha256, source.PayloadSha256, StringComparison.OrdinalIgnoreCase) ||
             archive.TrxBytes.Length != source.PayloadSizeBytes)
             throw new InvalidDataException("Verified TRX payload identity does not match the trusted artifact manifest.");
