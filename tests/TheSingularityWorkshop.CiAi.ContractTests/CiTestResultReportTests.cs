@@ -157,11 +157,11 @@ internal static class CiTestResultReportTests
         var canonicalDigest = Convert.ToHexString(SHA256.HashData(canonicalBytes)).ToLowerInvariant();
         Assert(canonicalBytes.Length <= CiTestResultReport.DefaultMaximumReportBytes &&
             canonicalBytes.Length > 0 && canonicalBytes[0] != 0xEF &&
-            canonicalBytes[^1] != (byte)'\\n' && canonicalBytes[^1] != (byte)'\\r',
+            canonicalBytes[^1] != (byte)'\n' && canonicalBytes[^1] != (byte)'\r',
             "canonical report violated its bounded UTF-8/no-BOM/no-trailing-newline contract");
-        Assert(canonicalJson.StartsWith("{\\"contractVersion\\":1,\\"schema\\":\\"ciai.test-results.v1\\"",
+        Assert(canonicalJson.StartsWith("{\"contractVersion\":1,\"schema\":\"ciai.test-results.v1\"",
                 StringComparison.Ordinal) &&
-            canonicalJson.Contains("\\"verdict\\":\\"ActionableFailure\\"", StringComparison.Ordinal) &&
+            canonicalJson.Contains("\"verdict\":\"ActionableFailure\"", StringComparison.Ordinal) &&
             !canonicalJson.Contains("ReportIdentity", StringComparison.Ordinal) &&
             !canonicalJson.Contains("reportIdentity", StringComparison.Ordinal),
             "canonical report property order, schema, enum encoding, or identity exclusion changed");
