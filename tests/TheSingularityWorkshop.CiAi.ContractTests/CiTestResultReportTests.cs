@@ -152,6 +152,24 @@ internal static class CiTestResultReportTests
             actionable.ToJson().Contains("ActionableFailure", StringComparison.Ordinal),
             "normalized report did not serialize its versioned schema and named verdict");
 
+        var canonicalBytes = actionable.ToCanonicalUtf8Bytes();
+        var canonicalJson = Encoding.UTF8.GetString(canonicalBytes);
+        var canonicalDigest = Convert.ToHexString(SHA256.HashData(canonicalBytes)).ToLowerInvariant();
+        Assert(canonicalBytes.Length <= CiTestResultReport.DefaultMaximumReportBytes &&
+            canonicalBytes.Length > 0 && canonicalBytes[0] != 0xEF &&
+            canonicalBytes[^1] != (byte)'\\n' && canonicalBytes[^1] != (byte)'\\r',
+            "canonical report violated its bounded UTF-8/no-BOM/no-trailing-newline contract");
+        Assert(canonicalJson.StartsWith("{\\"contractVersion\\":1,\\"schema\\":\\"ciai.test-results.v1\\"",
+                StringComparison.Ordinal) &&
+            canonicalJson.Contains("\\"verdict\\":\\"ActionableFailure\\"", StringComparison.Ordinal) &&
+            !canonicalJson.Contains("ReportIdentity", StringComparison.Ordinal) &&
+            !canonicalJson.Contains("reportIdentity", StringComparison.Ordinal),
+            "canonical report property order, schema, enum encoding, or identity exclusion changed");
+        Assert(actionable.ReportIdentity == "sha256:" + canonicalDigest &&
+            actionable.ReportSha256 == canonicalDigest &&
+            actionable.ToCanonicalUtf8Bytes().SequenceEqual(canonicalBytes),
+            "report identity was not the deterministic SHA-256 of the exact canonical bytes");
+
         var passingTrx = Encoding.UTF8.GetBytes(CreateTrx(
             ("test-1", "FirstPass", "Passed", null, null),
             ("test-2", "SecondPass", "Passed", null, null),
