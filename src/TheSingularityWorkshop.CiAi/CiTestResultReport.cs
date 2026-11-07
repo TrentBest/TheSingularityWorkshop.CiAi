@@ -403,11 +403,56 @@ public sealed record CiTestResultReport
             null, null, null, null, 0, 0, 0, 0, 0, 0, Array.Empty<CiTestResultRecord>(), observedAt);
     }
 
+    /// <summary>
+    /// Maximum canonical report size accepted by the cross-repository CODE RED handoff.
+    /// This is deliberately independent of the larger raw TRX/archive parsing limits.
+    /// </summary>
+    public const int DefaultMaximumReportBytes = 1024 * 1024;
+
+    private static readonly JsonSerializerOptions CanonicalJsonOptions = CreateCanonicalJsonOptions();
+
+    /// <summary>
+    /// SHA-256 identity of the exact canonical UTF-8 report bytes, prefixed with "sha256:".
+    /// This property is metadata for consumers and is not included in the report JSON itself.
+    /// </summary>
+    [JsonIgnore]
+    public string ReportIdentity => "sha256:" + Convert.ToHexString(SHA256.HashData(ToCanonicalUtf8Bytes())).ToLowerInvariant();
+
+    /// <summary>Lowercase SHA-256 of the exact canonical UTF-8 report bytes.</summary>
+    [JsonIgnore]
+    public string ReportSha256 => ReportIdentity[7..];
+
+    /// <summary>
+    /// Returns the canonical wire representation: UTF-8 without BOM, compact JSON, camelCase
+    /// properties, string enum values, declaration-order properties, and no trailing newline.
+    /// The returned bytes are the bytes to hash, persist, deliver, and pass unchanged downstream.
+    /// </summary>
+    public byte[] ToCanonicalUtf8Bytes()
+    {
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(this, CanonicalJsonOptions);
+        if (bytes.Length > DefaultMaximumReportBytes)
+            throw new InvalidDataException($"Canonical test-result report exceeds the {DefaultMaximumReportBytes}-byte handoff limit.");
+        return bytes;
+    }
+
+    public string ToCanonicalJson() => Encoding.UTF8.GetString(ToCanonicalUtf8Bytes());
+
     public string ToJson(bool indented = true)
     {
         var options = new JsonSerializerOptions { WriteIndented = indented };
         options.Converters.Add(new JsonStringEnumConverter());
         return JsonSerializer.Serialize(this, options);
+    }
+
+    private static JsonSerializerOptions CreateCanonicalJsonOptions()
+    {
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = false,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+        options.Converters.Add(new JsonStringEnumConverter());
+        return options;
     }
 
     private static void ValidateEvidenceBinding(
