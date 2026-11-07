@@ -91,6 +91,17 @@ internal static class CiTestResultReportTests
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
             foreignRunArchive, failedPacket, foreignRunSource, RequiredPolicy, ObservedAt));
 
+        var foreignCheckoutProvenance = CreateProvenanceJson(
+            failedPacket, checkoutSha: new string('f', 40));
+        var foreignCheckoutZip = CreateArtifactArchive(failedTrx, foreignCheckoutProvenance);
+        var foreignCheckoutDigest = "sha256:" + Convert.ToHexString(SHA256.HashData(foreignCheckoutZip)).ToLowerInvariant();
+        var foreignCheckoutArchive = CiTestResultArtifactArchive.Read(
+            foreignCheckoutZip, foreignCheckoutDigest, "results.trx", "provenance.json");
+        var foreignCheckoutSource = CreateSource(failedTrx, archiveDigest: foreignCheckoutDigest,
+            archiveSizeBytes: foreignCheckoutZip.Length);
+        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
+            foreignCheckoutArchive, failedPacket, foreignCheckoutSource, RequiredPolicy, ObservedAt));
+
         var substitutedArchiveSource = CreateSource(failedTrx, archiveDigest: "sha256:" + new string('f', 64),
             archiveSizeBytes: zipBytes.Length);
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
@@ -367,7 +378,8 @@ internal static class CiTestResultReportTests
 
     private static byte[] CreateProvenanceJson(
         CiWorkflowEvidencePacketV3 evidence,
-        long? runId = null)
+        long? runId = null,
+        string? checkoutSha = null)
     {
         var provenance = evidence.Provenance;
         var pullRequest = provenance.PullRequest is null ? null : new
@@ -390,7 +402,7 @@ internal static class CiTestResultReportTests
                 sha = provenance.EventSha,
                 pullRequest
             },
-            checkout = new { @ref = provenance.CheckoutRef, sha = provenance.CheckoutSha }
+            checkout = new { @ref = provenance.CheckoutRef, sha = checkoutSha ?? provenance.CheckoutSha }
         });
     }
 
