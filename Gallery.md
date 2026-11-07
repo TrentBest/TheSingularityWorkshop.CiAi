@@ -4,7 +4,7 @@ CiAi exposes continuous-integration facts to applications and LLMs without handi
 
 ## Visitor experience
 
-- **[Open the interactive CiAi experience](https://trentbest.github.io/TheSingularityWorkshop.CiAi/)** — a browser-based introduction to observation, verification, commit-bound correlation, and fail-closed evidence.
+- **[Preview the interactive CiAi experience source](index.html)** — a browser-based introduction to observation, verification, commit-bound correlation, and fail-closed evidence. The static site and deployment workflow are staged on `development`; hosting follows reviewed promotion to `master`.
 - **[Evidence walkthrough](index.html#explore)** — synthetic scenarios demonstrate complete evidence versus missing required evidence. They are explicitly labeled as illustrative, not live GitHub results.
 - **[Ecosystem integration plan](docs/ECOSYSTEM_INTEGRATION.md)** — how CiAi can support Learning, Physics, GUI, and FSM_API without adding unnecessary dependencies or taking ownership of their CI.
 
