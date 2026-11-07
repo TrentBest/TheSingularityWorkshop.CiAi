@@ -16,8 +16,6 @@ on:
       - ".github/workflows/ci.yml"
       - ".gitmodules"
       - "external/**"
-      - ".gitmodules"
-      - "external/**"
       - ".github/workflows/observe-release-candidate.yml"
       - ".github/workflows/ciai-evidence.yml"
       - ".github/workflows/serialization-benchmark-dispatch.yml"
