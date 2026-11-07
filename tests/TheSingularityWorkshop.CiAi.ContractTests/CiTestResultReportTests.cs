@@ -75,6 +75,12 @@ internal static class CiTestResultReportTests
             archiveReport.ArchiveSizeBytes == zipBytes.Length,
             "verified archive did not flow through provenance validation into the authoritative CODE RED verdict");
 
+        // The ZIP container and its individual payloads have different documented limits.
+        _ = CreateSource(failedTrx, archiveSizeBytes:
+            CiTestResultArtifactArchive.DefaultMaximumPayloadBytes + 1);
+        Throws<ArgumentOutOfRangeException>(() => CreateSource(failedTrx, archiveSizeBytes:
+            CiTestResultArtifactArchive.DefaultMaximumArchiveBytes + 1));
+
         var foreignRunProvenance = CreateProvenanceJson(failedPacket, runId: RunId + 1);
         var foreignRunZip = CreateArtifactArchive(failedTrx, foreignRunProvenance);
         var foreignRunDigest = "sha256:" + Convert.ToHexString(SHA256.HashData(foreignRunZip)).ToLowerInvariant();
