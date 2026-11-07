@@ -99,6 +99,40 @@ The host still owns provider authentication, exact artifact selection, download,
 - **Foundry:** correlates the report to the task, applies lifecycle and retry/time/cost budgets, and mediates authorized handoffs. It does not reinterpret test output or become a second CI verdict engine.
 - **Repository host/owner:** retains approval of repository mutations and all privileged release actions.
 
+## Canonical v1 report bytes and identity
+
+The report model is the sole public CODE RED diagnostic payload: `ciai.test-results.v1`. The workflow/provenance packet is trusted input used by CiAi to derive this report; it is not a second downstream report contract.
+
+Consumers must use `CiTestResultReport.ToCanonicalUtf8Bytes()` and must preserve those returned bytes unchanged. The canonical representation is defined as:
+
+- UTF-8 encoding without a byte-order mark.
+- Compact JSON with no indentation and no trailing newline.
+- camelCase property names, in the `CiTestResultReport` declaration order.
+- Enum values serialized as their exact string names (for example `ActionableFailure`).
+- Null-valued properties are retained; no optional-property omission or consumer-side reserialization is permitted.
+- The default `System.Text.Json` escaping rules are used. URI values are serialized as absolute URI strings; date/time values use the platform's ISO 8601 JSON representation.
+- The maximum canonical report size is **1 MiB**. If the complete report exceeds this bound, serialization fails; diagnostics are never silently truncated to fit.
+
+The report identity is exactly `sha256:` followed by the lowercase hexadecimal SHA-256 digest of the complete canonical UTF-8 byte sequence. `ReportSha256` exposes the lowercase digest without the prefix; `ReportIdentity` exposes the prefixed identity. These are derived metadata and are not serialized into the report body, avoiding a self-referential digest. The schema value and contract version remain `ciai.test-results.v1` and `1`.
+
+`ToJson()` remains a human-readable diagnostic convenience and is **not** a wire-format or digest input. Do not hash its indented output. The accepted report bytes, identity, and digest are the exact values passed to Foundry and then opaquely to HeadlessAi.
+
+The v1 verdict vocabulary is `CompletePass`, `ActionableFailure`, `IncompleteOrUntrusted`, and `NonActionableFailure`. The current stable reason codes are:
+
+- `test-results.complete-pass`
+- `test-results.actionable-failure`
+- `test-results.artifact-missing`
+- `test-results.required-check-incomplete`
+- `test-results.required-check-status-mismatch`
+- `test-results.check-not-required`
+- `test-results.empty`
+- `test-results.unknown-outcome`
+- `test-results.failed-tests-in-green-job`
+- `test-results.check-failed-without-test-failure`
+- `test-results.failure-diagnostics-incomplete`
+
+Reason codes are bounded producer output. Consumers preserve unknown future values as data but must not reinterpret them as a pass or actionable verdict.
+
 ## 04 — See it in a minute
 
 ### Contract usage
