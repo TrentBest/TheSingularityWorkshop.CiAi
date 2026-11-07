@@ -66,7 +66,7 @@ public sealed record CiTestResultArtifactSource
             !providerArchiveDigest.AsSpan(7).ToString().All(Uri.IsHexDigit))
             throw new ArgumentException("Provider archive digest must use sha256:<64 hexadecimal characters>.", nameof(providerArchiveDigest));
         ValidateDigest(payloadSha256, nameof(payloadSha256));
-        if (archiveSizeBytes is <= 0 or > CiTestResultReport.DefaultMaximumPayloadBytes)
+        if (archiveSizeBytes is <= 0 or > CiTestResultArtifactArchive.DefaultMaximumArchiveBytes)
             throw new ArgumentOutOfRangeException(nameof(archiveSizeBytes));
         if (payloadSizeBytes is <= 0 or > CiTestResultReport.DefaultMaximumPayloadBytes)
             throw new ArgumentOutOfRangeException(nameof(payloadSizeBytes));
