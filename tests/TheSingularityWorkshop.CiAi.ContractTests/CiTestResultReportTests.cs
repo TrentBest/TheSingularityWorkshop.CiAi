@@ -1,5 +1,7 @@
+using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Xml;
 using TheSingularityWorkshop.CiAi;
 
@@ -55,6 +57,38 @@ internal static class CiTestResultReportTests
         Throws<ArgumentException>(() => new CiRequiredJobDefinition(WorkflowPath, "../unsafe", JobName));
         var actionable = CiTestResultReport.ParseAndValidate(
             failedTrx, failedPacket, failedSource, RequiredPolicy, ObservedAt);
+
+        // Exercise the complete trust path: provider ZIP digest -> bounded archive extraction ->
+        // embedded provenance digest/identity -> trusted run evidence -> normalized test verdict.
+        var embeddedProvenance = CreateProvenanceJson(failedPacket);
+        var zipBytes = CreateArtifactArchive(failedTrx, embeddedProvenance);
+        var zipDigest = "sha256:" + Convert.ToHexString(SHA256.HashData(zipBytes)).ToLowerInvariant();
+        var verifiedArchive = CiTestResultArtifactArchive.Read(
+            zipBytes, zipDigest, "results.trx", "provenance.json");
+        var archiveSource = CreateSource(failedTrx, archiveDigest: zipDigest,
+            archiveSizeBytes: zipBytes.Length);
+        var archiveReport = CiTestResultReport.ParseAndValidate(
+            verifiedArchive, failedPacket, archiveSource, RequiredPolicy, ObservedAt);
+        Assert(archiveReport.Verdict == CiTestResultVerdict.ActionableFailure &&
+            archiveReport.Failed == 2 &&
+            archiveReport.ProviderArchiveDigest == zipDigest &&
+            archiveReport.ArchiveSizeBytes == zipBytes.Length,
+            "verified archive did not flow through provenance validation into the authoritative CODE RED verdict");
+
+        var foreignRunProvenance = CreateProvenanceJson(failedPacket, runId: RunId + 1);
+        var foreignRunZip = CreateArtifactArchive(failedTrx, foreignRunProvenance);
+        var foreignRunDigest = "sha256:" + Convert.ToHexString(SHA256.HashData(foreignRunZip)).ToLowerInvariant();
+        var foreignRunArchive = CiTestResultArtifactArchive.Read(
+            foreignRunZip, foreignRunDigest, "results.trx", "provenance.json");
+        var foreignRunSource = CreateSource(failedTrx, archiveDigest: foreignRunDigest,
+            archiveSizeBytes: foreignRunZip.Length);
+        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
+            foreignRunArchive, failedPacket, foreignRunSource, RequiredPolicy, ObservedAt));
+
+        var substitutedArchiveSource = CreateSource(failedTrx, archiveDigest: "sha256:" + new string('f', 64),
+            archiveSizeBytes: zipBytes.Length);
+        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
+            verifiedArchive, failedPacket, substitutedArchiveSource, RequiredPolicy, ObservedAt));
         Assert(actionable.Verdict == CiTestResultVerdict.ActionableFailure &&
             actionable.Total == 3 && actionable.Passed == 1 && actionable.Failed == 2 &&
             actionable.Skipped == 0 && actionable.Results.Count == 3,
@@ -313,15 +347,58 @@ internal static class CiTestResultReportTests
         string? jobName = null,
         string? artifactName = null,
         string? archiveDigest = null,
-        string? payloadSha256 = null)
+        string? payloadSha256 = null,
+        long archiveSizeBytes = 512)
     {
         var digest = Convert.ToHexString(SHA256.HashData(payload)).ToLowerInvariant();
         return new CiTestResultArtifactSource(
             repository ?? Repository, RunId, runAttempt ?? RunAttempt,
             jobId ?? JobId, jobName ?? JobName, JobKey,
             7001, artifactName ?? $"ciai-test-results-{RunId}-{runAttempt ?? RunAttempt}-{JobKey}",
-            archiveDigest ?? "sha256:" + new string('a', 64), 512,
+            archiveDigest ?? "sha256:" + new string('a', 64), archiveSizeBytes,
             payloadSha256 ?? digest, payload.Length, "xUnit", CreatedAt, ExpiresAt);
+    }
+
+    private static byte[] CreateProvenanceJson(
+        CiWorkflowEvidencePacketV3 evidence,
+        long? runId = null)
+    {
+        var provenance = evidence.Provenance;
+        var pullRequest = provenance.PullRequest is null ? null : new
+        {
+            number = provenance.PullRequest.Number,
+            head = new { @ref = provenance.PullRequest.HeadRef, sha = provenance.PullRequest.HeadSha },
+            @base = new { @ref = provenance.PullRequest.BaseRef, sha = provenance.PullRequest.BaseSha }
+        };
+        return JsonSerializer.SerializeToUtf8Bytes(new
+        {
+            schema = CiWorkflowProvenanceRecord.CurrentSchema,
+            repository = provenance.Repository,
+            runId = runId ?? provenance.RunId,
+            runAttempt = provenance.RunAttempt,
+            workflow = new { @ref = provenance.WorkflowRef, sha = provenance.WorkflowSha },
+            @event = new
+            {
+                name = provenance.EventName,
+                @ref = provenance.EventRef,
+                sha = provenance.EventSha,
+                pullRequest
+            },
+            checkout = new { @ref = provenance.CheckoutRef, sha = provenance.CheckoutSha }
+        });
+    }
+
+    private static byte[] CreateArtifactArchive(byte[] trx, byte[] provenance)
+    {
+        using var output = new MemoryStream();
+        using (var archive = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var trxEntry = archive.CreateEntry("results.trx", CompressionLevel.Optimal);
+            using (var stream = trxEntry.Open()) stream.Write(trx);
+            var provenanceEntry = archive.CreateEntry("provenance.json", CompressionLevel.Optimal);
+            using (var stream = provenanceEntry.Open()) stream.Write(provenance);
+        }
+        return output.ToArray();
     }
 
     private static string CreateTrx(
