@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Xml;
@@ -80,6 +81,18 @@ internal static class CiTestResultReportTests
             CiTestResultArtifactArchive.DefaultMaximumPayloadBytes + 1);
         Throws<ArgumentOutOfRangeException>(() => CreateSource(failedTrx, archiveSizeBytes:
             CiTestResultArtifactArchive.DefaultMaximumArchiveBytes + 1));
+
+        var mutatedTrxArchive = CiTestResultArtifactArchive.Read(
+            zipBytes, zipDigest, "results.trx", "provenance.json");
+        MutateExposedMemory(mutatedTrxArchive.TrxBytes);
+        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
+            mutatedTrxArchive, failedPacket, archiveSource, RequiredPolicy, ObservedAt));
+
+        var mutatedProvenanceArchive = CiTestResultArtifactArchive.Read(
+            zipBytes, zipDigest, "results.trx", "provenance.json");
+        MutateExposedMemory(mutatedProvenanceArchive.ProvenanceBytes);
+        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
+            mutatedProvenanceArchive, failedPacket, archiveSource, RequiredPolicy, ObservedAt));
 
         var foreignRunProvenance = CreateProvenanceJson(failedPacket, runId: RunId + 1);
         var foreignRunZip = CreateArtifactArchive(failedTrx, foreignRunProvenance);
@@ -374,6 +387,13 @@ internal static class CiTestResultReportTests
             7001, artifactName ?? $"ciai-test-results-{RunId}-{runAttempt ?? RunAttempt}-{JobKey}",
             archiveDigest ?? "sha256:" + new string('a', 64), archiveSizeBytes,
             payloadSha256 ?? digest, payload.Length, "xUnit", CreatedAt, ExpiresAt);
+    }
+
+    private static void MutateExposedMemory(ReadOnlyMemory<byte> memory)
+    {
+        if (!MemoryMarshal.TryGetArray(memory, out var segment) || segment.Array is null || segment.Count == 0)
+            throw new InvalidOperationException("Test could not access the expected array-backed memory.");
+        segment.Array[segment.Offset] ^= 0x01;
     }
 
     private static byte[] CreateProvenanceJson(
