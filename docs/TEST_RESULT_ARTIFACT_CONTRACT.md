@@ -85,8 +85,8 @@ The artifact name binds the run, attempt, and workflow job key. The trusted host
 3. Download the artifact through the trusted host. Verify the provider-reported SHA-256 over the complete ZIP bytes before extraction.
 4. Pass the downloaded ZIP bytes and provider digest to `CiTestResultArtifactArchive.Read`. It verifies the complete archive digest before reading entries, then rejects path traversal, unexpected/duplicate entries, unsafe file types, oversized archives or payloads, and excessive compression ratios. It extracts only the expected TRX and provenance sidecar in memory.
 5. Construct `CiTestResultArtifactSource` from provider metadata and the archive's verified digests/sizes. Bind the artifact ID/name to the exact repository, run, attempt, numeric job ID, job name, and job key.
-6. Call the archive overload of `CiTestResultReport.ParseAndValidate`. It re-hashes both extracted payloads (so mutation of exposed memory is detected), parses the embedded provenance against its exact content digest, and compares every workflow/event/checkout/PR identity to the trusted v3 packet before parsing TRX with DTD processing disabled and strict size/record limits.
-7. Configure `CiRequiredJobPolicy` with exact workflow path, YAML job key, and observed job name triples that CiAi considers required. The report derives `CiRequiredCheckStatus` from that policy and the validated v3 job observation; do not accept a caller's raw boolean or an externally supplied verdict.
+6. Call the archive overload of `CiTestResultReport.ParseAndValidate`. It re-hashes both extracted payloads (so mutation of exposed memory is detected), parses the embedded provenance against its exact content digest, and compares every workflow/event/checkout/PR identity to the trusted workflow evidence before parsing TRX with DTD processing disabled and strict size/record limits.
+7. Configure `CiRequiredJobPolicy` with exact workflow path, YAML job key, and observed job name triples that CiAi considers required. The report derives `CiRequiredCheckStatus` from that policy and the validated job observation; do not accept a caller's raw boolean or an externally supplied verdict.
 8. Preserve the normalized report and its source digests for the next bounded HeadlessAi turn.
 
 The host still owns provider authentication, exact artifact selection, download, and provider metadata verification. The archive reader owns digest-verified bounded ZIP inspection; the report overload owns embedded provenance binding and the CiAi verdict. The lower-level raw-TRX overload remains available for hosts that have already completed the equivalent trusted extraction and provenance checks.
@@ -153,7 +153,7 @@ var requiredJobs = new CiRequiredJobPolicy(new[]
 
 var report = CiTestResultReport.ParseAndValidate(
     verifiedArchive,
-    v3Packet,
+    trustedEvidence,
     source,
     requiredJobs,
     observedAt);
