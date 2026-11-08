@@ -11,7 +11,6 @@
     "experiment/http-projection-architecture",
     "experiment/read-only-ci-evidence-pilot",
     "feature/await-gate-contracts-31",
-    "feature/ciai-commandai-proposal-composer",
     "feature/ciai-trusted-trx-archive-reader",
     "feature/ciai-trx-diagnostic-verdict",
     "feature/ciai-versioned-ci-evidence-packet",
@@ -27,9 +26,9 @@
     "work/ciai-semantic-stack-foundation",
     "work/ecosystem-graph-performance-contract"
   ],
-  "branch_count": 20,
+  "branch_count": 19,
   "status": "NON-COMPLIANT",
-  "evaluated_at": "2026-11-08T09:26:02Z",
-  "workflow_run": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/42467155685",
-  "triggering_commit": "910acf947a9dcb1dc7a8eb68b3d8e038b53bde72"
+  "evaluated_at": "2026-11-08T09:26:25Z",
+  "workflow_run": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/42467180561",
+  "triggering_commit": "6d2e0dc57f6d0a92f254b706f2d87168420947d9"
 }
