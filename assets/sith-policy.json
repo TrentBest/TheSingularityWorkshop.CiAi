@@ -15,7 +15,6 @@
     "feature/ciai-trx-diagnostic-verdict",
     "feature/ciai-versioned-ci-evidence-packet",
     "feature/ciai-workflow-checkout-provenance",
-    "feature/trx-diagnostics-34",
     "fix/commandai-v1-deterministic-encoding-pin",
     "fix/stacked-feature-pr-ci-trigger",
     "master",
@@ -25,9 +24,9 @@
     "work/ciai-semantic-stack-foundation",
     "work/ecosystem-graph-performance-contract"
   ],
-  "branch_count": 18,
+  "branch_count": 17,
   "status": "NON-COMPLIANT",
-  "evaluated_at": "2026-11-10T01:20:09Z",
-  "workflow_run": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/42735028204",
-  "triggering_commit": "5aedb481a6d236ac1e38a7c8f64eee98d3e99a44"
+  "evaluated_at": "2026-11-10T01:20:27Z",
+  "workflow_run": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/42735067086",
+  "triggering_commit": "58699c4f37ba3f8f24da059b435e0ca9ed67fae8"
 }
