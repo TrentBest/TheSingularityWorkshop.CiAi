@@ -11,6 +11,7 @@ passed += CiWorkflowEvidenceDeliveryTests.Run();
 passed += await FoundryArtifactReadyNoticeClientTests.RunAsync();
 passed += FoundryArtifactReadyNoticeOutboxTests.Run();
 passed += await FoundryArtifactReadyNoticeDeliveryCoordinatorTests.RunAsync();
+passed += await CiTestResultFoundryNoticeEnqueuerTests.RunAsync();
 passed += AiCiBuilderContractTests.Run();
 passed += CiPipelineDefinitionContractTests.Run();
 passed += CiWorkflowDomainCatalogContractTests.Run();
