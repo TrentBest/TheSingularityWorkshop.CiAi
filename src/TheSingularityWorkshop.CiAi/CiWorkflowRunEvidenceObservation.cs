@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace TheSingularityWorkshop.CiAi;
@@ -10,9 +9,6 @@ namespace TheSingularityWorkshop.CiAi;
 /// </summary>
 public sealed record CiWorkflowRunEvidenceObservation
 {
-    public const int CurrentContractVersion = 1;
-    public const string CurrentSchema = "ciai.workflow-run-observation.v1";
-
     public CiWorkflowRunEvidenceObservation(
         string repository,
         string workflowPath,
@@ -83,8 +79,6 @@ public sealed record CiWorkflowRunEvidenceObservation
         if (artifacts.Any(uri => uri is null || !IsSafeGitHubUrl(uri)))
             throw new ArgumentException("Artifact references must be safe HTTPS GitHub URLs.", nameof(artifactReferences));
 
-        ContractVersion = CurrentContractVersion;
-        Schema = CurrentSchema;
         Repository = repository;
         WorkflowPath = workflowPath;
         RunId = runId;
@@ -107,8 +101,6 @@ public sealed record CiWorkflowRunEvidenceObservation
         CandidateCheckoutVerified = IsCandidateCheckoutVerified(candidateCheckoutEvidence, Jobs);
     }
 
-    public int ContractVersion { get; }
-    public string Schema { get; }
     public string Repository { get; }
     public string WorkflowPath { get; }
     public long RunId { get; }
@@ -175,7 +167,7 @@ public sealed record CiWorkflowRunEvidenceObservation
         }
     }
 
-    /// <summary>Serializes a stable versioned JSON contract suitable for durable evidence storage.</summary>
+    /// <summary>Creates the raw run/job observation embedded by the owning workflow-evidence envelope.</summary>
     public static CiWorkflowRunEvidenceObservation FromCollections(
         CiWorkflowRunCollection runCollection,
         CiWorkflowJobCollection jobCollection,
@@ -228,47 +220,6 @@ public sealed record CiWorkflowRunEvidenceObservation
             jobsComplete,
             artifactReferences,
             candidateCheckoutEvidence);
-    }
-
-    public string ToJson(bool indented = true) => JsonSerializer.Serialize(this, JsonOptions(indented));
-
-    public static CiWorkflowRunEvidenceObservation FromJson(string json)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(json);
-        using var document = JsonDocument.Parse(json);
-        var root = document.RootElement;
-        if (root.ValueKind != JsonValueKind.Object ||
-            !root.TryGetProperty("contractVersion", out var version) ||
-            !version.TryGetInt32(out var parsedVersion) ||
-            !root.TryGetProperty("schema", out var schema) ||
-            schema.ValueKind != JsonValueKind.String ||
-            parsedVersion != CurrentContractVersion ||
-            !string.Equals(schema.GetString(), CurrentSchema, StringComparison.Ordinal))
-            throw new InvalidDataException("Evidence packet contract version or schema is unsupported.");
-
-        var packet = JsonSerializer.Deserialize<CiWorkflowRunEvidenceObservation>(json, JsonOptions(false))
-            ?? throw new InvalidDataException("Evidence packet JSON produced no packet.");
-        if (!HasMatchingString(root, "workflowRef", packet.WorkflowRef, ignoreCase: false) ||
-            !HasMatchingString(root, "workflowSha", packet.WorkflowSha, ignoreCase: true) ||
-            !HasMatchingString(root, "candidateRef", packet.CandidateRef, ignoreCase: false) ||
-            !HasMatchingString(root, "candidateSha", packet.CandidateSha, ignoreCase: true) ||
-            !root.TryGetProperty("candidateCheckoutVerified", out var verified) ||
-            verified.ValueKind is not (JsonValueKind.True or JsonValueKind.False) ||
-            verified.GetBoolean() != packet.CandidateCheckoutVerified)
-            throw new InvalidDataException("Evidence packet flattened workflow/candidate provenance does not match its validated nested evidence.");
-        return packet;
-    }
-
-    private static bool HasMatchingString(
-        JsonElement root,
-        string propertyName,
-        string expected,
-        bool ignoreCase)
-    {
-        if (!root.TryGetProperty(propertyName, out var value) || value.ValueKind != JsonValueKind.String)
-            return false;
-        return string.Equals(value.GetString(), expected,
-            ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
     }
 
     private static bool IsCandidateCheckoutVerified(
