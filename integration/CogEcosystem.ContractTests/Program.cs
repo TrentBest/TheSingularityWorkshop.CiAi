@@ -175,6 +175,20 @@ Assert(failedPayload.Outcome == ProtocolSourceEventOutcome.Failed,
     "mapper failed to preserve a provider-reported failed job");
 Pass("GitHub Actions mapper maps a provider-reported failed job to Failed");
 
+var runningRunSnapshot = mapperRunSnapshot with
+{
+    Status = CiRunStatus.InProgress,
+    Conclusion = CiRunConclusion.None
+};
+var runningRun = mapperRun with { Run = runningRunSnapshot };
+var completedJobEnvelope = GitHubActionsProtocolSourceEventMapper.CreateEnvelope(
+    runningRun, mapperJob, mapperEvidence, "message-map-job-only", "candidate-map-job-only", now);
+var completedJobPayload = ProtocolTypedEventEnvelope.DeserializePayload<ProtocolSourceEvent>(
+    ProtocolEventEnvelopeJson.Deserialize(ProtocolEventEnvelopeJson.Serialize(completedJobEnvelope)));
+Assert(completedJobPayload.Outcome == ProtocolSourceEventOutcome.Succeeded,
+    "mapper incorrectly waited for unrelated workflow jobs before recording a completed job observation");
+Pass("GitHub Actions mapper scopes success to the completed observed job, not aggregate run completion");
+
 
 Console.WriteLine($"PASS: {checks} cross-Cog integration checks.");
 
