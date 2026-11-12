@@ -120,7 +120,63 @@ internal static class CiWorkflowEvidenceDeliveryTests
                 CiWorkflowEvidenceReceiptOutcome.Accepted,
                 DateTimeOffset.Parse("2026-10-31T02:04:00Z")));
 
-            Console.WriteLine("PASS: 18 CI workflow evidence v1 delivery and receipt checks.");
+            var receiptIdentityConflict = new CiWorkflowEvidenceRemoteReceipt(
+                1, "remote-receipt-1", delivery.DeliveryId, delivery.IdempotencyKey,
+                delivery.PayloadSha256, CiWorkflowEvidenceReceiptOutcome.Accepted,
+                DateTimeOffset.Parse("2026-10-31T02:06:00Z"));
+            Assert(ledger.Record(receiptIdentityConflict, delivery) == CiWorkflowEvidenceReceiptRecordOutcome.Conflict,
+                "reused remote receipt identity with changed receipt bytes was not rejected as a conflict");
+            Assert(ledger.ReadReceipts().Count == 2,
+                "receipt ledger did not reload both accepted and rejected receipt records");
+
+            var mismatch = new CiWorkflowEvidenceRemoteReceipt(
+                1, "remote-receipt-mismatch", "different-delivery", delivery.IdempotencyKey,
+                delivery.PayloadSha256, CiWorkflowEvidenceReceiptOutcome.Accepted,
+                DateTimeOffset.Parse("2026-10-31T02:07:00Z"));
+            Assert(mismatch.VerifyAgainst(delivery).Contains("deliveryId.mismatch"),
+                "receipt verification did not detect a delivery identity mismatch");
+            AssertThrows<ArgumentException>(() => ledger.Record(mismatch, delivery));
+
+            var rejectionThenAcceptance = new CiWorkflowEvidenceDelivery("v1-delivery-rejection-retry",
+                CreatePacket(runId: 44));
+            var firstRejection = new CiWorkflowEvidenceRemoteReceipt(
+                1, "remote-receipt-rejection-retry", rejectionThenAcceptance.DeliveryId,
+                rejectionThenAcceptance.IdempotencyKey, rejectionThenAcceptance.PayloadSha256,
+                CiWorkflowEvidenceReceiptOutcome.Rejected, DateTimeOffset.Parse("2026-10-31T02:08:00Z"),
+                "policy.retryable");
+            Assert(ledger.Record(firstRejection, rejectionThenAcceptance) == CiWorkflowEvidenceReceiptRecordOutcome.Recorded,
+                "initial rejection was not recorded");
+            Assert(ledger.Record(firstRejection, rejectionThenAcceptance) == CiWorkflowEvidenceReceiptRecordOutcome.Duplicate,
+                "identical rejection retry was not idempotent");
+            var laterAcceptance = new CiWorkflowEvidenceRemoteReceipt(
+                1, "remote-receipt-later-acceptance", rejectionThenAcceptance.DeliveryId,
+                rejectionThenAcceptance.IdempotencyKey, rejectionThenAcceptance.PayloadSha256,
+                CiWorkflowEvidenceReceiptOutcome.Accepted, DateTimeOffset.Parse("2026-10-31T02:09:00Z"));
+            Assert(ledger.Record(laterAcceptance, rejectionThenAcceptance) == CiWorkflowEvidenceReceiptRecordOutcome.Recorded,
+                "a later valid acceptance was blocked by a prior rejection");
+            Assert(ledger.ReadAcknowledgedDeliveryIds().Contains(rejectionThenAcceptance.DeliveryId),
+                "later acceptance after rejection did not acknowledge the delivery");
+
+            var tornLedgerPath = Path.Combine(root, "v1-receipts-torn.jsonl");
+            File.WriteAllText(tornLedgerPath, File.ReadAllText(ledgerPath).TrimEnd() + "{");
+            AssertThrows<InvalidDataException>(() =>
+                new FileCiWorkflowEvidenceReceiptLedger(tornLedgerPath).ReadReceipts());
+            var duplicateReceiptIdPath = Path.Combine(root, "v1-receipts-duplicate-id.jsonl");
+            var validReceiptRecord = File.ReadLines(ledgerPath).First();
+            File.WriteAllText(duplicateReceiptIdPath, validReceiptRecord + validReceiptRecord + "\\n");
+            AssertThrows<InvalidDataException>(() =>
+                new FileCiWorkflowEvidenceReceiptLedger(duplicateReceiptIdPath).ReadReceipts());
+
+            AssertThrows<ArgumentException>(() => new CiWorkflowEvidenceRemoteReceipt(
+                1, "remote-receipt-rejection-without-code", delivery.DeliveryId, delivery.IdempotencyKey,
+                delivery.PayloadSha256, CiWorkflowEvidenceReceiptOutcome.Rejected,
+                DateTimeOffset.Parse("2026-10-31T02:10:00Z")));
+            AssertThrows<ArgumentException>(() => new CiWorkflowEvidenceRemoteReceipt(
+                1, "remote-receipt-accepted-with-code", delivery.DeliveryId, delivery.IdempotencyKey,
+                delivery.PayloadSha256, CiWorkflowEvidenceReceiptOutcome.Accepted,
+                DateTimeOffset.Parse("2026-10-31T02:11:00Z"), "not.allowed"));
+
+            Console.WriteLine("PASS: 28 CI workflow evidence v1 delivery and receipt checks.");
             return 18;
         }
         finally
