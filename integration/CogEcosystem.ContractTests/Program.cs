@@ -6,6 +6,7 @@ using TheSingularityWorkshop.CiAi.CogB;
 using TheSingularityWorkshop.CiAi.CogC;
 using TheSingularityWorkshop.CiAi.CogD;
 using TheSingularityWorkshop.CiAi.CogE;
+using TheSingularityWorkshop.ProtocolAi;
 
 var checks = 0;
 var now = DateTimeOffset.Parse("2026-10-24T00:30:00Z");
@@ -113,3 +114,51 @@ Console.WriteLine($"PASS: {checks} cross-Cog integration checks.");
 void Pass(string message) { checks++; Console.WriteLine($"PASS {checks}: {message}"); }
 static string Digest(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
 static void Assert(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
+
+
+// ProtocolAi v1: CiAi emits a typed, exact-candidate source event. The envelope is
+// transport metadata only; the CI provider snapshot remains the evidence authority.
+var provenance = new ProtocolCandidateProvenance(
+    provider, "refs/heads/development", sourceSha, sourceSha, sourceSha,
+    ".github/workflows/build.yml", sourceSha, 42, 1, "build-and-test",
+    "https://github.com/TrentBest/UmlProvider/actions/runs/42",
+    new string('a', 64));
+var sourceEvent = new ProtocolSourceEvent(
+    "github-actions", "workflow.completed", "run:42/attempt:1",
+    ProtocolSourceEventOutcome.Succeeded, "Provider reported a completed successful run.");
+var sourceEnvelope = ProtocolTypedEventEnvelope.Create(
+    "message-ci-42", "candidate-ci-42", "ciai", sourceEvent, now, provenance);
+var serializedSource = ProtocolEventEnvelopeJson.Serialize(sourceEnvelope);
+var receivedEnvelope = ProtocolEventEnvelopeJson.Deserialize(serializedSource);
+var receivedSource = ProtocolTypedEventEnvelope.DeserializePayload<ProtocolSourceEvent>(receivedEnvelope);
+Assert(receivedEnvelope.Schema == ProtocolEventEnvelope.CurrentSchema &&
+       receivedEnvelope.SchemaVersion == 1 &&
+       receivedEnvelope.Kind == ProtocolEventKind.SourceEvent &&
+       receivedEnvelope.Provenance?.CandidateSha == sourceSha &&
+       receivedEnvelope.Provenance.TestedCheckoutSha == sourceSha &&
+       receivedSource.Outcome == ProtocolSourceEventOutcome.Succeeded,
+    "CiAi failed to round-trip the ProtocolAi v1 exact-candidate source event");
+Pass("CiAi emits and reads a ProtocolAi v1 source event with exact candidate provenance");
+
+var unknownSource = new ProtocolSourceEvent(
+    "github-actions", "workflow.completed", "run:43/attempt:1",
+    ProtocolSourceEventOutcome.Unknown, "Provider evidence was unavailable or incomplete.");
+var unknownEnvelope = ProtocolTypedEventEnvelope.Create(
+    "message-ci-43", "candidate-ci-43", "ciai", unknownSource, now, provenance);
+var unknownRoundTrip = ProtocolTypedEventEnvelope.DeserializePayload<ProtocolSourceEvent>(
+    ProtocolEventEnvelopeJson.Deserialize(ProtocolEventEnvelopeJson.Serialize(unknownEnvelope)));
+Assert(unknownRoundTrip.Outcome == ProtocolSourceEventOutcome.Unknown,
+    "CiAi converted unknown provider evidence into a successful source outcome");
+Pass("CiAi preserves Unknown as non-success in the ProtocolAi event contract");
+
+var mismatchedKindRejected = false;
+try
+{
+    _ = ProtocolTypedEventEnvelope.DeserializePayload<ProtocolObserverEvaluation>(receivedEnvelope);
+}
+catch (ArgumentException)
+{
+    mismatchedKindRejected = true;
+}
+Assert(mismatchedKindRejected, "ProtocolAi accepted a source event as an observer evaluation");
+Pass("CiAi rejects event-kind/payload mismatches through ProtocolAi typed reader");
