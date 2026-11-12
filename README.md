@@ -49,6 +49,8 @@ The current producer path is documented by its canonical contracts:
 - [Test-result report v1](src/TheSingularityWorkshop.CiAi/CiTestResultReport.md) — bounded TRX normalization and canonical 1 MiB JSON handoff.
 - [Evidence outbox and receipt ledger](src/TheSingularityWorkshop.CiAi/CiWorkflowEvidenceOutbox.md) — exact-byte persistence, replay protection, and trust reset on reload.
 - [Foundry report notice handoff](src/TheSingularityWorkshop.CiAi/CiTestResultFoundryNoticeEnqueuer.md) — host-published report bytes and manifest-bound notice delivery.
+- [Foundry notice sender](src/TheSingularityWorkshop.CiAi/FoundryArtifactReadyNoticeClient.md) — HTTPS sender, credential boundary, response classification, and retry semantics.
+- [Foundry notice delivery coordinator](src/TheSingularityWorkshop.CiAi/FoundryArtifactReadyNoticeDeliveryCoordinator.md) — bounded durable delivery passes and receipt-ledger behavior.
 
 The host artifact publisher and authenticated Foundry ingress/retrieval deployment remain integration responsibilities; these contracts do not claim live remote acceptance.
 
