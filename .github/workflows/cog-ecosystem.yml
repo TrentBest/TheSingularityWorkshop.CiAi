@@ -34,6 +34,12 @@ jobs:
         with:
           path: CiAi
           submodules: recursive
+      - name: Checkout ProtocolAi event contract
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: TrentBest/TheSingularityWorkshop.ProtocolAi
+          ref: development
+          path: ProtocolAi
       - name: Checkout CogA
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
