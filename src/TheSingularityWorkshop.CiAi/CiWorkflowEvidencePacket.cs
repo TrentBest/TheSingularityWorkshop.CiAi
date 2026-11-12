@@ -4,9 +4,9 @@ using System.Text.Json;
 namespace TheSingularityWorkshop.CiAi;
 
 /// <summary>
-/// Version 3 evidence envelope. Unlike v2, this contract requires a separately parsed,
+/// Canonical v1 evidence envelope. This contract requires a separately parsed,
 /// repository/run/attempt-bound workflow provenance artifact. The legacy packet is retained
-/// only as the job/run outcome observation; its v2 workflow/candidate SHA aliases are not
+/// only as the job/run outcome observation; its legacy workflow/candidate SHA aliases are not
 /// authoritative in this envelope.
 /// </summary>
 public sealed record CiWorkflowEvidencePacket
@@ -119,7 +119,7 @@ public sealed record CiWorkflowEvidencePacket
             observedRun.RunAttempt != provenance.RunAttempt)
             throw new InvalidDataException("Workflow provenance does not identify the exact observed repository, run, and attempt.");
 
-        // The v2 compatibility packet's WorkflowSha slot is retained here only as the
+        // The internal observation's WorkflowSha slot is retained here only as the
         // run API's triggering/head SHA observation. Bind the workflow-side event SHA to
         // that independent provider observation before accepting the v1 envelope.
         if (!string.Equals(observedRun.WorkflowSha, provenance.EventSha, StringComparison.OrdinalIgnoreCase))
@@ -139,7 +139,7 @@ public sealed record CiWorkflowEvidencePacket
                 !string.Equals(candidateCheckoutEvidence.CandidateSha, provenance.CheckoutSha, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("Candidate checkout evidence does not match the independently recorded checkout ref and SHA.");
 
-            // The v2 job observation is used only to corroborate the named resolution and
+            // The internal job observation is used only to corroborate the named resolution and
             // verification steps. The actual ref/SHA comes exclusively from the v1 provenance artifact.
             checkoutVerified = observedRun.CandidateCheckoutVerified;
         }
@@ -161,7 +161,7 @@ public sealed record CiWorkflowEvidencePacket
 
     public int ContractVersion => CurrentContractVersion;
     public string Schema => CurrentSchema;
-    public CiWorkflowEvidencePacket ObservedRun { get; }
+    public CiWorkflowRunEvidenceObservation ObservedRun { get; }
     public CiWorkflowProvenanceRecord Provenance { get; }
     public bool WorkflowDefinitionTrusted { get; }
     public string CandidateRef { get; }
@@ -255,7 +255,7 @@ public sealed record CiWorkflowEvidencePacket
             provenanceElement.ValueKind != JsonValueKind.Object)
             throw new InvalidDataException("Evidence packet v1 contract version or schema is unsupported.");
 
-        var observedRun = CiWorkflowEvidencePacket.FromJson(observedRunElement.GetRawText());
+        var observedRun = CiWorkflowRunEvidenceObservation.FromJson(observedRunElement.GetRawText());
         var provenanceBytes = JsonSerializer.SerializeToUtf8Bytes(provenanceElement);
         var provenance = CiWorkflowProvenanceRecord.ParseAndValidate(
             provenanceBytes,
