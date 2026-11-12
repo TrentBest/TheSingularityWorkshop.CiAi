@@ -163,7 +163,7 @@ internal static class CiWorkflowEvidenceDeliveryTests
                 new FileCiWorkflowEvidenceReceiptLedger(tornLedgerPath).ReadReceipts());
             var duplicateReceiptIdPath = Path.Combine(root, "v1-receipts-duplicate-id.jsonl");
             var validReceiptRecord = File.ReadLines(ledgerPath).First();
-            File.WriteAllText(duplicateReceiptIdPath, validReceiptRecord + validReceiptRecord + "\\n");
+            File.WriteAllText(duplicateReceiptIdPath, validReceiptRecord + validReceiptRecord + "\n");
             AssertThrows<InvalidDataException>(() =>
                 new FileCiWorkflowEvidenceReceiptLedger(duplicateReceiptIdPath).ReadReceipts());
 
@@ -176,8 +176,8 @@ internal static class CiWorkflowEvidenceDeliveryTests
                 delivery.PayloadSha256, CiWorkflowEvidenceReceiptOutcome.Accepted,
                 DateTimeOffset.Parse("2026-10-31T02:11:00Z"), "not.allowed"));
 
-            Console.WriteLine("PASS: 28 CI workflow evidence v1 delivery and receipt checks.");
-            return 18;
+            Console.WriteLine("PASS: 30 CI workflow evidence v1 delivery and receipt checks.");
+            return 30;
         }
         finally
         {
