@@ -4,6 +4,7 @@ using TheSingularityWorkshop.CiAi.RepositoryCommands;
 
 var passed = 0;
 passed += CiWorkflowProvenanceRecordTests.Run();
+passed += CiWorkflowEvidencePacketTests.Run();
 passed += AiCiBuilderContractTests.Run();
 passed += CiPipelineDefinitionContractTests.Run();
 passed += CiWorkflowDomainCatalogContractTests.Run();
