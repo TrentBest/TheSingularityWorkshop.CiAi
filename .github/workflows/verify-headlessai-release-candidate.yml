@@ -1,0 +1,74 @@
+name: Verify HeadlessAi Release Candidate (Non-Publishing)
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: Exact 40-character HeadlessAi candidate commit SHA
+        required: true
+        type: string
+      fsm_serialization_version:
+        description: Exact published FSM_Serialization version (allowlisted by HeadlessAi)
+        required: true
+        default: 1.0.0
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: headlessai-release-verification-${{ inputs.candidate_sha }}
+  cancel-in-progress: false
+
+jobs:
+  validate-request:
+    name: Validate immutable verification request
+    runs-on: ubuntu-latest
+    outputs:
+      candidate_sha: ${{ steps.validate.outputs.candidate_sha }}
+      dependency_version: ${{ steps.validate.outputs.dependency_version }}
+    steps:
+      - name: Require trusted CiAi development workflow
+        env:
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+          EVENT_REF: ${{ github.ref }}
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          DEPENDENCY_VERSION: ${{ inputs.fsm_serialization_version }}
+        id: validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_REF" != "refs/heads/development" ]]; then
+            echo "::error::Dispatch must use the trusted CiAi development ref."
+            exit 1
+          fi
+          if [[ ! "$CANDIDATE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "::error::HeadlessAi candidate must be an exact 40-character commit SHA."
+            exit 1
+          fi
+          if [[ "$DEPENDENCY_VERSION" != "1.0.0" ]]; then
+            echo "::error::Only the currently approved FSM_Serialization 1.0.0 dependency is accepted."
+            exit 1
+          fi
+          echo "candidate_sha=$CANDIDATE_SHA" >> "$GITHUB_OUTPUT"
+          echo "dependency_version=$DEPENDENCY_VERSION" >> "$GITHUB_OUTPUT"
+          echo "Trusted workflow ref: $WORKFLOW_REF"
+          echo "Candidate SHA: $CANDIDATE_SHA"
+          echo "Published dependency: TheSingularityWorkshop.FSM_Serialization $DEPENDENCY_VERSION"
+
+  verify:
+    name: Delegate exact-SHA package verification
+    needs: validate-request
+    uses: TrentBest/TheSingularityWorkshop.HeadlessAi/.github/workflows/release-verification.yml@05957b71287d7b8806f4a445f317d7a784145b56
+    with:
+      candidate_sha: ${{ needs.validate-request.outputs.candidate_sha }}
+      fsm_serialization_version: ${{ needs.validate-request.outputs.dependency_version }}
+    permissions:
+      contents: read
+
+# This caller delegates to an immutable HeadlessAi workflow revision.
+# The reusable workflow checks out the exact candidate SHA, validates the
+# published FSM_Serialization dependency, builds/tests/packs, audits the
+# package, and builds a clean consumer. It uploads a review artifact only.
+# No package publication, release creation, deployment, merge, or write
+# permission is granted by this workflow.
