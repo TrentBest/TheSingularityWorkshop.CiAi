@@ -68,30 +68,42 @@ public sealed class GitHubActionsWorkflowEvidenceCollector
             $"https://api.github.com/repos/{Uri.EscapeDataString(parts[0])}/{Uri.EscapeDataString(parts[1])}/actions/jobs/{job.JobId}/logs",
             MaximumArchiveBytes, cancellationToken, githubApi: true).ConfigureAwait(false);
 
-        using var archiveStream = new MemoryStream(logArchive, writable: false);
-        using var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, leaveOpen: false);
-        var entries = archive.Entries
-            .Where(entry => !string.IsNullOrEmpty(entry.Name) && entry.Length <= MaximumEntryBytes)
-            .OrderBy(entry => entry.FullName, StringComparer.Ordinal)
-            .ToArray();
-        if (entries.Length == 0 || archive.Entries.Any(entry => entry.Length > MaximumEntryBytes))
-            throw new InvalidDataException("Job log archive is empty or contains an oversized entry.");
-
         using var evidenceHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         var logText = new StringBuilder();
-        foreach (var entry in entries)
+        var isZip = logArchive.Length >= 4 && logArchive[0] == 0x50 && logArchive[1] == 0x4b &&
+            logArchive[2] is 0x03 or 0x05 or 0x07 && logArchive[3] is 0x04 or 0x06 or 0x08;
+        if (isZip)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var nameBytes = Encoding.UTF8.GetBytes(entry.FullName);
-            evidenceHash.AppendData(nameBytes);
-            evidenceHash.AppendData([0]);
-            await using var entryStream = entry.Open();
-            using var content = new MemoryStream();
-            await entryStream.CopyToAsync(content, cancellationToken).ConfigureAwait(false);
-            var bytes = content.ToArray();
-            evidenceHash.AppendData(bytes);
-            evidenceHash.AppendData([0]);
-            logText.Append(Encoding.UTF8.GetString(bytes)).Append('\n');
+            using var archiveStream = new MemoryStream(logArchive, writable: false);
+            using var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, leaveOpen: false);
+            var entries = archive.Entries
+                .Where(entry => !string.IsNullOrEmpty(entry.Name) && entry.Length <= MaximumEntryBytes)
+                .OrderBy(entry => entry.FullName, StringComparer.Ordinal)
+                .ToArray();
+            if (entries.Length == 0 || archive.Entries.Any(entry => entry.Length > MaximumEntryBytes))
+                throw new InvalidDataException("Job log archive is empty or contains an oversized entry.");
+
+            foreach (var entry in entries)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var nameBytes = Encoding.UTF8.GetBytes(entry.FullName);
+                evidenceHash.AppendData(nameBytes);
+                evidenceHash.AppendData([0]);
+                await using var entryStream = entry.Open();
+                using var content = new MemoryStream();
+                await entryStream.CopyToAsync(content, cancellationToken).ConfigureAwait(false);
+                var bytes = content.ToArray();
+                evidenceHash.AppendData(bytes);
+                evidenceHash.AppendData([0]);
+                logText.Append(Encoding.UTF8.GetString(bytes)).Append('\n');
+            }
+        }
+        else
+        {
+            // GitHub's redirect target can expose the decoded single-job log as plain UTF-8.
+            // Preserve and hash those exact returned bytes rather than assuming a ZIP wrapper.
+            evidenceHash.AppendData(logArchive);
+            logText.Append(Encoding.UTF8.GetString(logArchive));
         }
 
         var checkoutSha = FindCheckoutSha(logText.ToString(), expectedCheckoutRepository);
@@ -154,7 +166,7 @@ public sealed class GitHubActionsWorkflowEvidenceCollector
         if (commandIndex < 0)
             throw new InvalidDataException("Job logs do not record the expected checkout commit.");
         var afterCommand = section[(commandIndex + command.Length)..];
-        var match = Regex.Match(afterCommand, @"^\s*([0-9a-fA-F]{40})\s*$", RegexOptions.Multiline);
+        var match = Regex.Match(afterCommand, @"^(?:\d{4}-\d{2}-\d{2}T[^\s]+Z\s+)?([0-9a-fA-F]{40})\s*$", RegexOptions.Multiline);
         if (!match.Success)
             throw new InvalidDataException("Checkout commit in job logs is missing or ambiguous.");
         return match.Groups[1].Value.ToLowerInvariant();

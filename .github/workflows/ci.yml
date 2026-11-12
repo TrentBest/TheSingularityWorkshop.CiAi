@@ -5,6 +5,9 @@ on:
     branches: [development, master]
     paths:
       - "src/**"
+      - "integration/**"
+      - ".gitmodules"
+      - "external/**"
       - "tests/**"
       - "samples/**"
       - "README.md"
@@ -14,8 +17,6 @@ on:
       - "NuGet.config"
       - ".config/**"
       - ".github/workflows/ci.yml"
-      - ".gitmodules"
-      - "external/**"
       - ".github/workflows/ciai-evidence.yml"
       - ".github/workflows/observe-release-candidate.yml"
       - ".github/workflows/serialization-benchmark-dispatch.yml"
@@ -23,6 +24,9 @@ on:
     branches: [development, master]
     paths:
       - "src/**"
+      - "integration/**"
+      - ".gitmodules"
+      - "external/**"
       - "tests/**"
       - "samples/**"
       - "README.md"
@@ -32,8 +36,6 @@ on:
       - "NuGet.config"
       - ".config/**"
       - ".github/workflows/ci.yml"
-      - ".gitmodules"
-      - "external/**"
       - ".github/workflows/ciai-evidence.yml"
       - ".github/workflows/observe-release-candidate.yml"
       - ".github/workflows/serialization-benchmark-dispatch.yml"

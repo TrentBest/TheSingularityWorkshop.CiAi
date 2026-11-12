@@ -121,7 +121,7 @@ var mapperJob = new CiWorkflowJobObservation(
     Array.Empty<CiWorkflowStepObservation>());
 var mapperEvidence = new CiProtocolEvidenceBinding(
     "refs/heads/development", sourceSha, sourceSha,
-    ".github/workflows/build.yml@refs/heads/development", sourceSha,
+    ".github/workflows/build.yml@refs/heads/development", sourceSha, new string('c', 64),
     "https://github.com/TrentBest/UmlProvider/actions/runs/84/job/901",
     new string('b', 64));
 var mappedEnvelope = GitHubActionsProtocolSourceEventMapper.CreateEnvelope(
@@ -285,7 +285,7 @@ async Task VerifyLiveProviderEvidenceAsync()
         "Provider job logs prove a tested checkout SHA different from the candidate.");
     var binding = new CiProtocolEvidenceBinding(
         candidateRef, headSha, verified.TestedCheckoutSha,
-        verified.WorkflowDefinitionRef, verified.WorkflowDefinitionSha256,
+        verified.WorkflowDefinitionRef, run.Run.HeadSha, verified.WorkflowDefinitionSha256,
         verified.EvidenceReference, verified.EvidenceSha256);
     var envelope = GitHubActionsProtocolSourceEventMapper.CreateEnvelope(
         run, job, binding, $"github-actions:{runId}:{attempt}:{job.JobId}",

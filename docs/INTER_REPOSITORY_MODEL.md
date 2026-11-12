@@ -150,8 +150,19 @@ The harness adds three deterministic checks:
 This is a source-level, in-process interoperability check against the actual ProtocolAi implementation. It does **not** yet verify live CiAi provider observations, authenticate the asserted producer, verify evidence bytes/digests, or prove durable inbox/outbox, deduplication, replay, or causal ordering. Those remain separate host-owned acceptance criteria. The workflow's ProtocolAi checkout currently follows `development`; its resolved checkout SHA must be captured from the run before treating the result as a reproducible conformance record.
 
 
-### GitHub Actions → ProtocolAi mapper — 2026-11-12
+### GitHub Actions → ProtocolAi mapper and live evidence binding — 2026-11-12
 
-`GitHubActionsProtocolSourceEventMapper` now maps one selected `CiWorkflowRunObservation` and one attempt-specific `CiWorkflowJobObservation` into a typed ProtocolAi v1 source event. It checks that the job belongs to the exact run and attempt, binds the evidence reference to that exact GitHub job URL, requires the workflow-definition ref to identify the observed workflow path, and requires event/tested-checkout SHAs to match the provider-observed candidate SHA. The caller must supply the workflow-definition SHA and evidence SHA-256; the mapper validates their form but does not independently retrieve or hash those bytes.
+`GitHubActionsProtocolSourceEventMapper` maps one selected `CiWorkflowRunObservation` and one attempt-specific `CiWorkflowJobObservation` into a typed ProtocolAi v1 source event. It checks exact run/attempt/job identity, binds the evidence reference to the selected GitHub job URL, requires the workflow-definition ref to identify the observed workflow path, and rejects a tested checkout SHA that differs from the provider-observed candidate SHA.
 
-Only a completed successful run paired with a completed successful job maps to `Succeeded`. Incomplete, skipped, neutral, stale, or unrecognized observations remain `Unknown`; failures and cancellations remain non-success. The integration harness exercises success, wrong-checkout rejection, missing-digest rejection, and incomplete-observation handling. This is mapper contract proof using synthetic fixtures, not yet a live provider evidence verification. The exact evidence bytes/digest and tested checkout still require an independent evidence-binding step before production use.
+`GitHubActionsWorkflowEvidenceCollector` now retrieves the workflow definition at the candidate commit and the completed job's actual GitHub log response. It hashes the raw workflow-definition bytes with SHA-256, hashes the returned job-log evidence (or the deterministically ordered archive entries), and derives the tested checkout SHA from the checkout command/output recorded in the job logs. Missing, oversized, malformed, or ambiguous evidence fails closed. The workflow revision SHA (Git commit identity) is kept separate from the workflow-definition content SHA-256. The event detail records the content digest; provenance carries the workflow revision and the job-log evidence digest.
+
+The event is explicitly `workflow.job.observed`: `Succeeded` means that selected job completed successfully, not that every job in the aggregate workflow run has completed. This allows a completed job's immutable logs to be verified while later dependent jobs are still running. Incomplete jobs remain `Unknown`; failed and cancelled jobs remain non-success.
+
+**Live provider proof:** [Cog Ecosystem Integration run #376](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/43165281615) completed successfully. Its separate `verify-live-provider-evidence` job independently retrieved the `vertical-contract` job logs and workflow definition and emitted a typed source event only after the observed checkout matched the exact candidate commit.
+
+- Candidate and tested checkout: `54a462c6ab2aaf589353cf1de08eeba3824839a8`
+- Workflow-definition SHA-256: `f9fef013e2e9be39a3ec282112d919b74320b670b92e24e3cd56ad4a4fbcc18c`
+- Job-log evidence SHA-256: `2f7304c9dc1a9e00559e916f2121077298b51d9a06d2e74b1c040abe85247c4a`
+- Selected job ID: `131005591087`, run attempt `1`
+
+This proves live GitHub provider retrieval, checkout binding, workflow-byte hashing, job-log hashing, and ProtocolAi envelope construction for this one job. It does **not** yet prove producer authenticity beyond GitHub's authenticated API response, durable inbox/outbox, deduplication, replay, causal ordering, or cross-provider trust. Those remain host-owned acceptance criteria.

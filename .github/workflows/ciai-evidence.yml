@@ -5,6 +5,7 @@ on:
     branches: [development, master]
     paths:
       - "src/**"
+      - "integration/**"
       - "tests/**"
       - "samples/**"
       - "README.md"
