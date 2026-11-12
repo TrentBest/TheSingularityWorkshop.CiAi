@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/TheSingularityWorkshop.CiAi/TheSingularityWorkshop.CiAi.csproj" />
+    <PackageReference Include="TheSingularityWorkshop.ProtocolAi" Version="0.1.0-alpha.3" />
     <ProjectReference Include="../../../CogA/src/TheSingularityWorkshop.CiAi.CogA/TheSingularityWorkshop.CiAi.CogA.csproj" />
     <ProjectReference Include="../../../CogB/src/TheSingularityWorkshop.CiAi.CogB/TheSingularityWorkshop.CiAi.CogB.csproj" />
     <ProjectReference Include="../../../CogC/src/TheSingularityWorkshop.CiAi.CogC/TheSingularityWorkshop.CiAi.CogC.csproj" />
