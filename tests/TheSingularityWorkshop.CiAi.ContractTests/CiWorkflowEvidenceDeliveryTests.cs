@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using TheSingularityWorkshop.CiAi;
 
 internal static class CiWorkflowEvidenceDeliveryTests
@@ -79,6 +80,31 @@ internal static class CiWorkflowEvidenceDeliveryTests
                 "v1 rejection receipt was not durably recorded");
             Assert(!ledger.ReadAcknowledgedDeliveryIds().Contains(rejectedDelivery.DeliveryId),
                 "v1 rejection incorrectly acknowledged and suppressed replay");
+
+            // Reload must fail closed if a damaged journal contains two distinct terminal
+            // acceptances for the same delivery, even if each individual receipt is valid.
+            var conflictingLedgerPath = Path.Combine(root, "v1-receipts-conflicting.jsonl");
+            File.Copy(ledgerPath, conflictingLedgerPath);
+            var conflictingReceiptJson = JsonSerializer.Serialize(new
+            {
+                contractVersion = 1,
+                remoteReceiptId = "remote-receipt-forged-second-acceptance",
+                deliveryId = delivery.DeliveryId,
+                idempotencyKey = delivery.IdempotencyKey,
+                payloadSha256 = delivery.PayloadSha256,
+                outcome = "accepted",
+                receivedAt = DateTimeOffset.Parse("2026-10-31T02:05:00Z")
+            });
+            var conflictingRecord = JsonSerializer.Serialize(new
+            {
+                RemoteReceiptId = "remote-receipt-forged-second-acceptance",
+                DeliveryId = delivery.DeliveryId,
+                Outcome = CiWorkflowEvidenceReceiptOutcome.Accepted,
+                ReceiptJson = conflictingReceiptJson
+            });
+            File.AppendAllText(conflictingLedgerPath, conflictingRecord + "\\n");
+            AssertThrows<InvalidDataException>(() =>
+                new FileCiWorkflowEvidenceReceiptLedger(conflictingLedgerPath).ReadAcknowledgedDeliveryIds());
             AssertThrows<ArgumentException>(() => ledger.Record(
                 new CiWorkflowEvidenceRemoteReceipt(
                     1, "remote-receipt-3", delivery.DeliveryId, delivery.IdempotencyKey,
@@ -94,8 +120,8 @@ internal static class CiWorkflowEvidenceDeliveryTests
                 CiWorkflowEvidenceReceiptOutcome.Accepted,
                 DateTimeOffset.Parse("2026-10-31T02:04:00Z")));
 
-            Console.WriteLine("PASS: 17 CI workflow evidence v1 delivery and receipt checks.");
-            return 17;
+            Console.WriteLine("PASS: 18 CI workflow evidence v1 delivery and receipt checks.");
+            return 18;
         }
         finally
         {

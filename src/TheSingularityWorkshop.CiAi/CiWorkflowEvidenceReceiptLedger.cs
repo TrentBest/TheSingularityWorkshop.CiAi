@@ -199,6 +199,17 @@ public sealed class FileCiWorkflowEvidenceReceiptLedger
         }
         if (records.Select(item => item.RemoteReceiptId).Distinct(StringComparer.Ordinal).Count() != records.Count)
             throw new InvalidDataException(" receipt ledger contains duplicate receipt identities.");
+
+        // Enforce the same terminal-acceptance invariant during reload as during append.
+        // A corrupted or externally modified journal must not manufacture multiple
+        // independent acknowledgements for one delivery and silently suppress replay.
+        var conflictingAcceptances = records
+            .Where(item => item.Outcome is CiWorkflowEvidenceReceiptOutcome.Accepted or CiWorkflowEvidenceReceiptOutcome.Duplicate)
+            .GroupBy(item => item.DeliveryId, StringComparer.Ordinal)
+            .FirstOrDefault(group => group.Count() > 1);
+        if (conflictingAcceptances is not null)
+            throw new InvalidDataException(" receipt ledger contains conflicting terminal acceptance receipts for one delivery.");
+
         return records.ToArray();
     }
 
