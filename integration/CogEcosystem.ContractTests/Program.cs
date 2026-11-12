@@ -166,6 +166,16 @@ Assert(pendingPayload.Outcome == ProtocolSourceEventOutcome.Unknown,
     "mapper converted an incomplete provider observation into success");
 Pass("GitHub Actions mapper preserves incomplete provider observations as Unknown");
 
+var failedJob = mapperJob with { Conclusion = "failure" };
+var failedEnvelope = GitHubActionsProtocolSourceEventMapper.CreateEnvelope(
+    mapperRun, failedJob, mapperEvidence, "message-map-failed", "candidate-map-failed", now);
+var failedPayload = ProtocolTypedEventEnvelope.DeserializePayload<ProtocolSourceEvent>(
+    ProtocolEventEnvelopeJson.Deserialize(ProtocolEventEnvelopeJson.Serialize(failedEnvelope)));
+Assert(failedPayload.Outcome == ProtocolSourceEventOutcome.Failed,
+    "mapper failed to preserve a provider-reported failed job");
+Pass("GitHub Actions mapper maps a provider-reported failed job to Failed");
+
+
 Console.WriteLine($"PASS: {checks} cross-Cog integration checks.");
 
 void Pass(string message) { checks++; Console.WriteLine($"PASS {checks}: {message}"); }
