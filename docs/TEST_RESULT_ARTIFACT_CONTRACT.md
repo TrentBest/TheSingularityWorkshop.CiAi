@@ -83,13 +83,13 @@ The artifact name binds the run, attempt, and workflow job key. The trusted host
 1. Discover the exact workflow run and attempt, then collect the complete job inventory.
 2. Select the artifact by exact run/attempt/job naming convention. Preserve its GitHub artifact ID, name, provider digest, size, creation time, and expiry.
 3. Download the artifact through the trusted host. Verify the provider-reported SHA-256 over the complete ZIP bytes before extraction.
-4. Safely extract only the expected TRX payload. Reject path traversal, unexpected entries, oversized archives, duplicate payloads, and malformed manifests.
-5. Compute the extracted TRX SHA-256 and byte length. Bind the artifact ID/name/digests to the exact repository, run, attempt, numeric job ID, job name, and job key.
-6. Parse the extracted bytes with DTD processing disabled and strict size/record limits.
-7. Configure `CiRequiredJobPolicy` with exact workflow path, YAML job key, and observed job name triples that CiAi considers required. The report derives `CiRequiredCheckStatus` from that policy and the validated v3 job observation; do not accept a caller's raw boolean or an externally supplied verdict.
+4. Pass the downloaded ZIP bytes and provider digest to `CiTestResultArtifactArchive.Read`. It verifies the complete archive digest before reading entries, then rejects path traversal, unexpected/duplicate entries, unsafe file types, oversized archives or payloads, and excessive compression ratios. It extracts only the expected TRX and provenance sidecar in memory.
+5. Construct `CiTestResultArtifactSource` from provider metadata and the archive's verified digests/sizes. Bind the artifact ID/name to the exact repository, run, attempt, numeric job ID, job name, and job key.
+6. Call the archive overload of `CiTestResultReport.ParseAndValidate`. It re-hashes both extracted payloads (so mutation of exposed memory is detected), parses the embedded provenance against its exact content digest, and compares every workflow/event/checkout/PR identity to the trusted workflow evidence before parsing TRX with DTD processing disabled and strict size/record limits.
+7. Configure `CiRequiredJobPolicy` with exact workflow path, YAML job key, and observed job name triples that CiAi considers required. The report derives `CiRequiredCheckStatus` from that policy and the validated job observation; do not accept a caller's raw boolean or an externally supplied verdict.
 8. Preserve the normalized report and its source digests for the next bounded HeadlessAi turn.
 
-`CiTestResultReport.ParseAndValidate` verifies the extracted payload digest and size, the v3 workflow/event/checkout provenance, and the exact job binding. It does not download the ZIP, verify the provider ZIP digest, or perform ZIP extraction. Those are trusted-host responsibilities and must be completed before constructing `CiTestResultArtifactSource`.
+The host still owns provider authentication, exact artifact selection, download, and provider metadata verification. The archive reader owns digest-verified bounded ZIP inspection; the report overload owns embedded provenance binding and the CiAi verdict. The lower-level raw-TRX overload remains available for hosts that have already completed the equivalent trusted extraction and provenance checks.
 
 ### Trust and ownership
 
@@ -99,21 +99,61 @@ The artifact name binds the run, attempt, and workflow job key. The trusted host
 - **Foundry:** correlates the report to the task, applies lifecycle and retry/time/cost budgets, and mediates authorized handoffs. It does not reinterpret test output or become a second CI verdict engine.
 - **Repository host/owner:** retains approval of repository mutations and all privileged release actions.
 
+## Canonical v1 report bytes and identity
+
+The report model is the sole public CODE RED diagnostic payload: `ciai.test-results.v1`. The workflow/provenance packet is trusted input used by CiAi to derive this report; it is not a second downstream report contract.
+
+Consumers must use `CiTestResultReport.ToCanonicalUtf8Bytes()` and must preserve those returned bytes unchanged. The canonical representation is defined as:
+
+- UTF-8 encoding without a byte-order mark.
+- Compact JSON with no indentation and no trailing newline.
+- camelCase property names, in the `CiTestResultReport` declaration order.
+- Enum values serialized as their exact string names (for example `ActionableFailure`).
+- Null-valued properties are retained; no optional-property omission or consumer-side reserialization is permitted.
+- The default `System.Text.Json` escaping rules are used. URI values are serialized as absolute URI strings; date/time values use the platform's ISO 8601 JSON representation.
+- The maximum canonical report size is **1 MiB**. If the complete report exceeds this bound, serialization fails; diagnostics are never silently truncated to fit.
+
+The report identity is exactly `sha256:` followed by the lowercase hexadecimal SHA-256 digest of the complete canonical UTF-8 byte sequence. `ReportSha256` exposes the lowercase digest without the prefix; `ReportIdentity` exposes the prefixed identity. These are derived metadata and are not serialized into the report body, avoiding a self-referential digest. The schema value and contract version remain `ciai.test-results.v1` and `1`.
+
+`ToJson()` remains a human-readable diagnostic convenience and is **not** a wire-format or digest input. Do not hash its indented output. The accepted report bytes, identity, and digest are the exact values passed to Foundry and then opaquely to HeadlessAi.
+
+The v1 verdict vocabulary is `CompletePass`, `ActionableFailure`, `IncompleteOrUntrusted`, and `NonActionableFailure`. The current stable reason codes are:
+
+- `test-results.complete-pass`
+- `test-results.actionable-failure`
+- `test-results.artifact-missing`
+- `test-results.required-check-incomplete`
+- `test-results.required-check-status-mismatch`
+- `test-results.check-not-required`
+- `test-results.empty`
+- `test-results.unknown-outcome`
+- `test-results.failed-tests-in-green-job`
+- `test-results.check-failed-without-test-failure`
+- `test-results.failure-diagnostics-incomplete`
+
+Reason codes are bounded producer output. Consumers preserve unknown future values as data but must not reinterpret them as a pass or actionable verdict.
+
 ## 04 — See it in a minute
 
 ### Contract usage
 
-The following is a source-checked API sketch. `v3Packet`, `verifiedTrxBytes`, and `source` must come from the trusted collection/retrieval path described above.
+The preferred archive path keeps provider ZIP verification, embedded provenance, and TRX verdict production connected:
 
 ```csharp
+var verifiedArchive = CiTestResultArtifactArchive.Read(
+    downloadedZipBytes,
+    providerArchiveDigest,
+    "results.trx",
+    "provenance.json");
+
 var requiredJobs = new CiRequiredJobPolicy(new[]
 {
     new CiRequiredJobDefinition(".github/workflows/ci.yml", "test-minesweeper", "test-minesweeper")
 });
 
 var report = CiTestResultReport.ParseAndValidate(
-    verifiedTrxBytes,
-    v3Packet,
+    verifiedArchive,
+    trustedEvidence,
     source,
     requiredJobs,
     observedAt);
@@ -136,9 +176,9 @@ Both assertions reported expected `Accepted` and actual `RejectedTerminal`. The 
 
 ### Verification status
 
-The new contract checks are registered in `TheSingularityWorkshop.CiAi.ContractTests` (36 focused checks in the TRX report test group). They cover multi-failure normalization, exact provenance/job binding, digest and size mismatch, missing artifacts, pass/failure/non-actionable verdicts, unknown-outcome preservation, raw outcome digest binding, redaction, bounded diagnostics, duplicate identities, inconsistent counters, and DTD rejection.
+The contract checks are registered in `TheSingularityWorkshop.CiAi.ContractTests`. In addition to TRX normalization and verdict coverage, the archive integration tests exercise the complete ZIP-to-verdict path, exact embedded run/attempt and checkout binding, provider-manifest substitution, post-extraction payload mutation, and the distinct archive-versus-payload size ceilings.
 
-**Execution status:** GitHub Actions run [#41274930395](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/41274930395) completed successfully on the current PR head `47198829c15453951ff5795b8f3eff91115dbd6c`. Checkout provenance, restore, build, all contract checks, package creation, package validation, and artifact upload passed. The earlier run #560 passed on its then-current implementation head, but is historical rather than the current-head result. No local build/test result is claimed; the editing environment did not have a .NET SDK.
+**Execution status:** The earlier GitHub Actions run [#41274930395](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/41274930395) passed on its then-current PR #36 head. The new archive-to-verdict integration commits are on stacked PR #45, whose base is another feature branch; the repository's PR workflow only targets `development` and `master`, and no exact-head run is currently available for this new head. Do not treat the earlier run as validation of these new changes. No local build/test result is claimed.
 
 ## 05 — Choose your next step
 

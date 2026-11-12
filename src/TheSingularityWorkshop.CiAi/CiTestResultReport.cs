@@ -66,7 +66,7 @@ public sealed record CiTestResultArtifactSource
             !providerArchiveDigest.AsSpan(7).ToString().All(Uri.IsHexDigit))
             throw new ArgumentException("Provider archive digest must use sha256:<64 hexadecimal characters>.", nameof(providerArchiveDigest));
         ValidateDigest(payloadSha256, nameof(payloadSha256));
-        if (archiveSizeBytes is <= 0 or > CiTestResultReport.DefaultMaximumPayloadBytes)
+        if (archiveSizeBytes is <= 0 or > CiTestResultArtifactArchive.DefaultMaximumArchiveBytes)
             throw new ArgumentOutOfRangeException(nameof(archiveSizeBytes));
         if (payloadSizeBytes is <= 0 or > CiTestResultReport.DefaultMaximumPayloadBytes)
             throw new ArgumentOutOfRangeException(nameof(payloadSizeBytes));
@@ -303,6 +303,76 @@ public sealed record CiTestResultReport
             parsed.Total, parsed.Passed, parsed.Failed, parsed.Skipped, parsed.Other, parsed.Results, observedAt);
     }
 
+    /// <summary>
+    /// Verifies the complete provider archive, parses its embedded provenance, binds that provenance
+    /// to the already trusted workflow evidence, and only then produces normalized test diagnostics.
+    /// This is the preferred end-to-end entry point for provider-downloaded test-result artifacts.
+    /// </summary>
+    public static CiTestResultReport ParseAndValidate(
+        CiTestResultArtifactArchive archive,
+        CiWorkflowEvidencePacketV3 evidence,
+        CiTestResultArtifactSource source,
+        CiRequiredJobPolicy requiredJobPolicy,
+        DateTimeOffset observedAt,
+        long maximumPayloadBytes = DefaultMaximumPayloadBytes)
+    {
+        ArgumentNullException.ThrowIfNull(archive);
+        ArgumentNullException.ThrowIfNull(evidence);
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(requiredJobPolicy);
+
+        if (!string.Equals(archive.ProviderArchiveDigest, source.ProviderArchiveDigest, StringComparison.OrdinalIgnoreCase) ||
+            archive.ArchiveSizeBytes != source.ArchiveSizeBytes)
+            throw new InvalidDataException("Verified ZIP archive identity does not match the trusted provider artifact manifest.");
+        var actualTrxDigest = SHA256.HashData(archive.TrxBytes.Span);
+        var actualProvenanceDigest = SHA256.HashData(archive.ProvenanceBytes.Span);
+        if (!CryptographicOperations.FixedTimeEquals(actualTrxDigest, Convert.FromHexString(archive.TrxSha256)) ||
+            !CryptographicOperations.FixedTimeEquals(actualProvenanceDigest, Convert.FromHexString(archive.ProvenanceSha256)))
+            throw new InvalidDataException("Verified archive payload bytes changed after extraction.");
+
+        if (!string.Equals(archive.TrxSha256, source.PayloadSha256, StringComparison.OrdinalIgnoreCase) ||
+            archive.TrxBytes.Length != source.PayloadSizeBytes)
+            throw new InvalidDataException("Verified TRX payload identity does not match the trusted artifact manifest.");
+
+        var embeddedProvenance = CiWorkflowProvenanceRecord.ParseAndValidate(
+            archive.ProvenanceBytes, source.Repository, source.RunId, source.RunAttempt, archive.ProvenanceSha256);
+        if (!HasSameProvenance(embeddedProvenance, evidence.Provenance))
+            throw new InvalidDataException("Embedded artifact provenance does not match the trusted workflow evidence packet.");
+
+        return ParseAndValidate(
+            archive.TrxBytes, evidence, source, requiredJobPolicy, observedAt, maximumPayloadBytes);
+    }
+
+    private static bool HasSameProvenance(
+        CiWorkflowProvenanceRecord left,
+        CiWorkflowProvenanceRecord right)
+    {
+        return string.Equals(left.Repository, right.Repository, StringComparison.OrdinalIgnoreCase) &&
+            left.RunId == right.RunId &&
+            left.RunAttempt == right.RunAttempt &&
+            string.Equals(left.WorkflowPath, right.WorkflowPath, StringComparison.Ordinal) &&
+            string.Equals(left.WorkflowRef, right.WorkflowRef, StringComparison.Ordinal) &&
+            string.Equals(left.WorkflowSha, right.WorkflowSha, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(left.EventName, right.EventName, StringComparison.Ordinal) &&
+            string.Equals(left.EventRef, right.EventRef, StringComparison.Ordinal) &&
+            string.Equals(left.EventSha, right.EventSha, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(left.CheckoutRef, right.CheckoutRef, StringComparison.Ordinal) &&
+            string.Equals(left.CheckoutSha, right.CheckoutSha, StringComparison.OrdinalIgnoreCase) &&
+            SamePullRequest(left.PullRequest, right.PullRequest);
+    }
+
+    private static bool SamePullRequest(
+        CiWorkflowPullRequestProvenance? left,
+        CiWorkflowPullRequestProvenance? right)
+    {
+        if (left is null || right is null) return left is null && right is null;
+        return left.Number == right.Number &&
+            string.Equals(left.HeadRef, right.HeadRef, StringComparison.Ordinal) &&
+            string.Equals(left.HeadSha, right.HeadSha, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(left.BaseRef, right.BaseRef, StringComparison.Ordinal) &&
+            string.Equals(left.BaseSha, right.BaseSha, StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>Creates explicit incomplete evidence when the exact required test artifact is absent.</summary>
     public static CiTestResultReport MissingArtifact(
         CiWorkflowEvidencePacketV3 evidence,
@@ -333,11 +403,56 @@ public sealed record CiTestResultReport
             null, null, null, null, 0, 0, 0, 0, 0, 0, Array.Empty<CiTestResultRecord>(), observedAt);
     }
 
+    /// <summary>
+    /// Maximum canonical report size accepted by the cross-repository CODE RED handoff.
+    /// This is deliberately independent of the larger raw TRX/archive parsing limits.
+    /// </summary>
+    public const int DefaultMaximumReportBytes = 1024 * 1024;
+
+    private static readonly JsonSerializerOptions CanonicalJsonOptions = CreateCanonicalJsonOptions();
+
+    /// <summary>
+    /// SHA-256 identity of the exact canonical UTF-8 report bytes, prefixed with "sha256:".
+    /// This property is metadata for consumers and is not included in the report JSON itself.
+    /// </summary>
+    [JsonIgnore]
+    public string ReportIdentity => "sha256:" + Convert.ToHexString(SHA256.HashData(ToCanonicalUtf8Bytes())).ToLowerInvariant();
+
+    /// <summary>Lowercase SHA-256 of the exact canonical UTF-8 report bytes.</summary>
+    [JsonIgnore]
+    public string ReportSha256 => ReportIdentity[7..];
+
+    /// <summary>
+    /// Returns the canonical wire representation: UTF-8 without BOM, compact JSON, camelCase
+    /// properties, string enum values, declaration-order properties, and no trailing newline.
+    /// The returned bytes are the bytes to hash, persist, deliver, and pass unchanged downstream.
+    /// </summary>
+    public byte[] ToCanonicalUtf8Bytes()
+    {
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(this, CanonicalJsonOptions);
+        if (bytes.Length > DefaultMaximumReportBytes)
+            throw new InvalidDataException($"Canonical test-result report exceeds the {DefaultMaximumReportBytes}-byte handoff limit.");
+        return bytes;
+    }
+
+    public string ToCanonicalJson() => Encoding.UTF8.GetString(ToCanonicalUtf8Bytes());
+
     public string ToJson(bool indented = true)
     {
         var options = new JsonSerializerOptions { WriteIndented = indented };
         options.Converters.Add(new JsonStringEnumConverter());
         return JsonSerializer.Serialize(this, options);
+    }
+
+    private static JsonSerializerOptions CreateCanonicalJsonOptions()
+    {
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = false,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+        options.Converters.Add(new JsonStringEnumConverter());
+        return options;
     }
 
     private static void ValidateEvidenceBinding(

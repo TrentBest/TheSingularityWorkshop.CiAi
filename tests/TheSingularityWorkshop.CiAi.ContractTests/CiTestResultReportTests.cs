@@ -1,5 +1,8 @@
+using System.IO.Compression;
 using System.Security.Cryptography;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
 using System.Xml;
 using TheSingularityWorkshop.CiAi;
 
@@ -55,6 +58,67 @@ internal static class CiTestResultReportTests
         Throws<ArgumentException>(() => new CiRequiredJobDefinition(WorkflowPath, "../unsafe", JobName));
         var actionable = CiTestResultReport.ParseAndValidate(
             failedTrx, failedPacket, failedSource, RequiredPolicy, ObservedAt);
+
+        // Exercise the complete trust path: provider ZIP digest -> bounded archive extraction ->
+        // embedded provenance digest/identity -> trusted run evidence -> normalized test verdict.
+        var embeddedProvenance = CreateProvenanceJson(failedPacket);
+        var zipBytes = CreateArtifactArchive(failedTrx, embeddedProvenance);
+        var zipDigest = "sha256:" + Convert.ToHexString(SHA256.HashData(zipBytes)).ToLowerInvariant();
+        var verifiedArchive = CiTestResultArtifactArchive.Read(
+            zipBytes, zipDigest, "results.trx", "provenance.json");
+        var archiveSource = CreateSource(failedTrx, archiveDigest: zipDigest,
+            archiveSizeBytes: zipBytes.Length);
+        var archiveReport = CiTestResultReport.ParseAndValidate(
+            verifiedArchive, failedPacket, archiveSource, RequiredPolicy, ObservedAt);
+        Assert(archiveReport.Verdict == CiTestResultVerdict.ActionableFailure &&
+            archiveReport.Failed == 2 &&
+            archiveReport.ProviderArchiveDigest == zipDigest &&
+            archiveReport.ArchiveSizeBytes == zipBytes.Length,
+            "verified archive did not flow through provenance validation into the authoritative CODE RED verdict");
+
+        // The ZIP container and its individual payloads have different documented limits.
+        _ = CreateSource(failedTrx, archiveSizeBytes:
+            CiTestResultArtifactArchive.DefaultMaximumPayloadBytes + 1);
+        Throws<ArgumentOutOfRangeException>(() => CreateSource(failedTrx, archiveSizeBytes:
+            CiTestResultArtifactArchive.DefaultMaximumArchiveBytes + 1));
+
+        var mutatedTrxArchive = CiTestResultArtifactArchive.Read(
+            zipBytes, zipDigest, "results.trx", "provenance.json");
+        MutateExposedMemory(mutatedTrxArchive.TrxBytes);
+        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
+            mutatedTrxArchive, failedPacket, archiveSource, RequiredPolicy, ObservedAt));
+
+        var mutatedProvenanceArchive = CiTestResultArtifactArchive.Read(
+            zipBytes, zipDigest, "results.trx", "provenance.json");
+        MutateExposedMemory(mutatedProvenanceArchive.ProvenanceBytes);
+        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
+            mutatedProvenanceArchive, failedPacket, archiveSource, RequiredPolicy, ObservedAt));
+
+        var foreignRunProvenance = CreateProvenanceJson(failedPacket, runId: RunId + 1);
+        var foreignRunZip = CreateArtifactArchive(failedTrx, foreignRunProvenance);
+        var foreignRunDigest = "sha256:" + Convert.ToHexString(SHA256.HashData(foreignRunZip)).ToLowerInvariant();
+        var foreignRunArchive = CiTestResultArtifactArchive.Read(
+            foreignRunZip, foreignRunDigest, "results.trx", "provenance.json");
+        var foreignRunSource = CreateSource(failedTrx, archiveDigest: foreignRunDigest,
+            archiveSizeBytes: foreignRunZip.Length);
+        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
+            foreignRunArchive, failedPacket, foreignRunSource, RequiredPolicy, ObservedAt));
+
+        var foreignCheckoutProvenance = CreateProvenanceJson(
+            failedPacket, checkoutSha: new string('f', 40));
+        var foreignCheckoutZip = CreateArtifactArchive(failedTrx, foreignCheckoutProvenance);
+        var foreignCheckoutDigest = "sha256:" + Convert.ToHexString(SHA256.HashData(foreignCheckoutZip)).ToLowerInvariant();
+        var foreignCheckoutArchive = CiTestResultArtifactArchive.Read(
+            foreignCheckoutZip, foreignCheckoutDigest, "results.trx", "provenance.json");
+        var foreignCheckoutSource = CreateSource(failedTrx, archiveDigest: foreignCheckoutDigest,
+            archiveSizeBytes: foreignCheckoutZip.Length);
+        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
+            foreignCheckoutArchive, failedPacket, foreignCheckoutSource, RequiredPolicy, ObservedAt));
+
+        var substitutedArchiveSource = CreateSource(failedTrx, archiveDigest: "sha256:" + new string('f', 64),
+            archiveSizeBytes: zipBytes.Length);
+        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
+            verifiedArchive, failedPacket, substitutedArchiveSource, RequiredPolicy, ObservedAt));
         Assert(actionable.Verdict == CiTestResultVerdict.ActionableFailure &&
             actionable.Total == 3 && actionable.Passed == 1 && actionable.Failed == 2 &&
             actionable.Skipped == 0 && actionable.Results.Count == 3,
@@ -87,6 +151,24 @@ internal static class CiTestResultReportTests
         Assert(actionable.ToJson().Contains(CiTestResultReport.CurrentSchema, StringComparison.Ordinal) &&
             actionable.ToJson().Contains("ActionableFailure", StringComparison.Ordinal),
             "normalized report did not serialize its versioned schema and named verdict");
+
+        var canonicalBytes = actionable.ToCanonicalUtf8Bytes();
+        var canonicalJson = Encoding.UTF8.GetString(canonicalBytes);
+        var canonicalDigest = Convert.ToHexString(SHA256.HashData(canonicalBytes)).ToLowerInvariant();
+        Assert(canonicalBytes.Length <= CiTestResultReport.DefaultMaximumReportBytes &&
+            canonicalBytes.Length > 0 && canonicalBytes[0] != 0xEF &&
+            canonicalBytes[^1] != (byte)'\n' && canonicalBytes[^1] != (byte)'\r',
+            "canonical report violated its bounded UTF-8/no-BOM/no-trailing-newline contract");
+        Assert(canonicalJson.StartsWith("{\"contractVersion\":1,\"schema\":\"ciai.test-results.v1\"",
+                StringComparison.Ordinal) &&
+            canonicalJson.Contains("\"verdict\":\"ActionableFailure\"", StringComparison.Ordinal) &&
+            !canonicalJson.Contains("ReportIdentity", StringComparison.Ordinal) &&
+            !canonicalJson.Contains("reportIdentity", StringComparison.Ordinal),
+            "canonical report property order, schema, enum encoding, or identity exclusion changed");
+        Assert(actionable.ReportIdentity == "sha256:" + canonicalDigest &&
+            actionable.ReportSha256 == canonicalDigest &&
+            actionable.ToCanonicalUtf8Bytes().SequenceEqual(canonicalBytes),
+            "report identity was not the deterministic SHA-256 of the exact canonical bytes");
 
         var passingTrx = Encoding.UTF8.GetBytes(CreateTrx(
             ("test-1", "FirstPass", "Passed", null, null),
@@ -313,15 +395,66 @@ internal static class CiTestResultReportTests
         string? jobName = null,
         string? artifactName = null,
         string? archiveDigest = null,
-        string? payloadSha256 = null)
+        string? payloadSha256 = null,
+        long archiveSizeBytes = 512)
     {
         var digest = Convert.ToHexString(SHA256.HashData(payload)).ToLowerInvariant();
         return new CiTestResultArtifactSource(
             repository ?? Repository, RunId, runAttempt ?? RunAttempt,
             jobId ?? JobId, jobName ?? JobName, JobKey,
             7001, artifactName ?? $"ciai-test-results-{RunId}-{runAttempt ?? RunAttempt}-{JobKey}",
-            archiveDigest ?? "sha256:" + new string('a', 64), 512,
+            archiveDigest ?? "sha256:" + new string('a', 64), archiveSizeBytes,
             payloadSha256 ?? digest, payload.Length, "xUnit", CreatedAt, ExpiresAt);
+    }
+
+    private static void MutateExposedMemory(ReadOnlyMemory<byte> memory)
+    {
+        if (!MemoryMarshal.TryGetArray(memory, out var segment) || segment.Array is null || segment.Count == 0)
+            throw new InvalidOperationException("Test could not access the expected array-backed memory.");
+        segment.Array[segment.Offset] ^= 0x01;
+    }
+
+    private static byte[] CreateProvenanceJson(
+        CiWorkflowEvidencePacketV3 evidence,
+        long? runId = null,
+        string? checkoutSha = null)
+    {
+        var provenance = evidence.Provenance;
+        var pullRequest = provenance.PullRequest is null ? null : new
+        {
+            number = provenance.PullRequest.Number,
+            head = new { @ref = provenance.PullRequest.HeadRef, sha = provenance.PullRequest.HeadSha },
+            @base = new { @ref = provenance.PullRequest.BaseRef, sha = provenance.PullRequest.BaseSha }
+        };
+        return JsonSerializer.SerializeToUtf8Bytes(new
+        {
+            schema = CiWorkflowProvenanceRecord.CurrentSchema,
+            repository = provenance.Repository,
+            runId = runId ?? provenance.RunId,
+            runAttempt = provenance.RunAttempt,
+            workflow = new { @ref = provenance.WorkflowRef, sha = provenance.WorkflowSha },
+            @event = new
+            {
+                name = provenance.EventName,
+                @ref = provenance.EventRef,
+                sha = provenance.EventSha,
+                pullRequest
+            },
+            checkout = new { @ref = provenance.CheckoutRef, sha = checkoutSha ?? provenance.CheckoutSha }
+        });
+    }
+
+    private static byte[] CreateArtifactArchive(byte[] trx, byte[] provenance)
+    {
+        using var output = new MemoryStream();
+        using (var archive = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var trxEntry = archive.CreateEntry("results.trx", CompressionLevel.Optimal);
+            using (var stream = trxEntry.Open()) stream.Write(trx);
+            var provenanceEntry = archive.CreateEntry("provenance.json", CompressionLevel.Optimal);
+            using (var stream = provenanceEntry.Open()) stream.Write(provenance);
+        }
+        return output.ToArray();
     }
 
     private static string CreateTrx(
