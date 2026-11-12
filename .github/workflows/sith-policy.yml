@@ -157,7 +157,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           event_deleted="$(jq -r '.deleted // false' "$GITHUB_EVENT_PATH")"
-          if [[ "$GITHUB_REF" == "refs/heads/$DEFAULT_BRANCH" || "$GITHUB_REF" == "refs/heads/development" || "$GITHUB_EVENT_NAME" == "delete" || "$event_deleted" == "true" ]]; then
+          # Only an evaluation running on the default branch (or a branch deletion
+          # evaluated from the default branch) may commit the living badge. A
+          # development-triggered run must never push its HEAD to master.
+          if [[ "$GITHUB_REF" == "refs/heads/$DEFAULT_BRANCH" || "$GITHUB_EVENT_NAME" == "delete" || "$event_deleted" == "true" ]]; then
             git add assets/sith-policy.svg assets/sith-policy.json
             if ! git diff --cached --quiet; then
               git commit -m "chore: refresh Sith policy evidence"
@@ -184,4 +187,3 @@ jobs:
           if [[ "$status" != "COMPLIANT" ]]; then
             echo "::error::Sith Policy requires exactly master and development; status is $status."
             exit 1
-          fi
