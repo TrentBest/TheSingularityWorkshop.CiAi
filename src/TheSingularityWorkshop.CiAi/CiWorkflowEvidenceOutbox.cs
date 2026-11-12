@@ -52,7 +52,7 @@ public enum CiWorkflowEvidenceEnqueueOutcome
 }
 
 /// <summary>
-/// Separate append-only v1 outbox. V2 storage and its legacy SHA aliases are intentionally untouched.
+/// The single append-only outbox for canonical v1 evidence packets. Reload verifies bytes and identity but never restores host trust.
 /// Workflow-definition and tested-checkout identities both participate in the v1 idempotency boundary.
 /// </summary>
 public sealed class FileCiWorkflowEvidenceOutbox
@@ -110,7 +110,7 @@ public sealed class FileCiWorkflowEvidenceOutbox
                 var delivery = new CiWorkflowEvidenceDelivery(record.DeliveryId, packet);
                 if (!string.Equals(delivery.IdempotencyKey, record.IdempotencyKey, StringComparison.Ordinal) ||
                     !string.Equals(delivery.PayloadSha256, record.PayloadSha256, StringComparison.Ordinal))
-                    throw new InvalidDataException(" outbox record integrity or identity validation failed.");
+                    throw new InvalidDataException("outbox record integrity or identity validation failed.");
                 return delivery;
             }).ToArray();
         return Array.AsReadOnly(pending);
@@ -137,17 +137,17 @@ public sealed class FileCiWorkflowEvidenceOutbox
         using var input = new FileStream(_path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         if (input.Length == 0) return Array.Empty<OutboxRecord>();
         if (input.Length > int.MaxValue)
-            throw new InvalidDataException(" evidence outbox exceeds the supported 2 GiB scan limit.");
+            throw new InvalidDataException("Evidence outbox exceeds the supported 2 GiB scan limit.");
         var bytes = new byte[(int)input.Length];
         input.ReadExactly(bytes);
         if (bytes[^1] != (byte)'\n')
-            throw new InvalidDataException(" evidence outbox ends with an incomplete record; refusing to discard evidence.");
+            throw new InvalidDataException("Evidence outbox ends with an incomplete record; refusing to discard evidence.");
 
         var records = new List<OutboxRecord>();
         foreach (var line in Encoding.UTF8.GetString(bytes).Split('\n', StringSplitOptions.RemoveEmptyEntries))
         {
             var record = JsonSerializer.Deserialize<OutboxRecord>(line)
-                ?? throw new InvalidDataException(" evidence outbox contains an empty record.");
+                ?? throw new InvalidDataException("Evidence outbox contains an empty record.");
             if (string.IsNullOrWhiteSpace(record.DeliveryId) ||
                 !IsValidIdempotencyKey(record.IdempotencyKey) ||
                 !RepositoryIdentity.IsValid(record.Repository) ||
@@ -155,17 +155,17 @@ public sealed class FileCiWorkflowEvidenceOutbox
                 string.IsNullOrWhiteSpace(record.Payload) ||
                 string.IsNullOrWhiteSpace(record.PayloadSha256) ||
                 record.PayloadSha256.Length != 64 || !record.PayloadSha256.All(Uri.IsHexDigit))
-                throw new InvalidDataException(" evidence outbox contains an invalid record.");
+                throw new InvalidDataException("Evidence outbox contains an invalid record.");
             var actual = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(record.Payload)));
             if (!CryptographicOperations.FixedTimeEquals(
                 Convert.FromHexString(actual), Convert.FromHexString(record.PayloadSha256)))
-                throw new InvalidDataException(" evidence outbox payload digest is invalid.");
+                throw new InvalidDataException("Evidence outbox payload digest is invalid.");
             records.Add(record);
         }
 
         if (records.Select(record => record.DeliveryId).Distinct(StringComparer.Ordinal).Count() != records.Count ||
             records.Select(record => record.IdempotencyKey).Distinct(StringComparer.Ordinal).Count() != records.Count)
-            throw new InvalidDataException(" evidence outbox contains duplicate delivery or attempt identities.");
+            throw new InvalidDataException("Evidence outbox contains duplicate delivery or attempt identities.");
         return records.ToArray();
     }
 
