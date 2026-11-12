@@ -163,7 +163,7 @@ internal static class CiWorkflowEvidenceDeliveryTests
                 new FileCiWorkflowEvidenceReceiptLedger(tornLedgerPath).ReadReceipts());
             var duplicateReceiptIdPath = Path.Combine(root, "v1-receipts-duplicate-id.jsonl");
             var validReceiptRecord = File.ReadLines(ledgerPath).First();
-            File.WriteAllText(duplicateReceiptIdPath, validReceiptRecord + validReceiptRecord + "\n");
+            File.WriteAllText(duplicateReceiptIdPath, validReceiptRecord + "\n" + validReceiptRecord + "\n");
             AssertThrows<InvalidDataException>(() =>
                 new FileCiWorkflowEvidenceReceiptLedger(duplicateReceiptIdPath).ReadReceipts());
 
