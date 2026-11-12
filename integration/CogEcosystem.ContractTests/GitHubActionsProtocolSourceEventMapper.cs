@@ -104,8 +104,11 @@ public static class GitHubActionsProtocolSourceEventMapper
             (runStatus == CiRunStatus.Completed && runConclusion == CiRunConclusion.Cancelled))
             return ProtocolSourceEventOutcome.Cancelled;
 
-        if (runStatus == CiRunStatus.Completed &&
-            runConclusion is CiRunConclusion.Failure or CiRunConclusion.TimedOut or CiRunConclusion.ActionRequired)
+        if (string.Equals(jobConclusion, "failure", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(jobConclusion, "timed_out", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(jobConclusion, "action_required", StringComparison.OrdinalIgnoreCase) ||
+            (runStatus == CiRunStatus.Completed &&
+             runConclusion is CiRunConclusion.Failure or CiRunConclusion.TimedOut or CiRunConclusion.ActionRequired))
             return ProtocolSourceEventOutcome.Failed;
 
         if (!string.Equals(jobStatus, "completed", StringComparison.OrdinalIgnoreCase) ||
