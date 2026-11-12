@@ -7,6 +7,7 @@ passed += CiWorkflowProvenanceRecordTests.Run();
 passed += CiWorkflowEvidencePacketTests.Run();
 passed += CiTestResultReportTests.Run();
 passed += CiTestResultArtifactArchiveTests.Run();
+passed += CiWorkflowEvidenceDeliveryTests.Run();
 passed += AiCiBuilderContractTests.Run();
 passed += CiPipelineDefinitionContractTests.Run();
 passed += CiWorkflowDomainCatalogContractTests.Run();
