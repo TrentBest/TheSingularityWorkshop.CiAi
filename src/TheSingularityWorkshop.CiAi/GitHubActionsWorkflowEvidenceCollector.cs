@@ -52,8 +52,8 @@ public sealed class GitHubActionsWorkflowEvidenceCollector
         if (!string.Equals(repository, run.Run.Repository, StringComparison.OrdinalIgnoreCase) ||
             job.RunId != run.Run.RunId || job.RunAttempt != run.RunAttempt)
             throw new InvalidDataException("Selected run and job do not belong to the requested repository and attempt.");
-        if (run.Run.Status != CiRunStatus.Completed)
-            throw new InvalidDataException("Workflow evidence is not final until the run is completed.");
+        if (!string.Equals(job.Status, "completed", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Job log evidence is not final until the selected job is completed.");
 
         var workflowRef = $"{run.WorkflowPath}@{run.Run.HeadSha}";
         var workflowBytes = await GetBytesAsync(
