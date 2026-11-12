@@ -175,11 +175,10 @@ Assert(failedPayload.Outcome == ProtocolSourceEventOutcome.Failed,
     "mapper failed to preserve a provider-reported failed job");
 Pass("GitHub Actions mapper maps a provider-reported failed job to Failed");
 
-var runningRunSnapshot = mapperRunSnapshot with
-{
-    Status = CiRunStatus.InProgress,
-    Conclusion = CiRunConclusion.None
-};
+var runningRunSnapshot = new CiRunSnapshot(
+    mapperRunSnapshot.Repository, mapperRunSnapshot.RunId, mapperRunSnapshot.WorkflowName,
+    mapperRunSnapshot.HeadSha, CiRunStatus.InProgress, CiRunConclusion.None,
+    mapperRunSnapshot.EvidenceUrl, mapperRunSnapshot.UpdatedAt);
 var runningRun = mapperRun with { Run = runningRunSnapshot };
 var completedJobEnvelope = GitHubActionsProtocolSourceEventMapper.CreateEnvelope(
     runningRun, mapperJob, mapperEvidence, "message-map-job-only", "candidate-map-job-only", now);
