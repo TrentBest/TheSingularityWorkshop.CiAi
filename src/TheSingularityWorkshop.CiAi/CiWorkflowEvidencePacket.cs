@@ -121,7 +121,7 @@ public sealed record CiWorkflowEvidencePacket
 
         // The v2 compatibility packet's WorkflowSha slot is retained here only as the
         // run API's triggering/head SHA observation. Bind the workflow-side event SHA to
-        // that independent provider observation before accepting the v3 envelope.
+        // that independent provider observation before accepting the v1 envelope.
         if (!string.Equals(observedRun.WorkflowSha, provenance.EventSha, StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("Workflow provenance event SHA does not match the exact observed run SHA.");
 
@@ -178,7 +178,7 @@ public sealed record CiWorkflowEvidencePacket
     public IReadOnlyList<string> BlockingReasons { get; }
 
     /// <summary>
-    /// Serializes the v3 envelope without persisting the host's workflow-trust decision.
+    /// Serializes the v1 envelope without persisting the host's workflow-trust decision.
     /// Trust must be re-evaluated by the host whenever the durable packet is reloaded.
     /// </summary>
     public string ToJson(bool indented = true)
@@ -217,7 +217,7 @@ public sealed record CiWorkflowEvidencePacket
     }
 
     /// <summary>
-    /// Reloads v3 evidence after revalidating the embedded provenance payload. The caller must
+    /// Reloads v1 evidence after revalidating the embedded provenance payload. The caller must
     /// independently re-check protected workflow-definition policy and supply that result;
     /// the trust decision is deliberately not serialized as self-authenticating evidence.
     /// </summary>
@@ -294,7 +294,7 @@ public sealed record CiWorkflowEvidencePacket
     {
         foreach (var reason in ObservedRun.BlockingReasons)
         {
-            // v2's candidate checkout bit is not authoritative for v3; replace it with
+            // the observation's candidate checkout bit is not authoritative for v1; replace it with
             // the independently checked provenance result below.
             if (!string.Equals(reason, "candidate.checkout-unverified", StringComparison.Ordinal))
                 yield return reason;

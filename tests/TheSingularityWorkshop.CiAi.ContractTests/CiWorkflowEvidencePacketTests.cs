@@ -110,7 +110,7 @@ internal static class CiWorkflowEvidencePacketTests
 
 
 
-    private static CiWorkflowEvidencePacket CreateDispatchObservedRun(
+    private static CiWorkflowRunEvidenceObservation CreateDispatchObservedRun(
         CiWorkflowCandidateCheckoutEvidence candidateEvidence)
     {
         var steps = new[]
