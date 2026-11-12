@@ -1,0 +1,27 @@
+name: Verify HeadlessAi Release Candidate (Non-Publishing)
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: Exact 40-character HeadlessAi candidate commit SHA to verify
+        required: true
+        type: string
+      fsm_serialization_version:
+        description: Exact published FSM_Serialization version (allowlisted by the called verifier)
+        required: true
+        default: 1.0.0
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Delegate exact-SHA package verification
+    uses: TrentBest/TheSingularityWorkshop.HeadlessAi/.github/workflows/release-verification.yml@05957b71287d7b8806f4a445f317d7a784145b56
+    with:
+      candidate_sha: ${{ inputs.candidate_sha }}
+      fsm_serialization_version: ${{ inputs.fsm_serialization_version }}
+    permissions:
+      contents: read
