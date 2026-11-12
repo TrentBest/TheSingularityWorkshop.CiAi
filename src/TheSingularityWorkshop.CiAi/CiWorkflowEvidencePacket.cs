@@ -155,7 +155,7 @@ public sealed record CiWorkflowEvidencePacket
                 string.Equals(provenance.CheckoutSha, provenance.EventSha, StringComparison.OrdinalIgnoreCase);
         }
 
-        return new CiWorkflowRunEvidenceObservation(
+        return new CiWorkflowEvidencePacket(
             observedRun, provenance, workflowDefinitionTrusted, checkoutVerified);
     }
 
