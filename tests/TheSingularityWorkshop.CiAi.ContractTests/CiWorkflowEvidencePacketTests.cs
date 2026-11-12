@@ -26,6 +26,16 @@ internal static class CiWorkflowEvidencePacketTests
             "v1 did not preserve independent workflow, event, and checkout identities");
 
         var serialized = trusted.ToJson();
+        using (var document = System.Text.Json.JsonDocument.Parse(serialized))
+        {
+            var observedRun = document.RootElement.GetProperty("observedRun");
+            Assert(!observedRun.TryGetProperty("schema", out _) &&
+                !observedRun.TryGetProperty("contractVersion", out _),
+                "raw run/job observations exposed a second independently versioned contract");
+            Assert(observedRun.TryGetProperty("jobs", out _) &&
+                observedRun.TryGetProperty("runId", out _),
+                "canonical v1 envelope omitted raw run/job observation facts");
+        }
         var serializedBytes = Encoding.UTF8.GetBytes(serialized);
         var packetDigest = Convert.ToHexString(SHA256.HashData(serializedBytes));
         var roundTrip = CiWorkflowEvidencePacket.FromJson(
