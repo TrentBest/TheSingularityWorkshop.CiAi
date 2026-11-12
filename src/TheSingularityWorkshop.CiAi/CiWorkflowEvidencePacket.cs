@@ -1,13 +1,14 @@
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace TheSingularityWorkshop.CiAi;
 
 /// <summary>
 /// Canonical v1 evidence envelope. This contract requires a separately parsed,
 /// repository/run/attempt-bound workflow provenance artifact. The legacy packet is retained
-/// only as the job/run outcome observation; its legacy workflow/candidate SHA aliases are not
-/// authoritative in this envelope.
+/// only as unversioned raw run/job observations owned by this envelope; workflow/candidate
+/// identity is authoritative only in the separately validated provenance artifact.
 /// </summary>
 public sealed record CiWorkflowEvidencePacket
 {
@@ -205,12 +206,12 @@ public sealed record CiWorkflowEvidencePacket
             },
             checkout = new { @ref = Provenance.CheckoutRef, sha = Provenance.CheckoutSha }
         };
-        using var observedRun = JsonDocument.Parse(ObservedRun.ToJson(indented: false));
+        var observedRun = JsonSerializer.SerializeToElement(ObservedRun, ObservationJsonOptions);
         var envelope = new
         {
             contractVersion = CurrentContractVersion,
             schema = CurrentSchema,
-            observedRun = observedRun.RootElement,
+            observedRun,
             provenance
         };
         return JsonSerializer.Serialize(envelope, new JsonSerializerOptions { WriteIndented = indented });
@@ -255,7 +256,9 @@ public sealed record CiWorkflowEvidencePacket
             provenanceElement.ValueKind != JsonValueKind.Object)
             throw new InvalidDataException("Evidence packet v1 contract version or schema is unsupported.");
 
-        var observedRun = CiWorkflowRunEvidenceObservation.FromJson(observedRunElement.GetRawText());
+        var observedRun = JsonSerializer.Deserialize<CiWorkflowRunEvidenceObservation>(
+            observedRunElement.GetRawText(), ObservationJsonOptions)
+            ?? throw new InvalidDataException("Evidence packet v1 observed-run data produced no observation.");
         var provenanceBytes = JsonSerializer.SerializeToUtf8Bytes(provenanceElement);
         var provenance = CiWorkflowProvenanceRecord.ParseAndValidate(
             provenanceBytes,
@@ -270,6 +273,12 @@ public sealed record CiWorkflowEvidencePacket
             workflowDefinitionTrusted,
             observedRun.CandidateCheckoutEvidence);
     }
+
+    private static JsonSerializerOptions ObservationJsonOptions => new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
+    };
 
     private static void ValidateNoDuplicateProperties(JsonElement element)
     {
