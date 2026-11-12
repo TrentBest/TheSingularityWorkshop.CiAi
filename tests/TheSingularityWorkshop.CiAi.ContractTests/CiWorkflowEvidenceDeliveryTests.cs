@@ -102,7 +102,7 @@ internal static class CiWorkflowEvidenceDeliveryTests
                 Outcome = CiWorkflowEvidenceReceiptOutcome.Accepted,
                 ReceiptJson = conflictingReceiptJson
             });
-            File.AppendAllText(conflictingLedgerPath, conflictingRecord + "\\n");
+            File.AppendAllText(conflictingLedgerPath, conflictingRecord + "\n");
             AssertThrows<InvalidDataException>(() =>
                 new FileCiWorkflowEvidenceReceiptLedger(conflictingLedgerPath).ReadAcknowledgedDeliveryIds());
             AssertThrows<ArgumentException>(() => ledger.Record(
