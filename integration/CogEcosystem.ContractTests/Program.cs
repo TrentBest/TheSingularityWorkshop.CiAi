@@ -229,3 +229,57 @@ catch (ArgumentException)
 }
 Assert(mismatchedKindRejected, "ProtocolAi accepted a source event as an observer evaluation");
 Pass("CiAi rejects event-kind/payload mismatches through ProtocolAi typed reader");
+
+
+if (string.Equals(Environment.GetEnvironmentVariable("CIAI_VERIFY_PROVIDER_EVIDENCE"), "1", StringComparison.Ordinal))
+{
+    await VerifyLiveProviderEvidenceAsync();
+}
+
+async Task VerifyLiveProviderEvidenceAsync()
+{
+    var repository = Environment.GetEnvironmentVariable("GITHUB_REPOSITORY")
+        ?? throw new InvalidOperationException("GITHUB_REPOSITORY is unavailable.");
+    var headSha = Environment.GetEnvironmentVariable("GITHUB_SHA")
+        ?? throw new InvalidOperationException("GITHUB_SHA is unavailable.");
+    var runId = long.Parse(Environment.GetEnvironmentVariable("GITHUB_RUN_ID")
+        ?? throw new InvalidOperationException("GITHUB_RUN_ID is unavailable."));
+    var attempt = int.Parse(Environment.GetEnvironmentVariable("GITHUB_RUN_ATTEMPT")
+        ?? throw new InvalidOperationException("GITHUB_RUN_ATTEMPT is unavailable."));
+    var candidateRef = Environment.GetEnvironmentVariable("GITHUB_REF")
+        ?? throw new InvalidOperationException("GITHUB_REF is unavailable.");
+    var token = Environment.GetEnvironmentVariable("GH_TOKEN")
+        ?? throw new InvalidOperationException("GH_TOKEN is unavailable.");
+
+    using var http = new HttpClient();
+    var runCollector = new GitHubActionsWorkflowRunCollector(http, token);
+    var runCollection = await runCollector.GetRunsForCommitAsync(repository, headSha);
+    Assert(!runCollection.IsTruncated, "Live workflow-run discovery was truncated.");
+    var run = runCollection.Runs.SingleOrDefault(item =>
+        item.Run.RunId == runId && item.RunAttempt == attempt)
+        ?? throw new InvalidDataException("The current GitHub Actions run/attempt was not found by exact commit identity.");
+
+    var jobCollector = new GitHubActionsWorkflowJobCollector(http, token);
+    var jobs = await jobCollector.GetJobsForAttemptAsync(repository, runId, attempt);
+    Assert(!jobs.IsTruncated, "Live workflow-job discovery was truncated.");
+    var job = jobs.Jobs.SingleOrDefault(item => item.Name == "vertical-contract")
+        ?? throw new InvalidDataException("The completed vertical-contract job was not found in this run attempt.");
+
+    var evidenceCollector = new GitHubActionsWorkflowEvidenceCollector(http, token);
+    var verified = await evidenceCollector.CollectAsync(
+        repository, run, job, repository, repository);
+    Assert(string.Equals(verified.TestedCheckoutSha, headSha, StringComparison.OrdinalIgnoreCase),
+        "Provider job logs prove a tested checkout SHA different from the candidate.");
+    var binding = new CiProtocolEvidenceBinding(
+        candidateRef, headSha, verified.TestedCheckoutSha,
+        verified.WorkflowDefinitionRef, verified.WorkflowDefinitionSha256,
+        verified.EvidenceReference, verified.EvidenceSha256);
+    var envelope = GitHubActionsProtocolSourceEventMapper.CreateEnvelope(
+        run, job, binding, $"github-actions:{runId}:{attempt}:{job.JobId}",
+        $"candidate:{repository}:{headSha}", DateTimeOffset.UtcNow);
+    var payload = ProtocolTypedEventEnvelope.DeserializePayload<ProtocolSourceEvent>(
+        ProtocolEventEnvelopeJson.Deserialize(ProtocolEventEnvelopeJson.Serialize(envelope)));
+    Assert(payload.Outcome == ProtocolSourceEventOutcome.Succeeded,
+        "Live GitHub provider evidence did not produce a successful source event.");
+    Console.WriteLine($"PASS: live GitHub evidence bound run {runId}, attempt {attempt}, job {job.JobId}; checkout {verified.TestedCheckoutSha}; workflow SHA-256 {verified.WorkflowDefinitionSha256}; log SHA-256 {verified.EvidenceSha256}.");
+}
