@@ -7,6 +7,7 @@ on:
       - "src/**"
       - "integration/**"
       - ".gitmodules"
+      - ".github/workflows/**"
       - "external/**"
       - "tests/**"
       - "samples/**"
@@ -16,16 +17,13 @@ on:
       - "global.json"
       - "NuGet.config"
       - ".config/**"
-      - ".github/workflows/ci.yml"
-      - ".github/workflows/ciai-evidence.yml"
-      - ".github/workflows/observe-release-candidate.yml"
-      - ".github/workflows/serialization-benchmark-dispatch.yml"
   pull_request:
     branches: [development, master]
     paths:
       - "src/**"
       - "integration/**"
       - ".gitmodules"
+      - ".github/workflows/**"
       - "external/**"
       - "tests/**"
       - "samples/**"
@@ -35,10 +33,6 @@ on:
       - "global.json"
       - "NuGet.config"
       - ".config/**"
-      - ".github/workflows/ci.yml"
-      - ".github/workflows/ciai-evidence.yml"
-      - ".github/workflows/observe-release-candidate.yml"
-      - ".github/workflows/serialization-benchmark-dispatch.yml"
   workflow_dispatch:
     inputs:
       target_branch:

@@ -6,6 +6,7 @@ on:
     paths:
       - "src/**"
       - "integration/**"
+      - ".github/workflows/**"
       - "tests/**"
       - "samples/**"
       - "README.md"
@@ -14,12 +15,8 @@ on:
       - "global.json"
       - "NuGet.config"
       - ".config/**"
-      - ".github/workflows/ci.yml"
-      - ".github/workflows/observe-release-candidate.yml"
-      - ".github/workflows/serialization-benchmark-dispatch.yml"
       - ".gitmodules"
       - "external/**"
-      - ".github/workflows/ciai-evidence.yml"
 
 permissions:
   contents: read
