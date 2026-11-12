@@ -101,6 +101,7 @@ public enum CiWorkflowEvidenceReceiptRecordOutcome
 /// </summary>
 public sealed class FileCiWorkflowEvidenceReceiptLedger
 {
+    private static readonly UTF8Encoding StrictUtf8 = new(false, true);
     private readonly string _path;
 
     public FileCiWorkflowEvidenceReceiptLedger(string path)
@@ -184,10 +185,25 @@ public sealed class FileCiWorkflowEvidenceReceiptLedger
             throw new InvalidDataException(" receipt ledger ends with an incomplete record; refusing to discard receipt history.");
 
         var records = new List<ReceiptRecord>();
-        foreach (var line in Encoding.UTF8.GetString(bytes).Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        string journalText;
+        try
         {
+            journalText = StrictUtf8.GetString(bytes);
+        }
+        catch (DecoderFallbackException exception)
+        {
+            throw new InvalidDataException("Receipt ledger is not valid UTF-8.", exception);
+        }
+
+        var lines = journalText.Split('\n');
+        for (var index = 0; index < lines.Length - 1; index++)
+        {
+            var line = lines[index];
+            if (string.IsNullOrWhiteSpace(line))
+                throw new InvalidDataException("Receipt ledger contains an empty journal record.");
+
             var item = JsonSerializer.Deserialize<ReceiptRecord>(line)
-                ?? throw new InvalidDataException(" receipt ledger contains an empty record.");
+                ?? throw new InvalidDataException("Receipt ledger contains an empty record.");
             var receipt = JsonSerializer.Deserialize<CiWorkflowEvidenceRemoteReceipt>(item.ReceiptJson, Options())
                 ?? throw new InvalidDataException(" receipt ledger contains an empty receipt.");
             if (!Enum.IsDefined(item.Outcome) ||
