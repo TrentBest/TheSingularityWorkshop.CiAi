@@ -13,6 +13,7 @@ public sealed record CiProtocolEvidenceBinding(
     string TestedCheckoutSha,
     string WorkflowDefinitionRef,
     string WorkflowDefinitionSha,
+    string WorkflowDefinitionSha256,
     string EvidenceReference,
     string EvidenceSha256);
 
@@ -49,6 +50,9 @@ public static class GitHubActionsProtocolSourceEventMapper
         RequireCommitSha(evidence.EventSha, nameof(evidence.EventSha));
         RequireCommitSha(evidence.TestedCheckoutSha, nameof(evidence.TestedCheckoutSha));
         RequireCommitSha(evidence.WorkflowDefinitionSha, nameof(evidence.WorkflowDefinitionSha));
+        if (evidence.WorkflowDefinitionSha256.Length != 64 ||
+            !evidence.WorkflowDefinitionSha256.All(Uri.IsHexDigit))
+            throw new InvalidDataException("Workflow definition SHA-256 must be exactly 64 hexadecimal characters.");
         if (string.IsNullOrWhiteSpace(evidence.CandidateRef) ||
             string.IsNullOrWhiteSpace(evidence.WorkflowDefinitionRef) ||
             string.IsNullOrWhiteSpace(evidence.EvidenceReference))
@@ -74,7 +78,7 @@ public static class GitHubActionsProtocolSourceEventMapper
             "workflow.job.observed",
             $"run:{snapshot.RunId}/attempt:{run.RunAttempt}/job:{job.JobId}",
             outcome,
-            $"GitHub Actions run '{snapshot.WorkflowName}' job '{job.Name}' reported status '{job.Status}' and conclusion '{job.Conclusion ?? "none"}'.");
+            $"GitHub Actions run '{snapshot.WorkflowName}' job '{job.Name}' reported status '{job.Status}' and conclusion '{job.Conclusion ?? "none"}'. Workflow definition SHA-256: {evidence.WorkflowDefinitionSha256}.");
 
         var provenance = new ProtocolCandidateProvenance(
             snapshot.Repository,
