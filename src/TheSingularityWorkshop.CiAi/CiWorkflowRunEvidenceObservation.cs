@@ -57,7 +57,7 @@ public sealed record CiWorkflowRunEvidenceObservation
             throw new ArgumentException("Completed runs require a conclusion; non-completed runs must not have one.", nameof(conclusion));
 
         if (candidateCheckoutEvidence is not null &&
-            !string.Equals(workflowRef, CiWorkflowDispatchInputContract.TrustedWorkflowRef, StringComparison.Ordinal))
+            !string.Equals(workflowRef, "refs/heads/development", StringComparison.Ordinal))
             throw new ArgumentException("Separate candidate checkout evidence requires the trusted workflow-definition ref.", nameof(workflowRef));
         if (candidateCheckoutEvidence is not null &&
             !string.Equals(@event, "workflow_dispatch", StringComparison.Ordinal))
