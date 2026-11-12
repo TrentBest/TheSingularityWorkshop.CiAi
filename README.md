@@ -54,7 +54,7 @@ The current producer path is documented by its canonical contracts:
 
 The host artifact publisher and authenticated Foundry ingress/retrieval deployment remain integration responsibilities; these contracts do not claim live remote acceptance.
 
-## 04 — Architecture and proof
+## 05 — Architecture and proof
 
 - [Gallery](Gallery.md) — current demonstrations and evidence.
 - [Cross-Cog integration](integration/CogEcosystem.ContractTests/README.md) — pinned in-process contract proof.
