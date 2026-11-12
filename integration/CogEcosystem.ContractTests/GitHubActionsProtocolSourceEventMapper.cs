@@ -68,7 +68,7 @@ public static class GitHubActionsProtocolSourceEventMapper
                 StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("Observed job evidence identity does not match the selected run.");
 
-        var outcome = MapOutcome(snapshot.Status, snapshot.Conclusion, job.Status, job.Conclusion);
+        var outcome = MapOutcome(job.Status, job.Conclusion);
         var sourceEvent = new ProtocolSourceEvent(
             "github-actions",
             "workflow.job.observed",
@@ -94,29 +94,21 @@ public static class GitHubActionsProtocolSourceEventMapper
             messageId, candidateId, "ciai", sourceEvent, createdAt, provenance);
     }
 
-    private static ProtocolSourceEventOutcome MapOutcome(
-        CiRunStatus runStatus,
-        CiRunConclusion runConclusion,
-        string jobStatus,
-        string? jobConclusion)
+    // This event describes the selected job, not the aggregate workflow run. A completed
+    // successful job remains a successful job observation even while other workflow jobs run.
+    private static ProtocolSourceEventOutcome MapOutcome(string jobStatus, string? jobConclusion)
     {
-        if (string.Equals(jobConclusion, "cancelled", StringComparison.OrdinalIgnoreCase) ||
-            (runStatus == CiRunStatus.Completed && runConclusion == CiRunConclusion.Cancelled))
+        if (!string.Equals(jobStatus, "completed", StringComparison.OrdinalIgnoreCase))
+            return ProtocolSourceEventOutcome.Unknown;
+        if (string.Equals(jobConclusion, "cancelled", StringComparison.OrdinalIgnoreCase))
             return ProtocolSourceEventOutcome.Cancelled;
-
         if (string.Equals(jobConclusion, "failure", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(jobConclusion, "timed_out", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(jobConclusion, "action_required", StringComparison.OrdinalIgnoreCase) ||
-            (runStatus == CiRunStatus.Completed &&
-             runConclusion is CiRunConclusion.Failure or CiRunConclusion.TimedOut or CiRunConclusion.ActionRequired))
+            string.Equals(jobConclusion, "action_required", StringComparison.OrdinalIgnoreCase))
             return ProtocolSourceEventOutcome.Failed;
-
-        if (!string.Equals(jobStatus, "completed", StringComparison.OrdinalIgnoreCase) ||
-            !string.Equals(jobConclusion, "success", StringComparison.OrdinalIgnoreCase) ||
-            runStatus != CiRunStatus.Completed || runConclusion != CiRunConclusion.Success)
-            return ProtocolSourceEventOutcome.Unknown;
-
-        return ProtocolSourceEventOutcome.Succeeded;
+        if (string.Equals(jobConclusion, "success", StringComparison.OrdinalIgnoreCase))
+            return ProtocolSourceEventOutcome.Succeeded;
+        return ProtocolSourceEventOutcome.Unknown;
     }
 
     private static void RequireCommitSha(string value, string parameterName)
