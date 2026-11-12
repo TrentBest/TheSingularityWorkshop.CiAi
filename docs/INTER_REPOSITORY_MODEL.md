@@ -136,3 +136,15 @@ Show a directed graph. Nodes expose declared capabilities, dependencies/consumer
 7. Add package packing; only later add explicitly approved publishing.
 
 Completion requires tests for successful round trip and rejection of unauthorized targets, unknown operations, duplicates, mismatched correlation, wrong repo/run/SHA, invalid evidence URLs, and failed conclusions. Mark unimplemented capabilities planned/experimental.
+
+## ProtocolAi event-envelope conformance — 2026-11-12
+
+The parent integration harness now references the ProtocolAi source project directly (not the published alpha.2 package, which predates the event-envelope API). Its GitHub Actions workflow checks out ProtocolAi `development` beside CiAi and the five Cogs.
+
+The harness adds three deterministic checks:
+
+1. A typed `SourceEvent` is created through `ProtocolTypedEventEnvelope`, serialized, deserialized, and checked for schema v1, event kind, and exact candidate/tested-checkout SHA provenance.
+2. An `Unknown` source outcome survives the round trip and remains explicitly non-success.
+3. A source event cannot be deserialized as an observer evaluation; the typed reader must reject the event-kind/payload mismatch.
+
+This is a source-level, in-process interoperability check against the actual ProtocolAi implementation. It does **not** yet verify live CiAi provider observations, authenticate the asserted producer, verify evidence bytes/digests, or prove durable inbox/outbox, deduplication, replay, or causal ordering. Those remain separate host-owned acceptance criteria. The workflow's ProtocolAi checkout currently follows `development`; its resolved checkout SHA must be captured from the run before treating the result as a reproducible conformance record.
