@@ -38,9 +38,7 @@ public static class GitHubActionsProtocolSourceEventMapper
         ArgumentException.ThrowIfNullOrWhiteSpace(candidateId);
 
         var snapshot = run.Run;
-        if (!string.Equals(job.RunId.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                snapshot.RunId.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal) ||
-            job.RunAttempt != run.RunAttempt)
+        if (job.RunId != snapshot.RunId || job.RunAttempt != run.RunAttempt)
             throw new InvalidDataException("Job identity does not belong to the selected workflow run attempt.");
 
         if (!string.Equals(evidence.EventSha, snapshot.HeadSha, StringComparison.OrdinalIgnoreCase))
@@ -55,6 +53,11 @@ public static class GitHubActionsProtocolSourceEventMapper
             string.IsNullOrWhiteSpace(evidence.WorkflowDefinitionRef) ||
             string.IsNullOrWhiteSpace(evidence.EvidenceReference))
             throw new InvalidDataException("Candidate ref, workflow definition ref, and evidence reference are required.");
+        if (!evidence.WorkflowDefinitionRef.StartsWith(run.WorkflowPath + "@", StringComparison.Ordinal) &&
+            !string.Equals(evidence.WorkflowDefinitionRef, run.WorkflowPath, StringComparison.Ordinal))
+            throw new InvalidDataException("Workflow definition ref does not identify the workflow path reported by GitHub.");
+        if (!string.Equals(evidence.EvidenceReference, job.EvidenceUrl.AbsoluteUri, StringComparison.Ordinal))
+            throw new InvalidDataException("Evidence reference must identify the exact observed GitHub job.");
         if (evidence.EvidenceSha256.Length != 64 || !evidence.EvidenceSha256.All(Uri.IsHexDigit))
             throw new InvalidDataException("Evidence SHA-256 must be exactly 64 hexadecimal characters.");
 
