@@ -147,7 +147,7 @@ internal static class FoundryArtifactReadyNoticeClientTests
         using (var http = new HttpClient(new StubHandler((_, _) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
             {
-                Content = new StringContent("{\\"code\\":\\"policy.invalid\\"}", Encoding.UTF8, "application/json")
+                Content = new StringContent("{\"code\":\"policy.invalid\"}", Encoding.UTF8, "application/json")
             }))))
         {
             var result = await new FoundryArtifactReadyNoticeClient(http, Endpoint(),
