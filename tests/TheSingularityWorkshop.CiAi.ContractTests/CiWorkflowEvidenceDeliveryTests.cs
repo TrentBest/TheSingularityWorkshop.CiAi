@@ -157,6 +157,17 @@ internal static class CiWorkflowEvidenceDeliveryTests
             Assert(ledger.ReadAcknowledgedDeliveryIds().Contains(rejectionThenAcceptance.DeliveryId),
                 "later acceptance after rejection did not acknowledge the delivery");
 
+            var blankLineLedgerPath = Path.Combine(root, "v1-receipts-blank-line.jsonl");
+            File.WriteAllText(blankLineLedgerPath, File.ReadAllText(ledgerPath) + "\n");
+            AssertThrows<InvalidDataException>(() =>
+                new FileCiWorkflowEvidenceReceiptLedger(blankLineLedgerPath).ReadReceipts());
+
+            var invalidUtf8LedgerPath = Path.Combine(root, "v1-receipts-invalid-utf8.jsonl");
+            var validLedgerBytes = File.ReadAllBytes(ledgerPath);
+            File.WriteAllBytes(invalidUtf8LedgerPath, validLedgerBytes[..^1].Concat(new byte[] { 0xFF, (byte)'\n' }).ToArray());
+            AssertThrows<InvalidDataException>(() =>
+                new FileCiWorkflowEvidenceReceiptLedger(invalidUtf8LedgerPath).ReadReceipts());
+
             var tornLedgerPath = Path.Combine(root, "v1-receipts-torn.jsonl");
             File.WriteAllText(tornLedgerPath, File.ReadAllText(ledgerPath).TrimEnd() + "{");
             AssertThrows<InvalidDataException>(() =>
