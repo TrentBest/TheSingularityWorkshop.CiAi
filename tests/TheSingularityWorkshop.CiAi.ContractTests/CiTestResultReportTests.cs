@@ -335,6 +335,16 @@ internal static class CiTestResultReportTests
         return 36;
     }
 
+    internal static CiTestResultReport CreateSampleReport()
+    {
+        var trx = Encoding.UTF8.GetBytes(CreateTrx(
+            ("minesweeper-1", "Minesweeper.Domain", "Failed", "Expected a safe cell.", "System.InvalidOperationException: test diagnostic"),
+            total: 1, passed: 0, failed: 1, skipped: 0));
+        return CiTestResultReport.ParseAndValidate(
+            trx, CreatePacket("failure"), CreateSource(trx, artifactName: "minesweeper-test-results"),
+            RequiredPolicy, ObservedAt);
+    }
+
     private static CiWorkflowEvidencePacket CreatePacket(
         string conclusion,
         bool workflowTrusted = true,
