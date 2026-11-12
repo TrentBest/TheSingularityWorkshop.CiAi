@@ -166,7 +166,7 @@ public sealed class GitHubActionsWorkflowEvidenceCollector
         if (commandIndex < 0)
             throw new InvalidDataException("Job logs do not record the expected checkout commit.");
         var afterCommand = section[(commandIndex + command.Length)..];
-        var match = Regex.Match(afterCommand, @"^\s*([0-9a-fA-F]{40})\s*$", RegexOptions.Multiline);
+        var match = Regex.Match(afterCommand, @"^(?:\d{4}-\d{2}-\d{2}T[^\s]+Z\s+)?([0-9a-fA-F]{40})\s*$", RegexOptions.Multiline);
         if (!match.Success)
             throw new InvalidDataException("Checkout commit in job logs is missing or ambiguous.");
         return match.Groups[1].Value.ToLowerInvariant();
