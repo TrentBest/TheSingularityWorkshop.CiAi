@@ -254,6 +254,46 @@ internal static class CiPipelineDefinitionContractTests
                 "generic Task<bool> failure was not preserved");
         });
 
+        Check("executor captures asynchronous faults and skips dependent work", () =>
+        {
+            var laterCalled = false;
+            var definition = new CiPipelineBuilder("TrentBest/TheSingularityWorkshop.CiAi")
+                .On(CiPipelineTrigger.Manual)
+                .Add<Task<bool>>("async fault", () =>
+                    Task.FromException<bool>(new InvalidOperationException("async failure")))
+                .Add<bool>("later", () => { laterCalled = true; return true; })
+                .Build();
+            var report = new CiPipelineExecutor().ExecuteAsync(definition,
+                "abcdef0123456789abcdef0123456789abcdef01", "plan-async-fault").GetAwaiter().GetResult();
+            Assert(!report.IsSuccessful && !laterCalled, "executor continued after an asynchronous fault");
+            Assert(report.Steps[0].Outcome == CiStepOutcome.Failed &&
+                report.Steps[0].Diagnostic!.Contains("async failure", StringComparison.Ordinal),
+                "asynchronous exception was not preserved as a failed step");
+            Assert(report.Steps[1].Outcome == CiStepOutcome.Skipped,
+                "dependent work was not skipped after an asynchronous fault");
+        });
+
+        Check("executor observes cancellation between successfully completed steps", () =>
+        {
+            using var cancellation = new CancellationTokenSource();
+            var laterCalled = false;
+            var definition = new CiPipelineBuilder("TrentBest/TheSingularityWorkshop.CiAi")
+                .On(CiPipelineTrigger.Manual)
+                .Add<bool>("request cancellation", () =>
+                {
+                    cancellation.Cancel();
+                    return true;
+                })
+                .Add<bool>("cancelled step", () => { laterCalled = true; return true; })
+                .Build();
+            var report = new CiPipelineExecutor().ExecuteAsync(definition,
+                "abcdef0123456789abcdef0123456789abcdef01", "plan-mid-run-cancel", cancellation.Token)
+                .GetAwaiter().GetResult();
+            Assert(!laterCalled && report.Steps[0].Outcome == CiStepOutcome.Succeeded &&
+                report.Steps[1].Outcome == CiStepOutcome.Cancelled,
+                "cancellation between steps was not preserved as a distinct outcome");
+        });
+
         Check("canonical execution JSON excludes wall-clock timestamps", () =>
         {
             var definition = new CiPipelineBuilder("TrentBest/TheSingularityWorkshop.CiAi")
