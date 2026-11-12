@@ -19,7 +19,7 @@ public sealed record CiWorkflowCandidateCheckoutEvidence
         ArgumentException.ThrowIfNullOrWhiteSpace(resolutionStepName);
         ArgumentException.ThrowIfNullOrWhiteSpace(verificationStepName);
 
-        if (!CiWorkflowRerunRequest.IsFeatureBranchRef(candidateRef))
+        if (!IsFeatureBranchRef(candidateRef))
             throw new ArgumentException("Candidate ref must identify an isolated feature branch.", nameof(candidateRef));
         if (candidateSha.Length != 40 || !candidateSha.All(Uri.IsHexDigit))
             throw new ArgumentException("Candidate SHA must be a full 40-character hexadecimal commit identifier.", nameof(candidateSha));
@@ -42,6 +42,26 @@ public sealed record CiWorkflowCandidateCheckoutEvidence
     public string JobName { get; }
     public string ResolutionStepName { get; }
     public string VerificationStepName { get; }
+
+    private static bool IsFeatureBranchRef(string headRef)
+    {
+        const string prefix = "refs/heads/feature/";
+        if (string.IsNullOrWhiteSpace(headRef) ||
+            !headRef.StartsWith(prefix, StringComparison.Ordinal) ||
+            headRef.Any(char.IsControl) || headRef.Any(char.IsWhiteSpace) ||
+            headRef.Contains("..", StringComparison.Ordinal) ||
+            headRef.Contains("@{", StringComparison.Ordinal) ||
+            headRef.Contains('\\') || headRef.EndsWith("/", StringComparison.Ordinal) ||
+            headRef.EndsWith(".", StringComparison.Ordinal))
+            return false;
+
+        var branch = headRef["refs/heads/".Length..];
+        var invalid = new[] { '~', '^', ':', '?', '*', '[', ']' };
+        return branch.Length > 0 && branch != "@" && branch.IndexOfAny(invalid) < 0 &&
+            branch.Split('/').All(segment => segment.Length > 0 && segment != "." && segment != ".." &&
+                !segment.StartsWith(".", StringComparison.Ordinal) &&
+                !segment.EndsWith(".lock", StringComparison.OrdinalIgnoreCase));
+    }
 
     private static void ValidateStepIdentity(string value, string parameterName)
     {
