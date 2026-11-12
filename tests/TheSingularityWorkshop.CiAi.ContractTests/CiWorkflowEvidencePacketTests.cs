@@ -18,12 +18,12 @@ internal static class CiWorkflowEvidencePacketTests
         var trusted = CiWorkflowEvidencePacket.FromValidatedProvenance(
             CreateObservedRun(), provenance, workflowDefinitionTrusted: true);
         Assert(trusted.ContractVersion == 1 && trusted.Schema == CiWorkflowEvidencePacket.CurrentSchema,
-            "v3 contract identity was not emitted");
+            "v1 contract identity was not emitted");
         Assert(trusted.Provenance.WorkflowSha == WorkflowSha &&
             trusted.Provenance.EventSha == EventSha &&
             trusted.Provenance.CheckoutSha == CheckoutSha &&
             trusted.CandidateSha == CheckoutSha && trusted.CheckoutVerified && trusted.IsSuccessful,
-            "v3 did not preserve independent workflow, event, and checkout identities");
+            "v1 did not preserve independent workflow, event, and checkout identities");
 
         var serialized = trusted.ToJson();
         var serializedBytes = Encoding.UTF8.GetBytes(serialized);
@@ -32,14 +32,14 @@ internal static class CiWorkflowEvidencePacketTests
             serialized, "TrentBest/CiAi", 42, 2, packetDigest, workflowDefinitionTrusted: true);
         Assert(roundTrip.IsSuccessful && roundTrip.Provenance.WorkflowSha == WorkflowSha &&
             roundTrip.CandidateSha == CheckoutSha,
-            "v3 durable round-trip lost validated provenance");
+            "v1 durable round-trip lost validated provenance");
 
         var (runCollection, jobCollection) = CreateCollections();
         var factoryPacket = CiWorkflowEvidencePacket.FromCollections(
             runCollection, jobCollection, 42, 2, DateTimeOffset.Parse("2026-10-31T01:02:00Z"),
             provenance, workflowDefinitionTrusted: true);
         Assert(factoryPacket.IsSuccessful && factoryPacket.Provenance.WorkflowSha == WorkflowSha,
-            "v3 collection factory depended on the legacy workflow-ref suffix instead of validated provenance");
+            "v1 collection factory depended on the legacy workflow-ref suffix instead of validated provenance");
 
         var dispatchBytes = Encoding.UTF8.GetBytes(CreateDispatchProvenance());
         var dispatchProvenance = CiWorkflowProvenanceRecord.ParseAndValidate(
@@ -104,7 +104,7 @@ internal static class CiWorkflowEvidencePacketTests
             failClosed.BlockingReasons.Contains("candidate.checkout-unverified"),
             "checkout SHA differing from event SHA was not failed closed");
 
-        Console.WriteLine("PASS: 10 CI workflow evidence packet v3 contract checks.");
+        Console.WriteLine("PASS: 10 CI workflow evidence packet v1 contract checks.");
         return 10;
     }
 

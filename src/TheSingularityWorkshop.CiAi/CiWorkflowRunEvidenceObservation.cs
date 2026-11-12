@@ -8,7 +8,7 @@ namespace TheSingularityWorkshop.CiAi;
 /// Workflow-definition provenance and candidate-code provenance are distinct when a trusted
 /// workflow checks out a separately authorized feature-branch commit.
 /// </summary>
-internal sealed record CiWorkflowRunEvidenceObservation
+public sealed record CiWorkflowRunEvidenceObservation
 {
     public const int CurrentContractVersion = 1;
     public const string CurrentSchema = "ciai.workflow-run-observation.v1";
