@@ -95,7 +95,7 @@ public sealed class GitHubActionsWorkflowEvidenceCollector
                 var bytes = content.ToArray();
                 evidenceHash.AppendData(bytes);
                 evidenceHash.AppendData([0]);
-                logText.Append(Encoding.UTF8.GetString(bytes)).Append('\\n');
+                logText.Append(Encoding.UTF8.GetString(bytes)).Append('\n');
             }
         }
         else
