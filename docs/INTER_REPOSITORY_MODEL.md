@@ -148,3 +148,10 @@ The harness adds three deterministic checks:
 3. A source event cannot be deserialized as an observer evaluation; the typed reader must reject the event-kind/payload mismatch.
 
 This is a source-level, in-process interoperability check against the actual ProtocolAi implementation. It does **not** yet verify live CiAi provider observations, authenticate the asserted producer, verify evidence bytes/digests, or prove durable inbox/outbox, deduplication, replay, or causal ordering. Those remain separate host-owned acceptance criteria. The workflow's ProtocolAi checkout currently follows `development`; its resolved checkout SHA must be captured from the run before treating the result as a reproducible conformance record.
+
+
+### GitHub Actions → ProtocolAi mapper — 2026-11-12
+
+`GitHubActionsProtocolSourceEventMapper` now maps one selected `CiWorkflowRunObservation` and one attempt-specific `CiWorkflowJobObservation` into a typed ProtocolAi v1 source event. It checks that the job belongs to the exact run and attempt, binds the evidence reference to that exact GitHub job URL, requires the workflow-definition ref to identify the observed workflow path, and requires event/tested-checkout SHAs to match the provider-observed candidate SHA. The caller must supply the workflow-definition SHA and evidence SHA-256; the mapper validates their form but does not independently retrieve or hash those bytes.
+
+Only a completed successful run paired with a completed successful job maps to `Succeeded`. Incomplete, skipped, neutral, stale, or unrecognized observations remain `Unknown`; failures and cancellations remain non-success. The integration harness exercises success, wrong-checkout rejection, missing-digest rejection, and incomplete-observation handling. This is mapper contract proof using synthetic fixtures, not yet a live provider evidence verification. The exact evidence bytes/digest and tested checkout still require an independent evidence-binding step before production use.
