@@ -39,7 +39,7 @@ public sealed record CiRequiredJobDefinition
 
 /// <summary>
 /// CiAi-owned policy that maps exact workflow paths and job keys to observed job names, then
-/// derives required-check status from the validated v3 run/job evidence.
+/// derives required-check status from the validated v1 workflow-evidence packet.
 /// </summary>
 public sealed class CiRequiredJobPolicy
 {
