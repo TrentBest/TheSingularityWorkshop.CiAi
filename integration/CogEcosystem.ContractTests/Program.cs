@@ -109,6 +109,63 @@ Assert(projection.Has(LifecycleFact.Accepted) && projection.Has(LifecycleFact.In
     "CogE projection lost facts, invented cleanup, or reported a contradiction");
 Pass("CogE projects distinct lifecycle facts and does not infer reclamation");
 
+
+var mapperRunSnapshot = new CiRunSnapshot(
+    provider, 84, "Build and test", sourceSha, CiRunStatus.Completed, CiRunConclusion.Success,
+    new Uri("https://github.com/TrentBest/UmlProvider/actions/runs/84"), now);
+var mapperRun = new CiWorkflowRunObservation(
+    mapperRunSnapshot, 2, ".github/workflows/build.yml", "push", Array.Empty<int>());
+var mapperJob = new CiWorkflowJobObservation(
+    901, 84, 2, "build-and-test", "completed", "success",
+    new Uri("https://github.com/TrentBest/UmlProvider/actions/runs/84/job/901"),
+    Array.Empty<CiWorkflowStepObservation>());
+var mapperEvidence = new CiProtocolEvidenceBinding(
+    "refs/heads/development", sourceSha, sourceSha,
+    ".github/workflows/build.yml@refs/heads/development", sourceSha,
+    "https://github.com/TrentBest/UmlProvider/actions/runs/84/job/901",
+    new string('b', 64));
+var mappedEnvelope = GitHubActionsProtocolSourceEventMapper.CreateEnvelope(
+    mapperRun, mapperJob, mapperEvidence, "message-map-84", "candidate-map-84", now);
+var mappedPayload = ProtocolTypedEventEnvelope.DeserializePayload<ProtocolSourceEvent>(
+    ProtocolEventEnvelopeJson.Deserialize(ProtocolEventEnvelopeJson.Serialize(mappedEnvelope)));
+Assert(mappedPayload.Outcome == ProtocolSourceEventOutcome.Succeeded &&
+       mappedEnvelope.Provenance?.WorkflowRunId == 84 &&
+       mappedEnvelope.Provenance?.WorkflowRunAttempt == 2 &&
+       mappedEnvelope.Provenance?.ObservedJobIdentity == "901:build-and-test",
+    "GitHub Actions mapper did not preserve exact run-attempt/job provenance");
+Pass("GitHub Actions mapper emits a typed source event with exact run-attempt/job identity");
+
+var mismatchedCheckoutRejected = false;
+try
+{
+    _ = GitHubActionsProtocolSourceEventMapper.CreateEnvelope(
+        mapperRun, mapperJob, mapperEvidence with { TestedCheckoutSha = new string('c', 40) },
+        "message-map-bad", "candidate-map-bad", now);
+}
+catch (InvalidDataException) { mismatchedCheckoutRejected = true; }
+Assert(mismatchedCheckoutRejected, "mapper accepted an unverified/different tested checkout SHA");
+Pass("GitHub Actions mapper rejects a tested checkout that differs from the candidate");
+
+var missingDigestRejected = false;
+try
+{
+    _ = GitHubActionsProtocolSourceEventMapper.CreateEnvelope(
+        mapperRun, mapperJob, mapperEvidence with { EvidenceSha256 = string.Empty },
+        "message-map-no-digest", "candidate-map-no-digest", now);
+}
+catch (InvalidDataException) { missingDigestRejected = true; }
+Assert(missingDigestRejected, "mapper accepted missing evidence digest");
+Pass("GitHub Actions mapper refuses to emit an envelope without an evidence digest");
+
+var pendingJob = mapperJob with { Status = "in_progress", Conclusion = null };
+var pendingEnvelope = GitHubActionsProtocolSourceEventMapper.CreateEnvelope(
+    mapperRun, pendingJob, mapperEvidence, "message-map-pending", "candidate-map-pending", now);
+var pendingPayload = ProtocolTypedEventEnvelope.DeserializePayload<ProtocolSourceEvent>(
+    ProtocolEventEnvelopeJson.Deserialize(ProtocolEventEnvelopeJson.Serialize(pendingEnvelope)));
+Assert(pendingPayload.Outcome == ProtocolSourceEventOutcome.Unknown,
+    "mapper converted an incomplete provider observation into success");
+Pass("GitHub Actions mapper preserves incomplete provider observations as Unknown");
+
 Console.WriteLine($"PASS: {checks} cross-Cog integration checks.");
 
 void Pass(string message) { checks++; Console.WriteLine($"PASS {checks}: {message}"); }
