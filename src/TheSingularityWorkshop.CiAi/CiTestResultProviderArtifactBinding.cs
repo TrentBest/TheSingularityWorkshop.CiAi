@@ -88,8 +88,10 @@ public sealed record CiTestResultProviderArtifactBinding
             string.Equals(job.Name, definitions[0].JobName, StringComparison.Ordinal)).ToArray();
         if (jobs.Length != 1)
             throw new InvalidDataException("Provider artifact binding does not identify exactly one observed job in the exact run attempt.");
-        if (!jobs[0].StartedAt.HasValue || !jobs[0].CompletedAt.HasValue ||
-            artifact.CreatedAt < jobs[0].StartedAt.Value || artifact.CreatedAt > jobs[0].CompletedAt.Value)
+        var jobStartedAt = jobs[0].StartedAt;
+        var jobCompletedAt = jobs[0].CompletedAt;
+        if (jobStartedAt is null || jobCompletedAt is null ||
+            artifact.CreatedAt < jobStartedAt.Value || artifact.CreatedAt > jobCompletedAt.Value)
             throw new InvalidDataException("Provider artifact creation time does not fall within the exact observed job attempt.");
         var requiredStatus = requiredJobPolicy.Evaluate(evidence, jobId, jobKey);
         if (requiredStatus is not (CiRequiredCheckStatus.Passed or CiRequiredCheckStatus.Failed))
