@@ -15,13 +15,32 @@ public sealed class CiWorkflowVocabularySnapshot : IGrammarExternalReferenceReso
         IReadOnlyDictionary<ulong, IReadOnlySet<ulong>> exposed)
     {
         _definitions = definitions; _exposed = exposed;
-        var canonical = string.Join("\n", exposed.OrderBy(p => p.Key).Select(p =>
-            p.Key.ToString(System.Globalization.CultureInfo.InvariantCulture) + ":" +
-            string.Join(",", p.Value.OrderBy(id => id).Select(id => id.ToString(System.Globalization.CultureInfo.InvariantCulture)))));
-        Digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical))).ToLowerInvariant();
+        var canonicalLines = new List<string> { "protocol-source:" + CiWorkflowGrammarMap.ProtocolAiRevision };
+        foreach (var pair in exposed.OrderBy(p => p.Key))
+        {
+            var definition = definitions[pair.Key];
+            canonicalLines.Add($"category:{definition.Id}:{definition.Name}");
+            foreach (var symbol in definition.Symbols.Where(s => pair.Value.Contains(s.Id)).OrderBy(s => s.Id))
+                canonicalLines.Add($"member:{symbol.Id}:{symbol.Name}:{symbol.Value}");
+        }
+        Digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("\n", canonicalLines)))).ToLowerInvariant();
     }
 
     public string Digest { get; }
+
+    /// <summary>Returns only categories and members exposed in this immutable request snapshot.</summary>
+    public string Describe()
+    {
+        var lines = new List<string> { "snapshot:" + Digest };
+        foreach (var pair in _exposed.OrderBy(p => p.Key))
+        {
+            var definition = _definitions[pair.Key];
+            lines.Add($"[{definition.Id}] {definition.Name}");
+            foreach (var symbol in definition.Symbols.Where(s => pair.Value.Contains(s.Id)).OrderBy(s => s.Id))
+                lines.Add($"  [{symbol.Id}] {symbol.Name} = \"{symbol.Value}\"");
+        }
+        return string.Join(Environment.NewLine, lines);
+    }
 
     public GrammarExternalReferenceStatus Resolve(GrammarProtocolReference reference)
     {

@@ -55,6 +55,11 @@ internal static class CiWorkflowGrammarContractTests
             var json=CiWorkflowGrammarMap.CreateProposal(plan).Json;
             Throws<ArgumentException>(()=>CiWorkflowGrammarMap.ValidateProposal(json,restricted));
             Assert(restricted.Digest!=CiWorkflowVocabularyCatalog.CreateSnapshot().Digest,"snapshot digest ignored exposure");
+            Assert(!restricted.Describe().Contains("[1] push",StringComparison.Ordinal),"disabled member leaked into model-facing catalog");
+            Assert(restricted.Resolve(new GrammarProtocolReference(CiWorkflowVocabularyCatalog.TriggerCategoryId,1))==GrammarExternalReferenceStatus.NotExposed,"disabled member was not distinguished");
+            Assert(restricted.Resolve(new GrammarProtocolReference(CiWorkflowVocabularyCatalog.TriggerCategoryId,999))==GrammarExternalReferenceStatus.UnknownSymbol,"unknown member was not distinguished");
+            Assert(restricted.Resolve(new GrammarProtocolReference(0xdeadUL,1))==GrammarExternalReferenceStatus.UnknownProtocol,"unknown category was not distinguished");
+            Assert(CiWorkflowVocabularyCatalog.CreateSnapshot().Describe().Contains("[1] push",StringComparison.Ordinal),"enabled member missing from model-facing catalog");
         });
         Check("GrammarAi rejects an external reference from the wrong category",()=>{
             var json=CiWorkflowGrammarMap.CreateProposal(plan).Json;

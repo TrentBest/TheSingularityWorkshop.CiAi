@@ -21,14 +21,16 @@ A valid GrammarAi structure is untrusted intent. Structural validity does not es
 
 ## Implemented first integration slice
 
-CiAi currently pins GrammarAi source revision `2582362ad233faeffe82c2de28d464efffb0cda4`. The implemented first slice is deliberately small:
+CiAi pins GrammarAi source revision `2582362ad233faeffe82c2de28d464efffb0cda4` and ProtocolAi source revision `024ca3f2fac486d5aefa6f276c5203d5bdfe3bcf`. The first real workflow slice includes:
 
-- one workflow node and repeated ordered step nodes;
-- optional ordered dependency relationships between steps;
-- a populated integer-first proposal encoded and decoded by `GrammarStructureProposalCodec`;
-- required workflow membership and optional dependency cardinality.
+- workflow trigger references and repeated ordered step nodes;
+- optional ordered dependency relationships and a required typed action per step;
+- typed input/output declaration nodes with ProtocolAi category/member identities;
+- declared capability, side-effect, evidence-role, and outcome-role references;
+- a request-scoped exposed vocabulary snapshot, digest, and model-facing description;
+- a populated integer-first proposal encoded and decoded by GrammarAi's tagged v2 `GrammarStructureProposalCodec`.
 
-Input/output nodes describe declared parameter names and types; they do not carry runtime values. CiAi continues to carry step domain/action meaning in its existing `CiWorkflowDomainCatalog` and validates dependency semantics with `CiWorkflowPlanValidator` before mapping. The graph codec is not a second semantic policy engine.
+Input/output nodes describe declared parameter names and types; they do not carry runtime values. CiAi continues to own step-domain meaning and semantic dependency policy through its existing catalog and validator. The model-facing catalog is a filtered immutable snapshot; disabled members are omitted from its description and rejected by the GrammarAi resolver. The graph codec is not a second semantic policy engine.
 
 Use `GrammarStructureDefinition`, `GrammarNodeDefinition`, `GrammarSlotDefinition`, `GrammarStructureInstance`, and `GrammarStructureProposalCodec` where they fit. Evaluate the production-grammar API for any part that genuinely needs ordered symbol composition. Do not implement a second grammar or structural validator in CiAi, and do not attempt to model every CI workflow family in the first increment.
 
@@ -39,7 +41,7 @@ The active schema identity/version is `CiWorkflowGrammarMap.DefinitionId` / `Sch
 The CiAi integration should retain the existing provider evidence contract:
 - canonical repository identity, full source commit SHA, workflow path, trigger/event, run ID and attempt;
 - provider status/conclusion, timestamps, job/step outcomes, and authoritative evidence URLs;
-- exact resolved source revision of each sibling dependency, including the GrammarAi pin;
+- exact resolved source revisions of each sibling dependency, including the GrammarAi and ProtocolAi pins;
 - distinct missing, not-triggered, skipped, cancelled, unavailable, unknown, failed, and successful states.
 
 GrammarAi validates the proposed structure. CiAi evaluates the meaning of the declared CI policy against provider evidence. Foundry/host owns execution authorization and lifecycle.
@@ -47,7 +49,7 @@ GrammarAi validates the proposed structure. CiAi evaluates the meaning of the de
 ## Adoption and verification
 
 1. Pin an immutable GrammarAi source commit in CiAi's source dependency model; do not build against a moving branch ref.
-2. Build CiAi against that exact source revision without relying on a NuGet publication.
+2. Build CiAi against the exact GrammarAi and ProtocolAi source revisions without relying on a NuGet publication.
 3. Exercise a deterministic versioned CI workflow definition and populated proposal in contract tests.
 4. Cover valid and invalid relationships, ordering/cardinality, stale schema and unknown wire versions, malformed/bounded payloads, and deterministic round trips as applicable.
 5. Verify clean-checkout builds, package creation, and package-consumer smoke tests include the dependency correctly.
