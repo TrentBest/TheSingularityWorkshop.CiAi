@@ -321,8 +321,8 @@ internal static class CiTestResultReportTests
             truncated.Results[0].StackTrace!.Length <= 8_020,
             "diagnostic message or stack trace was not bounded");
 
-        Console.WriteLine("PASS: 36 provenance-bound TRX diagnostic report contract checks.");
-        return 36;
+        Console.WriteLine("PASS: 52 provenance-bound TRX diagnostic report contract checks.");
+        return 52;
     }
 
     internal static CiTestResultReport CreateSampleReport()
