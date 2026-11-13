@@ -6,11 +6,11 @@ GrammarAi is the reusable AI-facing knowledge-mapping layer for describing and v
 
 CiAi should use GrammarAi to define its own versioned CI domain map: workflow plans, triggers, conditions/dependencies, typed steps/actions, inputs/outputs, declared capabilities, and expected evidence/outcome roles. GrammarAi supplies the structural model and bounded proposal validation; CiAi supplies the CI-specific vocabulary and meaning.
 
-**Integration status:** implemented as the first structural vertical slice on CiAi `development`. CiAi pins GrammarAi source revision `2582362ad233faeffe82c2de28d464efffb0cda4` as `external/GrammarAi`, references its project directly, and exercises the public graph and proposal codec in contract tests. The slice models a versioned workflow node, repeated ordered step membership, and optional step dependencies. CiAi retains domain/action meaning in its existing catalog and semantic plan validator; this is not an execution or release authorization.
+**Integration status:** implemented as the first structural vertical slice on CiAi `development`. CiAi pins GrammarAi source revision `2582362ad233faeffe82c2de28d464efffb0cda4` and ProtocolAi source revision `024ca3f2fac486d5aefa6f276c5203d5bdfe3bcf` as source submodules, references both projects directly, and exercises the public graph and proposal codec in contract tests. The graph models workflow triggers, ordered steps/dependencies, step actions, typed input/output declarations, capabilities, side effects, and expected evidence/outcome roles. CiAi retains domain/action meaning in its existing catalog and semantic plan validator; this is not an execution or release authorization.
 
 ## Ownership boundary
 
-- **ProtocolAi:** stable vocabulary identities. Global category ownership remains a separate cross-repository decision; do not invent category metadata in CiAi.
+- **ProtocolAi:** stable vocabulary identities. Each immutable `ProtocolDefinition.Id` is a category identity and each `ProtocolSymbol.Id` is a member identity within that category. CiAi owns the CI-specific definitions; it does not add a competing category abstraction.
 - **GrammarAi:** reusable production/structural grammar definitions, typed node and slot identities, schema versioning, graph validation, and compact integer-first proposal codec.
 - **CiAi:** CI-specific action vocabulary and parameter identities, workflow-domain semantics, evidence/policy evaluation, and CI-provider adapters.
 - **CommandAi:** generic atomic-command proposal representation and serialization.
@@ -28,11 +28,11 @@ CiAi currently pins GrammarAi source revision `2582362ad233faeffe82c2de28d464eff
 - a populated integer-first proposal encoded and decoded by `GrammarStructureProposalCodec`;
 - required workflow membership and optional dependency cardinality.
 
-Typed input/output payloads, explicit triggers, capabilities, and outcome/evidence roles are not yet part of this first graph slice. CiAi continues to carry step domain/action meaning in its existing `CiWorkflowDomainCatalog` and validates dependency semantics with `CiWorkflowPlanValidator` before mapping. The graph codec is not a second semantic policy engine.
+Input/output nodes describe declared parameter names and types; they do not carry runtime values. CiAi continues to carry step domain/action meaning in its existing `CiWorkflowDomainCatalog` and validates dependency semantics with `CiWorkflowPlanValidator` before mapping. The graph codec is not a second semantic policy engine.
 
 Use `GrammarStructureDefinition`, `GrammarNodeDefinition`, `GrammarSlotDefinition`, `GrammarStructureInstance`, and `GrammarStructureProposalCodec` where they fit. Evaluate the production-grammar API for any part that genuinely needs ordered symbol composition. Do not implement a second grammar or structural validator in CiAi, and do not attempt to model every CI workflow family in the first increment.
 
-The active schema identity/version is `CiWorkflowGrammarMap.DefinitionId` / `SchemaVersion`; the GrammarAi proposal codec wire version remains a separate field. This first slice uses only GrammarAi node targets and therefore does not fabricate ProtocolAi category identities or bypass the host-owned external-reference resolver.
+The active schema identity/version is `CiWorkflowGrammarMap.DefinitionId` / `SchemaVersion`; the GrammarAi proposal codec wire version and vocabulary-snapshot digest are separate identities. GrammarAi external slots target ProtocolAi definition IDs and carry qualified category/member references. A snapshot can expose only selected categories/members; known-but-disabled members are rejected. Exposure is not authorization.
 
 ## Evidence contract
 

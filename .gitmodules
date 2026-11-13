@@ -4,3 +4,6 @@
 [submodule "external/GrammarAi"]
 	path = external/GrammarAi
 	url = https://github.com/TrentBest/TheSingularityWorkshop.GrammarAi.git
+[submodule "external/ProtocolAi"]
+	path = external/ProtocolAi
+	url = https://github.com/TrentBest/TheSingularityWorkshop.ProtocolAi.git
