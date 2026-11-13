@@ -16,6 +16,8 @@ internal static class GitHubActionsWorkflowJobCollectorTests
             "name": "build-and-test",
             "status": "completed",
             "conclusion": "failure",
+            "started_at": "2026-10-24T03:58:00Z",
+            "completed_at": "2026-10-24T04:01:00Z",
             "html_url": "https://github.com/TrentBest/SimpleDemos/actions/runs/42/job/1201",
             "steps": [
               {"number": 2, "name": "Build", "status": "completed", "conclusion": "skipped", "completed_at": "2026-10-24T04:00:00Z"},
@@ -41,6 +43,9 @@ internal static class GitHubActionsWorkflowJobCollectorTests
             Assert(result.Jobs.Count == 1 && !result.IsTruncated, "job collection was incomplete");
             Assert(result.Jobs[0].RunAttempt == 2 && result.Jobs[0].Conclusion == "failure",
                 "attempt or raw conclusion was lost");
+            Assert(result.Jobs[0].StartedAt == DateTimeOffset.Parse("2026-10-24T03:58:00Z") &&
+                result.Jobs[0].CompletedAt == DateTimeOffset.Parse("2026-10-24T04:01:00Z"),
+                "exact job-attempt time bounds were not preserved");
             Assert(result.Jobs[0].Steps.Count == 2 &&
                 result.Jobs[0].Steps[0].Name == "Branding preflight" &&
                 result.Jobs[0].Steps[1].Conclusion == "skipped",
@@ -71,6 +76,16 @@ internal static class GitHubActionsWorkflowJobCollectorTests
         {
             var wrongUrl = response.Replace("/actions/runs/42/job/1201", "/actions/runs/99/job/1201");
             return Task.FromResult(JsonResponse(wrongUrl));
+        })))
+        {
+            await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowJobCollector(client)
+                .GetJobsForAttemptAsync("TrentBest/SimpleDemos", 42, 2));
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+        {
+            var invalidTimes = response.Replace("2026-10-24T04:01:00Z", "2026-10-24T03:00:00Z");
+            return Task.FromResult(JsonResponse(invalidTimes));
         })))
         {
             await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowJobCollector(client)
