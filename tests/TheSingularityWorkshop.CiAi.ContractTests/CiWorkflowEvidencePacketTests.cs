@@ -136,8 +136,8 @@ internal static class CiWorkflowEvidencePacketTests
             failClosed.BlockingReasons.Contains("candidate.checkout-unverified"),
             "checkout SHA differing from event SHA was not failed closed");
 
-        Console.WriteLine("PASS: 10 CI workflow evidence packet v1 contract checks.");
-        return 10;
+        Console.WriteLine("PASS: 12 CI workflow evidence packet v1 contract checks.");
+        return 12;
     }
 
 
