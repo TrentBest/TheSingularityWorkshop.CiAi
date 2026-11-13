@@ -34,6 +34,8 @@ Input/output nodes describe declared parameter names and types; they do not carr
 
 Use `GrammarStructureDefinition`, `GrammarNodeDefinition`, `GrammarSlotDefinition`, `GrammarStructureInstance`, and `GrammarStructureProposalCodec` where they fit. Evaluate the production-grammar API for any part that genuinely needs ordered symbol composition. Do not implement a second grammar or structural validator in CiAi, and do not attempt to model every CI workflow family in the first increment.
 
+The GrammarAi production-grammar API was evaluated for this workflow slice. Workflow sequencing is already represented directly by ordered repeated structural slots and dependency relationships, so production productions would duplicate the graph's job without adding useful constraints. The structural graph is the chosen representation; no parallel production grammar is introduced.
+
 The active schema identity/version is `CiWorkflowGrammarMap.DefinitionId` / `SchemaVersion`; the GrammarAi proposal codec wire version and vocabulary-snapshot digest are separate identities. GrammarAi external slots target ProtocolAi definition IDs and carry qualified category/member references. A snapshot can expose only selected categories/members; known-but-disabled members are rejected. Exposure is not authorization.
 
 ## Evidence contract

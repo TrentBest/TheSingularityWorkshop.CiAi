@@ -36,12 +36,24 @@ internal static class CiWorkflowGrammarContractTests
             Assert(graph.Nodes.Count(n=>n.NodeDefinitionId==CiWorkflowGrammarMap.StepNodeId)==4,"step nodes missing");
             Assert(graph.Nodes.Count(n=>n.NodeDefinitionId==CiWorkflowGrammarMap.InputNodeId)==5,"input nodes missing");
             Assert(graph.Nodes.Count(n=>n.NodeDefinitionId==CiWorkflowGrammarMap.OutputNodeId)==3,"output nodes missing");
+            var orderedStepIds=graph.GetRelationships(proposal.WorkflowInstanceId,CiWorkflowGrammarMap.WorkflowStepsSlotId)
+                .Select(r=>r.ChildInstanceId).ToArray();
+            Assert(orderedStepIds.SequenceEqual(plan.Steps.Select(s=>proposal.StepInstanceIds[s.Id])),"repeated workflow steps lost declaration order");
             Assert(graph.Relationships.Count(r=>r.SlotId==CiWorkflowGrammarMap.WorkflowTriggersSlotId)==2,"triggers missing");
             Assert(graph.Relationships.Count(r=>r.SlotId==CiWorkflowGrammarMap.StepCapabilitiesSlotId)==4,"capabilities missing");
             Assert(graph.Relationships.Count(r=>r.SlotId==CiWorkflowGrammarMap.StepSideEffectsSlotId)==5,"side effects missing");
             Assert(graph.Relationships.Count(r=>r.SlotId==CiWorkflowGrammarMap.StepEvidenceRolesSlotId)==4,"evidence roles missing");
             Assert(graph.Relationships.Count(r=>r.SlotId==CiWorkflowGrammarMap.StepOutcomeRolesSlotId)==4,"outcome roles missing");
             Assert(graph.Relationships.Count(r=>r.SlotId==CiWorkflowGrammarMap.StepConditionSlotId)==4,"typed step conditions missing");
+        });
+        Check("all dependency conditions use stable ProtocolAi category/member identities",()=>{
+            var conditions=new[]{CiWorkflowStepCondition.Always,CiWorkflowStepCondition.AnyDependencyFailed,
+                CiWorkflowStepCondition.AllDependenciesCompleted,CiWorkflowStepCondition.AllDependenciesSucceeded};
+            var conditioned=plan with{Steps=plan.Steps.Select((step,index)=>step with{Condition=conditions[index]}).ToArray()};
+            var graph=CiWorkflowGrammarMap.ValidateProposal(CiWorkflowGrammarMap.CreateProposal(conditioned));
+            var ids=graph.Relationships.Where(r=>r.SlotId==CiWorkflowGrammarMap.StepConditionSlotId)
+                .Select(r=>r.ExternalReference!.Value.SymbolId).ToArray();
+            Assert(ids.SequenceEqual(new ulong[]{2,3,4,1}),"condition symbols were not mapped to stable category members");
         });
         Check("v2 encoding is deterministic and round-trips against the exact definition",()=>{
             var first=CiWorkflowGrammarMap.CreateProposal(plan);var second=CiWorkflowGrammarMap.CreateProposal(plan);
