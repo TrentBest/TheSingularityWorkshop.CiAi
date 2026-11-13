@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using System.Net;
 using System.Security.Cryptography;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -274,14 +275,10 @@ internal static class CiTestResultReportTests
             failedTrx, failedPacket, CreateSource(failedTrx, repository: "Other/Repo"),
             RequiredPolicy, ObservedAt));
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
-            failedTrx, failedPacket, CreateSource(failedTrx, runAttempt: 2),
-            RequiredPolicy, ObservedAt));
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
             failedTrx, failedPacket, CreateSource(failedTrx, jobId: JobId + 1),
             RequiredPolicy, ObservedAt));
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
-            failedTrx, failedPacket, CreateSource(failedTrx, jobName: "other-job"),
-            RequiredPolicy, ObservedAt));
         Throws<InvalidDataException>(() => CreateSource(failedTrx, jobKey: "unregistered-job"));
         Throws<InvalidDataException>(() => CreateSource(failedTrx, artifactName: "unregistered-artifact"));
         Throws<InvalidDataException>(() => CreateSource(failedTrx, isExpired: true));
@@ -394,9 +391,7 @@ internal static class CiTestResultReportTests
     private static CiTestResultArtifactSource CreateSource(
         byte[] payload,
         string? repository = null,
-        int? runAttempt = null,
         long? jobId = null,
-        string? jobName = null,
         string? artifactName = null,
         string? jobKey = null,
         long? artifactId = null,
@@ -408,12 +403,29 @@ internal static class CiTestResultReportTests
         var evidence = CreatePacket("failure");
         var exactArchiveBytes = archiveBytes ?? CreateArtifactArchive(payload, CreateProvenanceJson(evidence));
         var actualDigest = "sha256:" + Convert.ToHexString(SHA256.HashData(exactArchiveBytes)).ToLowerInvariant();
-        var binding = new CiTestResultProviderArtifactBinding(
-            repository ?? Repository, RunId, runAttempt ?? RunAttempt,
-            jobId ?? JobId, jobName ?? JobName, jobKey ?? JobKey,
-            artifactId ?? 7001, artifactName ?? "minesweeper-test-results",
-            archiveDigest ?? actualDigest, archiveSizeBytes ?? exactArchiveBytes.Length,
-            CreatedAt, ExpiresAt, isExpired);
+        var artifactRepository = repository ?? Repository;
+        var providerArtifactId = artifactId ?? 7001;
+        var providerArtifactName = artifactName ?? "minesweeper-test-results";
+        var providerDigest = archiveDigest ?? actualDigest;
+        var providerSize = archiveSizeBytes ?? exactArchiveBytes.Length;
+        var artifactJson = JsonSerializer.Serialize(new
+        {
+            id = providerArtifactId,
+            name = providerArtifactName,
+            size_in_bytes = providerSize,
+            digest = providerDigest,
+            expired = isExpired,
+            created_at = CreatedAt,
+            expires_at = ExpiresAt,
+            archive_download_url = $"https://api.github.com/repos/{artifactRepository}/actions/artifacts/{providerArtifactId}/zip",
+            workflow_run = new { id = RunId, head_sha = CandidateSha }
+        });
+        using var http = new HttpClient(new ArtifactHandler(artifactJson));
+        var observedArtifact = new GitHubActionsArtifactCollector(http)
+            .GetArtifactAsync(artifactRepository, providerArtifactId, RunId, CandidateSha)
+            .GetAwaiter().GetResult();
+        var binding = CiTestResultProviderArtifactBinding.FromObservedArtifact(
+            observedArtifact, evidence, RequiredPolicy, jobId ?? JobId, jobKey ?? JobKey);
         var archive = CiTestResultArtifactArchive.Read(
             exactArchiveBytes, binding, "results.trx", "provenance.json");
         return CiTestResultArtifactSource.FromVerifiedProviderObservation(
@@ -515,6 +527,22 @@ internal static class CiTestResultReportTests
           </ResultSummary>
         </TestRun>
         """;
+    }
+
+    private sealed class ArtifactHandler(string json) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            if (request.Method != HttpMethod.Get ||
+                request.RequestUri?.AbsolutePath != $"/repos/{Repository}/actions/artifacts/7001")
+                throw new InvalidOperationException("Unexpected GitHub artifact metadata request.");
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            });
+        }
     }
 
     private static void Assert(bool condition, string message)
