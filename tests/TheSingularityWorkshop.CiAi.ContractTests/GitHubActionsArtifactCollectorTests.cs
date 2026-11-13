@@ -37,9 +37,9 @@ internal static class GitHubActionsArtifactCollectorTests
                 "provider artifact retention metadata was not preserved");
         }
 
-        await Reject(valid.Replace("\"id\":7001", "\"id\":7002", StringComparison.Ordinal),
+        await Reject(valid.Replace("\"id\": 7001", "\"id\":7002", StringComparison.Ordinal),
             "different artifact ID");
-        await Reject(valid.Replace("\"id\":41234078182", "\"id\":41234078183", StringComparison.Ordinal),
+        await Reject(valid.Replace("\"id\": 41234078182", "\"id\":41234078183", StringComparison.Ordinal),
             "different workflow run");
         await Reject(valid.Replace(Sha, new string('c', 40), StringComparison.Ordinal),
             "different workflow SHA");
@@ -49,11 +49,11 @@ internal static class GitHubActionsArtifactCollectorTests
             "substituted archive URL");
         await Reject(valid.Replace("2026-11-07T01:00:00Z", "not-a-time", StringComparison.Ordinal),
             "invalid provider expiry");
-        await Reject(valid.Replace("\"size_in_bytes\":4096", "\"size_in_bytes\":20971521", StringComparison.Ordinal),
+        await Reject(valid.Replace("\"size_in_bytes\": 4096", "\"size_in_bytes\":20971521", StringComparison.Ordinal),
             "oversized provider artifact");
 
         using (var client = new HttpClient(new StubHandler((_, _) =>
-            Task.FromResult(JsonResponse(valid.Replace("\"expired\":false", "\"expired\":true", StringComparison.Ordinal))))))
+            Task.FromResult(JsonResponse(valid.Replace("\"expired\": false", "\"expired\":true", StringComparison.Ordinal))))))
         {
             var artifact = await new GitHubActionsArtifactCollector(client)
                 .GetArtifactAsync(Repository, ArtifactId, RunId, Sha);
@@ -94,7 +94,7 @@ internal static class GitHubActionsArtifactCollectorTests
                 "required artifact ID was not selected from the exact run's provider listing");
         }
 
-        var duplicate = valid.Replace("\\"id\\":7001", "\\"id\\":7002", StringComparison.Ordinal)
+        var duplicate = valid.Replace("\"id\": 7001", "\"id\": 7002", StringComparison.Ordinal)
             .Replace($"/actions/artifacts/{ArtifactId}/zip", "/actions/artifacts/7002/zip", StringComparison.Ordinal);
         await RejectListing($"""{"total_count":2,"artifacts":[{{valid}},{{duplicate}}]}""",
             "duplicate configured artifact names");
