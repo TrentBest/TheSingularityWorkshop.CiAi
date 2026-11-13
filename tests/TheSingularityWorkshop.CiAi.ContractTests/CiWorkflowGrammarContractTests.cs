@@ -76,6 +76,15 @@ internal static class CiWorkflowGrammarContractTests
             Throws<ArgumentException>(()=>CiWorkflowGrammarMap.ValidateProposal("{not-json"));
             Throws<ArgumentException>(()=>CiWorkflowGrammarMap.ValidateProposal(new string('x',GrammarLimits.MaxProposalCharacters+1)));
         });
+        Check("untrusted graphs cannot orphan steps or declare dependency cycles",()=>{
+            var proposal=CiWorkflowGrammarMap.CreateProposal(plan);
+            var orphan=proposal.Json.Replace("[1,101,0,2]","[1,101,0,3]",StringComparison.Ordinal);
+            Assert(orphan!=proposal.Json,"orphan-step mutation was not applied");
+            Throws<ArgumentException>(()=>CiWorkflowGrammarMap.ValidateProposal(proposal with{Json=orphan}));
+            var cycle=proposal.Json.Replace("[3,102,0,2]","[3,102,0,3]",StringComparison.Ordinal);
+            Assert(cycle!=proposal.Json,"cycle mutation was not applied");
+            Throws<ArgumentException>(()=>CiWorkflowGrammarMap.ValidateProposal(proposal with{Json=cycle}));
+        });
         Check("plans without triggers or typed step actions cannot be mapped",()=>{
             Throws<ArgumentException>(()=>CiWorkflowGrammarMap.CreateProposal(plan with{Triggers=Array.Empty<string>()}));
             Throws<ArgumentException>(()=>CiWorkflowGrammarMap.CreateProposal(plan with{Steps=plan.Steps.Select(s=>s with{ActionId=null}).ToArray()}));

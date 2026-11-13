@@ -131,8 +131,58 @@ public static class CiWorkflowGrammarMap
         if(instance.Nodes.Count(n=>n.NodeDefinitionId==WorkflowNodeId)!=1 ||
             proposal.StepInstanceIds.Count!=stepNodes.Count ||
             proposal.StepInstanceIds.Values.Distinct().Count()!=proposal.StepInstanceIds.Count ||
-            !proposal.StepInstanceIds.Values.All(stepNodes.Contains))
+            !proposal.StepInstanceIds.Values.All(stepNodes.Contains) ||
+            proposal.StepInstanceIds.Keys.Any(string.IsNullOrWhiteSpace))
             throw new ArgumentException("Step-instance correlation does not match the graph.",nameof(proposal));
+
+        var workflowSteps=instance.GetRelationships(proposal.WorkflowInstanceId,WorkflowStepsSlotId);
+        var workflowStepIds=workflowSteps.Select(r=>r.ChildInstanceId).ToHashSet();
+        if(workflowSteps.Count!=stepNodes.Count || workflowStepIds.Count!=workflowSteps.Count ||
+            !workflowStepIds.SetEquals(stepNodes))
+            throw new ArgumentException("Every step must appear exactly once in the workflow's ordered step list.",nameof(proposal));
+
+        var inputNodeIds=instance.Nodes.Where(n=>n.NodeDefinitionId==InputNodeId).Select(n=>n.Id).ToHashSet();
+        var outputNodeIds=instance.Nodes.Where(n=>n.NodeDefinitionId==OutputNodeId).Select(n=>n.Id).ToHashSet();
+        var referencedInputs=new List<ulong>();
+        var referencedOutputs=new List<ulong>();
+        var indegree=stepNodes.ToDictionary(id=>id,_=>0);
+        var dependents=stepNodes.ToDictionary(id=>id,_=>new List<ulong>());
+        foreach(var stepId in stepNodes)
+        {
+            var dependencies=instance.GetRelationships(stepId,StepDependenciesSlotId);
+            var dependencyIds=dependencies.Select(r=>r.ChildInstanceId).ToArray();
+            if(dependencyIds.Distinct().Count()!=dependencyIds.Length || dependencyIds.Contains(stepId) ||
+                dependencyIds.Any(id=>!stepNodes.Contains(id)))
+                throw new ArgumentException("Step dependencies must be unique references to other steps.",nameof(proposal));
+            foreach(var dependencyId in dependencyIds)
+            {
+                indegree[stepId]++;
+                dependents[dependencyId].Add(stepId);
+            }
+            referencedInputs.AddRange(instance.GetRelationships(stepId,StepInputsSlotId).Select(r=>r.ChildInstanceId));
+            referencedOutputs.AddRange(instance.GetRelationships(stepId,StepOutputsSlotId).Select(r=>r.ChildInstanceId));
+        }
+        if(referencedInputs.Count!=inputNodeIds.Count || referencedInputs.Distinct().Count()!=referencedInputs.Count ||
+            !referencedInputs.ToHashSet().SetEquals(inputNodeIds))
+            throw new ArgumentException("Every input declaration must belong to exactly one workflow step.",nameof(proposal));
+        if(referencedOutputs.Count!=outputNodeIds.Count || referencedOutputs.Distinct().Count()!=referencedOutputs.Count ||
+            !referencedOutputs.ToHashSet().SetEquals(outputNodeIds))
+            throw new ArgumentException("Every output declaration must belong to exactly one workflow step.",nameof(proposal));
+
+        var ready=new Queue<ulong>(indegree.Where(p=>p.Value==0).Select(p=>p.Key));
+        var visited=0;
+        while(ready.Count>0)
+        {
+            var current=ready.Dequeue();
+            visited++;
+            foreach(var dependent in dependents[current])
+            {
+                indegree[dependent]--;
+                if(indegree[dependent]==0)ready.Enqueue(dependent);
+            }
+        }
+        if(visited!=stepNodes.Count)
+            throw new ArgumentException("Workflow step dependencies contain a cycle.",nameof(proposal));
         return instance;
     }
 
