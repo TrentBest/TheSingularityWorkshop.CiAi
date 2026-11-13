@@ -411,7 +411,7 @@ internal static class CiTestResultReportTests
         var binding = new CiTestResultProviderArtifactBinding(
             repository ?? Repository, RunId, runAttempt ?? RunAttempt,
             jobId ?? JobId, jobName ?? JobName, jobKey ?? JobKey,
-            artifactId ?? 7001, artifactName ?? $"ciai-test-results-{RunId}-{runAttempt ?? RunAttempt}-{JobKey}",
+            artifactId ?? 7001, artifactName ?? "minesweeper-test-results",
             archiveDigest ?? actualDigest, archiveSizeBytes ?? exactArchiveBytes.Length,
             CreatedAt, ExpiresAt, isExpired);
         var archive = CiTestResultArtifactArchive.Read(
