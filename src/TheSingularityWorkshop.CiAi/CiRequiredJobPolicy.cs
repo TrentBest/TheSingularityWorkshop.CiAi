@@ -3,7 +3,11 @@ namespace TheSingularityWorkshop.CiAi;
 /// <summary>One required job, scoped to an exact workflow path and its YAML job key/name.</summary>
 public sealed record CiRequiredJobDefinition
 {
-    public CiRequiredJobDefinition(string workflowPath, string jobKey, string jobName)
+    public CiRequiredJobDefinition(
+        string workflowPath,
+        string jobKey,
+        string jobName,
+        string? artifactName = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workflowPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(jobKey);
@@ -15,14 +19,20 @@ public sealed record CiRequiredJobDefinition
             throw new ArgumentException("Workflow job key contains unsupported characters.", nameof(jobKey));
         if (jobName.Length > 200 || jobName.Any(char.IsControl))
             throw new ArgumentException("Workflow job name must be at most 200 characters without control characters.", nameof(jobName));
+        if (artifactName is not null &&
+            (string.IsNullOrWhiteSpace(artifactName) || artifactName.Length > 200 || artifactName.Any(char.IsControl)))
+            throw new ArgumentException("Expected artifact name must be at most 200 characters without control characters.", nameof(artifactName));
         WorkflowPath = workflowPath;
         JobKey = jobKey;
         JobName = jobName;
+        ArtifactName = artifactName;
     }
 
     public string WorkflowPath { get; }
     public string JobKey { get; }
     public string JobName { get; }
+    /// <summary>Exact provider artifact name expected from this job when source-artifact evidence is required.</summary>
+    public string? ArtifactName { get; }
 
     private static bool IsValidWorkflowPath(string path)
     {
