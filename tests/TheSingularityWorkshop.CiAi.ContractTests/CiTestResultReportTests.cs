@@ -284,7 +284,7 @@ internal static class CiTestResultReportTests
         Throws<InvalidDataException>(() => CreateSource(failedTrx,
             createdAt: CreatedAt.AddMinutes(5)));
         Throws<InvalidDataException>(() => CreateSource(failedTrx, isExpired: true));
-        Throws<ArgumentOutOfRangeException>(() => CreateSource(failedTrx, artifactId: 0));
+        Throws<InvalidDataException>(() => CreateSource(failedTrx, artifactId: 0));
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
             failedTrx, CreatePacket("failure", workflowTrusted: false), failedSource,
             RequiredPolicy, ObservedAt));
@@ -428,10 +428,17 @@ internal static class CiTestResultReportTests
             archive_download_url = $"https://api.github.com/repos/{artifactRepository}/actions/artifacts/{providerArtifactId}/zip",
             workflow_run = new { id = RunId, head_sha = CandidateSha }
         });
+        var artifactListing = JsonSerializer.Serialize(new
+        {
+            total_count = 1,
+            artifacts = new[] { JsonDocument.Parse(artifactJson).RootElement.Clone() }
+        });
         using var http = new HttpClient(new ArtifactHandler(
-            artifactJson, $"/repos/{artifactRepository}/actions/artifacts/{providerArtifactId}"));
+            artifactListing, artifactJson,
+            $"/repos/{artifactRepository}/actions/runs/{RunId}/artifacts",
+            $"/repos/{artifactRepository}/actions/artifacts/{providerArtifactId}"));
         var observedArtifact = new GitHubActionsArtifactCollector(http)
-            .GetArtifactAsync(artifactRepository, providerArtifactId, RunId, CandidateSha)
+            .GetRequiredArtifactAsync(artifactRepository, RunId, CandidateSha, "minesweeper-test-results")
             .GetAwaiter().GetResult();
         var binding = CiTestResultProviderArtifactBinding.FromObservedArtifact(
             observedArtifact, evidence, RequiredPolicy, jobId ?? JobId, jobKey ?? JobKey);
@@ -538,15 +545,22 @@ internal static class CiTestResultReportTests
         """;
     }
 
-    private sealed class ArtifactHandler(string json, string expectedPath) : HttpMessageHandler
+    private sealed class ArtifactHandler(
+        string listingJson,
+        string detailJson,
+        string listingPath,
+        string detailPath) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
-            if (request.Method != HttpMethod.Get ||
-                request.RequestUri?.AbsolutePath != expectedPath)
+            if (request.Method != HttpMethod.Get)
                 throw new InvalidOperationException("Unexpected GitHub artifact metadata request.");
+            var path = request.RequestUri?.AbsolutePath;
+            var json = path == listingPath ? listingJson :
+                path == detailPath ? detailJson :
+                throw new InvalidOperationException("Unexpected GitHub artifact metadata request path.");
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
