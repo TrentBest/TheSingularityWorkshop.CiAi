@@ -104,17 +104,22 @@ public static class TrxTestResultParser
                 var errorInfo = element.Descendants().FirstOrDefault(child => child.Name.LocalName == "ErrorInfo");
                 var message = ChildValue(errorInfo, "Message");
                 var stackTrace = ChildValue(errorInfo, "StackTrace");
+                var boundedTestId = Bound(Attribute(element, "testId"), maximumDiagnosticCharacters, out var testIdTruncated) ?? string.Empty;
+                var boundedExecutionId = Bound(Attribute(element, "executionId"), maximumDiagnosticCharacters, out var executionIdTruncated) ?? string.Empty;
+                var boundedTestName = Bound(Attribute(element, "testName"), maximumDiagnosticCharacters, out var testNameTruncated) ?? string.Empty;
+                var boundedProviderOutcome = Bound(providerOutcome, maximumDiagnosticCharacters, out var outcomeTruncated) ?? string.Empty;
                 var boundedMessage = Bound(message, maximumDiagnosticCharacters, out var messageTruncated);
                 var boundedStack = Bound(stackTrace, maximumDiagnosticCharacters, out var stackTruncated);
 
                 results.Add(new CiTestResult(
-                    Attribute(element, "testId"),
-                    Attribute(element, "executionId"),
-                    Bound(Attribute(element, "testName"), maximumDiagnosticCharacters, out _) ?? string.Empty,
+                    boundedTestId,
+                    boundedExecutionId,
+                    boundedTestName,
                     outcome,
-                    Bound(providerOutcome, maximumDiagnosticCharacters, out _) ?? string.Empty,
+                    boundedProviderOutcome,
                     boundedMessage,
                     boundedStack,
+                    testIdTruncated || executionIdTruncated || testNameTruncated || outcomeTruncated ||
                     messageTruncated || stackTruncated));
             }
 
