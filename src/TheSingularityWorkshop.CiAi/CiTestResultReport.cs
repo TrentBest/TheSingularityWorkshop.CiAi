@@ -130,9 +130,10 @@ public sealed record CiTestResultArtifactSource
         var policyDefinitions = requiredJobPolicy.RequiredJobs.Where(definition =>
             string.Equals(definition.WorkflowPath, evidence.Provenance.WorkflowPath, StringComparison.Ordinal) &&
             string.Equals(definition.JobKey, providerBinding.JobKey, StringComparison.Ordinal) &&
-            string.Equals(definition.JobName, providerBinding.JobName, StringComparison.Ordinal)).ToArray();
-        if (policyDefinitions.Length != 1)
-            throw new InvalidDataException("Provider artifact binding does not match exactly one configured required workflow job.");
+            string.Equals(definition.JobName, providerBinding.JobName, StringComparison.Ordinal) &&
+            string.Equals(definition.ArtifactName, providerBinding.ArtifactName, StringComparison.Ordinal)).ToArray();
+        if (policyDefinitions.Length != 1 || string.IsNullOrWhiteSpace(policyDefinitions[0].ArtifactName))
+            throw new InvalidDataException("Provider artifact name must match the exact artifact name configured for this required workflow job.");
         var requiredStatus = requiredJobPolicy.Evaluate(evidence, providerBinding.JobId, providerBinding.JobKey);
         if (requiredStatus is not (CiRequiredCheckStatus.Passed or CiRequiredCheckStatus.Failed))
             throw new InvalidDataException("Provider artifact binding does not identify a complete required check.");
