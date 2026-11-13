@@ -41,6 +41,7 @@ internal static class CiWorkflowGrammarContractTests
             Assert(graph.Relationships.Count(r=>r.SlotId==CiWorkflowGrammarMap.StepSideEffectsSlotId)==5,"side effects missing");
             Assert(graph.Relationships.Count(r=>r.SlotId==CiWorkflowGrammarMap.StepEvidenceRolesSlotId)==4,"evidence roles missing");
             Assert(graph.Relationships.Count(r=>r.SlotId==CiWorkflowGrammarMap.StepOutcomeRolesSlotId)==4,"outcome roles missing");
+            Assert(graph.Relationships.Count(r=>r.SlotId==CiWorkflowGrammarMap.StepConditionSlotId)==4,"typed step conditions missing");
         });
         Check("v2 encoding is deterministic and round-trips against the exact definition",()=>{
             var first=CiWorkflowGrammarMap.CreateProposal(plan);var second=CiWorkflowGrammarMap.CreateProposal(plan);

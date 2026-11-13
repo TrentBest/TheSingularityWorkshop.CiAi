@@ -24,7 +24,7 @@ A valid GrammarAi structure is untrusted intent. Structural validity does not es
 CiAi pins GrammarAi source revision `2582362ad233faeffe82c2de28d464efffb0cda4` and ProtocolAi source revision `024ca3f2fac486d5aefa6f276c5203d5bdfe3bcf`. The first real workflow slice includes:
 
 - workflow trigger references and repeated ordered step nodes;
-- optional ordered dependency relationships and a required typed action per step;
+- optional ordered dependency relationships, a required typed action, and an explicit typed dependency condition per step;
 - typed input/output declaration nodes with ProtocolAi category/member identities;
 - declared capability, side-effect, evidence-role, and outcome-role references;
 - a request-scoped exposed vocabulary snapshot, digest, and model-facing description;

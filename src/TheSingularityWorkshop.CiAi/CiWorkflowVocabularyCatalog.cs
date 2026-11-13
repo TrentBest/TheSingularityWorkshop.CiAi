@@ -63,6 +63,7 @@ public static class CiWorkflowVocabularyCatalog
     public const ulong SideEffectCategoryId = 0x4349414900000007UL;
     public const ulong EvidenceRoleCategoryId = 0x4349414900000008UL;
     public const ulong OutcomeRoleCategoryId = 0x4349414900000009UL;
+    public const ulong StepConditionCategoryId = 0x434941490000000AUL;
 
     private static readonly IReadOnlyDictionary<ulong, ProtocolDefinition> DefinitionsValue = new Dictionary<ulong, ProtocolDefinition>
     {
@@ -74,7 +75,8 @@ public static class CiWorkflowVocabularyCatalog
         [CapabilityCategoryId] = Build(CapabilityCategoryId, "CiAi.Capability", (1,"read_source"),(2,"execute_build"),(3,"execute_tests"),(4,"create_package"),(5,"observe_provider")),
         [SideEffectCategoryId] = Build(SideEffectCategoryId, "CiAi.SideEffect", (1,"read_files"),(2,"write_artifacts"),(3,"spawn_process"),(4,"network_read")),
         [EvidenceRoleCategoryId] = Build(EvidenceRoleCategoryId, "CiAi.EvidenceRole", (1,"build_log"),(2,"test_results"),(3,"package_metadata"),(4,"provenance")),
-        [OutcomeRoleCategoryId] = Build(OutcomeRoleCategoryId, "CiAi.OutcomeRole", (1,"build_succeeded"),(2,"tests_passed"),(3,"package_created"),(4,"evidence_complete"))
+        [OutcomeRoleCategoryId] = Build(OutcomeRoleCategoryId, "CiAi.OutcomeRole", (1,"build_succeeded"),(2,"tests_passed"),(3,"package_created"),(4,"evidence_complete")),
+        [StepConditionCategoryId] = Build(StepConditionCategoryId, "CiAi.StepCondition", (1,"all_dependencies_succeeded"),(2,"always"),(3,"any_dependency_failed"),(4,"all_dependencies_completed"))
     };
 
     public static IReadOnlyCollection<ProtocolDefinition> Definitions => DefinitionsValue.Values.ToArray();

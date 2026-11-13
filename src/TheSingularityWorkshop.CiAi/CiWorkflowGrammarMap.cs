@@ -16,7 +16,7 @@ public static class CiWorkflowGrammarMap
     public const ulong WorkflowNodeId = 1, StepNodeId = 2, InputNodeId = 3, OutputNodeId = 4;
     public const ulong WorkflowStepsSlotId = 101, StepDependenciesSlotId = 102, WorkflowTriggersSlotId = 103;
     public const ulong StepActionSlotId = 201, StepInputsSlotId = 202, StepOutputsSlotId = 203;
-    public const ulong StepCapabilitiesSlotId = 204, StepSideEffectsSlotId = 205, StepEvidenceRolesSlotId = 206, StepOutcomeRolesSlotId = 207;
+    public const ulong StepCapabilitiesSlotId = 204, StepSideEffectsSlotId = 205, StepEvidenceRolesSlotId = 206, StepOutcomeRolesSlotId = 207, StepConditionSlotId = 208;
     public const ulong InputNameSlotId = 301, InputTypeSlotId = 302, OutputNameSlotId = 401, OutputTypeSlotId = 402;
     public const int MaximumSteps = 256, MaximumTypedValuesPerStep = 32, MaximumDeclarationsPerStep = 64;
 
@@ -36,6 +36,7 @@ public static class CiWorkflowGrammarMap
             new GrammarSlotDefinition(StepSideEffectsSlotId,StepNodeId,"SideEffects",GrammarSlotTarget.ExternalProtocolCategory(CiWorkflowVocabularyCatalog.SideEffectCategoryId),0,MaximumDeclarationsPerStep),
             new GrammarSlotDefinition(StepEvidenceRolesSlotId,StepNodeId,"ExpectedEvidence",GrammarSlotTarget.ExternalProtocolCategory(CiWorkflowVocabularyCatalog.EvidenceRoleCategoryId),0,MaximumDeclarationsPerStep),
             new GrammarSlotDefinition(StepOutcomeRolesSlotId,StepNodeId,"ExpectedOutcomes",GrammarSlotTarget.ExternalProtocolCategory(CiWorkflowVocabularyCatalog.OutcomeRoleCategoryId),0,MaximumDeclarationsPerStep),
+            new GrammarSlotDefinition(StepConditionSlotId,StepNodeId,"Condition",GrammarSlotTarget.ExternalProtocolCategory(CiWorkflowVocabularyCatalog.StepConditionCategoryId),1,1),
             new GrammarSlotDefinition(InputNameSlotId,InputNodeId,"Name",GrammarSlotTarget.ExternalProtocolCategory(CiWorkflowVocabularyCatalog.InputNameCategoryId),1,1),
             new GrammarSlotDefinition(InputTypeSlotId,InputNodeId,"Type",GrammarSlotTarget.ExternalProtocolCategory(CiWorkflowVocabularyCatalog.DataTypeCategoryId),1,1),
             new GrammarSlotDefinition(OutputNameSlotId,OutputNodeId,"Name",GrammarSlotTarget.ExternalProtocolCategory(CiWorkflowVocabularyCatalog.OutputNameCategoryId),1,1),
@@ -72,6 +73,7 @@ public static class CiWorkflowGrammarMap
         {
             var id = stepIds[step.Id];
             relationships.Add(External(id,StepActionSlotId,CiWorkflowVocabularyCatalog.ActionCategoryId,step.ActionId!,snapshot));
+            relationships.Add(External(id,StepConditionSlotId,CiWorkflowVocabularyCatalog.StepConditionCategoryId,ConditionValue(step.Condition),snapshot));
             foreach (var dependency in step.DependsOn) relationships.Add(new GrammarRelationship(id,StepDependenciesSlotId,stepIds[dependency]));
             AddRefs(step.Capabilities,StepCapabilitiesSlotId,CiWorkflowVocabularyCatalog.CapabilityCategoryId);
             AddRefs(step.SideEffects,StepSideEffectsSlotId,CiWorkflowVocabularyCatalog.SideEffectCategoryId);
@@ -133,6 +135,15 @@ public static class CiWorkflowGrammarMap
             throw new ArgumentException("Step-instance correlation does not match the graph.",nameof(proposal));
         return instance;
     }
+
+    private static string ConditionValue(CiWorkflowStepCondition condition) => condition switch
+    {
+        CiWorkflowStepCondition.AllDependenciesSucceeded => "all_dependencies_succeeded",
+        CiWorkflowStepCondition.Always => "always",
+        CiWorkflowStepCondition.AnyDependencyFailed => "any_dependency_failed",
+        CiWorkflowStepCondition.AllDependenciesCompleted => "all_dependencies_completed",
+        _ => throw new ArgumentOutOfRangeException(nameof(condition))
+    };
 
     private static GrammarRelationship External(ulong parent,ulong slot,ulong category,string value,CiWorkflowVocabularySnapshot snapshot) =>
         new(parent,slot,CiWorkflowVocabularyCatalog.Reference(snapshot,category,value));
