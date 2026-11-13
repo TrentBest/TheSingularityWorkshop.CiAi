@@ -6,7 +6,7 @@ GrammarAi is the reusable AI-facing knowledge-mapping layer for describing and v
 
 CiAi should use GrammarAi to define its own versioned CI domain map: workflow plans, triggers, conditions/dependencies, typed steps/actions, inputs/outputs, declared capabilities, and expected evidence/outcome roles. GrammarAi supplies the structural model and bounded proposal validation; CiAi supplies the CI-specific vocabulary and meaning.
 
-**Integration status:** planned and tracked by [CiAi issue #59](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/59). The current CiAi development project does not yet reference GrammarAi. This page describes the intended consumer contract, not a completed integration.
+**Integration status:** implemented as the first structural vertical slice on CiAi `development`. CiAi pins GrammarAi source revision `2582362ad233faeffe82c2de28d464efffb0cda4` as `external/GrammarAi`, references its project directly, and exercises the public graph and proposal codec in contract tests. The slice models a versioned workflow node, repeated ordered step membership, and optional step dependencies. CiAi retains domain/action meaning in its existing catalog and semantic plan validator; this is not an execution or release authorization.
 
 ## Ownership boundary
 
@@ -19,19 +19,20 @@ CiAi should use GrammarAi to define its own versioned CI domain map: workflow pl
 
 A valid GrammarAi structure is untrusted intent. Structural validity does not establish semantic correctness, successful CI evidence, authorization, or permission to execute, publish, or deploy.
 
-## First integration slice
+## Implemented first integration slice
 
-Use GrammarAi's public API from an exact, immutable source revision. The initial CI map should remain deliberately small and cover a real workflow proposal, for example:
+CiAi currently pins GrammarAi source revision `2582362ad233faeffe82c2de28d464efffb0cda4`. The implemented first slice is deliberately small:
 
-- one workflow/plan node;
-- an ordered sequence of typed restore/build/test steps;
-- explicit dependency/condition relationships;
-- typed input/output or evidence roles;
-- required and optional relationships where appropriate.
+- one workflow node and repeated ordered step nodes;
+- optional ordered dependency relationships between steps;
+- a populated integer-first proposal encoded and decoded by `GrammarStructureProposalCodec`;
+- required workflow membership and optional dependency cardinality.
+
+Typed input/output payloads, explicit triggers, capabilities, and outcome/evidence roles are not yet part of this first graph slice. CiAi continues to carry step domain/action meaning in its existing `CiWorkflowDomainCatalog` and validates dependency semantics with `CiWorkflowPlanValidator` before mapping. The graph codec is not a second semantic policy engine.
 
 Use `GrammarStructureDefinition`, `GrammarNodeDefinition`, `GrammarSlotDefinition`, `GrammarStructureInstance`, and `GrammarStructureProposalCodec` where they fit. Evaluate the production-grammar API for any part that genuinely needs ordered symbol composition. Do not implement a second grammar or structural validator in CiAi, and do not attempt to model every CI workflow family in the first increment.
 
-The host selects the active versioned definition and supplies any vocabulary/identifier resolution. Keep structure-definition identity/version separate from the codec wire version.
+The active schema identity/version is `CiWorkflowGrammarMap.DefinitionId` / `SchemaVersion`; the GrammarAi proposal codec wire version remains a separate field. This first slice uses only GrammarAi node targets and therefore does not fabricate ProtocolAi category identities or bypass the host-owned external-reference resolver.
 
 ## Evidence contract
 

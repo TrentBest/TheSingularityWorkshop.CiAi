@@ -53,6 +53,7 @@ ServerSC2 is the next CODE RED evidence integration. ServerSC2 owns authoritativ
 
 - [Gallery](Gallery.md) — current demonstrations and evidence.
 - [Cross-Cog integration](integration/CogEcosystem.ContractTests/README.md) — pinned in-process contract proof.
+- GrammarAi is consumed from the immutable source pin `2582362ad233faeffe82c2de28d464efffb0cda4`; the first typed workflow graph/codec vertical slice is covered by CiAi contract tests. Structural validity remains separate from CI policy/evidence verdicts and host authorization.
 - [Inter-repository model](docs/INTER_REPOSITORY_MODEL.md) — request/result workflow and integration gaps.
 - [Release readiness](docs/RELEASE_READINESS.md) — package and authorization boundaries.
 - [FSM_COS coordination notes](FSM_COSLLM.md) — read-only evidence pilot and cross-repository contract.

@@ -5,6 +5,8 @@ on:
     branches: [development, master]
     paths:
       - "src/**"
+      - "external/**"
+      - ".gitmodules"
       - "tests/**"
       - "samples/**"
       - "README.md"
@@ -20,6 +22,8 @@ on:
     branches: [development, master]
     paths:
       - "src/**"
+      - "external/**"
+      - ".gitmodules"
       - "tests/**"
       - "samples/**"
       - "README.md"
@@ -85,6 +89,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ steps.resolve-target.outputs.sha }}
+          submodules: recursive
       - name: Verify checkout provenance
         id: provenance
         env:
@@ -105,6 +110,16 @@ jobs:
             echo "repository=$REPOSITORY"
           } >> "$GITHUB_OUTPUT"
           echo "Verified repository=$REPOSITORY ref=$TARGET_REF sha=$actual_sha"
+      - name: Verify pinned GrammarAi source revision
+        env:
+          EXPECTED_GRAMMAR_AI_SHA: 2582362ad233faeffe82c2de28d464efffb0cda4
+        run: |
+          set -euo pipefail
+          actual_sha="$(git -C external/GrammarAi rev-parse HEAD)"
+          gitlink_sha="$(git ls-tree HEAD external/GrammarAi | awk '{print $3}')"
+          test "$actual_sha" = "$EXPECTED_GRAMMAR_AI_SHA"
+          test "$gitlink_sha" = "$EXPECTED_GRAMMAR_AI_SHA"
+          echo "Verified GrammarAi source pin: $actual_sha"
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
         id: setup-dotnet
         with:
@@ -140,6 +155,7 @@ jobs:
           set -euo pipefail
           mkdir -p artifacts/local-feed
           dotnet pack external/CommandAi/TheSingularityWorkshop.CommandAi.csproj --configuration Release --no-restore --output artifacts/local-feed
+          dotnet pack external/GrammarAi/TheSingularityWorkshop.GrammarAi.csproj --configuration Release --no-restore --output artifacts/local-feed
           dotnet pack src/TheSingularityWorkshop.CiAi/TheSingularityWorkshop.CiAi.csproj --configuration Release --no-build --output artifacts/local-feed
       - name: Restore and build an external package consumer
         id: package-consumer
