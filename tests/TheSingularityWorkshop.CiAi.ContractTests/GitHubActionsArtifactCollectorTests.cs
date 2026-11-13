@@ -61,7 +61,7 @@ internal static class GitHubActionsArtifactCollectorTests
         }
 
         using (var client = new HttpClient(new StubHandler((_, _) =>
-            Task.FromResult(JsonResponse(valid.Replace(",\"workflow_run\":{\"id\":41234078182,\"head_sha\":\"" + Sha + "\"}", "", StringComparison.Ordinal))))))
+            Task.FromResult(JsonResponse(valid.Replace("\"workflow_run\"", "\"other\"", StringComparison.Ordinal))))))
         {
             await ThrowsAsync<InvalidDataException>(() => new GitHubActionsArtifactCollector(client)
                 .GetArtifactAsync(Repository, ArtifactId, RunId, Sha));
