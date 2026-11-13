@@ -281,6 +281,10 @@ internal static class CiTestResultReportTests
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
         Throws<InvalidDataException>(() => CreateSource(failedTrx, jobKey: "unregistered-job"));
         Throws<InvalidDataException>(() => CreateSource(failedTrx, artifactName: "unregistered-artifact"));
+        Throws<InvalidDataException>(() => CreateSource(failedTrx,
+            createdAt: CreatedAt.AddMinutes(-2)));
+        Throws<InvalidDataException>(() => CreateSource(failedTrx,
+            createdAt: CreatedAt.AddMinutes(5)));
         Throws<InvalidDataException>(() => CreateSource(failedTrx, isExpired: true));
         Throws<ArgumentOutOfRangeException>(() => CreateSource(failedTrx, artifactId: 0));
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
@@ -402,7 +406,8 @@ internal static class CiTestResultReportTests
         string? archiveDigest = null,
         long? archiveSizeBytes = null,
         byte[]? archiveBytes = null,
-        bool isExpired = false)
+        bool isExpired = false,
+        DateTimeOffset? createdAt = null)
     {
         var evidence = CreatePacket("failure");
         var exactArchiveBytes = archiveBytes ?? CreateArtifactArchive(payload, CreateProvenanceJson(evidence));
@@ -412,6 +417,7 @@ internal static class CiTestResultReportTests
         var providerArtifactName = artifactName ?? "minesweeper-test-results";
         var providerDigest = archiveDigest ?? actualDigest;
         var providerSize = archiveSizeBytes ?? exactArchiveBytes.Length;
+        var providerCreatedAt = createdAt ?? CreatedAt;
         var artifactJson = JsonSerializer.Serialize(new
         {
             id = providerArtifactId,
@@ -419,7 +425,7 @@ internal static class CiTestResultReportTests
             size_in_bytes = providerSize,
             digest = providerDigest,
             expired = isExpired,
-            created_at = CreatedAt,
+            created_at = providerCreatedAt,
             expires_at = ExpiresAt,
             archive_download_url = $"https://api.github.com/repos/{artifactRepository}/actions/artifacts/{providerArtifactId}/zip",
             workflow_run = new { id = RunId, head_sha = CandidateSha }
