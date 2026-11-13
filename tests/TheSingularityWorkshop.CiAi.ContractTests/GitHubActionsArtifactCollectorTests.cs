@@ -111,7 +111,7 @@ internal static class GitHubActionsArtifactCollectorTests
         Console.WriteLine("PASS: 16 GitHub Actions artifact observation and discovery checks.");
     }
 
-    private static string Fixture() => $$$"""
+    private static string Fixture() => $"""
     {
       "id": {{ArtifactId}},
       "name": "minesweeper-test-results",
