@@ -20,8 +20,9 @@ The source descriptor is created only through `CiTestResultArtifactSource.FromVe
 The binding is a host assertion, not self-authenticating data: production adapters must not populate it from the report JSON or from artifact claims copied out of an untrusted sidecar. The production host sequence is:
 
 ```csharp
-var providerArtifact = await artifactCollector.GetArtifactAsync(
-    repository, artifactId, runId, headSha);
+var providerArtifact = await artifactCollector.GetRequiredArtifactAsync(
+    repository, runId, headSha, requiredJobPolicy.RequiredJobs.Single(
+        job => job.WorkflowPath == workflowPath && job.JobKey == jobKey).ArtifactName!);
 var binding = CiTestResultProviderArtifactBinding.FromObservedArtifact(
     providerArtifact, evidence, requiredJobPolicy, jobId, jobKey);
 var archive = CiTestResultArtifactArchive.Read(
