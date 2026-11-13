@@ -8,7 +8,7 @@ namespace TheSingularityWorkshop.CiAi;
 /// </summary>
 public sealed record CiTestResultProviderArtifactBinding
 {
-    public CiTestResultProviderArtifactBinding(
+    internal CiTestResultProviderArtifactBinding(
         string repository,
         long runId,
         int runAttempt,
@@ -52,6 +52,51 @@ public sealed record CiTestResultProviderArtifactBinding
         CreatedAt = createdAt;
         ExpiresAt = expiresAt;
         IsExpired = isExpired;
+    }
+
+    /// <summary>
+    /// Binds provider-observed artifact metadata to one exact job from the trusted run packet.
+    /// The required-job policy must declare the exact artifact name for this job key.
+    /// </summary>
+    public static CiTestResultProviderArtifactBinding FromObservedArtifact(
+        CiProviderArtifactObservation artifact,
+        CiWorkflowEvidencePacket evidence,
+        CiRequiredJobPolicy requiredJobPolicy,
+        long jobId,
+        string jobKey)
+    {
+        ArgumentNullException.ThrowIfNull(artifact);
+        ArgumentNullException.ThrowIfNull(evidence);
+        ArgumentNullException.ThrowIfNull(requiredJobPolicy);
+        ArgumentException.ThrowIfNullOrWhiteSpace(jobKey);
+        if (!string.Equals(artifact.Repository, evidence.Provenance.Repository, StringComparison.OrdinalIgnoreCase) ||
+            artifact.RunId != evidence.Provenance.RunId ||
+            !string.Equals(artifact.HeadSha, evidence.ObservedRun.WorkflowSha, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Provider artifact does not belong to the exact trusted repository and workflow run.");
+
+        var definitions = requiredJobPolicy.RequiredJobs.Where(definition =>
+            string.Equals(definition.WorkflowPath, evidence.Provenance.WorkflowPath, StringComparison.Ordinal) &&
+            string.Equals(definition.JobKey, jobKey, StringComparison.Ordinal) &&
+            string.Equals(definition.ArtifactName, artifact.ArtifactName, StringComparison.Ordinal)).ToArray();
+        if (definitions.Length != 1 || string.IsNullOrWhiteSpace(definitions[0].ArtifactName))
+            throw new InvalidDataException("Provider artifact name does not match exactly one configured required job.");
+
+        var jobs = evidence.ObservedRun.Jobs.Where(job =>
+            job.JobId == jobId &&
+            job.RunId == evidence.Provenance.RunId &&
+            job.RunAttempt == evidence.Provenance.RunAttempt &&
+            string.Equals(job.Name, definitions[0].JobName, StringComparison.Ordinal)).ToArray();
+        if (jobs.Length != 1)
+            throw new InvalidDataException("Provider artifact binding does not identify exactly one observed job in the exact run attempt.");
+        var requiredStatus = requiredJobPolicy.Evaluate(evidence, jobId, jobKey);
+        if (requiredStatus is not (CiRequiredCheckStatus.Passed or CiRequiredCheckStatus.Failed))
+            throw new InvalidDataException("Provider artifact binding does not identify a complete required check.");
+
+        return new CiTestResultProviderArtifactBinding(
+            artifact.Repository, artifact.RunId, evidence.Provenance.RunAttempt,
+            jobId, jobs[0].Name, jobKey, artifact.ArtifactId, artifact.ArtifactName,
+            artifact.ProviderArchiveDigest, artifact.ArchiveSizeBytes,
+            artifact.CreatedAt, artifact.ExpiresAt, artifact.IsExpired);
     }
 
     public string Repository { get; }
