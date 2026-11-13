@@ -61,6 +61,17 @@ internal static class CiWorkflowEvidencePacketTests
             mismatchedWorkflowRefCollection, jobCollection, 42, 2,
             DateTimeOffset.Parse("2026-10-31T01:02:00Z"),
             provenance, workflowDefinitionTrusted: true));
+        var missingWorkflowRefCollection = runCollection with
+        {
+            Runs = new[]
+            {
+                runCollection.Runs[0] with { WorkflowRef = null }
+            }
+        };
+        Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromCollections(
+            missingWorkflowRefCollection, jobCollection, 42, 2,
+            DateTimeOffset.Parse("2026-10-31T01:02:00Z"),
+            provenance, workflowDefinitionTrusted: true));
 
         var dispatchBytes = Encoding.UTF8.GetBytes(CreateDispatchProvenance());
         var dispatchProvenance = CiWorkflowProvenanceRecord.ParseAndValidate(
