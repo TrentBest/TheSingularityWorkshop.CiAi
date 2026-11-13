@@ -79,7 +79,7 @@ internal static class CiTestResultReportTests
         // The ZIP container and its individual payloads have different documented limits.
         Throws<InvalidDataException>(() => CreateSource(failedTrx, archiveSizeBytes:
             CiTestResultArtifactArchive.DefaultMaximumPayloadBytes + 1));
-        Throws<ArgumentOutOfRangeException>(() => CreateSource(failedTrx, archiveSizeBytes:
+        Throws<InvalidDataException>(() => CreateSource(failedTrx, archiveSizeBytes:
             CiTestResultArtifactArchive.DefaultMaximumArchiveBytes + 1));
 
         var mutatedTrxArchive = CiTestResultArtifactArchive.Read(
@@ -298,11 +298,11 @@ internal static class CiTestResultReportTests
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
             failedTrx, failedPacket, failedSource, RequiredPolicy, ObservedAt,
             maximumPayloadBytes: 2));
-        Throws<ArgumentException>(() => CreateSource(failedTrx, archiveDigest: "not-a-digest"));
+        Throws<InvalidDataException>(() => CreateSource(failedTrx, archiveDigest: "not-a-digest"));
         Assert(CreateSource(failedTrx, artifactName: "minesweeper-test-results").ArtifactName ==
             "minesweeper-test-results",
             "trusted provider artifact name was incorrectly required to follow a CiAi-generated naming convention");
-        Throws<ArgumentException>(() => CreateSource(failedTrx, artifactName: ""));
+        Throws<InvalidDataException>(() => CreateSource(failedTrx, artifactName: ""));
 
         var dtd = Encoding.UTF8.GetBytes("<!DOCTYPE TestRun [<!ENTITY xxe SYSTEM 'file:///etc/passwd'>]><TestRun>&xxe;</TestRun>");
         Throws<XmlException>(() => CiTestResultReport.ParseAndValidate(
@@ -420,7 +420,8 @@ internal static class CiTestResultReportTests
             archive_download_url = $"https://api.github.com/repos/{artifactRepository}/actions/artifacts/{providerArtifactId}/zip",
             workflow_run = new { id = RunId, head_sha = CandidateSha }
         });
-        using var http = new HttpClient(new ArtifactHandler(artifactJson));
+        using var http = new HttpClient(new ArtifactHandler(
+            artifactJson, $"/repos/{artifactRepository}/actions/artifacts/{providerArtifactId}"));
         var observedArtifact = new GitHubActionsArtifactCollector(http)
             .GetArtifactAsync(artifactRepository, providerArtifactId, RunId, CandidateSha)
             .GetAwaiter().GetResult();
@@ -529,14 +530,14 @@ internal static class CiTestResultReportTests
         """;
     }
 
-    private sealed class ArtifactHandler(string json) : HttpMessageHandler
+    private sealed class ArtifactHandler(string json, string expectedPath) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
             if (request.Method != HttpMethod.Get ||
-                request.RequestUri?.AbsolutePath != $"/repos/{Repository}/actions/artifacts/7001")
+                request.RequestUri?.AbsolutePath != expectedPath)
                 throw new InvalidOperationException("Unexpected GitHub artifact metadata request.");
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
