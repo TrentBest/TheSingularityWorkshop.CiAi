@@ -275,10 +275,8 @@ internal static class CiTestResultReportTests
             failedTrx, failedPacket, CreateSource(failedTrx, repository: "Other/Repo"),
             RequiredPolicy, ObservedAt));
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
-        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
             failedTrx, failedPacket, CreateSource(failedTrx, jobId: JobId + 1),
             RequiredPolicy, ObservedAt));
-        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
         Throws<InvalidDataException>(() => CreateSource(failedTrx, jobKey: "unregistered-job"));
         Throws<InvalidDataException>(() => CreateSource(failedTrx, artifactName: "unregistered-artifact"));
         Throws<InvalidDataException>(() => CreateSource(failedTrx,
