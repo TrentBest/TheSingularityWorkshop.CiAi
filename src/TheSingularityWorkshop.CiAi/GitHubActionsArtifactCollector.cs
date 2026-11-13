@@ -63,6 +63,97 @@ public sealed class GitHubActionsArtifactCollector
         _token = string.IsNullOrWhiteSpace(token) ? null : token;
     }
 
+    /// <summary>
+    /// Discovers the one artifact with the configured name from the exact workflow run.
+    /// The artifact ID is selected from provider listing metadata, never from report JSON.
+    /// Ambiguous, incomplete, or truncated listings fail closed.
+    /// </summary>
+    public async Task<CiProviderArtifactObservation> GetRequiredArtifactAsync(
+        string repository,
+        long expectedRunId,
+        string expectedHeadSha,
+        string expectedArtifactName,
+        int maximumPages = 10,
+        int pageSize = 100,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(repository);
+        ArgumentException.ThrowIfNullOrWhiteSpace(expectedArtifactName);
+        if (!RepositoryIdentity.IsValid(repository))
+            throw new ArgumentException("Repository must use canonical owner/repository identifiers.", nameof(repository));
+        if (expectedRunId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(expectedRunId));
+        if (expectedHeadSha is not { Length: 40 } || !expectedHeadSha.All(Uri.IsHexDigit))
+            throw new ArgumentException("Expected workflow SHA must be a full 40-character commit identifier.", nameof(expectedHeadSha));
+        if (maximumPages is <= 0 or > 100)
+            throw new ArgumentOutOfRangeException(nameof(maximumPages));
+        if (pageSize is <= 0 or > 100)
+            throw new ArgumentOutOfRangeException(nameof(pageSize));
+
+        var parts = repository.Split('/');
+        var baseUrl = $"https://api.github.com/repos/{Uri.EscapeDataString(parts[0])}/{Uri.EscapeDataString(parts[1])}/actions/runs/{expectedRunId}/artifacts";
+        var artifactIds = new HashSet<long>();
+        long? expectedTotal = null;
+        long? matchingArtifactId = null;
+        var returned = 0;
+
+        for (var page = 1; page <= maximumPages; page++)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}?per_page={pageSize}&page={page}");
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+            request.Headers.UserAgent.ParseAdd("TheSingularityWorkshop-CiAi/0.1");
+            request.Headers.Add("X-GitHub-Api-Version", "2022-11-28");
+            if (_token is not null)
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _token);
+
+            using var response = await _httpClient.SendAsync(
+                request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var root = document.RootElement;
+            if (!root.TryGetProperty("total_count", out var totalElement) ||
+                !totalElement.TryGetInt64(out var total) || total < 0 ||
+                !root.TryGetProperty("artifacts", out var artifacts) ||
+                artifacts.ValueKind != JsonValueKind.Array)
+                throw new InvalidDataException("GitHub artifact listing omitted its total count or artifact array.");
+            if (expectedTotal.HasValue && expectedTotal.Value != total)
+                throw new InvalidDataException("GitHub artifact listing total changed during pagination.");
+            expectedTotal = total;
+
+            foreach (var item in artifacts.EnumerateArray())
+            {
+                var id = RequiredInt64(item, "id");
+                var name = RequiredString(item, "name");
+                if (id <= 0 || !artifactIds.Add(id))
+                    throw new InvalidDataException("GitHub artifact listing contains a nonpositive or duplicate artifact ID.");
+                returned++;
+                if (string.Equals(name, expectedArtifactName, StringComparison.Ordinal))
+                {
+                    if (matchingArtifactId.HasValue)
+                        throw new InvalidDataException("More than one provider artifact matches the configured required artifact name.");
+                    matchingArtifactId = id;
+                }
+            }
+
+            if (returned >= total)
+                break;
+            if (page == maximumPages)
+                throw new InvalidDataException("GitHub artifact listing is truncated; the required artifact cannot be selected unambiguously.");
+        }
+
+        if (!expectedTotal.HasValue || returned != expectedTotal.Value)
+            throw new InvalidDataException("GitHub artifact listing is incomplete.");
+        if (!matchingArtifactId.HasValue)
+            throw new InvalidDataException("No provider artifact matches the configured required artifact name.");
+
+        var observed = await GetArtifactAsync(
+            repository, matchingArtifactId.Value, expectedRunId, expectedHeadSha, cancellationToken).ConfigureAwait(false);
+        if (!string.Equals(observed.ArtifactName, expectedArtifactName, StringComparison.Ordinal))
+            throw new InvalidDataException("Provider artifact name changed between listing and detail observation.");
+        return observed;
+    }
+
     public async Task<CiProviderArtifactObservation> GetArtifactAsync(
         string repository,
         long artifactId,
