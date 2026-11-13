@@ -22,7 +22,7 @@ internal static class CiTestResultReportTests
     private static readonly DateTimeOffset ObservedAt = DateTimeOffset.Parse("2026-10-31T01:05:00Z");
     private static CiRequiredJobPolicy RequiredPolicy => new(new[]
     {
-        new CiRequiredJobDefinition(WorkflowPath, JobKey, JobName)
+        new CiRequiredJobDefinition(WorkflowPath, JobKey, JobName, "minesweeper-test-results")
     });
     private static CiRequiredJobPolicy NonRequiredPolicy => new(Array.Empty<CiRequiredJobDefinition>());
 
@@ -124,8 +124,7 @@ internal static class CiTestResultReportTests
             "normalized report lost exact workflow, checkout, PR, run, attempt, or job provenance");
 
         Assert(actionable.RequiredCheckStatus == CiRequiredCheckStatus.Failed &&
-            actionable.SourceArtifactId == 7001 && actionable.SourceArtifactName ==
-                $"ciai-test-results-{RunId}-{RunAttempt}-{JobKey}" &&
+            actionable.SourceArtifactId == 7001 && actionable.SourceArtifactName == "minesweeper-test-results" &&
             actionable.SourceJobKey == JobKey && actionable.ProviderArchiveDigest ==
                 failedSource.ProviderArchiveDigest && actionable.ArchiveSizeBytes == failedSource.ArchiveSizeBytes &&
             actionable.ArtifactCreatedAt == CreatedAt && actionable.ArtifactExpiresAt == ExpiresAt &&
@@ -284,6 +283,7 @@ internal static class CiTestResultReportTests
             failedTrx, failedPacket, CreateSource(failedTrx, jobName: "other-job"),
             RequiredPolicy, ObservedAt));
         Throws<InvalidDataException>(() => CreateSource(failedTrx, jobKey: "unregistered-job"));
+        Throws<InvalidDataException>(() => CreateSource(failedTrx, artifactName: "unregistered-artifact"));
         Throws<InvalidDataException>(() => CreateSource(failedTrx, isExpired: true));
         Throws<ArgumentOutOfRangeException>(() => CreateSource(failedTrx, artifactId: 0));
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
