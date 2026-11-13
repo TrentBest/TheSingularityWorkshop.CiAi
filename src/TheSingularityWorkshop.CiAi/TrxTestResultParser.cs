@@ -100,7 +100,7 @@ public static class TrxTestResultParser
             foreach (var element in resultElements)
             {
                 var providerOutcome = Attribute(element, "outcome");
-                var (outcome, normalized) = NormalizeOutcome(providerOutcome);
+                var (outcome, _) = NormalizeOutcome(providerOutcome);
                 var errorInfo = element.Descendants().FirstOrDefault(child => child.Name.LocalName == "ErrorInfo");
                 var message = ChildValue(errorInfo, "Message");
                 var stackTrace = ChildValue(errorInfo, "StackTrace");
