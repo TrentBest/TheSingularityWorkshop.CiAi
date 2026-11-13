@@ -40,7 +40,16 @@ AnyApp is CiAi's first source-based consumer pilot. It keeps GitHub Actions as t
 - [AnyApp consumer walkthrough and evidence-lane map](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/Samples/AnyApp.md)
 - [AnyApp CiAi evidence workflow](https://github.com/TrentBest/AnyApp/blob/development/.github/workflows/ciai-evidence.yml)
 
-## 04 — Architecture and proof
+## 04 — Next consumer: ServerSC2
+
+ServerSC2 is the next CODE RED evidence integration. ServerSC2 owns authoritative SC2 match/replay evidence; CiAi owns exact GitHub workflow/artifact provenance, test-result normalization, and the CI verdict. This integration is coordinated but not yet implemented or verified.
+
+- [ServerSC2 evidence integration contract](docs/Samples/ServerSC2.md)
+- [ServerSC2 domain implementation issue](https://github.com/TrentBest/TheSingularityWorkshop.ServerSC2/issues/1)
+- [CiAi integration issue](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/67)
+- [Shared CODE RED / HeadlessAi handoff](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/34)
+
+## 05 — Architecture and proof
 
 - [Gallery](Gallery.md) — current demonstrations and evidence.
 - [Cross-Cog integration](integration/CogEcosystem.ContractTests/README.md) — pinned in-process contract proof.
