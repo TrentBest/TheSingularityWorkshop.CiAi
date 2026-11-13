@@ -66,8 +66,7 @@ internal static class CiTestResultReportTests
         var zipDigest = "sha256:" + Convert.ToHexString(SHA256.HashData(zipBytes)).ToLowerInvariant();
         var verifiedArchive = CiTestResultArtifactArchive.Read(
             zipBytes, zipDigest, "results.trx", "provenance.json");
-        var archiveSource = CreateSource(failedTrx, archiveDigest: zipDigest,
-            archiveSizeBytes: zipBytes.Length);
+        var archiveSource = CreateSource(failedTrx, archiveBytes: zipBytes);
         var archiveReport = CiTestResultReport.ParseAndValidate(
             verifiedArchive, failedPacket, archiveSource, RequiredPolicy, ObservedAt);
         Assert(archiveReport.Verdict == CiTestResultVerdict.ActionableFailure &&
@@ -77,8 +76,8 @@ internal static class CiTestResultReportTests
             "verified archive did not flow through provenance validation into the authoritative CODE RED verdict");
 
         // The ZIP container and its individual payloads have different documented limits.
-        _ = CreateSource(failedTrx, archiveSizeBytes:
-            CiTestResultArtifactArchive.DefaultMaximumPayloadBytes + 1);
+        Throws<InvalidDataException>(() => CreateSource(failedTrx, archiveSizeBytes:
+            CiTestResultArtifactArchive.DefaultMaximumPayloadBytes + 1));
         Throws<ArgumentOutOfRangeException>(() => CreateSource(failedTrx, archiveSizeBytes:
             CiTestResultArtifactArchive.DefaultMaximumArchiveBytes + 1));
 
@@ -99,10 +98,7 @@ internal static class CiTestResultReportTests
         var foreignRunDigest = "sha256:" + Convert.ToHexString(SHA256.HashData(foreignRunZip)).ToLowerInvariant();
         var foreignRunArchive = CiTestResultArtifactArchive.Read(
             foreignRunZip, foreignRunDigest, "results.trx", "provenance.json");
-        var foreignRunSource = CreateSource(failedTrx, archiveDigest: foreignRunDigest,
-            archiveSizeBytes: foreignRunZip.Length);
-        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
-            foreignRunArchive, failedPacket, foreignRunSource, RequiredPolicy, ObservedAt));
+        Throws<InvalidDataException>(() => CreateSource(failedTrx, archiveBytes: foreignRunZip));
 
         var foreignCheckoutProvenance = CreateProvenanceJson(
             failedPacket, checkoutSha: new string('f', 40));
@@ -110,15 +106,10 @@ internal static class CiTestResultReportTests
         var foreignCheckoutDigest = "sha256:" + Convert.ToHexString(SHA256.HashData(foreignCheckoutZip)).ToLowerInvariant();
         var foreignCheckoutArchive = CiTestResultArtifactArchive.Read(
             foreignCheckoutZip, foreignCheckoutDigest, "results.trx", "provenance.json");
-        var foreignCheckoutSource = CreateSource(failedTrx, archiveDigest: foreignCheckoutDigest,
-            archiveSizeBytes: foreignCheckoutZip.Length);
-        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
-            foreignCheckoutArchive, failedPacket, foreignCheckoutSource, RequiredPolicy, ObservedAt));
+        Throws<InvalidDataException>(() => CreateSource(failedTrx, archiveBytes: foreignCheckoutZip));
 
-        var substitutedArchiveSource = CreateSource(failedTrx, archiveDigest: "sha256:" + new string('f', 64),
-            archiveSizeBytes: zipBytes.Length);
-        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
-            verifiedArchive, failedPacket, substitutedArchiveSource, RequiredPolicy, ObservedAt));
+        Throws<InvalidDataException>(() => CreateSource(failedTrx,
+            archiveDigest: "sha256:" + new string('f', 64), archiveBytes: zipBytes));
         Assert(actionable.Verdict == CiTestResultVerdict.ActionableFailure &&
             actionable.Total == 3 && actionable.Passed == 1 && actionable.Failed == 2 &&
             actionable.Skipped == 0 && actionable.Results.Count == 3,
@@ -140,9 +131,9 @@ internal static class CiTestResultReportTests
             actionable.SourceArtifactId == 7001 && actionable.SourceArtifactName ==
                 $"ciai-test-results-{RunId}-{RunAttempt}-{JobKey}" &&
             actionable.SourceJobKey == JobKey && actionable.ProviderArchiveDigest ==
-                "sha256:" + new string('a', 64) && actionable.ArchiveSizeBytes == 512 &&
+                failedSource.ProviderArchiveDigest && actionable.ArchiveSizeBytes == failedSource.ArchiveSizeBytes &&
             actionable.ArtifactCreatedAt == CreatedAt && actionable.ArtifactExpiresAt == ExpiresAt &&
-            actionable.PayloadSha256?.Length == 64 && actionable.PayloadSizeBytes == failedTrx.Length,
+            actionable.PayloadSha256 == failedSource.PayloadSha256 && actionable.PayloadSizeBytes == failedTrx.Length,
             "report omitted exact artifact identity, provider/payload digests, size, or retention metadata");
         Assert(actionable.Results.Where(item => item.Outcome == CiTestOutcome.Failed)
             .All(item => !string.IsNullOrWhiteSpace(item.Message) &&
@@ -304,9 +295,10 @@ internal static class CiTestResultReportTests
             RequiredPolicy, ObservedAt));
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
             failedTrx, failedPacket, failedSource, RequiredPolicy, ExpiresAt.AddSeconds(1)));
-        Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
-            failedTrx, failedPacket, CreateSource(failedTrx, payloadSha256: new string('0', 64)),
-            RequiredPolicy, ObservedAt));
+        Assert(failedSource.PayloadSha256 ==
+            Convert.ToHexString(SHA256.HashData(failedTrx)).ToLowerInvariant() &&
+            failedSource.PayloadSizeBytes == failedTrx.Length,
+            "source payload identity was not derived from the verified archive bytes");
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
             failedTrx, failedPacket, failedSource, RequiredPolicy, ObservedAt,
             maximumPayloadBytes: 2));
@@ -408,16 +400,22 @@ internal static class CiTestResultReportTests
         string? jobName = null,
         string? artifactName = null,
         string? archiveDigest = null,
-        string? payloadSha256 = null,
-        long archiveSizeBytes = 512)
+        long? archiveSizeBytes = null,
+        byte[]? archiveBytes = null)
     {
-        var digest = Convert.ToHexString(SHA256.HashData(payload)).ToLowerInvariant();
-        return new CiTestResultArtifactSource(
+        var evidence = CreatePacket("failure");
+        var exactArchiveBytes = archiveBytes ?? CreateArtifactArchive(payload, CreateProvenanceJson(evidence));
+        var actualDigest = "sha256:" + Convert.ToHexString(SHA256.HashData(exactArchiveBytes)).ToLowerInvariant();
+        var binding = new CiTestResultProviderArtifactBinding(
             repository ?? Repository, RunId, runAttempt ?? RunAttempt,
             jobId ?? JobId, jobName ?? JobName, JobKey,
             7001, artifactName ?? $"ciai-test-results-{RunId}-{runAttempt ?? RunAttempt}-{JobKey}",
-            archiveDigest ?? "sha256:" + new string('a', 64), archiveSizeBytes,
-            payloadSha256 ?? digest, payload.Length, "xUnit", CreatedAt, ExpiresAt);
+            archiveDigest ?? actualDigest, archiveSizeBytes ?? exactArchiveBytes.Length,
+            CreatedAt, ExpiresAt, isExpired: false);
+        var archive = CiTestResultArtifactArchive.Read(
+            exactArchiveBytes, binding, "results.trx", "provenance.json");
+        return CiTestResultArtifactSource.FromVerifiedProviderObservation(
+            evidence, RequiredPolicy, binding, archive, "xUnit");
     }
 
     private static void MutateExposedMemory(ReadOnlyMemory<byte> memory)
