@@ -70,7 +70,7 @@ internal static class GitHubActionsArtifactCollectorTests
         await ThrowsAsync<ArgumentOutOfRangeException>(() =>
             new GitHubActionsArtifactCollector(new HttpClient()).GetArtifactAsync(Repository, 0, RunId, Sha));
 
-        Console.WriteLine("PASS: 10 GitHub Actions artifact observation checks.");
+        Console.WriteLine("PASS: 11 GitHub Actions artifact observation checks.");
     }
 
     private static string Fixture() => $$"""
