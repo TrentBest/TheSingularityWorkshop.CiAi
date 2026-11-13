@@ -20,7 +20,11 @@ public sealed record CiWorkflowJobObservation(
     string Status,
     string? Conclusion,
     Uri EvidenceUrl,
-    IReadOnlyList<CiWorkflowStepObservation> Steps);
+    IReadOnlyList<CiWorkflowStepObservation> Steps)
+{
+    public DateTimeOffset? StartedAt { get; init; }
+    public DateTimeOffset? CompletedAt { get; init; }
+}
 
 /// <summary>A bounded job collection for one explicit workflow run attempt.</summary>
 public sealed record CiWorkflowJobCollection(
@@ -148,8 +152,17 @@ public sealed class GitHubActionsWorkflowJobCollector
             }
         }
 
+        var startedAt = OptionalTimestamp(root, "started_at");
+        var completedAt = OptionalTimestamp(root, "completed_at");
+        if (startedAt.HasValue && completedAt.HasValue && completedAt.Value < startedAt.Value)
+            throw new InvalidDataException("GitHub job completion timestamp predates its start timestamp.");
+
         return new CiWorkflowJobObservation(id, runId, attempt, name, status, conclusion, url,
-            Array.AsReadOnly(steps.OrderBy(x => x.Number).ToArray()));
+            Array.AsReadOnly(steps.OrderBy(x => x.Number).ToArray()))
+        {
+            StartedAt = startedAt,
+            CompletedAt = completedAt
+        };
     }
 
     private static string RequiredString(JsonElement root, string property)
@@ -163,6 +176,24 @@ public sealed class GitHubActionsWorkflowJobCollector
     private static string? OptionalString(JsonElement root, string property) =>
         root.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String
             ? value.GetString() : null;
+
+    private static DateTimeOffset? OptionalTimestamp(JsonElement root, string property)
+    {
+        if (!root.TryGetProperty(property, out var value) || value.ValueKind == JsonValueKind.Null)
+            return null;
+        if (value.ValueKind != JsonValueKind.String)
+            throw new InvalidDataException($"GitHub job timestamp '{property}' must be a string or null.");
+        var text = value.GetString();
+        if (string.IsNullOrWhiteSpace(text))
+            throw new InvalidDataException($"GitHub job timestamp '{property}' cannot be empty.");
+        var hasZone = text.EndsWith("Z", StringComparison.OrdinalIgnoreCase) ||
+            (text.Contains('T') && (text.LastIndexOf('+') > text.IndexOf('T') || text.LastIndexOf('-') > text.IndexOf('T')));
+        if (!hasZone || !DateTimeOffset.TryParse(text, System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out var timestamp))
+            throw new InvalidDataException($"GitHub job timestamp '{property}' must include an explicit UTC offset.");
+        return timestamp;
+    }
+
 
     private static long RequiredInt64(JsonElement root, string property)
     {
