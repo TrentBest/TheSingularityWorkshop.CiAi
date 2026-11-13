@@ -82,6 +82,8 @@ try
                 job.JobId,
                 job.RunId,
                 job.RunAttempt,
+                job.StartedAt,
+                job.CompletedAt,
                 job.Name,
                 job.Status,
                 job.Conclusion,
