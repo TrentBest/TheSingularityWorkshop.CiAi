@@ -376,7 +376,11 @@ internal static class CiTestResultReportTests
             {
                 new CiWorkflowStepObservation(1, "dotnet test", "completed", conclusion,
                     "2026-10-31T01:03:00Z")
-            }));
+            }))
+        {
+            StartedAt = DateTimeOffset.Parse("2026-10-31T00:59:00Z"),
+            CompletedAt = DateTimeOffset.Parse("2026-10-31T01:04:00Z")
+        };
         var observed = new CiWorkflowRunEvidenceObservation(
             Repository, ".github/workflows/ci.yml", RunId, RunAttempt,
             "refs/heads/development", CandidateSha, "pull_request", "Validation",
