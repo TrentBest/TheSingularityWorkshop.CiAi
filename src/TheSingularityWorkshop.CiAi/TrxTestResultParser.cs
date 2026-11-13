@@ -110,9 +110,9 @@ public static class TrxTestResultParser
                 results.Add(new CiTestResult(
                     Attribute(element, "testId"),
                     Attribute(element, "executionId"),
-                    Bound(Attribute(element, "testName"), maximumDiagnosticCharacters, out _),
+                    Bound(Attribute(element, "testName"), maximumDiagnosticCharacters, out _) ?? string.Empty,
                     outcome,
-                    normalized ? providerOutcome : "unknown",
+                    Bound(providerOutcome, maximumDiagnosticCharacters, out _) ?? string.Empty,
                     boundedMessage,
                     boundedStack,
                     messageTruncated || stackTruncated));
