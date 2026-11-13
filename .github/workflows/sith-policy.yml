@@ -186,4 +186,5 @@ jobs:
 
           if [[ "$status" != "COMPLIANT" ]]; then
             echo "::error::Sith Policy requires exactly master and development; status is $status."
-            exit 1          fi
+            exit 1
+          fi
