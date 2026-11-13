@@ -33,7 +33,7 @@ public enum CiTestResultVerdict
 /// </summary>
 public sealed record CiTestResultArtifactSource
 {
-    public CiTestResultArtifactSource(
+    private CiTestResultArtifactSource(
         string repository,
         long runId,
         int runAttempt,
@@ -89,6 +89,99 @@ public sealed record CiTestResultArtifactSource
         TestFramework = testFramework;
         CreatedAt = createdAt;
         ExpiresAt = expiresAt;
+    }
+
+    /// <summary>
+    /// Creates a source descriptor only from a host-observed provider artifact/job binding and
+    /// an archive whose provider digest, bounded ZIP entries, TRX bytes, and embedded provenance
+    /// have already been verified. The host must construct the binding from independent provider
+    /// API observations and its explicit artifact-to-job association; report JSON is never a source.
+    /// </summary>
+    public static CiTestResultArtifactSource FromVerifiedProviderObservation(
+        CiWorkflowEvidencePacket evidence,
+        CiRequiredJobPolicy requiredJobPolicy,
+        CiTestResultProviderArtifactBinding providerBinding,
+        CiTestResultArtifactArchive archive,
+        string testFramework)
+    {
+        ArgumentNullException.ThrowIfNull(evidence);
+        ArgumentNullException.ThrowIfNull(requiredJobPolicy);
+        ArgumentNullException.ThrowIfNull(providerBinding);
+        ArgumentNullException.ThrowIfNull(archive);
+        ArgumentException.ThrowIfNullOrWhiteSpace(testFramework);
+
+        if (!evidence.WorkflowDefinitionTrusted || !evidence.CheckoutVerified || !evidence.EvidenceComplete)
+            throw new InvalidDataException("Provider artifact binding requires trusted, complete exact-run evidence.");
+        if (providerBinding.IsExpired)
+            throw new InvalidDataException("Provider reports that the source artifact is expired.");
+        if (!string.Equals(providerBinding.Repository, evidence.Provenance.Repository, StringComparison.OrdinalIgnoreCase) ||
+            providerBinding.RunId != evidence.Provenance.RunId ||
+            providerBinding.RunAttempt != evidence.Provenance.RunAttempt)
+            throw new InvalidDataException("Provider artifact binding does not identify the exact trusted run and attempt.");
+
+        var matchingJobs = evidence.ObservedRun.Jobs.Where(job =>
+            job.JobId == providerBinding.JobId &&
+            job.RunId == providerBinding.RunId &&
+            job.RunAttempt == providerBinding.RunAttempt &&
+            string.Equals(job.Name, providerBinding.JobName, StringComparison.Ordinal)).ToArray();
+        if (matchingJobs.Length != 1)
+            throw new InvalidDataException("Provider artifact binding does not identify exactly one independently observed job.");
+
+        var policyDefinitions = requiredJobPolicy.RequiredJobs.Where(definition =>
+            string.Equals(definition.WorkflowPath, evidence.Provenance.WorkflowPath, StringComparison.Ordinal) &&
+            string.Equals(definition.JobKey, providerBinding.JobKey, StringComparison.Ordinal) &&
+            string.Equals(definition.JobName, providerBinding.JobName, StringComparison.Ordinal)).ToArray();
+        if (policyDefinitions.Length != 1)
+            throw new InvalidDataException("Provider artifact binding does not match exactly one configured required workflow job.");
+        var requiredStatus = requiredJobPolicy.Evaluate(evidence, providerBinding.JobId, providerBinding.JobKey);
+        if (requiredStatus is not (CiRequiredCheckStatus.Passed or CiRequiredCheckStatus.Failed))
+            throw new InvalidDataException("Provider artifact binding does not identify a complete required check.");
+
+        if (!string.Equals(archive.ProviderArchiveDigest, providerBinding.ProviderArchiveDigest, StringComparison.OrdinalIgnoreCase) ||
+            archive.ArchiveSizeBytes != providerBinding.ArchiveSizeBytes)
+            throw new InvalidDataException("Verified archive bytes do not match independently observed provider artifact metadata.");
+
+        var embeddedProvenance = CiWorkflowProvenanceRecord.ParseAndValidate(
+            archive.ProvenanceBytes, providerBinding.Repository, providerBinding.RunId,
+            providerBinding.RunAttempt, archive.ProvenanceSha256);
+        if (!SameProvenance(embeddedProvenance, evidence.Provenance))
+            throw new InvalidDataException("Verified archive provenance does not match the exact trusted workflow evidence.");
+
+        return new CiTestResultArtifactSource(
+            providerBinding.Repository, providerBinding.RunId, providerBinding.RunAttempt,
+            providerBinding.JobId, providerBinding.JobName, providerBinding.JobKey,
+            providerBinding.ArtifactId, providerBinding.ArtifactName,
+            archive.ProviderArchiveDigest, archive.ArchiveSizeBytes,
+            archive.TrxSha256, archive.TrxBytes.Length, testFramework,
+            providerBinding.CreatedAt, providerBinding.ExpiresAt);
+    }
+
+    private static bool SameProvenance(
+        CiWorkflowProvenanceRecord left,
+        CiWorkflowProvenanceRecord right) =>
+        string.Equals(left.Repository, right.Repository, StringComparison.OrdinalIgnoreCase) &&
+        left.RunId == right.RunId &&
+        left.RunAttempt == right.RunAttempt &&
+        string.Equals(left.WorkflowPath, right.WorkflowPath, StringComparison.Ordinal) &&
+        string.Equals(left.WorkflowRef, right.WorkflowRef, StringComparison.Ordinal) &&
+        string.Equals(left.WorkflowSha, right.WorkflowSha, StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(left.EventName, right.EventName, StringComparison.Ordinal) &&
+        string.Equals(left.EventRef, right.EventRef, StringComparison.Ordinal) &&
+        string.Equals(left.EventSha, right.EventSha, StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(left.CheckoutRef, right.CheckoutRef, StringComparison.Ordinal) &&
+        string.Equals(left.CheckoutSha, right.CheckoutSha, StringComparison.OrdinalIgnoreCase) &&
+        SamePullRequest(left.PullRequest, right.PullRequest);
+
+    private static bool SamePullRequest(
+        CiWorkflowPullRequestProvenance? left,
+        CiWorkflowPullRequestProvenance? right)
+    {
+        if (left is null || right is null) return left is null && right is null;
+        return left.Number == right.Number &&
+            string.Equals(left.HeadRef, right.HeadRef, StringComparison.Ordinal) &&
+            string.Equals(left.HeadSha, right.HeadSha, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(left.BaseRef, right.BaseRef, StringComparison.Ordinal) &&
+            string.Equals(left.BaseSha, right.BaseSha, StringComparison.OrdinalIgnoreCase);
     }
 
     public string Repository { get; }
