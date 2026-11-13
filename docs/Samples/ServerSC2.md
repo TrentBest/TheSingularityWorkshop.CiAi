@@ -5,13 +5,13 @@
 
 ## Status
 
-**Coordination contract only; the ServerSC2 consumer integration is not yet implemented or verified.**
+**Initial CiAi TRX normalization primitive implemented on development; the ServerSC2 consumer integration and end-to-end handoff are not yet implemented or verified.**
 
 - ServerSC2 domain implementation: [ServerSC2 #1](https://github.com/TrentBest/TheSingularityWorkshop.ServerSC2/issues/1)
 - CiAi integration work: [CiAi #67](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/67)
 - Shared normalized test-artifact and HeadlessAi handoff authority: [CiAi #34](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/34)
 
-This sample defines the boundary and acceptance case. It does not claim that ServerSC2 already emits the artifacts or that CiAi already ingests TRX.
+This sample defines the boundary and acceptance case. CiAi now has a bounded, DTD-disabled TRX parser with contract tests. That parser is not yet wired to GitHub artifact retrieval, exact run/job provenance, a stable CODE RED verdict, or HeadlessAi delivery. ServerSC2 does not yet claim to emit the required artifacts.
 
 ## Responsibility boundary
 
@@ -38,7 +38,7 @@ The consumer mapping must be based on the actual workflow paths and artifacts pr
 | TRX test-result artifact | Machine-readable diagnostics emitted even when tests fail; absence is incomplete evidence when required |
 | Replay/integration payload | Optional bounded diagnostic artifact under explicit size and retention limits; never treated as CI authorization |
 
-## Provenance required by CiAi
+## Current CiAi implementation slice\n\nThe development branch now contains `TrxTestResultParser` and `TrxTestResultParserContractTests`. The parser bounds payload size, result count, and all provider-supplied text fields; prohibits DTD/external entity processing; normalizes pass/fail/not-executed/unknown outcomes; preserves unknown provider outcome strings; and labels diagnostic content as untrusted. Its output is explicitly not provenance evidence. The caller must first verify the downloaded bytes against the artifact manifest and bind the normalized result to the exact repository, checkout SHA, workflow run attempt, and job.\n\nThis is a useful first primitive, not completion of CiAi #34 or #67. It has not yet been run in CI in this turn.\n\n## Provenance required by CiAi
 
 Every normalized report must retain and validate, where exposed by GitHub:
 
