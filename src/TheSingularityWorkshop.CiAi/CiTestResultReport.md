@@ -17,7 +17,22 @@ Provider artifact names are labels supplied by the provider. They are not requir
 
 The source descriptor is created only through `CiTestResultArtifactSource.FromVerifiedProviderObservation`. The required-job policy also declares the exact expected provider artifact name for that workflow path/job key. The host first builds a `CiTestResultProviderArtifactBinding` from independently observed provider artifact metadata and its explicit artifact-to-job association; the source factory requires the observed artifact name to equal that configured value. It then calls `CiTestResultArtifactArchive.Read(bytes, binding, ...)`, which checks the downloaded ZIP size and SHA-256 against that provider observation before bounded extraction. The source factory rechecks exact repository/run/attempt/job ID/name/job key and configured required-check policy, requires the artifact name configured for that job, and verifies the provider artifact creation time falls within the independently observed job-attempt start/completion interval. It compares artifact ID/name and retention metadata from the binding, derives archive and TRX digests/sizes from the verified bytes, and validates the embedded provenance against the exact trusted evidence packet.
 
-The binding is a host assertion, not self-authenticating data: production adapters must not populate it from the report JSON or from artifact claims copied out of an untrusted sidecar. The host must independently observe the provider job and artifact records, establish their association under its configured policy, and reject ambiguous or incomplete mappings. The artifact collector does not download the archive or implement the host's network/credential policy. The archive reader accepts only the expected TRX/provenance entries and rejects unsafe paths, duplicate or missing entries, symlinks/reparse points, oversized payloads, and malformed archives. TRX parsing disables DTDs and external entities.
+The binding is a host assertion, not self-authenticating data: production adapters must not populate it from the report JSON or from artifact claims copied out of an untrusted sidecar. The production host sequence is:
+
+```csharp
+var providerArtifact = await artifactCollector.GetArtifactAsync(
+    repository, artifactId, runId, headSha);
+var binding = CiTestResultProviderArtifactBinding.FromObservedArtifact(
+    providerArtifact, evidence, requiredJobPolicy, jobId, jobKey);
+var archive = CiTestResultArtifactArchive.Read(
+    downloadedZipBytes, binding, "results.trx", "provenance.json");
+var source = CiTestResultArtifactSource.FromVerifiedProviderObservation(
+    evidence, requiredJobPolicy, binding, archive, "xUnit");
+var report = CiTestResultReport.ParseAndValidate(
+    archive, evidence, source, requiredJobPolicy, observedAt);
+```
+
+`downloadedZipBytes` must be the exact bytes retrieved from `providerArtifact.ArchiveDownloadUrl` through the host's authenticated, redirect/DNS-safe transport. The artifact collector does not download the archive or implement the host's network/credential policy. The archive reader accepts only the expected TRX/provenance entries and rejects unsafe paths, duplicate or missing entries, symlinks/reparse points, oversized payloads, and malformed archives. TRX parsing disables DTDs and external entities.
 
 ## Verdicts
 
