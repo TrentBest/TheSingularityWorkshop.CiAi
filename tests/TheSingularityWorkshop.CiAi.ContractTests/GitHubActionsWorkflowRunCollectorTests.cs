@@ -144,8 +144,8 @@ internal static class GitHubActionsWorkflowRunCollectorTests
         foreach (var (providerConclusion, expectedConclusion) in terminalConclusions)
         {
             using var client = new HttpClient(new StubHandler((_, _) =>
-                Task.FromResult(JsonResponse(page.Replace("\\"conclusion\\": \\"failure\\"",
-                    "\\"conclusion\\": \\"" + providerConclusion + "\\"", StringComparison.Ordinal)))));
+                Task.FromResult(JsonResponse(page.Replace("\"conclusion\": \"failure\"",
+                    "\"conclusion\": \"" + providerConclusion + "\"", StringComparison.Ordinal)))));
             var result = await new GitHubActionsWorkflowRunCollector(client)
                 .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha);
             Assert(result.Runs[0].Run.Status == CiRunStatus.Completed &&
@@ -163,8 +163,8 @@ internal static class GitHubActionsWorkflowRunCollectorTests
         {
             using var client = new HttpClient(new StubHandler((_, _) =>
                 Task.FromResult(JsonResponse(page.Replace(
-                    "\\"status\\": \\"completed\\", \\"conclusion\\": \\"failure\\"",
-                    "\\"status\\": \\"" + providerStatus + "\\", \\"conclusion\\": null", StringComparison.Ordinal)))));
+                    "\"status\": \"completed\", \"conclusion\": \"failure\"",
+                    "\"status\": \"" + providerStatus + "\", \"conclusion\": null", StringComparison.Ordinal)))));
             var result = await new GitHubActionsWorkflowRunCollector(client)
                 .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha);
             Assert(result.Runs[0].Run.Status == expectedStatus &&
@@ -192,8 +192,8 @@ internal static class GitHubActionsWorkflowRunCollectorTests
 
         using (var client = new HttpClient(new StubHandler((_, _) =>
             Task.FromResult(JsonResponse(page.Replace(
-                "\\"updated_at\\": \\"2026-10-24T04:00:00Z\\"",
-                "\\"updated_at\\": \\"not-a-timestamp\\"", StringComparison.Ordinal))))))
+                "\"updated_at\": \"2026-10-24T04:00:00Z\"",
+                "\"updated_at\": \"not-a-timestamp\"", StringComparison.Ordinal))))))
         {
             await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowRunCollector(client)
                 .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha));
@@ -201,14 +201,14 @@ internal static class GitHubActionsWorkflowRunCollectorTests
 
         using (var client = new HttpClient(new StubHandler((_, _) =>
             Task.FromResult(JsonResponse(page.Replace(
-                "\\"conclusion\\": \\"failure\\"", "\\"conclusion\\": null", StringComparison.Ordinal))))))
+                "\"conclusion\": \"failure\"", "\"conclusion\": null", StringComparison.Ordinal))))))
         {
             await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowRunCollector(client)
                 .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha));
         }
 
         using (var client = new HttpClient(new StubHandler((_, _) =>
-            Task.FromResult(JsonResponse("{\\"total_count\\":0,\\"workflow_runs\\":[]}")))))
+            Task.FromResult(JsonResponse("{\"total_count\":0,\"workflow_runs\":[]}")))))
         {
             var empty = await new GitHubActionsWorkflowRunCollector(client)
                 .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha);
