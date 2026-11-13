@@ -142,13 +142,13 @@ public sealed class GitHubActionsArtifactCollector
                 throw new InvalidDataException("GitHub artifact listing is truncated; the required artifact cannot be selected unambiguously.");
         }
 
-        if (!expectedTotal.HasValue || returned != expectedTotal.Value)
+        if (expectedTotal is not { } total || returned != total)
             throw new InvalidDataException("GitHub artifact listing is incomplete.");
-        if (!matchingArtifactId.HasValue)
+        if (matchingArtifactId is not { } selectedArtifactId)
             throw new InvalidDataException("No provider artifact matches the configured required artifact name.");
 
         var observed = await GetArtifactAsync(
-            repository, matchingArtifactId.Value, expectedRunId, expectedHeadSha, cancellationToken).ConfigureAwait(false);
+            repository, selectedArtifactId, expectedRunId, expectedHeadSha, cancellationToken).ConfigureAwait(false);
         if (!string.Equals(observed.ArtifactName, expectedArtifactName, StringComparison.Ordinal))
             throw new InvalidDataException("Provider artifact name changed between listing and detail observation.");
         return observed;
