@@ -77,7 +77,11 @@ public sealed record CiWorkflowEvidencePacket
         var workflowRefSeparator = provenance.WorkflowRef.LastIndexOf('@');
         if (workflowRefSeparator <= 0)
             throw new InvalidDataException("Validated workflow provenance does not contain a full workflow ref.");
-        var legacyWorkflowRef = provenance.WorkflowRef[(workflowRefSeparator + 1)..];
+        var provenanceWorkflowRef = provenance.WorkflowRef[(workflowRefSeparator + 1)..];
+        var providerWorkflowRef = matchingRuns[0].WorkflowRef;
+        if (string.IsNullOrWhiteSpace(providerWorkflowRef) ||
+            !string.Equals(providerWorkflowRef, provenanceWorkflowRef, StringComparison.Ordinal))
+            throw new InvalidDataException("Workflow provenance ref does not match the independently observed GitHub workflow ref.");
         var jobsComplete = !jobCollection.IsTruncated && jobCollection.TotalCount == jobCollection.Jobs.Count;
         var discoveryComplete = !runCollection.IsTruncated && runCollection.TotalCount == runCollection.Runs.Count;
         var observedRun = new CiWorkflowRunEvidenceObservation(
@@ -85,7 +89,7 @@ public sealed record CiWorkflowEvidencePacket
             observation.WorkflowPath,
             observation.Run.RunId,
             observation.RunAttempt,
-            legacyWorkflowRef,
+            providerWorkflowRef!,
             observation.Run.HeadSha,
             observation.Event,
             observation.Run.WorkflowName,
