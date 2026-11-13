@@ -45,6 +45,24 @@ public sealed class CiTestResultArtifactArchive
     /// Verifies the provider's SHA-256 over the complete ZIP and reads exactly the expected
     /// TRX and provenance files under strict entry, size, path, and expansion limits.
     /// </summary>
+    /// <summary>Reads an archive against the exact provider-observed metadata binding.</summary>
+    public static CiTestResultArtifactArchive Read(
+        ReadOnlyMemory<byte> archiveBytes,
+        CiTestResultProviderArtifactBinding providerBinding,
+        string expectedTrxEntryName,
+        string expectedProvenanceEntryName,
+        long maximumArchiveBytes = DefaultMaximumArchiveBytes,
+        long maximumPayloadBytes = DefaultMaximumPayloadBytes)
+    {
+        ArgumentNullException.ThrowIfNull(providerBinding);
+        if (providerBinding.IsExpired)
+            throw new InvalidDataException("Provider reports that the source artifact is expired.");
+        if (archiveBytes.Length != providerBinding.ArchiveSizeBytes)
+            throw new InvalidDataException("Downloaded archive size does not match independently observed provider metadata.");
+        return Read(archiveBytes, providerBinding.ProviderArchiveDigest,
+            expectedTrxEntryName, expectedProvenanceEntryName, maximumArchiveBytes, maximumPayloadBytes);
+    }
+
     public static CiTestResultArtifactArchive Read(
         ReadOnlyMemory<byte> archiveBytes,
         string providerArchiveDigest,
