@@ -96,16 +96,12 @@ internal static class CiTestResultReportTests
         var foreignRunProvenance = CreateProvenanceJson(failedPacket, runId: RunId + 1);
         var foreignRunZip = CreateArtifactArchive(failedTrx, foreignRunProvenance);
         var foreignRunDigest = "sha256:" + Convert.ToHexString(SHA256.HashData(foreignRunZip)).ToLowerInvariant();
-        var foreignRunArchive = CiTestResultArtifactArchive.Read(
-            foreignRunZip, foreignRunDigest, "results.trx", "provenance.json");
         Throws<InvalidDataException>(() => CreateSource(failedTrx, archiveBytes: foreignRunZip));
 
         var foreignCheckoutProvenance = CreateProvenanceJson(
             failedPacket, checkoutSha: new string('f', 40));
         var foreignCheckoutZip = CreateArtifactArchive(failedTrx, foreignCheckoutProvenance);
         var foreignCheckoutDigest = "sha256:" + Convert.ToHexString(SHA256.HashData(foreignCheckoutZip)).ToLowerInvariant();
-        var foreignCheckoutArchive = CiTestResultArtifactArchive.Read(
-            foreignCheckoutZip, foreignCheckoutDigest, "results.trx", "provenance.json");
         Throws<InvalidDataException>(() => CreateSource(failedTrx, archiveBytes: foreignCheckoutZip));
 
         Throws<InvalidDataException>(() => CreateSource(failedTrx,
