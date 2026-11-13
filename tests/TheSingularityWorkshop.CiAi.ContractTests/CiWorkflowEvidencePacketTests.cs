@@ -49,7 +49,18 @@ internal static class CiWorkflowEvidencePacketTests
             runCollection, jobCollection, 42, 2, DateTimeOffset.Parse("2026-10-31T01:02:00Z"),
             provenance, workflowDefinitionTrusted: true);
         Assert(factoryPacket.IsSuccessful && factoryPacket.Provenance.WorkflowSha == WorkflowSha,
-            "v1 collection factory depended on the legacy workflow-ref suffix instead of validated provenance");
+            "v1 collection factory did not preserve the independently observed workflow ref");
+        var mismatchedWorkflowRefCollection = runCollection with
+        {
+            Runs = new[]
+            {
+                runCollection.Runs[0] with { WorkflowRef = "refs/heads/master" }
+            }
+        };
+        Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromCollections(
+            mismatchedWorkflowRefCollection, jobCollection, 42, 2,
+            DateTimeOffset.Parse("2026-10-31T01:02:00Z"),
+            provenance, workflowDefinitionTrusted: true));
 
         var dispatchBytes = Encoding.UTF8.GetBytes(CreateDispatchProvenance());
         var dispatchProvenance = CiWorkflowProvenanceRecord.ParseAndValidate(
@@ -176,7 +187,7 @@ internal static class CiWorkflowEvidencePacketTests
             DateTimeOffset.Parse("2026-10-31T01:00:00Z"));
         var observation = new CiWorkflowRunObservation(
             snapshot, 2, ".github/workflows/ci.yml", "pull_request",
-            Array.Empty<int>()) { WorkflowRef = null };
+            Array.Empty<int>()) { WorkflowRef = "refs/heads/development" };
         var runs = new CiWorkflowRunCollection(
             "TrentBest/CiAi", EventSha, new[] { observation }, 1, 1, false);
         var job = new CiWorkflowJobObservation(
