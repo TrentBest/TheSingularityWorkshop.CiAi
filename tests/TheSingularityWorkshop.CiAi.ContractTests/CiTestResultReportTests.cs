@@ -283,6 +283,9 @@ internal static class CiTestResultReportTests
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
             failedTrx, failedPacket, CreateSource(failedTrx, jobName: "other-job"),
             RequiredPolicy, ObservedAt));
+        Throws<InvalidDataException>(() => CreateSource(failedTrx, jobKey: "unregistered-job"));
+        Throws<InvalidDataException>(() => CreateSource(failedTrx, isExpired: true));
+        Throws<ArgumentOutOfRangeException>(() => CreateSource(failedTrx, artifactId: 0));
         Throws<InvalidDataException>(() => CiTestResultReport.ParseAndValidate(
             failedTrx, CreatePacket("failure", workflowTrusted: false), failedSource,
             RequiredPolicy, ObservedAt));
@@ -395,19 +398,22 @@ internal static class CiTestResultReportTests
         long? jobId = null,
         string? jobName = null,
         string? artifactName = null,
+        string? jobKey = null,
+        long? artifactId = null,
         string? archiveDigest = null,
         long? archiveSizeBytes = null,
-        byte[]? archiveBytes = null)
+        byte[]? archiveBytes = null,
+        bool isExpired = false)
     {
         var evidence = CreatePacket("failure");
         var exactArchiveBytes = archiveBytes ?? CreateArtifactArchive(payload, CreateProvenanceJson(evidence));
         var actualDigest = "sha256:" + Convert.ToHexString(SHA256.HashData(exactArchiveBytes)).ToLowerInvariant();
         var binding = new CiTestResultProviderArtifactBinding(
             repository ?? Repository, RunId, runAttempt ?? RunAttempt,
-            jobId ?? JobId, jobName ?? JobName, JobKey,
-            7001, artifactName ?? $"ciai-test-results-{RunId}-{runAttempt ?? RunAttempt}-{JobKey}",
+            jobId ?? JobId, jobName ?? JobName, jobKey ?? JobKey,
+            artifactId ?? 7001, artifactName ?? $"ciai-test-results-{RunId}-{runAttempt ?? RunAttempt}-{JobKey}",
             archiveDigest ?? actualDigest, archiveSizeBytes ?? exactArchiveBytes.Length,
-            CreatedAt, ExpiresAt, isExpired: false);
+            CreatedAt, ExpiresAt, isExpired);
         var archive = CiTestResultArtifactArchive.Read(
             exactArchiveBytes, binding, "results.trx", "provenance.json");
         return CiTestResultArtifactSource.FromVerifiedProviderObservation(
