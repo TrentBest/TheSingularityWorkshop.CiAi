@@ -142,7 +142,7 @@ public sealed class GitHubActionsArtifactCollector
                 throw new InvalidDataException("GitHub artifact listing is truncated; the required artifact cannot be selected unambiguously.");
         }
 
-        if (expectedTotal is not { } total || returned != total)
+        if (expectedTotal is not { } expectedTotalCount || returned != expectedTotalCount)
             throw new InvalidDataException("GitHub artifact listing is incomplete.");
         if (matchingArtifactId is not { } selectedArtifactId)
             throw new InvalidDataException("No provider artifact matches the configured required artifact name.");
