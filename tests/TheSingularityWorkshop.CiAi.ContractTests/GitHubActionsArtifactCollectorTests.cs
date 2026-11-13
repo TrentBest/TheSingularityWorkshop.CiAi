@@ -67,7 +67,7 @@ internal static class GitHubActionsArtifactCollectorTests
                 .GetArtifactAsync(Repository, ArtifactId, RunId, Sha));
         }
 
-        var listing = $"""{"total_count":1,"artifacts":[{{valid}}]}""";
+        var listing = $$"""{"total_count":1,"artifacts":[{{valid}}]}""";
         var requests = new List<string>();
         using (var client = new HttpClient(new StubHandler((request, _) =>
         {
@@ -96,13 +96,13 @@ internal static class GitHubActionsArtifactCollectorTests
 
         var duplicate = valid.Replace("\"id\": 7001", "\"id\": 7002", StringComparison.Ordinal)
             .Replace($"/actions/artifacts/{ArtifactId}/zip", "/actions/artifacts/7002/zip", StringComparison.Ordinal);
-        await RejectListing($"""{"total_count":2,"artifacts":[{{valid}},{{duplicate}}]}""",
+        await RejectListing($$"""{"total_count":2,"artifacts":[{{valid}},{{duplicate}}]}""",
             "duplicate configured artifact names");
-        await RejectListing($"""{"total_count":1,"artifacts":[{{valid.Replace("minesweeper-test-results","other",StringComparison.Ordinal)}}]}""",
+        await RejectListing($$"""{"total_count":1,"artifacts":[{{valid.Replace("minesweeper-test-results","other",StringComparison.Ordinal)}}]}""",
             "missing configured artifact name");
-        await RejectListing($"""{"total_count":2,"artifacts":[{{valid}}]}""",
+        await RejectListing($$"""{"total_count":2,"artifacts":[{{valid}}]}""",
             "truncated artifact discovery", maximumPages: 1, pageSize: 1);
-        await RejectListing($"""{"total_count":2,"artifacts":[{{valid}},{{valid}}]}""",
+        await RejectListing($$"""{"total_count":2,"artifacts":[{{valid}},{{valid}}]}""",
             "duplicate artifact IDs");
 
         await ThrowsAsync<ArgumentOutOfRangeException>(() =>
@@ -111,7 +111,7 @@ internal static class GitHubActionsArtifactCollectorTests
         Console.WriteLine("PASS: 16 GitHub Actions artifact observation and discovery checks.");
     }
 
-    private static string Fixture() => $$"""
+    private static string Fixture() => $$$"""
     {
       "id": {{ArtifactId}},
       "name": "minesweeper-test-results",
