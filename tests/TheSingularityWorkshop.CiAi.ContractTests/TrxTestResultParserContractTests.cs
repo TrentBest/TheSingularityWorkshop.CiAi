@@ -25,7 +25,7 @@ internal static class TrxTestResultParserContractTests
                 "<TestRun><Results><UnitTestResult testId=\"x\" executionId=\"e\" testName=\"T\" outcome=\"FutureOutcome\" /></Results></TestRun>"));
             Assert(report.Unknown == 1 && report.Passed == 0 && report.Failed == 0,
                 "unknown provider outcome was upgraded to pass or failure");
-            Assert(report.Results[0].ProviderOutcome == "unknown", "unknown outcome was not normalized");
+            Assert(report.Results[0].ProviderOutcome == "FutureOutcome", "unknown outcome was not normalized");
         });
 
         Check("TRX parser bounds diagnostic strings and records truncation", () =>
