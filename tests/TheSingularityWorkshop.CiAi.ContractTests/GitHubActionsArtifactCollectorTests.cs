@@ -67,10 +67,48 @@ internal static class GitHubActionsArtifactCollectorTests
                 .GetArtifactAsync(Repository, ArtifactId, RunId, Sha));
         }
 
+        var listing = $"""{"total_count":1,"artifacts":[{{valid}}]}""";
+        var requests = new List<string>();
+        using (var client = new HttpClient(new StubHandler((request, _) =>
+        {
+            requests.Add(request.RequestUri!.AbsolutePath);
+            if (request.RequestUri.AbsolutePath == $"/repos/{Repository}/actions/runs/{RunId}/artifacts")
+            {
+                Assert(request.RequestUri.Query.Contains("per_page=100", StringComparison.Ordinal),
+                    "required-artifact discovery must use an explicit bounded page size");
+                return Task.FromResult(JsonResponse(listing));
+            }
+            if (request.RequestUri.AbsolutePath == $"/repos/{Repository}/actions/artifacts/{ArtifactId}")
+                return Task.FromResult(JsonResponse(valid));
+            throw new InvalidOperationException("Unexpected provider artifact discovery request.");
+        })))
+        {
+            var artifact = await new GitHubActionsArtifactCollector(client)
+                .GetRequiredArtifactAsync(Repository, RunId, Sha, "minesweeper-test-results");
+            Assert(artifact.ArtifactId == ArtifactId &&
+                requests.SequenceEqual(new[]
+                {
+                    $"/repos/{Repository}/actions/runs/{RunId}/artifacts",
+                    $"/repos/{Repository}/actions/artifacts/{ArtifactId}"
+                }),
+                "required artifact ID was not selected from the exact run's provider listing");
+        }
+
+        var duplicate = valid.Replace("\\"id\\":7001", "\\"id\\":7002", StringComparison.Ordinal)
+            .Replace($"/actions/artifacts/{ArtifactId}/zip", "/actions/artifacts/7002/zip", StringComparison.Ordinal);
+        await RejectListing($"""{"total_count":2,"artifacts":[{{valid}},{{duplicate}}]}""",
+            "duplicate configured artifact names");
+        await RejectListing($"""{"total_count":1,"artifacts":[{{valid.Replace("minesweeper-test-results","other",StringComparison.Ordinal)}}]}""",
+            "missing configured artifact name");
+        await RejectListing($"""{"total_count":2,"artifacts":[{{valid}}]}""",
+            "truncated artifact discovery", maximumPages: 1, pageSize: 1);
+        await RejectListing($"""{"total_count":2,"artifacts":[{{valid}},{{valid}}]}""",
+            "duplicate artifact IDs");
+
         await ThrowsAsync<ArgumentOutOfRangeException>(() =>
             new GitHubActionsArtifactCollector(new HttpClient()).GetArtifactAsync(Repository, 0, RunId, Sha));
 
-        Console.WriteLine("PASS: 11 GitHub Actions artifact observation checks.");
+        Console.WriteLine("PASS: 16 GitHub Actions artifact observation and discovery checks.");
     }
 
     private static string Fixture() => $$"""
@@ -86,6 +124,23 @@ internal static class GitHubActionsArtifactCollectorTests
       "workflow_run": { "id": {{RunId}}, "head_sha": "{{Sha}}" }
     }
     """;
+
+    private static async Task RejectListing(
+        string json,
+        string scenario,
+        int maximumPages = 10,
+        int pageSize = 100)
+    {
+        using var client = new HttpClient(new StubHandler((request, _) =>
+        {
+            if (request.RequestUri?.AbsolutePath != $"/repos/{Repository}/actions/runs/{RunId}/artifacts")
+                throw new InvalidOperationException("Unexpected provider artifact listing request.");
+            return Task.FromResult(JsonResponse(json));
+        }));
+        await ThrowsAsync<InvalidDataException>(() => new GitHubActionsArtifactCollector(client)
+            .GetRequiredArtifactAsync(Repository, RunId, Sha, "minesweeper-test-results",
+                maximumPages, pageSize));
+    }
 
     private static async Task Reject(string json, string scenario)
     {
