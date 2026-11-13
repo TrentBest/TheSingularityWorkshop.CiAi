@@ -642,6 +642,7 @@ await GitHubActionsRunClientTests.RunAsync();
 await GitHubActionsWorkflowRunCollectorTests.RunAsync();
 CiRequiredWorkflowEvidenceEvaluatorTests.Run();
 await GitHubActionsWorkflowJobCollectorTests.RunAsync();
+await GitHubActionsArtifactCollectorTests.RunAsync();
 
 void Check(string name, Action action)
 {
