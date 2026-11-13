@@ -73,6 +73,7 @@ try
                 evidenceUrl = observation.Run.EvidenceUrl.ToString(),
                 observation.RunAttempt,
                 observation.WorkflowPath,
+                observation.WorkflowRef,
                 observation.Event,
                 observation.PullRequestNumbers
             },
@@ -104,6 +105,31 @@ try
 
     var requiredWorkflowPaths = (Environment.GetEnvironmentVariable("CIAI_REQUIRED_WORKFLOW_PATHS") ?? string.Empty)
         .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    var expectedWorkflowRef = Environment.GetEnvironmentVariable("CIAI_EXPECTED_WORKFLOW_REF");
+    var expectedWorkflowEvent = Environment.GetEnvironmentVariable("CIAI_EXPECTED_WORKFLOW_EVENT");
+    var exactRunBindingConfigured = !string.IsNullOrWhiteSpace(expectedWorkflowRef) ||
+        !string.IsNullOrWhiteSpace(expectedWorkflowEvent);
+    var exactRunBindingValid = !exactRunBindingConfigured ||
+        (requiredWorkflowPaths.Length > 0 &&
+         !string.IsNullOrWhiteSpace(expectedWorkflowRef) &&
+         !string.IsNullOrWhiteSpace(expectedWorkflowEvent) &&
+         requiredWorkflowPaths.All(selector =>
+         {
+             var parts = selector.Split('#');
+             if (parts.Length != 3 ||
+                 !long.TryParse(parts[1], out var expectedRunId) ||
+                 !int.TryParse(parts[2], out var expectedAttempt))
+                 return false;
+             var matches = runCollection.Runs.Where(run =>
+                 run.Run.RunId == expectedRunId &&
+                 run.RunAttempt == expectedAttempt &&
+                 string.Equals(run.WorkflowPath, parts[0], StringComparison.Ordinal)).ToArray();
+             return matches.Length == 1 &&
+                 string.Equals(matches[0].WorkflowRef, expectedWorkflowRef, StringComparison.Ordinal) &&
+                 string.Equals(matches[0].Event, expectedWorkflowEvent, StringComparison.Ordinal) &&
+                 matches[0].Run.Status == CiRunStatus.Completed &&
+                 matches[0].ProviderStatus == "completed";
+         }));
     var discoveryComplete = !runCollection.IsTruncated &&
         runCollection.Runs.Count == runCollection.TotalCount;
     var requiredWorkflowResults = requiredWorkflowPaths.Length == 0
@@ -115,7 +141,8 @@ try
         requiredWorkflowResults.All(result => result.Terminal);
     var requiredWorkflowsSuccessful = requiredWorkflowResults.Length > 0 &&
         requiredWorkflowResults.All(result => result.Successful);
-    var complete = CiRequiredWorkflowEvidenceEvaluator.IsPassing(discoveryComplete, requiredWorkflowResults);
+    var complete = CiRequiredWorkflowEvidenceEvaluator.IsPassing(discoveryComplete, requiredWorkflowResults) &&
+        exactRunBindingValid;
     var report = new
     {
         schema = "ciai.commit-observation.v2",
@@ -133,11 +160,13 @@ try
         discoveryComplete,
         requiredWorkflowPolicy = new { configured = requiredWorkflowPaths.Length > 0, workflowIdentities = requiredWorkflowPaths },
         requiredWorkflowResults,
+        exactRunBindingConfigured,
+        exactRunBindingValid,
         requiredEvidenceComplete,
         requiredWorkflowsTerminal,
         requiredWorkflowsSuccessful,
         complete,
-        note = "Observation only: this report does not certify release readiness, inspect package contents, interpret security findings, or authorize publication. API discovery completeness, required evidence completeness, required-workflow terminality, and required-workflow success are separate facts. Only explicitly required workflow identities block the policy; missing, ambiguous, non-terminal, unsuccessful, or incomplete required evidence fails closed. Set CIAI_REQUIRED_WORKFLOW_PATHS to a semicolon-separated list of exact .github/workflows/ paths, optionally suffixed with #<run-id>#<attempt>. Without a configured policy, complete is false.",
+        note = "Observation only: this report does not certify release readiness, inspect package contents, interpret security findings, or authorize publication. API discovery completeness, required evidence completeness, required-workflow terminality, and required-workflow success are separate facts. Only explicitly required workflow identities block the policy; missing, ambiguous, non-terminal, unsuccessful, or incomplete required evidence fails closed. Set CIAI_REQUIRED_WORKFLOW_PATHS to a semicolon-separated list of exact .github/workflows/ paths, optionally suffixed with #<run-id>#<attempt>. When CIAI_EXPECTED_WORKFLOW_REF and CIAI_EXPECTED_WORKFLOW_EVENT are configured, each exact required run must also match that provider-observed workflow ref and event. Without a configured required-workflow policy, complete is false.",
         runs = observedRuns
     };
 
