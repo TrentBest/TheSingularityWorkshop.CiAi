@@ -109,7 +109,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: TrentBest/TheSingularityWorkshop.CiAi
-          ref: 49a802fcab60fa7411b01892072d7e2c8a2c72a9
+          ref: e66a9a39c2daf93b50ad7fd61f4a19e32988a658
           path: ciai
           submodules: recursive
           persist-credentials: false
@@ -133,6 +133,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           CIAI_GITHUB_TOKEN: ${{ github.token }}
           CIAI_REQUIRED_WORKFLOW_PATHS: .github/workflows/ci.yml#${{ steps.source-run.outputs.run_id }}#${{ steps.source-run.outputs.run_attempt }}
+          CIAI_EXPECTED_WORKFLOW_REF: refs/heads/${{ steps.source.outputs.branch }}
+          CIAI_EXPECTED_WORKFLOW_EVENT: push
           TARGET_REPOSITORY: ${{ steps.source.outputs.repository }}
           TARGET_SHA: ${{ steps.source.outputs.sha }}
           SOURCE_RUN_ID: ${{ steps.source-run.outputs.run_id }}
@@ -148,6 +150,8 @@ jobs:
             .repository == $repo and
             .headSha == $sha and
             .discoveryComplete == true and
+            .exactRunBindingConfigured == true and
+            .exactRunBindingValid == true and
             .complete == true and
             (.requiredWorkflowResults | length) == 1 and
             .requiredWorkflowResults[0].WorkflowPath == $expected and
