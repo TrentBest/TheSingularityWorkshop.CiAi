@@ -6,11 +6,11 @@ GrammarAi is the reusable AI-facing knowledge-mapping layer for describing and v
 
 CiAi should use GrammarAi to define its own versioned CI domain map: workflow plans, triggers, conditions/dependencies, typed steps/actions, inputs/outputs, declared capabilities, and expected evidence/outcome roles. GrammarAi supplies the structural model and bounded proposal validation; CiAi supplies the CI-specific vocabulary and meaning.
 
-**Integration status:** planned and tracked by [CiAi issue #59](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/59). The current CiAi development project does not yet reference GrammarAi. This page describes the intended consumer contract, not a completed integration.
+**Integration status:** implemented as the first structural vertical slice on CiAi `development`. CiAi pins GrammarAi source revision `2582362ad233faeffe82c2de28d464efffb0cda4` and ProtocolAi source revision `024ca3f2fac486d5aefa6f276c5203d5bdfe3bcf` as source submodules, references both projects directly, and exercises the public graph and proposal codec in contract tests. The graph models workflow triggers, ordered steps/dependencies, step actions, typed input/output declarations, capabilities, side effects, and expected evidence/outcome roles. CiAi retains domain/action meaning in its existing catalog and semantic plan validator; this is not an execution or release authorization.
 
 ## Ownership boundary
 
-- **ProtocolAi:** stable vocabulary identities. Global category ownership remains a separate cross-repository decision; do not invent category metadata in CiAi.
+- **ProtocolAi:** stable vocabulary identities. Each immutable `ProtocolDefinition.Id` is a category identity and each `ProtocolSymbol.Id` is a member identity within that category. CiAi owns the CI-specific definitions; it does not add a competing category abstraction.
 - **GrammarAi:** reusable production/structural grammar definitions, typed node and slot identities, schema versioning, graph validation, and compact integer-first proposal codec.
 - **CiAi:** CI-specific action vocabulary and parameter identities, workflow-domain semantics, evidence/policy evaluation, and CI-provider adapters.
 - **CommandAi:** generic atomic-command proposal representation and serialization.
@@ -19,26 +19,31 @@ CiAi should use GrammarAi to define its own versioned CI domain map: workflow pl
 
 A valid GrammarAi structure is untrusted intent. Structural validity does not establish semantic correctness, successful CI evidence, authorization, or permission to execute, publish, or deploy.
 
-## First integration slice
+## Implemented first integration slice
 
-Use GrammarAi's public API from an exact, immutable source revision. The initial CI map should remain deliberately small and cover a real workflow proposal, for example:
+CiAi pins GrammarAi source revision `2582362ad233faeffe82c2de28d464efffb0cda4` and ProtocolAi source revision `024ca3f2fac486d5aefa6f276c5203d5bdfe3bcf`. The first real workflow slice includes:
 
-- one workflow/plan node;
-- an ordered sequence of typed restore/build/test steps;
-- explicit dependency/condition relationships;
-- typed input/output or evidence roles;
-- required and optional relationships where appropriate.
+- workflow trigger references and repeated ordered step nodes;
+- optional ordered dependency relationships, a required typed action, and an explicit typed dependency condition per step;
+- typed input/output declaration nodes with ProtocolAi category/member identities;
+- declared capability, side-effect, evidence-role, and outcome-role references;
+- a request-scoped exposed vocabulary snapshot, digest, and model-facing description;
+- a populated integer-first proposal encoded and decoded by GrammarAi's tagged v2 `GrammarStructureProposalCodec`.
+
+Input/output nodes describe declared parameter names and types; they do not carry runtime values. CiAi continues to own step-domain meaning and semantic dependency policy through its existing catalog and validator. The model-facing catalog is a filtered immutable snapshot; disabled members are omitted from its description and rejected by the GrammarAi resolver. The graph codec is not a second semantic policy engine.
 
 Use `GrammarStructureDefinition`, `GrammarNodeDefinition`, `GrammarSlotDefinition`, `GrammarStructureInstance`, and `GrammarStructureProposalCodec` where they fit. Evaluate the production-grammar API for any part that genuinely needs ordered symbol composition. Do not implement a second grammar or structural validator in CiAi, and do not attempt to model every CI workflow family in the first increment.
 
-The host selects the active versioned definition and supplies any vocabulary/identifier resolution. Keep structure-definition identity/version separate from the codec wire version.
+The GrammarAi production-grammar API was evaluated for this workflow slice. Workflow sequencing is already represented directly by ordered repeated structural slots and dependency relationships, so production productions would duplicate the graph's job without adding useful constraints. The structural graph is the chosen representation; no parallel production grammar is introduced.
+
+The active schema identity/version is `CiWorkflowGrammarMap.DefinitionId` / `SchemaVersion`; the GrammarAi proposal codec wire version and vocabulary-snapshot digest are separate identities. GrammarAi external slots target ProtocolAi definition IDs and carry qualified category/member references. A snapshot can expose only selected categories/members; known-but-disabled members are rejected. Exposure is not authorization.
 
 ## Evidence contract
 
 The CiAi integration should retain the existing provider evidence contract:
 - canonical repository identity, full source commit SHA, workflow path, trigger/event, run ID and attempt;
 - provider status/conclusion, timestamps, job/step outcomes, and authoritative evidence URLs;
-- exact resolved source revision of each sibling dependency, including the GrammarAi pin;
+- exact resolved source revisions of each sibling dependency, including the GrammarAi and ProtocolAi pins;
 - distinct missing, not-triggered, skipped, cancelled, unavailable, unknown, failed, and successful states.
 
 GrammarAi validates the proposed structure. CiAi evaluates the meaning of the declared CI policy against provider evidence. Foundry/host owns execution authorization and lifecycle.
@@ -46,7 +51,7 @@ GrammarAi validates the proposed structure. CiAi evaluates the meaning of the de
 ## Adoption and verification
 
 1. Pin an immutable GrammarAi source commit in CiAi's source dependency model; do not build against a moving branch ref.
-2. Build CiAi against that exact source revision without relying on a NuGet publication.
+2. Build CiAi against the exact GrammarAi and ProtocolAi source revisions without relying on a NuGet publication.
 3. Exercise a deterministic versioned CI workflow definition and populated proposal in contract tests.
 4. Cover valid and invalid relationships, ordering/cardinality, stale schema and unknown wire versions, malformed/bounded payloads, and deterministic round trips as applicable.
 5. Verify clean-checkout builds, package creation, and package-consumer smoke tests include the dependency correctly.

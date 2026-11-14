@@ -40,7 +40,16 @@ AnyApp is CiAi's first source-based consumer pilot. It keeps GitHub Actions as t
 - [AnyApp consumer walkthrough and evidence-lane map](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/Samples/AnyApp.md)
 - [AnyApp CiAi evidence workflow](https://github.com/TrentBest/AnyApp/blob/development/.github/workflows/ciai-evidence.yml)
 
-## 04 — CODE RED evidence contracts
+## 04 — Next consumer: ServerSC2
+
+ServerSC2 is the next CODE RED evidence integration. ServerSC2 owns authoritative SC2 match/replay evidence; CiAi owns exact GitHub workflow/artifact provenance, test-result normalization, and the CI verdict. This integration is coordinated but not yet implemented or verified.
+
+- [ServerSC2 evidence integration contract](docs/Samples/ServerSC2.md)
+- [ServerSC2 domain implementation issue](https://github.com/TrentBest/TheSingularityWorkshop.ServerSC2/issues/1)
+- [CiAi integration issue](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/67)
+- [Shared CODE RED / HeadlessAi handoff](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/34)
+
+## 05 — CODE RED evidence contracts
 
 The current producer path is documented by its canonical contracts:
 
@@ -54,10 +63,11 @@ The current producer path is documented by its canonical contracts:
 
 The host artifact publisher and authenticated Foundry ingress/retrieval deployment remain integration responsibilities; these contracts do not claim live remote acceptance.
 
-## 05 — Architecture and proof
+## 06 — Architecture and proof
 
 - [Gallery](Gallery.md) — current demonstrations and evidence.
 - [Cross-Cog integration](integration/CogEcosystem.ContractTests/README.md) — pinned in-process contract proof.
+- GrammarAi is consumed from immutable source pin `2582362ad233faeffe82c2de28d464efffb0cda4`; ProtocolAi is consumed from immutable source pin `024ca3f2fac486d5aefa6f276c5203d5bdfe3bcf`. CiAi owns CI vocabulary and workflow semantics, ProtocolAi owns stable category/member identity primitives, and GrammarAi validates the typed workflow/evidence graph. Structural validity remains separate from CI policy/evidence verdicts and host authorization.
 - [Inter-repository model](docs/INTER_REPOSITORY_MODEL.md) — request/result workflow and integration gaps.
 - [Release readiness](docs/RELEASE_READINESS.md) — package and authorization boundaries.
 - [FSM_COS coordination notes](FSM_COSLLM.md) — read-only evidence pilot and cross-repository contract.

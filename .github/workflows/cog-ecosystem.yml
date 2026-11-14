@@ -5,6 +5,8 @@ on:
     paths:
       - "integration/**"
       - "src/**"
+      - "external/**"
+      - ".gitmodules"
       - "tests/**"
       - "Directory.Build.props"
       - "Directory.Build.targets"
@@ -16,6 +18,8 @@ on:
     paths:
       - "integration/**"
       - "src/**"
+      - "external/**"
+      - ".gitmodules"
       - "tests/**"
       - "Directory.Build.props"
       - "Directory.Build.targets"
@@ -35,6 +39,27 @@ jobs:
         with:
           path: CiAi
           submodules: recursive
+      - name: Verify pinned ProtocolAi source revision
+        env:
+          EXPECTED_PROTOCOL_AI_SHA: 024ca3f2fac486d5aefa6f276c5203d5bdfe3bcf
+        run: |
+          set -euo pipefail
+          actual_sha="$(git -C CiAi/external/ProtocolAi rev-parse HEAD)"
+          gitlink_sha="$(git -C CiAi ls-tree HEAD external/ProtocolAi | awk '{print $3}')"
+          test "$actual_sha" = "$EXPECTED_PROTOCOL_AI_SHA"
+          test "$gitlink_sha" = "$EXPECTED_PROTOCOL_AI_SHA"
+          echo "Verified ProtocolAi source pin: $actual_sha"
+      - name: Verify pinned GrammarAi source revision
+        working-directory: CiAi
+        env:
+          EXPECTED_GRAMMAR_AI_SHA: 2582362ad233faeffe82c2de28d464efffb0cda4
+        run: |
+          set -euo pipefail
+          actual_sha="$(git -C external/GrammarAi rev-parse HEAD)"
+          gitlink_sha="$(git ls-tree HEAD external/GrammarAi | awk '{print $3}')"
+          test "$actual_sha" = "$EXPECTED_GRAMMAR_AI_SHA"
+          test "$gitlink_sha" = "$EXPECTED_GRAMMAR_AI_SHA"
+          echo "Verified GrammarAi source pin: $actual_sha"
       - name: Checkout ProtocolAi event contract
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -94,6 +119,17 @@ jobs:
         with:
           path: CiAi
           submodules: recursive
+      - name: Verify pinned GrammarAi source revision
+        working-directory: CiAi
+        env:
+          EXPECTED_GRAMMAR_AI_SHA: 2582362ad233faeffe82c2de28d464efffb0cda4
+        run: |
+          set -euo pipefail
+          actual_sha="$(git -C external/GrammarAi rev-parse HEAD)"
+          gitlink_sha="$(git ls-tree HEAD external/GrammarAi | awk '{print $3}')"
+          test "$actual_sha" = "$EXPECTED_GRAMMAR_AI_SHA"
+          test "$gitlink_sha" = "$EXPECTED_GRAMMAR_AI_SHA"
+          echo "Verified GrammarAi source pin: $actual_sha"
       - name: Checkout ProtocolAi event contract
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:

@@ -30,6 +30,23 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           ref: development
+          submodules: recursive
+      - name: Verify pinned source dependencies
+        shell: bash
+        env:
+          EXPECTED_GRAMMAR_AI_SHA: 2582362ad233faeffe82c2de28d464efffb0cda4
+          EXPECTED_PROTOCOL_AI_SHA: 024ca3f2fac486d5aefa6f276c5203d5bdfe3bcf
+        run: |
+          set -euo pipefail
+          grammar_sha="$(git -C external/GrammarAi rev-parse HEAD)"
+          grammar_gitlink="$(git ls-tree HEAD external/GrammarAi | awk '{print $3}')"
+          protocol_sha="$(git -C external/ProtocolAi rev-parse HEAD)"
+          protocol_gitlink="$(git ls-tree HEAD external/ProtocolAi | awk '{print $3}')"
+          test "$grammar_sha" = "$EXPECTED_GRAMMAR_AI_SHA"
+          test "$grammar_gitlink" = "$EXPECTED_GRAMMAR_AI_SHA"
+          test "$protocol_sha" = "$EXPECTED_PROTOCOL_AI_SHA"
+          test "$protocol_gitlink" = "$EXPECTED_PROTOCOL_AI_SHA"
+          echo "Verified GrammarAi=$grammar_sha ProtocolAi=$protocol_sha"
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
         with:
           dotnet-version: 8.0.x

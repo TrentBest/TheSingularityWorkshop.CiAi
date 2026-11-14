@@ -18,6 +18,7 @@ passed += CiPipelineDefinitionContractTests.Run();
 passed += CiWorkflowDomainCatalogContractTests.Run();
 passed += CiWorkflowDomainEvaluatorContractTests.Run();
 passed += CiWorkflowPlanContractTests.Run();
+passed += CiWorkflowGrammarContractTests.Run();
 passed += BenchmarkBuildDispatchTests.Run();
 passed += SuccessfulBuildBenchmarkCoordinatorTests.Run();
 passed += NuGetPackageArtifactVerifierContractTests.Run();
@@ -29,6 +30,7 @@ passed += ConsumerVerificationContractTests.Run();
 passed += FileDependencyReleaseCandidateStoreContractTests.Run();
 passed += DependencyReleaseGateCoordinatorContractTests.Run();
 passed += CiRequiredEvidenceEvaluatorTests.Run();
+passed += TrxTestResultParserContractTests.Run();
 passed += CiBenchmarkEvidencePolicyEvaluatorTests.Run();
 
 Check("dependency monitor-only policy reports without authorizing adoption", () =>
