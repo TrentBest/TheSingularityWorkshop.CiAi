@@ -208,9 +208,103 @@ jobs:
         run: dotnet tool install --global dotnet-coverage
       - name: Run contract checks with coverage
         id: contract-tests
+        continue-on-error: true
         run: |
+          set +e
           mkdir -p TestResults
-          dotnet-coverage collect "dotnet run --project tests/TheSingularityWorkshop.CiAi.ContractTests --configuration Release --no-build" --output-format cobertura --output TestResults/coverage.cobertura.xml
+          dotnet-coverage collect "dotnet run --project tests/TheSingularityWorkshop.CiAi.ContractTests --configuration Release --no-build" --output-format cobertura --output TestResults/coverage.cobertura.xml 2>&1 | tee TestResults/contract-run.log
+          status=${PIPESTATUS[0]}
+          set -e
+          exit "$status"
+      - name: Create bounded TRX and source provenance archive
+        if: always()
+        env:
+          CONTRACT_OUTCOME: ${{ steps.contract-tests.outcome }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import datetime
+          import os
+          import pathlib
+          import uuid
+          import xml.etree.ElementTree as ET
+          import zipfile
+
+          outcome = os.environ.get("CONTRACT_OUTCOME", "skipped")
+          if outcome == "success":
+              trx_outcome, summary_outcome = "Passed", "Passed"
+              counters = dict(total="1", executed="1", passed="1", failed="0", error="0",
+                              timeout="0", aborted="0", notExecuted="0", inconclusive="0",
+                              notRunnable="0", disconnected="0", warning="0",
+                              passedButRunAborted="0", pending="0", inProgress="0")
+          elif outcome == "failure":
+              trx_outcome, summary_outcome = "Failed", "Failed"
+              counters = dict(total="1", executed="1", passed="0", failed="1", error="0",
+                              timeout="0", aborted="0", notExecuted="0", inconclusive="0",
+                              notRunnable="0", disconnected="0", warning="0",
+                              passedButRunAborted="0", pending="0", inProgress="0")
+          else:
+              trx_outcome, summary_outcome = "NotExecuted", "NotExecuted"
+              counters = dict(total="1", executed="0", passed="0", failed="0", error="0",
+                              timeout="0", aborted="0", notExecuted="1", inconclusive="0",
+                              notRunnable="0", disconnected="0", warning="0",
+                              passedButRunAborted="0", pending="0", inProgress="0")
+
+          now = datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
+          identity = f"{os.environ['RUN_ID']}:{os.environ['RUN_ATTEMPT']}:CiAi.ContractSuite"
+          test_id = str(uuid.uuid5(uuid.NAMESPACE_URL, identity))
+          execution_id = str(uuid.uuid5(uuid.NAMESPACE_OID, identity))
+          root = ET.Element("TestRun", {
+              "id": str(uuid.uuid5(uuid.NAMESPACE_DNS, identity)),
+              "name": "CiAi Contract Suite",
+              "runUser": "GitHub Actions"
+          })
+          ET.SubElement(root, "Times", {
+              "creation": now, "queuing": now, "start": now, "finish": now
+          })
+          results = ET.SubElement(root, "Results")
+          result = ET.SubElement(results, "UnitTestResult", {
+              "executionId": execution_id,
+              "testId": test_id,
+              "testName": "CiAi.ContractSuite",
+              "outcome": trx_outcome,
+              "duration": "00:00:00.001",
+              "startTime": now,
+              "endTime": now
+          })
+          if outcome == "failure":
+              log_path = pathlib.Path("TestResults/contract-run.log")
+              diagnostic = log_path.read_text(errors="replace")[-8000:] if log_path.exists() else ""
+              output = ET.SubElement(result, "Output")
+              error = ET.SubElement(output, "ErrorInfo")
+              ET.SubElement(error, "Message").text = "The CiAi contract suite command failed. Bounded provider job output follows."
+              ET.SubElement(error, "StackTrace").text = diagnostic or "No contract-suite diagnostic output was captured."
+          summary = ET.SubElement(root, "ResultSummary", {"outcome": summary_outcome})
+          ET.SubElement(summary, "Counters", counters)
+          trx_path = pathlib.Path("TestResults/contract-suite.trx")
+          trx_path.parent.mkdir(parents=True, exist_ok=True)
+          ET.ElementTree(root).write(trx_path, encoding="utf-8", xml_declaration=True)
+
+          provenance_path = pathlib.Path("artifacts/workflow-provenance/workflow-provenance.json")
+          if not provenance_path.is_file() or provenance_path.stat().st_size == 0:
+              raise SystemExit("Exact workflow provenance payload is missing; source evidence cannot be packaged.")
+          archive_path = pathlib.Path("artifacts/ciai-test-results.zip")
+          archive_path.parent.mkdir(parents=True, exist_ok=True)
+          with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+              archive.write(trx_path, "results.trx")
+              archive.write(provenance_path, "provenance.json")
+          print(f"Created bounded CiAi TRX/provenance archive for run {identity}.")
+          PY
+      - name: Upload exact contract source artifact
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: ciai-test-results-${{ github.run_attempt }}
+          path: artifacts/ciai-test-results.zip
+          if-no-files-found: error
+          retention-days: 30
       - name: Upload coverage to Codecov
         id: codecov
         uses: codecov/codecov-action@v6
@@ -302,3 +396,8 @@ jobs:
               echo "**Evidence completeness: incomplete** — at least one required gate step did not succeed."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Fail closed when contract tests failed
+        if: always() && steps.contract-tests.outcome == 'failure'
+        run: |
+          echo "::error::The CiAi contract test suite failed; source diagnostics were retained, but the required gate remains failed."
+          exit 1
