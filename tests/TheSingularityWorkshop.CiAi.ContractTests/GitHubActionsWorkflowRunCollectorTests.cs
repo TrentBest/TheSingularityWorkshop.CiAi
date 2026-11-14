@@ -23,6 +23,25 @@ internal static class GitHubActionsWorkflowRunCollectorTests
         }
         """;
 
+        var apiPathWithoutWorkflowRef = page
+            .Replace(".yml@refs/heads/development", ".yml", StringComparison.Ordinal)
+            .Replace("\\"event\\": \\"push\\"", "\\"event\\": \\"push\\", \\"head_branch\\": \\"development\\"", StringComparison.Ordinal);
+        using (var client = new HttpClient(new StubHandler((_, _) => Task.FromResult(JsonResponse(apiPathWithoutWorkflowRef)))))
+        {
+            var collection = await new GitHubActionsWorkflowRunCollector(client)
+                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha);
+            Assert(collection.Runs[0].WorkflowRef == "refs/heads/development",
+                "workflow ref was not derived from provider head_branch when REST omitted the path suffix");
+        }
+
+        var invalidProviderBranch = apiPathWithoutWorkflowRef.Replace(
+            "\\"head_branch\\": \\"development\\"", "\\"head_branch\\": \\"bad..branch\\"", StringComparison.Ordinal);
+        using (var client = new HttpClient(new StubHandler((_, _) => Task.FromResult(JsonResponse(invalidProviderBranch)))))
+        {
+            await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowRunCollector(client)
+                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha));
+        }
+
         using (var client = new HttpClient(new StubHandler((request, _) =>
         {
             Assert(request.Method == HttpMethod.Get, "collector must be read-only");
