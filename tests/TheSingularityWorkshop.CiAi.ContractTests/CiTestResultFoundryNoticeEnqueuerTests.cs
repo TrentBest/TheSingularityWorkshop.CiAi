@@ -48,6 +48,19 @@ internal static class CiTestResultFoundryNoticeEnqueuerTests
             Assert(badDigestOutbox.ReadPending().Count == 0,
                 "invalid publisher digest was persisted as a deliverable notice");
 
+            var tamperedReportOutbox = new FileFoundryArtifactReadyNoticeOutbox(Path.Combine(root, "tampered-report.jsonl"));
+            var tamperedReportPublisher = new FakePublisher((value, payload) =>
+            {
+                var alteredBytes = payload.ToArray();
+                alteredBytes[0] ^= 0x01;
+                return CreateManifest(value, alteredBytes, recipient, digestOverride: null, sourceShaOverride: null);
+            });
+            var tamperedReportEnqueuer = new CiTestResultFoundryNoticeEnqueuer(tamperedReportPublisher, tamperedReportOutbox);
+            await AssertThrowsAsync<InvalidDataException>(() => tamperedReportEnqueuer.PublishAndEnqueueAsync(
+                report, recipient, "notice-tampered-report", notifiedAt));
+            Assert(tamperedReportOutbox.ReadPending().Count == 0,
+                "publisher-substituted report bytes were persisted as a deliverable Foundry notice");
+
             var wrongCandidateOutbox = new FileFoundryArtifactReadyNoticeOutbox(Path.Combine(root, "wrong-candidate.jsonl"));
             var wrongCandidatePublisher = new FakePublisher((value, payload) =>
                 CreateManifest(value, payload.Span, recipient, null, new string('f', 40)));
@@ -57,8 +70,8 @@ internal static class CiTestResultFoundryNoticeEnqueuerTests
             Assert(wrongCandidateOutbox.ReadPending().Count == 0,
                 "wrong candidate SHA was persisted as a deliverable notice");
 
-            Console.WriteLine("PASS: 6 canonical report-to-Foundry notice binding checks.");
-            return 6;
+            Console.WriteLine("PASS: 7 canonical report-to-Foundry notice binding checks.");
+            return 7;
         }
         finally
         {
