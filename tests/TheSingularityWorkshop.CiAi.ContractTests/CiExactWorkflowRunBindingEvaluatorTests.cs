@@ -18,9 +18,9 @@ internal static class CiExactWorkflowRunBindingEvaluatorTests
             "wrong provider workflow ref must fail closed");
         Assert(!Evaluate(new[] { selector }, new[] { valid with { Event = "pull_request" } }),
             "wrong provider event must fail closed");
-        Assert(!Evaluate(new[] { selector }, new[] { valid with { Run = valid.Run with { HeadSha = new string('b', 40) } } }),
+        Assert(!Evaluate(new[] { selector }, new[] { Observation(headSha: new string('b', 40)) }),
             "wrong source SHA must fail closed");
-        Assert(!Evaluate(new[] { selector }, new[] { valid with { Run = valid.Run with { Repository = "Other/Repo" } } }),
+        Assert(!Evaluate(new[] { selector }, new[] { Observation(repository: "Other/Repo") }),
             "wrong source repository must fail closed");
 
         Assert(!Evaluate(new[] { selector }, Array.Empty<CiWorkflowRunObservation>()),
@@ -34,10 +34,10 @@ internal static class CiExactWorkflowRunBindingEvaluatorTests
         Assert(!Evaluate(new[] { path + "#not-a-run#2" }, new[] { valid }),
             "malformed run selector must fail closed");
         Assert(!CiExactWorkflowRunBindingEvaluator.IsValid(
-            new[] { selector }, new[] { valid }, null, eventName),
+            new[] { selector }, new[] { valid }, "TrentBest/SimpleDemos", new string('a', 40), null, eventName),
             "missing expected workflow ref must fail closed");
         Assert(!CiExactWorkflowRunBindingEvaluator.IsValid(
-            new[] { selector }, new[] { valid }, workflowRef, null),
+            new[] { selector }, new[] { valid }, "TrentBest/SimpleDemos", new string('a', 40), workflowRef, null),
             "missing expected event must fail closed");
         Assert(!Evaluate(new[] { selector, selector }, new[] { valid }),
             "duplicate selector must fail closed");
@@ -45,7 +45,11 @@ internal static class CiExactWorkflowRunBindingEvaluatorTests
             "nonterminal provider status must fail closed");
         Assert(!Evaluate(new[] { selector }, new[] { valid with
         {
-            Run = valid.Run with { Status = CiRunStatus.InProgress, Conclusion = CiRunConclusion.None }
+            Run = new CiRunSnapshot(
+                "TrentBest/SimpleDemos", 42, "CiAi Contract Verification", new string('a', 40),
+                CiRunStatus.InProgress, CiRunConclusion.None,
+                new Uri("https://github.com/TrentBest/SimpleDemos/actions/runs/42"),
+                DateTimeOffset.Parse("2026-11-13T12:00:00Z"))
         }}), "nonterminal normalized status must fail closed");
 
         Console.WriteLine("PASS: exact workflow run binding fail-closed matrix (13 checks).");
@@ -58,13 +62,15 @@ internal static class CiExactWorkflowRunBindingEvaluatorTests
             selectors, observations, "TrentBest/SimpleDemos", new string('a', 40),
             "refs/heads/development", "push");
 
-    private static CiWorkflowRunObservation Observation()
+    private static CiWorkflowRunObservation Observation(
+        string repository = "TrentBest/SimpleDemos",
+        string? headSha = null)
     {
         var run = new CiRunSnapshot(
-            "TrentBest/SimpleDemos",
+            repository,
             42,
             "CiAi Contract Verification",
-            new string('a', 40),
+            headSha ?? new string('a', 40),
             CiRunStatus.Completed,
             CiRunConclusion.Success,
             new Uri("https://github.com/TrentBest/SimpleDemos/actions/runs/42"),
