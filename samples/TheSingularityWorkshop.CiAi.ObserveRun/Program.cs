@@ -89,14 +89,55 @@ try
     var policyEvidence = new List<CiRequiredWorkflowRunEvidence>();
     foreach (var observation in runCollection.Runs)
     {
-        // Each job query is tied to the exact attempt reported for this run; retries are not blended.
-        var jobs = await jobCollector.GetJobsForAttemptAsync(
-            repository, observation.Run.RunId, observation.RunAttempt,
-            maxPages: 10, perPage: 100, cancellationToken: CancellationToken.None);
+        // Only collect jobs for configured required workflow identities. Unrelated workflows
+        // are still listed as run observations, but malformed/skipped jobs in them cannot
+        // invalidate the exact required-check evidence.
+        var requiresJobEvidence = requiredWorkflowPaths.Any(required =>
+        {
+            var identity = required.Split('#');
+            if (identity.Length == 1)
+                return string.Equals(identity[0], observation.WorkflowPath, StringComparison.Ordinal);
+            return identity.Length == 3 &&
+                string.Equals(identity[0], observation.WorkflowPath, StringComparison.Ordinal) &&
+                long.TryParse(identity[1], out var requiredRunId) &&
+                int.TryParse(identity[2], out var requiredAttempt) &&
+                requiredRunId == observation.Run.RunId &&
+                requiredAttempt == observation.RunAttempt;
+        });
+        CiWorkflowJobCollection? jobs = null;
+        if (requiresJobEvidence)
+        {
+            // Each job query is tied to the exact attempt reported for this run; retries are not blended.
+            jobs = await jobCollector.GetJobsForAttemptAsync(
+                repository, observation.Run.RunId, observation.RunAttempt,
+                maxPages: 10, perPage: 100, cancellationToken: CancellationToken.None);
+        }
 
-        var jobsComplete = !jobs.IsTruncated &&
+        var jobsComplete = jobs is not null && !jobs.IsTruncated &&
             jobs.TotalCount == jobs.Jobs.Count &&
             jobs.Jobs.Count > 0;
+        var jobRows = jobs is null
+            ? Array.Empty<object>()
+            : jobs.Jobs.Select(job => (object)new
+            {
+                job.JobId,
+                job.RunId,
+                job.RunAttempt,
+                job.StartedAt,
+                job.CompletedAt,
+                job.Name,
+                job.Status,
+                job.Conclusion,
+                evidenceUrl = job.EvidenceUrl.ToString(),
+                steps = job.Steps.Select(step => new
+                {
+                    step.Number,
+                    step.Name,
+                    step.Status,
+                    step.Conclusion,
+                    step.CompletedAt
+                })
+            }).ToArray();
         policyEvidence.Add(new CiRequiredWorkflowRunEvidence(
             observation.WorkflowPath, observation.Run.RunId, observation.RunAttempt,
             observation.Run.Status, observation.Run.Conclusion, jobsComplete));
@@ -119,30 +160,11 @@ try
                 observation.Event,
                 observation.PullRequestNumbers
             },
-            jobs = jobs.Jobs.Select(job => new
-            {
-                job.JobId,
-                job.RunId,
-                job.RunAttempt,
-                job.StartedAt,
-                job.CompletedAt,
-                job.Name,
-                job.Status,
-                job.Conclusion,
-                evidenceUrl = job.EvidenceUrl.ToString(),
-                steps = job.Steps.Select(step => new
-                {
-                    step.Number,
-                    step.Name,
-                    step.Status,
-                    step.Conclusion,
-                    step.CompletedAt
-                })
-            }).ToArray(),
-            jobsPagesRead = jobs.PagesRead,
-            jobsTotalCount = jobs.TotalCount,
-            jobsReturnedCount = jobs.Jobs.Count,
-            jobsTruncated = jobs.IsTruncated,
+            jobs = jobRows,
+            jobsPagesRead = jobs?.PagesRead ?? 0,
+            jobsTotalCount = jobs?.TotalCount ?? 0,
+            jobsReturnedCount = jobs?.Jobs.Count ?? 0,
+            jobsTruncated = jobs?.IsTruncated ?? false,
             jobsComplete
         });
     }
