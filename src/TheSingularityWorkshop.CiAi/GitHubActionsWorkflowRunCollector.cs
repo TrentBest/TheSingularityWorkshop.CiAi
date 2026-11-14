@@ -211,7 +211,7 @@ public sealed class GitHubActionsWorkflowRunCollector
             value.Contains("//", StringComparison.Ordinal) || value.Contains("..", StringComparison.Ordinal) ||
             value.Contains("@{", StringComparison.Ordinal) || value.Any(character =>
                 char.IsControl(character) || char.IsWhiteSpace(character) ||
-                "~^:?*[\\]".Contains(character, StringComparison.Ordinal)))
+                "~^:?*[\\]".IndexOf(character) >= 0))
             return false;
         return value.Split('/').All(segment =>
             segment.Length > 0 && !segment.StartsWith(".", StringComparison.Ordinal) &&
