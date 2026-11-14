@@ -201,8 +201,8 @@ try
             observedAt, workflowProvenance.Provenance, workflowDefinitionTrusted: true,
             artifactReferences: new[]
             {
-                workflowProvenance.ProviderArtifact.ArchiveDownloadUrl,
-                sourceProviderArtifact.ArchiveDownloadUrl
+                new Uri($"https://github.com/{repository}/actions/runs/{sourceRunId}/artifacts/{workflowProvenance.ProviderArtifact.ArtifactId}"),
+                new Uri($"https://github.com/{repository}/actions/runs/{sourceRunId}/artifacts/{sourceProviderArtifact.ArtifactId}")
             });
         var requiredJob = requiredJobCollection.Jobs.Single(job =>
             job.RunId == sourceRunId && job.RunAttempt == sourceRunAttempt &&
