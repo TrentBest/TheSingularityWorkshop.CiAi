@@ -112,26 +112,8 @@ try
     var exactRunBindingConfigured = !string.IsNullOrWhiteSpace(expectedWorkflowRef) ||
         !string.IsNullOrWhiteSpace(expectedWorkflowEvent);
     var exactRunBindingValid = !exactRunBindingConfigured ||
-        (requiredWorkflowPaths.Length > 0 &&
-         !string.IsNullOrWhiteSpace(expectedWorkflowRef) &&
-         !string.IsNullOrWhiteSpace(expectedWorkflowEvent) &&
-         requiredWorkflowPaths.All(selector =>
-         {
-             var parts = selector.Split('#');
-             if (parts.Length != 3 ||
-                 !long.TryParse(parts[1], out var expectedRunId) ||
-                 !int.TryParse(parts[2], out var expectedAttempt))
-                 return false;
-             var matches = runCollection.Runs.Where(run =>
-                 run.Run.RunId == expectedRunId &&
-                 run.RunAttempt == expectedAttempt &&
-                 string.Equals(run.WorkflowPath, parts[0], StringComparison.Ordinal)).ToArray();
-             return matches.Length == 1 &&
-                 string.Equals(matches[0].WorkflowRef, expectedWorkflowRef, StringComparison.Ordinal) &&
-                 string.Equals(matches[0].Event, expectedWorkflowEvent, StringComparison.Ordinal) &&
-                 matches[0].Run.Status == CiRunStatus.Completed &&
-                 matches[0].ProviderStatus == "completed";
-         }));
+        CiExactWorkflowRunBindingEvaluator.IsValid(
+            requiredWorkflowPaths, runCollection.Runs, expectedWorkflowRef, expectedWorkflowEvent);
     var discoveryComplete = !runCollection.IsTruncated &&
         runCollection.Runs.Count == runCollection.TotalCount;
     var requiredWorkflowResults = requiredWorkflowPaths.Length == 0
