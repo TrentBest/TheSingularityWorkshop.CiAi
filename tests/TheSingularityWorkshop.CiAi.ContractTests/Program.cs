@@ -3,35 +3,36 @@ using TheSingularityWorkshop.CiAi;
 using TheSingularityWorkshop.CiAi.RepositoryCommands;
 
 var passed = 0;
-passed += CiWorkflowProvenanceRecordTests.Run();
-passed += await CiWorkflowProvenanceArtifactReaderTests.RunAsync();
-passed += CiWorkflowEvidencePacketTests.Run();
-passed += CiTestResultReportTests.Run();
-passed += CiTestResultArtifactArchiveTests.Run();
-passed += CiWorkflowEvidenceDeliveryTests.Run();
-passed += await FoundryArtifactReadyNoticeClientTests.RunAsync();
-passed += FoundryArtifactReadyNoticeOutboxTests.Run();
-passed += await FoundryArtifactReadyNoticeDeliveryCoordinatorTests.RunAsync();
-passed += await CiTestResultFoundryNoticeEnqueuerTests.RunAsync();
-passed += AiCiBuilderContractTests.Run();
-passed += CiPipelineDefinitionContractTests.Run();
-passed += CiWorkflowDomainCatalogContractTests.Run();
-passed += CiWorkflowDomainEvaluatorContractTests.Run();
-passed += CiWorkflowPlanContractTests.Run();
-passed += CiWorkflowGrammarContractTests.Run();
-passed += BenchmarkBuildDispatchTests.Run();
-passed += SuccessfulBuildBenchmarkCoordinatorTests.Run();
-passed += NuGetPackageArtifactVerifierContractTests.Run();
-passed += NuGetV3VersionCatalogContractTests.Run();
-passed += NuGetVersionUpdateClassifierContractTests.Run();
-passed += await NuGetDependencyUpdateEvaluatorContractTests.RunAsync();
-passed += DependencyReleaseGateContractTests.Run();
-passed += ConsumerVerificationContractTests.Run();
-passed += FileDependencyReleaseCandidateStoreContractTests.Run();
-passed += DependencyReleaseGateCoordinatorContractTests.Run();
-passed += CiRequiredEvidenceEvaluatorTests.Run();
-passed += TrxTestResultParserContractTests.Run();
-passed += CiBenchmarkEvidencePolicyEvaluatorTests.Run();
+var trx = new CiTrxResultWriter();
+RunSuite("CiWorkflowProvenanceRecordTests", () => CiWorkflowProvenanceRecordTests.Run());
+await RunSuiteAsync("CiWorkflowProvenanceArtifactReaderTests", () => CiWorkflowProvenanceArtifactReaderTests.RunAsync());
+RunSuite("CiWorkflowEvidencePacketTests", () => CiWorkflowEvidencePacketTests.Run());
+RunSuite("CiTestResultReportTests", () => CiTestResultReportTests.Run());
+RunSuite("CiTestResultArtifactArchiveTests", () => CiTestResultArtifactArchiveTests.Run());
+RunSuite("CiWorkflowEvidenceDeliveryTests", () => CiWorkflowEvidenceDeliveryTests.Run());
+await RunSuiteAsync("FoundryArtifactReadyNoticeClientTests", () => FoundryArtifactReadyNoticeClientTests.RunAsync());
+RunSuite("FoundryArtifactReadyNoticeOutboxTests", () => FoundryArtifactReadyNoticeOutboxTests.Run());
+await RunSuiteAsync("FoundryArtifactReadyNoticeDeliveryCoordinatorTests", () => FoundryArtifactReadyNoticeDeliveryCoordinatorTests.RunAsync());
+await RunSuiteAsync("CiTestResultFoundryNoticeEnqueuerTests", () => CiTestResultFoundryNoticeEnqueuerTests.RunAsync());
+RunSuite("AiCiBuilderContractTests", () => AiCiBuilderContractTests.Run());
+RunSuite("CiPipelineDefinitionContractTests", () => CiPipelineDefinitionContractTests.Run());
+RunSuite("CiWorkflowDomainCatalogContractTests", () => CiWorkflowDomainCatalogContractTests.Run());
+RunSuite("CiWorkflowDomainEvaluatorContractTests", () => CiWorkflowDomainEvaluatorContractTests.Run());
+RunSuite("CiWorkflowPlanContractTests", () => CiWorkflowPlanContractTests.Run());
+RunSuite("CiWorkflowGrammarContractTests", () => CiWorkflowGrammarContractTests.Run());
+RunSuite("BenchmarkBuildDispatchTests", () => BenchmarkBuildDispatchTests.Run());
+RunSuite("SuccessfulBuildBenchmarkCoordinatorTests", () => SuccessfulBuildBenchmarkCoordinatorTests.Run());
+RunSuite("NuGetPackageArtifactVerifierContractTests", () => NuGetPackageArtifactVerifierContractTests.Run());
+RunSuite("NuGetV3VersionCatalogContractTests", () => NuGetV3VersionCatalogContractTests.Run());
+RunSuite("NuGetVersionUpdateClassifierContractTests", () => NuGetVersionUpdateClassifierContractTests.Run());
+await RunSuiteAsync("NuGetDependencyUpdateEvaluatorContractTests", () => NuGetDependencyUpdateEvaluatorContractTests.RunAsync());
+RunSuite("DependencyReleaseGateContractTests", () => DependencyReleaseGateContractTests.Run());
+RunSuite("ConsumerVerificationContractTests", () => ConsumerVerificationContractTests.Run());
+RunSuite("FileDependencyReleaseCandidateStoreContractTests", () => FileDependencyReleaseCandidateStoreContractTests.Run());
+RunSuite("DependencyReleaseGateCoordinatorContractTests", () => DependencyReleaseGateCoordinatorContractTests.Run());
+RunSuite("CiRequiredEvidenceEvaluatorTests", () => CiRequiredEvidenceEvaluatorTests.Run());
+RunSuite("TrxTestResultParserContractTests", () => TrxTestResultParserContractTests.Run());
+RunSuite("CiBenchmarkEvidencePolicyEvaluatorTests", () => CiBenchmarkEvidencePolicyEvaluatorTests.Run());
 
 Check("dependency monitor-only policy reports without authorizing adoption", () =>
 {
@@ -640,26 +641,78 @@ Check("Markdown release report escapes table delimiters in provider diagnostics"
         "diagnostic was able to break the Markdown table");
 });
 
-Console.WriteLine($"PASS: {passed} CiAi contract checks.");
-await GitHubActionsRunClientTests.RunAsync();
-await GitHubActionsWorkflowRunCollectorTests.RunAsync();
-CiExactWorkflowRunBindingEvaluatorTests.Run();
-CiRequiredWorkflowEvidenceEvaluatorTests.Run();
-await GitHubActionsWorkflowJobCollectorTests.RunAsync();
-await GitHubActionsArtifactCollectorTests.RunAsync();
+await RunSuiteAsync("GitHubActionsRunClientTests", () => GitHubActionsRunClientTests.RunAsync());
+await RunSuiteAsync("GitHubActionsWorkflowRunCollectorTests", () => GitHubActionsWorkflowRunCollectorTests.RunAsync());
+RunSuite("CiExactWorkflowRunBindingEvaluatorTests", () => CiExactWorkflowRunBindingEvaluatorTests.Run());
+RunSuite("CiRequiredWorkflowEvidenceEvaluatorTests", () => CiRequiredWorkflowEvidenceEvaluatorTests.Run());
+await RunSuiteAsync("GitHubActionsWorkflowJobCollectorTests", () => GitHubActionsWorkflowJobCollectorTests.RunAsync());
+await RunSuiteAsync("GitHubActionsArtifactCollectorTests", () => GitHubActionsArtifactCollectorTests.RunAsync());
+trx.Write("artifacts/source-evidence/results.trx");
+Console.WriteLine($"CiAi harness summary: {passed} assertions reported by suites; {trx.ResultCount} suite/check records; {trx.FailedCount} failed records.");
+if (trx.FailedCount > 0) Environment.ExitCode = 1;
+
+void RunSuite(string name, Func<int> action)
+{
+    try
+    {
+        var count = action();
+        passed += count;
+        trx.RecordPassed($"suite:{name}", $"Suite completed; reported {count} assertions.");
+        Console.WriteLine($"PASS suite {name}: {count} assertions");
+    }
+    catch (Exception exception)
+    {
+        trx.RecordFailed($"suite:{name}", exception);
+        Console.Error.WriteLine($"FAIL suite {name}: {exception}");
+    }
+}
+
+async Task RunSuiteAsync(string name, Func<Task<int>> action)
+{
+    try
+    {
+        var count = await action();
+        passed += count;
+        trx.RecordPassed($"suite:{name}", $"Suite completed; reported {count} assertions.");
+        Console.WriteLine($"PASS suite {name}: {count} assertions");
+    }
+    catch (Exception exception)
+    {
+        trx.RecordFailed($"suite:{name}", exception);
+        Console.Error.WriteLine($"FAIL suite {name}: {exception}");
+    }
+}
 
 void Check(string name, Action action)
 {
-    action();
-    passed++;
-    Console.WriteLine($"PASS {passed}: {name}");
+    try
+    {
+        action();
+        passed++;
+        trx.RecordPassed($"check:{name}", null);
+        Console.WriteLine($"PASS {passed}: {name}");
+    }
+    catch (Exception exception)
+    {
+        trx.RecordFailed($"check:{name}", exception);
+        Console.Error.WriteLine($"FAIL {name}: {exception}");
+    }
 }
 
 async Task CheckAsync(string name, Func<Task> action)
 {
-    await action();
-    passed++;
-    Console.WriteLine($"PASS {passed}: {name}");
+    try
+    {
+        await action();
+        passed++;
+        trx.RecordPassed($"check:{name}", null);
+        Console.WriteLine($"PASS {passed}: {name}");
+    }
+    catch (Exception exception)
+    {
+        trx.RecordFailed($"check:{name}", exception);
+        Console.Error.WriteLine($"FAIL {name}: {exception}");
+    }
 }
 
 static async Task ThrowsAsync<TException>(Func<Task> action) where TException : Exception
