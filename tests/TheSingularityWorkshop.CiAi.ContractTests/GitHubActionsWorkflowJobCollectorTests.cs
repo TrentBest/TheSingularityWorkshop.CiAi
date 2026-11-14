@@ -74,6 +74,46 @@ internal static class GitHubActionsWorkflowJobCollectorTests
 
         using (var client = new HttpClient(new StubHandler((_, _) =>
         {
+            var missingRunId = response.Replace("\\"run_id\\": 42,\\n            ", string.Empty);
+            return Task.FromResult(JsonResponse(missingRunId));
+        })))
+        {
+            await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowJobCollector(client)
+                .GetJobsForAttemptAsync("TrentBest/SimpleDemos", 42, 2));
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+        {
+            var malformedRunId = response.Replace("\\"run_id\\": 42", "\\"run_id\\": \\"42\\"");
+            return Task.FromResult(JsonResponse(malformedRunId));
+        })))
+        {
+            await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowJobCollector(client)
+                .GetJobsForAttemptAsync("TrentBest/SimpleDemos", 42, 2));
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+        {
+            var missingAttempt = response.Replace("\\"run_attempt\\": 2,\\n            ", string.Empty);
+            return Task.FromResult(JsonResponse(missingAttempt));
+        })))
+        {
+            await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowJobCollector(client)
+                .GetJobsForAttemptAsync("TrentBest/SimpleDemos", 42, 2));
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+        {
+            var malformedAttempt = response.Replace("\\"run_attempt\\": 2", "\\"run_attempt\\": \\"2\\"");
+            return Task.FromResult(JsonResponse(malformedAttempt));
+        })))
+        {
+            await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowJobCollector(client)
+                .GetJobsForAttemptAsync("TrentBest/SimpleDemos", 42, 2));
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+        {
             var wrongUrl = response.Replace("/actions/runs/42/job/1201", "/actions/runs/99/job/1201");
             return Task.FromResult(JsonResponse(wrongUrl));
         })))
