@@ -127,13 +127,26 @@ jobs:
           mkdir -p artifacts
           gh api "repos/$TARGET_REPOSITORY/actions/artifacts/${artifact_ids[0]}/zip" > artifacts/workflow-provenance.zip
           test -s artifacts/workflow-provenance.zip
-          echo "Downloaded provider artifact ID ${artifact_ids[0]} for run $SOURCE_RUN_ID attempt $SOURCE_RUN_ATTEMPT."
+          echo "Downloaded workflow provenance artifact ID ${artifact_ids[0]} for run $SOURCE_RUN_ID attempt $SOURCE_RUN_ATTEMPT."
+          test_artifact_name="ciai-test-results-$SOURCE_RUN_ATTEMPT"
+          mapfile -t test_artifact_ids < <(
+            gh api --paginate \
+              "repos/$TARGET_REPOSITORY/actions/runs/$SOURCE_RUN_ID/artifacts" \
+              --jq ".artifacts[] | select(.name == \"$test_artifact_name\") | .id"
+          )
+          if [ "${#test_artifact_ids[@]}" -ne 1 ] || ! [[ "${test_artifact_ids[0]}" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::Expected exactly one provider TRX source artifact for the exact run attempt."
+            exit 1
+          fi
+          gh api "repos/$TARGET_REPOSITORY/actions/artifacts/${test_artifact_ids[0]}/zip" > artifacts/test-results.zip
+          test -s artifacts/test-results.zip
+          echo "Downloaded TRX source artifact ID ${test_artifact_ids[0]} for run $SOURCE_RUN_ID attempt $SOURCE_RUN_ATTEMPT."
       
       - name: Check out pinned CiAi observer source
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: TrentBest/TheSingularityWorkshop.CiAi
-          ref: 4ea77265610da150b10cd048c0e7636471e941ff
+          ref: 4b7b0ef294744628004c99fea99c7fd5d93b94f0
           path: ciai
           submodules: recursive
           persist-credentials: false
@@ -162,6 +175,7 @@ jobs:
           CIAI_EXPECTED_WORKFLOW_SHA: ${{ steps.source.outputs.sha }}
           CIAI_REQUIRE_WORKFLOW_PROVENANCE: "true"
           CIAI_WORKFLOW_PROVENANCE_ARCHIVE_PATH: ../artifacts/workflow-provenance.zip
+          CIAI_TEST_RESULTS_ARCHIVE_PATH: ../artifacts/test-results.zip
           TARGET_REPOSITORY: ${{ steps.source.outputs.repository }}
           TARGET_SHA: ${{ steps.source.outputs.sha }}
           SOURCE_RUN_ID: ${{ steps.source-run.outputs.run_id }}
@@ -182,6 +196,9 @@ jobs:
             .workflowProvenanceValid == true and
             .workflowProvenance.valid == true and
             .workflowProvenance.workflowSha == $sha and
+            .testResultReportValid == true and
+            .testResultReport.valid == true and
+            .testResultReport.verdict == "CompletePass" and
             .complete == true and
             (.requiredWorkflowResults | length) == 1 and
             .requiredWorkflowResults[0].WorkflowPath == $expected and
@@ -200,6 +217,7 @@ jobs:
           path: |
             ciai/artifacts/commit-observation.json
             ciai/artifacts/commit-observation.md
+            ciai/artifacts/test-results-report.json
           if-no-files-found: warn
           retention-days: 30
 
