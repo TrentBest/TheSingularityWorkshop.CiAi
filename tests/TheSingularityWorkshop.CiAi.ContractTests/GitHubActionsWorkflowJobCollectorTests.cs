@@ -196,7 +196,7 @@ internal static class GitHubActionsWorkflowJobCollectorTests
             new GitHubActionsWorkflowJobCollector(new HttpClient()).GetJobsForAttemptAsync(
                 "TrentBest/SimpleDemos", 42, 0));
 
-        Console.WriteLine("PASS: 9 GitHub Actions workflow job collector checks.");
+        Console.WriteLine("PASS: 13 GitHub Actions workflow job collector checks.");
     }
 
     private static string Job(long id, long runId, int attempt) =>
