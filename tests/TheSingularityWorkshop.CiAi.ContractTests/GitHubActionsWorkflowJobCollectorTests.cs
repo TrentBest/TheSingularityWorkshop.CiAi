@@ -74,7 +74,7 @@ internal static class GitHubActionsWorkflowJobCollectorTests
 
         using (var client = new HttpClient(new StubHandler((_, _) =>
         {
-            var missingRunId = response.Replace("\\"run_id\\": 42,\\n            ", string.Empty);
+            var missingRunId = response.Replace("\"run_id\": 42,\n            ", string.Empty);
             return Task.FromResult(JsonResponse(missingRunId));
         })))
         {
@@ -84,7 +84,7 @@ internal static class GitHubActionsWorkflowJobCollectorTests
 
         using (var client = new HttpClient(new StubHandler((_, _) =>
         {
-            var malformedRunId = response.Replace("\\"run_id\\": 42", "\\"run_id\\": \\"42\\"");
+            var malformedRunId = response.Replace("\"run_id\": 42", "\"run_id\": \"42\"");
             return Task.FromResult(JsonResponse(malformedRunId));
         })))
         {
@@ -94,7 +94,7 @@ internal static class GitHubActionsWorkflowJobCollectorTests
 
         using (var client = new HttpClient(new StubHandler((_, _) =>
         {
-            var missingAttempt = response.Replace("\\"run_attempt\\": 2,\\n            ", string.Empty);
+            var missingAttempt = response.Replace("\"run_attempt\": 2,\n            ", string.Empty);
             return Task.FromResult(JsonResponse(missingAttempt));
         })))
         {
@@ -104,7 +104,7 @@ internal static class GitHubActionsWorkflowJobCollectorTests
 
         using (var client = new HttpClient(new StubHandler((_, _) =>
         {
-            var malformedAttempt = response.Replace("\\"run_attempt\\": 2", "\\"run_attempt\\": \\"2\\"");
+            var malformedAttempt = response.Replace("\"run_attempt\": 2", "\"run_attempt\": \"2\"");
             return Task.FromResult(JsonResponse(malformedAttempt));
         })))
         {
