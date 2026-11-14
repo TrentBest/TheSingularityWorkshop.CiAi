@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Xml.Linq;
 
 internal sealed class CiTrxResultWriter
@@ -16,9 +18,13 @@ internal sealed class CiTrxResultWriter
         results.Add((name, false, diagnostic));
     }
 
+    private static string StableTestId(string name) => new Guid(SHA256.HashData(Encoding.UTF8.GetBytes(name))[..16]).ToString("D");
+
     public void Write(string path)
     {
         if (results.Count == 0) throw new InvalidOperationException("No harness results were recorded.");
+        if (results.Select(item => item.Name).Distinct(StringComparer.Ordinal).Count() != results.Count)
+            throw new InvalidOperationException("Harness result names must be unique for stable TRX identity.");
         var now = DateTime.UtcNow.ToString("o", System.Globalization.CultureInfo.InvariantCulture);
         var root = new XElement("TestRun",
             new XAttribute("id", Guid.NewGuid().ToString("D")),
@@ -31,7 +37,7 @@ internal sealed class CiTrxResultWriter
                 var id = Guid.NewGuid().ToString("D");
                 var result = new XElement("UnitTestResult",
                     new XAttribute("executionId", id),
-                    new XAttribute("testId", Guid.NewGuid().ToString("D")),
+                    new XAttribute("testId", StableTestId(item.Name)),
                     new XAttribute("testName", item.Name),
                     new XAttribute("outcome", item.Passed ? "Passed" : "Failed"),
                     new XAttribute("duration", "00:00:00.000"),
