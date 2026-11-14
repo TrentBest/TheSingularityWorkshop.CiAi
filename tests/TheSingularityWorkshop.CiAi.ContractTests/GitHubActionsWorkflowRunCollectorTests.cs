@@ -51,6 +51,20 @@ internal static class GitHubActionsWorkflowRunCollectorTests
                 "provider-observed workflow-definition ref was not preserved independently");
         }
 
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+            Task.FromResult(JsonResponse(page.Replace("\"id\": 42", "\"id\": \"42\"", StringComparison.Ordinal))))))
+        {
+            await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowRunCollector(client)
+                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha));
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+            Task.FromResult(JsonResponse(page.Replace("\"run_attempt\": 2", "\"run_attempt\": \"2\"", StringComparison.Ordinal))))))
+        {
+            await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowRunCollector(client)
+                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha));
+        }
+
         using (var client = new HttpClient(new StubHandler((request, _) =>
         {
             var wrongRepo = page.Replace("\"full_name\": \"TrentBest/SimpleDemos\"", "\"full_name\": \"Other/Repo\"");
