@@ -113,7 +113,7 @@ try
         !string.IsNullOrWhiteSpace(expectedWorkflowEvent);
     var exactRunBindingValid = !exactRunBindingConfigured ||
         CiExactWorkflowRunBindingEvaluator.IsValid(
-            requiredWorkflowPaths, runCollection.Runs, expectedWorkflowRef, expectedWorkflowEvent);
+            requiredWorkflowPaths, runCollection.Runs, repository, headSha, expectedWorkflowRef, expectedWorkflowEvent);
     var discoveryComplete = !runCollection.IsTruncated &&
         runCollection.Runs.Count == runCollection.TotalCount;
     var requiredWorkflowResults = requiredWorkflowPaths.Length == 0
