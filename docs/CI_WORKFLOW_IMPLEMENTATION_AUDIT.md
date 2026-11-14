@@ -1,3 +1,6 @@
+<!-- The Singularity Workshop moniker -->
+<p align="center"><a href="https://github.com/TrentBest"><img src="https://raw.githubusercontent.com/TrentBest/TheSingularityWorkshop.Visualize/development/docs/assets/moniker.svg" alt="The Singularity Workshop animated moniker" width="720" /></a></p>
+
 # CI Workflow Implementation Audit
 
 **Trent Best · The Singularity Workshop**
@@ -48,8 +51,9 @@ This audit measures the implementation of the 22 workflow families in the CiAi d
 
 - **Domain catalog:** 22 stable IDs, descriptions, and evidence-kind vocabularies.
 - **Evidence evaluation:** fail-closed evaluation of supplied facts, bound to canonical repository identity and a full commit SHA; missing, duplicate, mismatched, or non-passing required facts do not pass.
-- **Plan validation:** stable IDs, domain references, dependencies, cycles, and deterministic topological order. Conditions are descriptive; runtime condition scheduling is not implemented by the plan validator.
-- **Recipe execution:** an in-process sequential executor exists for ordinary steps, with failure/skip/cancel reporting. Privileged steps are blocked by this executor. This does not make the entire declarative plan model executable.
+- **Plan validation and scheduling:** stable IDs, domain references, dependencies, cycles, and deterministic topological order; `CiWorkflowPlanScheduler` separately evaluates the four declared dependency conditions into pending/eligible/completed/skipped/indeterminate decisions. This is pure scheduling evaluation, not operation execution.
+- **Recipe execution:** an in-process sequential executor exists for ordinary registered steps, with candidate context, typed prior-step outputs, fail-closed result classification, cancellation, and deterministic timestamp-free JSON reporting. Privileged steps remain blocked.
+- **Plan scheduling:** a pure evaluator applies dependency conditions to exact step outcomes in deterministic topological order. It does not invoke operations; a trusted host still needs to consume its eligibility decisions.
 - **GitHub Actions observation:** bounded, read-only run and job/step collection with exact-revision/attempt identity checks and explicit truncation.
 - **Artifact and release foundations:** package inventory checks, artifact digest verification/receipt tracking, release evidence reports, and a guarded benchmark dispatch path.
 - **Safety boundary:** publication and deployment are not enabled merely because a workflow is green or a catalog entry exists.
@@ -68,4 +72,4 @@ A family should be marked **implemented** only after all of the following are pr
 
 Re-audit the table after substantive implementation changes. Do not increase the completed-family count just because an ID, interface, workflow YAML, or shared primitive has been added.
 
-![The Singularity Workshop](../Avatar.jpg)
+<p align="center"><img src="https://raw.githubusercontent.com/TrentBest/FSM_API/master/Documentation/Branding/TheSingularityWorkshop.png" alt="The Singularity Workshop" width="480" /></p>

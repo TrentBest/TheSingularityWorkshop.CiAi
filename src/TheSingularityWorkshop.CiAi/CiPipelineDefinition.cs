@@ -19,7 +19,7 @@ public enum CiStepCapability
     CancelWorkflow = 3
 }
 
-/// <summary>An immutable, inspectable step description. This alpha model never executes its operation.</summary>
+/// <summary>An immutable, inspectable step description with an explicitly registered operation.</summary>
 public sealed record CiStepDefinition
 {
     internal CiStepDefinition(
@@ -44,7 +44,7 @@ public sealed record CiStepDefinition
     public CiStepCapability Capability { get; }
     public bool RequiresApproval { get; }
 
-    // Retained for a future executor; deliberately not public or invoked by the definition model.
+    // The definition model never invokes this delegate; only an executor may do so.
     internal Delegate Operation { get; }
 }
 
@@ -120,13 +120,31 @@ public sealed class CiPipelineBuilder
         return this;
     }
 
-    /// <summary>Registers a named operation for a future executor; the delegate is not called here.</summary>
+    /// <summary>Registers an operation that does not require execution context.</summary>
     public CiPipelineBuilder Add<T>(
         string name,
         Func<T> operation,
         string? id = null,
         CiStepCapability capability = CiStepCapability.None,
-        bool requiresApproval = false)
+        bool requiresApproval = false) =>
+        AddCore(name, operation, typeof(T), id, capability, requiresApproval);
+
+    /// <summary>Registers an operation that receives the exact candidate and prior step outputs.</summary>
+    public CiPipelineBuilder Add<T>(
+        string name,
+        Func<CiExecutionContext, T> operation,
+        string? id = null,
+        CiStepCapability capability = CiStepCapability.None,
+        bool requiresApproval = false) =>
+        AddCore(name, operation, typeof(T), id, capability, requiresApproval);
+
+    private CiPipelineBuilder AddCore(
+        string name,
+        Delegate operation,
+        Type resultType,
+        string? id,
+        CiStepCapability capability,
+        bool requiresApproval)
     {
         EnsureMutable();
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -142,7 +160,7 @@ public sealed class CiPipelineBuilder
         if (_steps.Any(step => string.Equals(step.Id, stepId, StringComparison.OrdinalIgnoreCase)))
             throw new ArgumentException($"Step ID '{stepId}' is already registered.", nameof(id));
 
-        _steps.Add(new CiStepDefinition(stepId, name.Trim(), typeof(T), capability, requiresApproval, operation));
+        _steps.Add(new CiStepDefinition(stepId, name.Trim(), resultType, capability, requiresApproval, operation));
         return this;
     }
 
