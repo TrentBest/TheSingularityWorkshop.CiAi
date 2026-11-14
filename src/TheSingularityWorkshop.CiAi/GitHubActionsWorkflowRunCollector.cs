@@ -163,6 +163,7 @@ public sealed class GitHubActionsWorkflowRunCollector
             System.Globalization.DateTimeStyles.AssumeUniversal, out var updatedAt))
             throw new InvalidDataException("GitHub workflow run contains an invalid updated_at timestamp.");
 
+        var eventName = RequiredString(root, "event");
         var path = RequiredString(root, "path");
         // Preserve workflow-definition provenance separately from the run's event/head SHA.
         string? workflowRef = null;
@@ -175,7 +176,16 @@ public sealed class GitHubActionsWorkflowRunCollector
                 throw new InvalidDataException("GitHub workflow path contains an invalid workflow-definition ref.");
             path = path[..refSuffix];
         }
-        var eventName = RequiredString(root, "event");
+        else if (eventName is "push" or "workflow_dispatch")
+        {
+            // GitHub's REST workflow-run path normally omits the workflow-ref suffix. For
+            // branch-triggered runs, derive the ref from the provider-observed head_branch;
+            // never use the workflow-side provenance payload as the source of this value.
+            var headBranch = RequiredString(root, "head_branch");
+            if (!IsValidBranchName(headBranch))
+                throw new InvalidDataException("GitHub workflow run contains an invalid provider-observed head_branch.");
+            workflowRef = "refs/heads/" + headBranch;
+        }
         var snapshot = new CiRunSnapshot(repository, runId, name, sha, status, conclusion, url, updatedAt);
         var prNumbers = new List<int>();
         if (root.TryGetProperty("pull_requests", out var prs) && prs.ValueKind == JsonValueKind.Array)
@@ -192,6 +202,20 @@ public sealed class GitHubActionsWorkflowRunCollector
             ProviderStatus = statusText,
             WorkflowRef = workflowRef
         };
+    }
+
+    private static bool IsValidBranchName(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length > 255 ||
+            value.StartsWith("/", StringComparison.Ordinal) || value.EndsWith("/", StringComparison.Ordinal) ||
+            value.Contains("//", StringComparison.Ordinal) || value.Contains("..", StringComparison.Ordinal) ||
+            value.Contains("@{", StringComparison.Ordinal) || value.Any(character =>
+                char.IsControl(character) || char.IsWhiteSpace(character) ||
+                "~^:?*[\\]".Contains(character, StringComparison.Ordinal)))
+            return false;
+        return value.Split('/').All(segment =>
+            segment.Length > 0 && !segment.StartsWith(".", StringComparison.Ordinal) &&
+            !segment.EndsWith(".", StringComparison.Ordinal));
     }
 
     private static string RequiredString(JsonElement root, string property)
