@@ -49,7 +49,21 @@ ServerSC2 is the next CODE RED evidence integration. ServerSC2 owns authoritativ
 - [CiAi integration issue](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/67)
 - [Shared CODE RED / HeadlessAi handoff](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/34)
 
-## 05 — Architecture and proof
+## 05 — CODE RED evidence contracts
+
+The current producer path is documented by its canonical contracts:
+
+- [Workflow provenance v1](src/TheSingularityWorkshop.CiAi/CiWorkflowProvenanceRecord.md) — workflow-definition, event, PR, and checkout identity.
+- [Workflow evidence v1](src/TheSingularityWorkshop.CiAi/CiWorkflowEvidencePacket.md) — exact run/attempt envelope and fail-closed trust.
+- [Test-result report v1](src/TheSingularityWorkshop.CiAi/CiTestResultReport.md) — bounded TRX normalization and canonical 1 MiB JSON handoff.
+- [Evidence outbox and receipt ledger](src/TheSingularityWorkshop.CiAi/CiWorkflowEvidenceOutbox.md) — exact-byte persistence, replay protection, and trust reset on reload.
+- [Foundry report notice handoff](src/TheSingularityWorkshop.CiAi/CiTestResultFoundryNoticeEnqueuer.md) — host-published report bytes and manifest-bound notice delivery.
+- [Foundry notice sender](src/TheSingularityWorkshop.CiAi/FoundryArtifactReadyNoticeClient.md) — HTTPS sender, credential boundary, response classification, and retry semantics.
+- [Foundry notice delivery coordinator](src/TheSingularityWorkshop.CiAi/FoundryArtifactReadyNoticeDeliveryCoordinator.md) — bounded durable delivery passes and receipt-ledger behavior.
+
+The host artifact publisher and authenticated Foundry ingress/retrieval deployment remain integration responsibilities; these contracts do not claim live remote acceptance.
+
+## 06 — Architecture and proof
 
 - [Gallery](Gallery.md) — current demonstrations and evidence.
 - [Cross-Cog integration](integration/CogEcosystem.ContractTests/README.md) — pinned in-process contract proof.
@@ -59,3 +73,7 @@ ServerSC2 is the next CODE RED evidence integration. ServerSC2 owns authoritativ
 - [FSM_COS coordination notes](FSM_COSLLM.md) — read-only evidence pilot and cross-repository contract.
 
 The visitor experience is an introduction, not a substitute for source, tests, CI runs, or the implementation status recorded by each owning repository.
+
+---
+
+<p align="center"><img src="https://raw.githubusercontent.com/TrentBest/FSM_API/master/Documentation/Branding/TheSingularityWorkshop.png" alt="The Singularity Workshop" width="240" /></p>

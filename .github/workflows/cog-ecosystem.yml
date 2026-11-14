@@ -110,6 +110,7 @@ jobs:
         run: dotnet run --project integration/CogEcosystem.ContractTests --configuration Release --no-build
 
   verify-live-provider-evidence:
+    if: github.event_name != 'pull_request'
     needs: vertical-contract
     runs-on: ubuntu-latest
     steps:

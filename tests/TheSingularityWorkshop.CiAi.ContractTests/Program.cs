@@ -3,6 +3,16 @@ using TheSingularityWorkshop.CiAi;
 using TheSingularityWorkshop.CiAi.RepositoryCommands;
 
 var passed = 0;
+passed += CiWorkflowProvenanceRecordTests.Run();
+passed += await CiWorkflowProvenanceArtifactReaderTests.RunAsync();
+passed += CiWorkflowEvidencePacketTests.Run();
+passed += CiTestResultReportTests.Run();
+passed += CiTestResultArtifactArchiveTests.Run();
+passed += CiWorkflowEvidenceDeliveryTests.Run();
+passed += await FoundryArtifactReadyNoticeClientTests.RunAsync();
+passed += FoundryArtifactReadyNoticeOutboxTests.Run();
+passed += await FoundryArtifactReadyNoticeDeliveryCoordinatorTests.RunAsync();
+passed += await CiTestResultFoundryNoticeEnqueuerTests.RunAsync();
 passed += AiCiBuilderContractTests.Run();
 passed += CiPipelineDefinitionContractTests.Run();
 passed += CiWorkflowDomainCatalogContractTests.Run();
@@ -633,8 +643,10 @@ Check("Markdown release report escapes table delimiters in provider diagnostics"
 Console.WriteLine($"PASS: {passed} CiAi contract checks.");
 await GitHubActionsRunClientTests.RunAsync();
 await GitHubActionsWorkflowRunCollectorTests.RunAsync();
+CiExactWorkflowRunBindingEvaluatorTests.Run();
 CiRequiredWorkflowEvidenceEvaluatorTests.Run();
 await GitHubActionsWorkflowJobCollectorTests.RunAsync();
+await GitHubActionsArtifactCollectorTests.RunAsync();
 
 void Check(string name, Action action)
 {

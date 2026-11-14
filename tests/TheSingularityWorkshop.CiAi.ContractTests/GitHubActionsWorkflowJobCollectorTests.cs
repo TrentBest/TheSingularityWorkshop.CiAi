@@ -16,6 +16,8 @@ internal static class GitHubActionsWorkflowJobCollectorTests
             "name": "build-and-test",
             "status": "completed",
             "conclusion": "failure",
+            "started_at": "2026-10-24T03:58:00Z",
+            "completed_at": "2026-10-24T04:01:00Z",
             "html_url": "https://github.com/TrentBest/SimpleDemos/actions/runs/42/job/1201",
             "steps": [
               {"number": 2, "name": "Build", "status": "completed", "conclusion": "skipped", "completed_at": "2026-10-24T04:00:00Z"},
@@ -41,6 +43,9 @@ internal static class GitHubActionsWorkflowJobCollectorTests
             Assert(result.Jobs.Count == 1 && !result.IsTruncated, "job collection was incomplete");
             Assert(result.Jobs[0].RunAttempt == 2 && result.Jobs[0].Conclusion == "failure",
                 "attempt or raw conclusion was lost");
+            Assert(result.Jobs[0].StartedAt == DateTimeOffset.Parse("2026-10-24T03:58:00Z") &&
+                result.Jobs[0].CompletedAt == DateTimeOffset.Parse("2026-10-24T04:01:00Z"),
+                "exact job-attempt time bounds were not preserved");
             Assert(result.Jobs[0].Steps.Count == 2 &&
                 result.Jobs[0].Steps[0].Name == "Branding preflight" &&
                 result.Jobs[0].Steps[1].Conclusion == "skipped",
@@ -69,8 +74,58 @@ internal static class GitHubActionsWorkflowJobCollectorTests
 
         using (var client = new HttpClient(new StubHandler((_, _) =>
         {
+            var missingRunId = response.Replace("\"run_id\": 42,", "\"run_id_missing\": 42,");
+            return Task.FromResult(JsonResponse(missingRunId));
+        })))
+        {
+            await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowJobCollector(client)
+                .GetJobsForAttemptAsync("TrentBest/SimpleDemos", 42, 2));
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+        {
+            var malformedRunId = response.Replace("\"run_id\": 42", "\"run_id\": \"42\"");
+            return Task.FromResult(JsonResponse(malformedRunId));
+        })))
+        {
+            await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowJobCollector(client)
+                .GetJobsForAttemptAsync("TrentBest/SimpleDemos", 42, 2));
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+        {
+            var missingAttempt = response.Replace("\"run_attempt\": 2,", "\"run_attempt_missing\": 2,");
+            return Task.FromResult(JsonResponse(missingAttempt));
+        })))
+        {
+            await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowJobCollector(client)
+                .GetJobsForAttemptAsync("TrentBest/SimpleDemos", 42, 2));
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+        {
+            var malformedAttempt = response.Replace("\"run_attempt\": 2", "\"run_attempt\": \"2\"");
+            return Task.FromResult(JsonResponse(malformedAttempt));
+        })))
+        {
+            await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowJobCollector(client)
+                .GetJobsForAttemptAsync("TrentBest/SimpleDemos", 42, 2));
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+        {
             var wrongUrl = response.Replace("/actions/runs/42/job/1201", "/actions/runs/99/job/1201");
             return Task.FromResult(JsonResponse(wrongUrl));
+        })))
+        {
+            await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowJobCollector(client)
+                .GetJobsForAttemptAsync("TrentBest/SimpleDemos", 42, 2));
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+        {
+            var invalidTimes = response.Replace("2026-10-24T04:01:00Z", "2026-10-24T03:00:00Z");
+            return Task.FromResult(JsonResponse(invalidTimes));
         })))
         {
             await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowJobCollector(client)
@@ -141,7 +196,7 @@ internal static class GitHubActionsWorkflowJobCollectorTests
             new GitHubActionsWorkflowJobCollector(new HttpClient()).GetJobsForAttemptAsync(
                 "TrentBest/SimpleDemos", 42, 0));
 
-        Console.WriteLine("PASS: 8 GitHub Actions workflow job collector checks.");
+        Console.WriteLine("PASS: 13 GitHub Actions workflow job collector checks.");
     }
 
     private static string Job(long id, long runId, int attempt) =>
