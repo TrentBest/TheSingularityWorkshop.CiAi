@@ -43,6 +43,10 @@ try
     var runCollection = await runCollector.GetRunsForCommitAsync(
         repository, headSha, maxPages: 10, perPage: 100, cancellationToken: CancellationToken.None);
 
+    var requiredWorkflowPaths = (Environment.GetEnvironmentVariable("CIAI_REQUIRED_WORKFLOW_PATHS") ?? string.Empty)
+        .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    var expectedWorkflowRef = Environment.GetEnvironmentVariable("CIAI_EXPECTED_WORKFLOW_REF");
+    var expectedWorkflowEvent = Environment.GetEnvironmentVariable("CIAI_EXPECTED_WORKFLOW_EVENT");
     var provenanceRequired = string.Equals(
         Environment.GetEnvironmentVariable("CIAI_REQUIRE_WORKFLOW_PROVENANCE"), "true", StringComparison.OrdinalIgnoreCase);
     CiWorkflowProvenanceArtifactEvidence? workflowProvenance = null;
@@ -143,10 +147,6 @@ try
         });
     }
 
-    var requiredWorkflowPaths = (Environment.GetEnvironmentVariable("CIAI_REQUIRED_WORKFLOW_PATHS") ?? string.Empty)
-        .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-    var expectedWorkflowRef = Environment.GetEnvironmentVariable("CIAI_EXPECTED_WORKFLOW_REF");
-    var expectedWorkflowEvent = Environment.GetEnvironmentVariable("CIAI_EXPECTED_WORKFLOW_EVENT");
     var exactRunBindingConfigured = !string.IsNullOrWhiteSpace(expectedWorkflowRef) ||
         !string.IsNullOrWhiteSpace(expectedWorkflowEvent);
     var exactRunBindingValid = !exactRunBindingConfigured ||
