@@ -52,7 +52,7 @@ internal static class CiExactWorkflowRunBindingEvaluatorTests
                 DateTimeOffset.Parse("2026-11-13T12:00:00Z"))
         }}), "nonterminal normalized status must fail closed");
 
-        Console.WriteLine("PASS: exact workflow run binding fail-closed matrix (13 checks).");
+        Console.WriteLine("PASS: exact workflow run binding fail-closed matrix (15 checks).");
     }
 
     private static bool Evaluate(
