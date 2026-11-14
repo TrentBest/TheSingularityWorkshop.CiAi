@@ -11,7 +11,7 @@ internal static class CiExactWorkflowRunBindingEvaluatorTests
 
         var valid = Observation();
         Assert(CiExactWorkflowRunBindingEvaluator.IsValid(
-            new[] { selector }, new[] { valid }, workflowRef, eventName),
+            new[] { selector }, new[] { valid }, "TrentBest/SimpleDemos", new string('a', 40), workflowRef, eventName),
             "exact workflow path, run, attempt, ref, and event should bind");
 
         Assert(!Evaluate(new[] { selector }, new[] { valid with { WorkflowRef = "refs/heads/master" } }),
@@ -19,7 +19,9 @@ internal static class CiExactWorkflowRunBindingEvaluatorTests
         Assert(!Evaluate(new[] { selector }, new[] { valid with { Event = "pull_request" } }),
             "wrong provider event must fail closed");
         Assert(!Evaluate(new[] { selector }, new[] { valid with { Run = valid.Run with { HeadSha = new string('b', 40) } } }),
-            "run identity mutation must not pass the exact binding");
+            "wrong source SHA must fail closed");
+        Assert(!Evaluate(new[] { selector }, new[] { valid with { Run = valid.Run with { Repository = "Other/Repo" } } }),
+            "wrong source repository must fail closed");
 
         Assert(!Evaluate(new[] { selector }, Array.Empty<CiWorkflowRunObservation>()),
             "zero matching runs must fail closed");
@@ -53,7 +55,8 @@ internal static class CiExactWorkflowRunBindingEvaluatorTests
         IReadOnlyCollection<string> selectors,
         IReadOnlyCollection<CiWorkflowRunObservation> observations)
         => CiExactWorkflowRunBindingEvaluator.IsValid(
-            selectors, observations, "refs/heads/development", "push");
+            selectors, observations, "TrentBest/SimpleDemos", new string('a', 40),
+            "refs/heads/development", "push");
 
     private static CiWorkflowRunObservation Observation()
     {
