@@ -25,7 +25,7 @@ internal static class GitHubActionsWorkflowRunCollectorTests
 
         var apiPathWithoutWorkflowRef = page
             .Replace(".yml@refs/heads/development", ".yml", StringComparison.Ordinal)
-            .Replace("\\"event\\": \\"push\\"", "\\"event\\": \\"push\\", \\"head_branch\\": \\"development\\"", StringComparison.Ordinal);
+            .Replace("\"event\": \"push\"", "\"event\": \"push\", \"head_branch\": \"development\"", StringComparison.Ordinal);
         using (var client = new HttpClient(new StubHandler((_, _) => Task.FromResult(JsonResponse(apiPathWithoutWorkflowRef)))))
         {
             var collection = await new GitHubActionsWorkflowRunCollector(client)
@@ -35,7 +35,7 @@ internal static class GitHubActionsWorkflowRunCollectorTests
         }
 
         var invalidProviderBranch = apiPathWithoutWorkflowRef.Replace(
-            "\\"head_branch\\": \\"development\\"", "\\"head_branch\\": \\"bad..branch\\"", StringComparison.Ordinal);
+            "\"head_branch\": \"development\"", "\"head_branch\": \"bad..branch\"", StringComparison.Ordinal);
         using (var client = new HttpClient(new StubHandler((_, _) => Task.FromResult(JsonResponse(invalidProviderBranch)))))
         {
             await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowRunCollector(client)
