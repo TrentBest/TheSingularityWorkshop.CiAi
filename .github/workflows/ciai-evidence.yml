@@ -116,9 +116,9 @@ jobs:
           set -euo pipefail
           artifact_name="ciai-workflow-provenance-$SOURCE_RUN_ATTEMPT"
           mapfile -t artifact_ids < <(
-            ARTIFACT_NAME="$artifact_name" gh api --paginate \
+            gh api --paginate \
               "repos/$TARGET_REPOSITORY/actions/runs/$SOURCE_RUN_ID/artifacts" \
-              --jq '.artifacts[] | select(.name == env.ARTIFACT_NAME) | .id'
+              --jq ".artifacts[] | select(.name == \"$artifact_name\") | .id"
           )
           if [ "${#artifact_ids[@]}" -ne 1 ] || ! [[ "${artifact_ids[0]}" =~ ^[1-9][0-9]*$ ]]; then
             echo "::error::Expected exactly one provider workflow-provenance artifact for the exact run attempt."
