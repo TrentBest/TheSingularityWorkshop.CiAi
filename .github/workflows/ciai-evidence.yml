@@ -124,9 +124,9 @@ jobs:
             echo "::error::Expected exactly one provider workflow-provenance artifact for the exact run attempt."
             exit 1
           fi
-          mkdir -p ciai/artifacts
-          gh api "repos/$TARGET_REPOSITORY/actions/artifacts/${artifact_ids[0]}/zip" > ciai/artifacts/workflow-provenance.zip
-          test -s ciai/artifacts/workflow-provenance.zip
+          mkdir -p artifacts
+          gh api "repos/$TARGET_REPOSITORY/actions/artifacts/${artifact_ids[0]}/zip" > artifacts/workflow-provenance.zip
+          test -s artifacts/workflow-provenance.zip
           echo "Downloaded provider artifact ID ${artifact_ids[0]} for run $SOURCE_RUN_ID attempt $SOURCE_RUN_ATTEMPT."
       
       - name: Check out pinned CiAi observer source
@@ -161,7 +161,7 @@ jobs:
           CIAI_EXPECTED_WORKFLOW_EVENT: push
           CIAI_EXPECTED_WORKFLOW_SHA: ${{ steps.source.outputs.sha }}
           CIAI_REQUIRE_WORKFLOW_PROVENANCE: "true"
-          CIAI_WORKFLOW_PROVENANCE_ARCHIVE_PATH: artifacts/workflow-provenance.zip
+          CIAI_WORKFLOW_PROVENANCE_ARCHIVE_PATH: ../artifacts/workflow-provenance.zip
           TARGET_REPOSITORY: ${{ steps.source.outputs.repository }}
           TARGET_SHA: ${{ steps.source.outputs.sha }}
           SOURCE_RUN_ID: ${{ steps.source-run.outputs.run_id }}
