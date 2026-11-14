@@ -43,6 +43,44 @@ try
     var runCollection = await runCollector.GetRunsForCommitAsync(
         repository, headSha, maxPages: 10, perPage: 100, cancellationToken: CancellationToken.None);
 
+    var provenanceRequired = string.Equals(
+        Environment.GetEnvironmentVariable("CIAI_REQUIRE_WORKFLOW_PROVENANCE"), "true", StringComparison.OrdinalIgnoreCase);
+    CiWorkflowProvenanceArtifactEvidence? workflowProvenance = null;
+    if (provenanceRequired)
+    {
+        var archivePath = Environment.GetEnvironmentVariable("CIAI_WORKFLOW_PROVENANCE_ARCHIVE_PATH");
+        var expectedWorkflowSha = Environment.GetEnvironmentVariable("CIAI_EXPECTED_WORKFLOW_SHA");
+        if (requiredWorkflowPaths.Length != 1 ||
+            string.IsNullOrWhiteSpace(expectedWorkflowRef) ||
+            string.IsNullOrWhiteSpace(expectedWorkflowEvent) ||
+            string.IsNullOrWhiteSpace(archivePath) ||
+            string.IsNullOrWhiteSpace(expectedWorkflowSha))
+            throw new InvalidDataException("Required workflow provenance policy is incomplete.");
+
+        var identity = requiredWorkflowPaths[0].Split('#');
+        if (identity.Length != 3 ||
+            !string.Equals(identity[0], ".github/workflows/ci.yml", StringComparison.Ordinal) ||
+            !long.TryParse(identity[1], out var provenanceRunId) || provenanceRunId <= 0 ||
+            !int.TryParse(identity[2], out var provenanceRunAttempt) || provenanceRunAttempt <= 0)
+            throw new InvalidDataException("Required workflow identity must bind ci.yml to one exact run ID and attempt.");
+
+        var exactRun = runCollection.Runs
+            .Where(item => item.Run.RunId == provenanceRunId && item.RunAttempt == provenanceRunAttempt)
+            .ToArray();
+        if (exactRun.Length != 1)
+            throw new InvalidDataException("Workflow provenance requires exactly one independently observed source run attempt.");
+
+        var artifactName = $"ciai-workflow-provenance-{provenanceRunAttempt}";
+        var providerArtifact = await new GitHubActionsArtifactCollector(httpClient, token)
+            .GetRequiredArtifactAsync(repository, provenanceRunId, headSha, artifactName,
+                cancellationToken: CancellationToken.None);
+        var archiveBytes = await File.ReadAllBytesAsync(archivePath);
+        workflowProvenance = CiWorkflowProvenanceArtifactReader.Read(
+            archiveBytes, providerArtifact, artifactName, "workflow-provenance.json",
+            repository, provenanceRunId, provenanceRunAttempt, headSha,
+            expectedWorkflowRef, expectedWorkflowSha, expectedWorkflowEvent, expectedWorkflowRef);
+    }
+
     var observedRuns = new List<object>();
     var policyEvidence = new List<CiRequiredWorkflowRunEvidence>();
     foreach (var observation in runCollection.Runs)
@@ -125,8 +163,9 @@ try
         requiredWorkflowResults.All(result => result.Terminal);
     var requiredWorkflowsSuccessful = requiredWorkflowResults.Length > 0 &&
         requiredWorkflowResults.All(result => result.Successful);
+    var workflowProvenanceValid = !provenanceRequired || workflowProvenance is not null;
     var complete = CiRequiredWorkflowEvidenceEvaluator.IsPassing(discoveryComplete, requiredWorkflowResults) &&
-        exactRunBindingValid;
+        exactRunBindingValid && workflowProvenanceValid;
     var report = new
     {
         schema = "ciai.commit-observation.v2",
@@ -146,6 +185,23 @@ try
         requiredWorkflowResults,
         exactRunBindingConfigured,
         exactRunBindingValid,
+        workflowProvenance = new
+        {
+            required = provenanceRequired,
+            valid = workflowProvenance is not null,
+            providerArtifactId = workflowProvenance?.ProviderArtifact.ArtifactId,
+            providerArchiveDigest = workflowProvenance?.ProviderArtifact.ProviderArchiveDigest,
+            payloadSha256 = workflowProvenance?.PayloadSha256,
+            payloadSizeBytes = workflowProvenance?.PayloadSizeBytes,
+            workflowRef = workflowProvenance?.Provenance.WorkflowRef,
+            workflowSha = workflowProvenance?.Provenance.WorkflowSha,
+            eventName = workflowProvenance?.Provenance.EventName,
+            eventRef = workflowProvenance?.Provenance.EventRef,
+            eventSha = workflowProvenance?.Provenance.EventSha,
+            checkoutRef = workflowProvenance?.Provenance.CheckoutRef,
+            checkoutSha = workflowProvenance?.Provenance.CheckoutSha
+        },
+        workflowProvenanceValid,
         requiredEvidenceComplete,
         requiredWorkflowsTerminal,
         requiredWorkflowsSuccessful,
