@@ -40,9 +40,10 @@ internal static class CiWorkflowProvenanceArtifactReaderTests
 
         using var client = new HttpClient(new StubHandler(request =>
         {
-            if (request.RequestUri!.AbsolutePath.EndsWith("/actions/runs/42/artifacts", StringComparison.Ordinal))
-                return Json($$"""{"total_count":1,"artifacts":[{"id":7,"name":"{{artifactName}}"}]}""");
-            if (request.RequestUri.AbsolutePath.EndsWith("/actions/artifacts/7", StringComparison.Ordinal))
+            var requestPath = request.RequestUri!.AbsolutePath;
+            if (requestPath.EndsWith("/actions/runs/42/artifacts", StringComparison.Ordinal))
+                return Json($"""{"total_count":1,"artifacts":[{"id":7,"name":"{{artifactName}}"}]}""");
+            if (requestPath.EndsWith("/actions/artifacts/7", StringComparison.Ordinal))
                 return Json($$"""
                 {
                   "id": 7,
