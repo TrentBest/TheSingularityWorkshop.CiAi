@@ -201,14 +201,14 @@ public sealed class GitHubActionsWorkflowJobCollector
 
     private static long RequiredInt64(JsonElement root, string property)
     {
-        if (!root.TryGetProperty(property, out var value) || !value.TryGetInt64(out var result))
+        if (!root.TryGetProperty(property, out var value) || value.ValueKind != JsonValueKind.Number || !value.TryGetInt64(out var result))
             throw new InvalidDataException($"GitHub response is missing valid field '{property}'.");
         return result;
     }
 
     private static int RequiredInt32(JsonElement root, string property)
     {
-        if (!root.TryGetProperty(property, out var value) || !value.TryGetInt32(out var result) || result < 0)
+        if (!root.TryGetProperty(property, out var value) || value.ValueKind != JsonValueKind.Number || !value.TryGetInt32(out var result) || result < 0)
             throw new InvalidDataException($"GitHub response is missing valid field '{property}'.");
         return result;
     }
