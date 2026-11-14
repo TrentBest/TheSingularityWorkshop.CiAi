@@ -2,7 +2,7 @@ name: CiAi Exact Commit Evidence
 
 on:
   push:
-    branches: [development, master]
+    branches: [development, master, integration/ciai-v1-evidence-contracts]
     paths:
       - "src/**"
       - "integration/**"
@@ -43,7 +43,7 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$TARGET_REPOSITORY" == "TrentBest/TheSingularityWorkshop.CiAi" ]]
-          [[ "$TARGET_BRANCH" == "development" || "$TARGET_BRANCH" == "master" ]]
+          [[ "$TARGET_BRANCH" == "development" || "$TARGET_BRANCH" == "master" || "$TARGET_BRANCH" == "integration/ciai-v1-evidence-contracts" ]]
           [[ "$PUSHED_BRANCH" == "refs/heads/$TARGET_BRANCH" ]]
           [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
           {
@@ -133,7 +133,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: TrentBest/TheSingularityWorkshop.CiAi
-          ref: 3b16e84782991898a78f5e6d8094e4dc40ec9fc0
+          ref: b9e8d0d9eb903cce210a49bbdc45ba8a9421e1b3
           path: ciai
           submodules: recursive
           persist-credentials: false
