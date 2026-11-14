@@ -48,7 +48,7 @@ internal static class CiExactWorkflowRunBindingEvaluatorTests
             Run = new CiRunSnapshot(
                 "TrentBest/SimpleDemos", 42, "CiAi Contract Verification", new string('a', 40),
                 CiRunStatus.InProgress, CiRunConclusion.None,
-                new Uri("https://github.com/TrentBest/SimpleDemos/actions/runs/42"),
+                new Uri($"https://github.com/{repository}/actions/runs/42"),
                 DateTimeOffset.Parse("2026-11-13T12:00:00Z"))
         }}), "nonterminal normalized status must fail closed");
 
