@@ -229,8 +229,8 @@ jobs:
           import os
           import pathlib
           import uuid
+          import shutil
           import xml.etree.ElementTree as ET
-          import zipfile
 
           outcome = os.environ.get("CONTRACT_OUTCOME", "skipped")
           if outcome == "success":
@@ -283,26 +283,23 @@ jobs:
               ET.SubElement(error, "StackTrace").text = diagnostic or "No contract-suite diagnostic output was captured."
           summary = ET.SubElement(root, "ResultSummary", {"outcome": summary_outcome})
           ET.SubElement(summary, "Counters", counters)
-          trx_path = pathlib.Path("TestResults/contract-suite.trx")
-          trx_path.parent.mkdir(parents=True, exist_ok=True)
+          source_dir = pathlib.Path("artifacts/source-evidence")
+          source_dir.mkdir(parents=True, exist_ok=True)
+          trx_path = source_dir / "results.trx"
           ET.ElementTree(root).write(trx_path, encoding="utf-8", xml_declaration=True)
 
           provenance_path = pathlib.Path("artifacts/workflow-provenance/workflow-provenance.json")
           if not provenance_path.is_file() or provenance_path.stat().st_size == 0:
               raise SystemExit("Exact workflow provenance payload is missing; source evidence cannot be packaged.")
-          archive_path = pathlib.Path("artifacts/ciai-test-results.zip")
-          archive_path.parent.mkdir(parents=True, exist_ok=True)
-          with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-              archive.write(trx_path, "results.trx")
-              archive.write(provenance_path, "provenance.json")
-          print(f"Created bounded CiAi TRX/provenance archive for run {identity}.")
+          shutil.copyfile(provenance_path, source_dir / "provenance.json")
+          print(f"Created bounded CiAi TRX/provenance payloads for run {identity}.")
           PY
       - name: Upload exact contract source artifact
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: ciai-test-results-${{ github.run_attempt }}
-          path: artifacts/ciai-test-results.zip
+          path: artifacts/source-evidence/
           if-no-files-found: error
           retention-days: 30
       - name: Upload coverage to Codecov
