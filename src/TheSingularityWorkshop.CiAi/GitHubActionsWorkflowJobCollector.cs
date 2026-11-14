@@ -120,11 +120,15 @@ public sealed class GitHubActionsWorkflowJobCollector
         var id = RequiredInt64(root, "id");
         if (id <= 0) throw new InvalidDataException("GitHub job ID must be positive.");
 
-        if (root.TryGetProperty("run_id", out var returnedRun) &&
-            returnedRun.ValueKind == JsonValueKind.Number && returnedRun.TryGetInt64(out var actualRun) && actualRun != runId)
+        // The attempt-specific endpoint is not a substitute for validating the provider's
+        // own identity fields. Missing or malformed fields must not inherit the requested
+        // values, because that would turn an unverified response into apparently bound evidence.
+        var returnedRun = RequiredInt64(root, "run_id");
+        if (returnedRun != runId)
             throw new InvalidDataException("GitHub returned a job belonging to a different workflow run.");
-        if (root.TryGetProperty("run_attempt", out var returnedAttempt) &&
-            returnedAttempt.ValueKind == JsonValueKind.Number && returnedAttempt.TryGetInt32(out var actualAttempt) && actualAttempt != attempt)
+
+        var returnedAttempt = RequiredInt32(root, "run_attempt");
+        if (returnedAttempt <= 0 || returnedAttempt != attempt)
             throw new InvalidDataException("GitHub returned a job belonging to a different run attempt.");
 
         var name = RequiredString(root, "name");
