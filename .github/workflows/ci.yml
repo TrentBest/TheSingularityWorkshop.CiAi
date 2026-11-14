@@ -216,84 +216,22 @@ jobs:
           status=${PIPESTATUS[0]}
           set -e
           exit "$status"
-      - name: Create bounded TRX and source provenance archive
+      - name: Package genuine harness results and exact source provenance
         if: always()
-        env:
-          CONTRACT_OUTCOME: ${{ steps.contract-tests.outcome }}
-          RUN_ID: ${{ github.run_id }}
-          RUN_ATTEMPT: ${{ github.run_attempt }}
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          import datetime
-          import os
-          import pathlib
-          import uuid
-          import shutil
-          import xml.etree.ElementTree as ET
-
-          outcome = os.environ.get("CONTRACT_OUTCOME", "skipped")
-          if outcome == "success":
-              trx_outcome, summary_outcome = "Passed", "Passed"
-              counters = dict(total="1", executed="1", passed="1", failed="0", error="0",
-                              timeout="0", aborted="0", notExecuted="0", inconclusive="0",
-                              notRunnable="0", disconnected="0", warning="0",
-                              passedButRunAborted="0", pending="0", inProgress="0")
-          elif outcome == "failure":
-              trx_outcome, summary_outcome = "Failed", "Failed"
-              counters = dict(total="1", executed="1", passed="0", failed="1", error="0",
-                              timeout="0", aborted="0", notExecuted="0", inconclusive="0",
-                              notRunnable="0", disconnected="0", warning="0",
-                              passedButRunAborted="0", pending="0", inProgress="0")
-          else:
-              trx_outcome, summary_outcome = "NotExecuted", "NotExecuted"
-              counters = dict(total="1", executed="0", passed="0", failed="0", error="0",
-                              timeout="0", aborted="0", notExecuted="1", inconclusive="0",
-                              notRunnable="0", disconnected="0", warning="0",
-                              passedButRunAborted="0", pending="0", inProgress="0")
-
-          now = datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
-          identity = f"{os.environ['RUN_ID']}:{os.environ['RUN_ATTEMPT']}:CiAi.ContractSuite"
-          test_id = str(uuid.uuid5(uuid.NAMESPACE_URL, identity))
-          execution_id = str(uuid.uuid5(uuid.NAMESPACE_OID, identity))
-          root = ET.Element("TestRun", {
-              "id": str(uuid.uuid5(uuid.NAMESPACE_DNS, identity)),
-              "name": "CiAi Contract Suite",
-              "runUser": "GitHub Actions"
-          })
-          ET.SubElement(root, "Times", {
-              "creation": now, "queuing": now, "start": now, "finish": now
-          })
-          results = ET.SubElement(root, "Results")
-          result = ET.SubElement(results, "UnitTestResult", {
-              "executionId": execution_id,
-              "testId": test_id,
-              "testName": "CiAi.ContractSuite",
-              "outcome": trx_outcome,
-              "duration": "00:00:00.001",
-              "startTime": now,
-              "endTime": now
-          })
-          if outcome == "failure":
-              log_path = pathlib.Path("TestResults/contract-run.log")
-              diagnostic = log_path.read_text(errors="replace")[-8000:] if log_path.exists() else ""
-              output = ET.SubElement(result, "Output")
-              error = ET.SubElement(output, "ErrorInfo")
-              ET.SubElement(error, "Message").text = "The CiAi contract suite command failed. Bounded provider job output follows."
-              ET.SubElement(error, "StackTrace").text = diagnostic or "No contract-suite diagnostic output was captured."
-          summary = ET.SubElement(root, "ResultSummary", {"outcome": summary_outcome})
-          ET.SubElement(summary, "Counters", counters)
-          source_dir = pathlib.Path("artifacts/source-evidence")
-          source_dir.mkdir(parents=True, exist_ok=True)
-          trx_path = source_dir / "results.trx"
-          ET.ElementTree(root).write(trx_path, encoding="utf-8", xml_declaration=True)
-
-          provenance_path = pathlib.Path("artifacts/workflow-provenance/workflow-provenance.json")
-          if not provenance_path.is_file() or provenance_path.stat().st_size == 0:
-              raise SystemExit("Exact workflow provenance payload is missing; source evidence cannot be packaged.")
-          shutil.copyfile(provenance_path, source_dir / "provenance.json")
-          print(f"Created bounded CiAi TRX/provenance payloads for run {identity}.")
-          PY
+          source_dir="artifacts/source-evidence"
+          test -s "$source_dir/results.trx" || {
+            echo "::error::The contract harness did not produce genuine result records."
+            exit 1
+          }
+          provenance="artifacts/workflow-provenance/workflow-provenance.json"
+          test -s "$provenance" || {
+            echo "::error::Exact workflow provenance payload is missing."
+            exit 1
+          }
+          cp "$provenance" "$source_dir/provenance.json"
+          echo "Packaged harness-emitted TRX and exact workflow provenance."
       - name: Upload exact contract source artifact
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
