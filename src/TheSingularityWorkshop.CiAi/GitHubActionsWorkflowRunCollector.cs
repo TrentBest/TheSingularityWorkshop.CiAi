@@ -119,7 +119,9 @@ public sealed class GitHubActionsWorkflowRunCollector
 
         var runId = RequiredInt64(root, "id");
         if (runId <= 0) throw new InvalidDataException("GitHub workflow run ID must be positive.");
-        var attempt = root.TryGetProperty("run_attempt", out var attemptValue) && attemptValue.TryGetInt32(out var parsedAttempt)
+        var attempt = root.TryGetProperty("run_attempt", out var attemptValue) &&
+            attemptValue.ValueKind == JsonValueKind.Number &&
+            attemptValue.TryGetInt32(out var parsedAttempt)
             ? parsedAttempt : 0;
         if (attempt <= 0) throw new InvalidDataException("GitHub workflow run attempt must be a positive integer.");
 
@@ -179,7 +181,8 @@ public sealed class GitHubActionsWorkflowRunCollector
         if (root.TryGetProperty("pull_requests", out var prs) && prs.ValueKind == JsonValueKind.Array)
         {
             foreach (var pr in prs.EnumerateArray())
-                if (pr.TryGetProperty("number", out var number) && number.TryGetInt32(out var prNumber) && prNumber > 0)
+                if (pr.TryGetProperty("number", out var number) && number.ValueKind == JsonValueKind.Number &&
+                    number.TryGetInt32(out var prNumber) && prNumber > 0)
                     prNumbers.Add(prNumber);
         }
 
@@ -208,14 +211,14 @@ public sealed class GitHubActionsWorkflowRunCollector
 
     private static long RequiredInt64(JsonElement root, string property)
     {
-        if (!root.TryGetProperty(property, out var value) || !value.TryGetInt64(out var result))
+        if (!root.TryGetProperty(property, out var value) || value.ValueKind != JsonValueKind.Number || !value.TryGetInt64(out var result))
             throw new InvalidDataException($"GitHub workflow collection is missing valid field '{property}'.");
         return result;
     }
 
     private static int RequiredInt32(JsonElement root, string property)
     {
-        if (!root.TryGetProperty(property, out var value) || !value.TryGetInt32(out var result) || result < 0)
+        if (!root.TryGetProperty(property, out var value) || value.ValueKind != JsonValueKind.Number || !value.TryGetInt32(out var result) || result < 0)
             throw new InvalidDataException($"GitHub workflow collection is missing valid field '{property}'.");
         return result;
     }
