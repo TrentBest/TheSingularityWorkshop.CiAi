@@ -52,6 +52,17 @@ internal static class FoundryArtifactReadyNoticeOutboxTests
                 delivery.IdempotencyKey, "accepted", DateTimeOffset.Parse("2026-10-31T00:02:00Z"));
             AssertThrows<ArgumentException>(() => ledger.Record(wrongReceipt, delivery));
 
+            var wrongIdempotencyReceipt = new FoundryArtifactIngressReceipt(
+                FoundryArtifactReadyNoticeClient.Contract, "receipt-wrong-key", notice.NoticeId,
+                "different-report-identity", "accepted", DateTimeOffset.Parse("2026-10-31T00:02:00Z"));
+            AssertThrows<ArgumentException>(() => ledger.Record(wrongIdempotencyReceipt, delivery));
+
+            var alteredReceiptReuse = new FoundryArtifactIngressReceipt(
+                FoundryArtifactReadyNoticeClient.Contract, "receipt-1", notice.NoticeId,
+                delivery.IdempotencyKey, "accepted", DateTimeOffset.Parse("2026-10-31T00:02:01Z"));
+            Assert(ledger.Record(alteredReceiptReuse, delivery) == FoundryArtifactIngressReceiptRecordOutcome.Conflict,
+                "a reused receipt identity with altered acceptance time was not rejected as a conflict");
+
             var tornOutbox = Path.Combine(root, "torn-outbox.jsonl");
             File.WriteAllText(tornOutbox, "partial");
             AssertThrows<InvalidDataException>(() =>
@@ -61,8 +72,8 @@ internal static class FoundryArtifactReadyNoticeOutboxTests
             AssertThrows<InvalidDataException>(() =>
                 new FileFoundryArtifactIngressReceiptLedger(tornLedger).ReadAcknowledgedNoticeIds());
 
-            Console.WriteLine("PASS: 13 Foundry notice outbox and receipt ledger contract checks.");
-            return 13;
+            Console.WriteLine("PASS: 15 Foundry notice outbox and receipt ledger contract checks.");
+            return 15;
         }
         finally
         {
