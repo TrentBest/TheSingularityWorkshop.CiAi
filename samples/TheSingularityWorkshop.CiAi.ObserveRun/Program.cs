@@ -87,6 +87,7 @@ try
 
     var observedRuns = new List<object>();
     var policyEvidence = new List<CiRequiredWorkflowRunEvidence>();
+    CiWorkflowJobCollection? requiredJobCollection = null;
     foreach (var observation in runCollection.Runs)
     {
         // Only collect jobs for configured required workflow identities. Unrelated workflows
@@ -111,6 +112,8 @@ try
             jobs = await jobCollector.GetJobsForAttemptAsync(
                 repository, observation.Run.RunId, observation.RunAttempt,
                 maxPages: 10, perPage: 100, cancellationToken: CancellationToken.None);
+            if (provenanceRequired)
+                requiredJobCollection = jobs;
         }
 
         var jobsComplete = jobs is not null && !jobs.IsTruncated &&
@@ -169,6 +172,53 @@ try
         });
     }
 
+    CiTestResultReport? testResultReport = null;
+    if (provenanceRequired)
+    {
+        if (workflowProvenance is null || requiredJobCollection is null)
+            throw new InvalidDataException("Exact source test-result evidence requires the trusted provenance packet and required job collection.");
+        var identity = requiredWorkflowPaths[0].Split('#');
+        if (identity.Length != 3 ||
+            !long.TryParse(identity[1], out var sourceRunId) ||
+            !int.TryParse(identity[2], out var sourceRunAttempt))
+            throw new InvalidDataException("Source test-result policy does not identify one exact run attempt.");
+
+        var testArchivePath = Environment.GetEnvironmentVariable("CIAI_TEST_RESULTS_ARCHIVE_PATH");
+        if (string.IsNullOrWhiteSpace(testArchivePath))
+            throw new InvalidDataException("Required source test-result archive path is not configured.");
+        var testArtifactName = $"ciai-test-results-{sourceRunAttempt}";
+        var sourceProviderArtifact = await new GitHubActionsArtifactCollector(httpClient, token)
+            .GetRequiredArtifactAsync(repository, sourceRunId, headSha, testArtifactName,
+                cancellationToken: CancellationToken.None);
+        var sourceArchiveBytes = await File.ReadAllBytesAsync(testArchivePath);
+        var requiredJobPolicy = new CiRequiredJobPolicy(new[]
+        {
+            new CiRequiredJobDefinition(".github/workflows/ci.yml", "contract", "contract", testArtifactName)
+        });
+        var observedAt = DateTimeOffset.UtcNow;
+        var evidencePacket = CiWorkflowEvidencePacket.FromCollections(
+            runCollection, requiredJobCollection, sourceRunId, sourceRunAttempt,
+            observedAt, workflowProvenance.Provenance, workflowDefinitionTrusted: true,
+            artifactReferences: new[]
+            {
+                workflowProvenance.ProviderArtifact.ArchiveDownloadUrl,
+                sourceProviderArtifact.ArchiveDownloadUrl
+            });
+        var requiredJob = requiredJobCollection.Jobs.Single(job =>
+            job.RunId == sourceRunId && job.RunAttempt == sourceRunAttempt &&
+            string.Equals(job.Name, "contract", StringComparison.Ordinal));
+        var providerBinding = CiTestResultProviderArtifactBinding.FromObservedArtifact(
+            sourceProviderArtifact, evidencePacket, requiredJobPolicy, requiredJob.JobId, "contract");
+        var sourceArchive = CiTestResultArtifactArchive.Read(
+            sourceArchiveBytes, providerBinding, "results.trx", "provenance.json");
+        var source = CiTestResultArtifactSource.FromVerifiedProviderObservation(
+            evidencePacket, requiredJobPolicy, providerBinding, sourceArchive, "CiAi.ContractSuite");
+        testResultReport = CiTestResultReport.ParseAndValidate(
+            sourceArchive, evidencePacket, source, requiredJobPolicy, DateTimeOffset.UtcNow);
+        Directory.CreateDirectory("artifacts");
+        await File.WriteAllBytesAsync("artifacts/test-results-report.json", testResultReport.ToCanonicalUtf8Bytes());
+    }
+
     var exactRunBindingConfigured = !string.IsNullOrWhiteSpace(expectedWorkflowRef) ||
         !string.IsNullOrWhiteSpace(expectedWorkflowEvent);
     var exactRunBindingValid = !exactRunBindingConfigured ||
@@ -186,8 +236,9 @@ try
     var requiredWorkflowsSuccessful = requiredWorkflowResults.Length > 0 &&
         requiredWorkflowResults.All(result => result.Successful);
     var workflowProvenanceValid = !provenanceRequired || workflowProvenance is not null;
+    var testResultReportValid = !provenanceRequired || testResultReport is not null;
     var complete = CiRequiredWorkflowEvidenceEvaluator.IsPassing(discoveryComplete, requiredWorkflowResults) &&
-        exactRunBindingValid && workflowProvenanceValid;
+        exactRunBindingValid && workflowProvenanceValid && testResultReportValid;
     var report = new
     {
         schema = "ciai.commit-observation.v2",
@@ -224,6 +275,27 @@ try
             checkoutSha = workflowProvenance?.Provenance.CheckoutSha
         },
         workflowProvenanceValid,
+        testResultReport = new
+        {
+            required = provenanceRequired,
+            valid = testResultReport is not null,
+            verdict = testResultReport?.Verdict.ToString(),
+            reportIdentity = testResultReport?.ReportIdentity,
+            reportSha256 = testResultReport?.ReportSha256,
+            sourceArtifactId = testResultReport?.SourceArtifactId,
+            sourceArtifactName = testResultReport?.SourceArtifactName,
+            providerArchiveDigest = testResultReport?.ProviderArchiveDigest,
+            archiveSizeBytes = testResultReport?.ArchiveSizeBytes,
+            payloadSha256 = testResultReport?.PayloadSha256,
+            payloadSizeBytes = testResultReport?.PayloadSizeBytes,
+            total = testResultReport?.Total,
+            passed = testResultReport?.Passed,
+            failed = testResultReport?.Failed,
+            skipped = testResultReport?.Skipped,
+            other = testResultReport?.Other,
+            reasonCodes = testResultReport?.ReasonCodes
+        },
+        testResultReportValid,
         requiredEvidenceComplete,
         requiredWorkflowsTerminal,
         requiredWorkflowsSuccessful,
