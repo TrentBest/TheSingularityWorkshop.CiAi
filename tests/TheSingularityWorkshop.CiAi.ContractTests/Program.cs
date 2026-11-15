@@ -648,7 +648,7 @@ RunSuite("CiRequiredWorkflowEvidenceEvaluatorTests", () => CiRequiredWorkflowEvi
 await RunSuiteAsync("GitHubActionsWorkflowJobCollectorTests", () => GitHubActionsWorkflowJobCollectorTests.RunAsync());
 await RunSuiteAsync("GitHubActionsArtifactCollectorTests", () => GitHubActionsArtifactCollectorTests.RunAsync());
 trx.Write("artifacts/source-evidence/results.trx");
-Console.WriteLine($"CiAi harness summary: {passed} assertions reported by suites; {trx.ResultCount} suite/check records; {trx.FailedCount} failed records.");
+Console.WriteLine($"CiAi harness summary: {passed} individual checks; {trx.ResultCount} suite/check records; {trx.FailedCount} failed records.");
 if (trx.FailedCount > 0) Environment.ExitCode = 1;
 
 void RunSuite(string name, Action action)
@@ -666,14 +666,13 @@ void RunSuite(string name, Action action)
     }
 }
 
-void RunSuite(string name, Func<int> action)
+void RunSuite(string name, Action action)
 {
     try
     {
-        var count = action();
-        passed += count;
-        trx.RecordPassed($"suite:{name}", $"Suite completed; reported {count} assertions.");
-        Console.WriteLine($"PASS suite {name}: {count} assertions");
+        action();
+        trx.RecordPassed($"suite:{name}", "Suite completed successfully.");
+        Console.WriteLine($"PASS suite {name}");
     }
     catch (Exception exception)
     {
