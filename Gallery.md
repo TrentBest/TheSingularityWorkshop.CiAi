@@ -10,6 +10,7 @@ CiAi exposes continuous-integration facts to applications and LLMs without handi
 
 ## Verified implementation paths
 
+- [Test-result evidence trust path](docs/TEST_RESULT_EVIDENCE_V1.md) — living SVG showing the exact-run, host-observed artifact binding, byte-verification, report, and downstream authority boundaries.
 - [Observe a real run](README.md#02--see-the-implementation-in-a-minute) — run the .NET sample against a repository and run ID.
 - [Cross-Cog vertical proof](integration/CogEcosystem.ContractTests/README.md) — pinned integration of catalog, policy, request, result correlation, artifact verification, receipt provenance, and lifecycle projection.
 - [Cross-Cog integration CI](.github/workflows/cog-ecosystem.yml) — repeatable build and six-check contract run against pinned Cog commits.
