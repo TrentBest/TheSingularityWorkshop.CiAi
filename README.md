@@ -15,7 +15,7 @@ CiAi is the application-owned boundary between continuous-integration systems an
 
 ## 02 — See the implementation in a minute
 
-Requires the .NET 8 SDK.
+Requires the .NET 10 SDK.
 
 Observe a real GitHub Actions run:
 
