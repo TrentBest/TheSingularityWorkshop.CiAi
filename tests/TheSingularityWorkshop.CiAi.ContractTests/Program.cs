@@ -667,14 +667,13 @@ void RunSuite(string name, Func<int> action)
     }
 }
 
-async Task RunSuiteAsync(string name, Func<Task<int>> action)
+async Task RunSuiteAsync(string name, Func<Task> action)
 {
     try
     {
-        var count = await action();
-        passed += count;
-        trx.RecordPassed($"suite:{name}", $"Suite completed; reported {count} assertions.");
-        Console.WriteLine($"PASS suite {name}: {count} assertions");
+        await action();
+        trx.RecordPassed($"suite:{name}", "Suite completed successfully.");
+        Console.WriteLine($"PASS suite {name}");
     }
     catch (Exception exception)
     {
