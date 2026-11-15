@@ -53,6 +53,8 @@ ServerSC2 is the next CODE RED evidence integration. ServerSC2 owns authoritativ
 
 The current producer path is documented by its canonical contracts:
 
+- [Test-result evidence v1 guide and trust-path diagram](docs/TEST_RESULT_EVIDENCE_V1.md) — producer sequence, independent host binding, verdict semantics, downstream ownership, and current candidate validation.
+
 - [Workflow provenance v1](src/TheSingularityWorkshop.CiAi/CiWorkflowProvenanceRecord.md) — workflow-definition, event, PR, and checkout identity.
 - [Workflow evidence v1](src/TheSingularityWorkshop.CiAi/CiWorkflowEvidencePacket.md) — exact run/attempt envelope and fail-closed trust.
 - [Test-result report v1](src/TheSingularityWorkshop.CiAi/CiTestResultReport.md) — bounded TRX normalization and canonical 1 MiB JSON handoff.
