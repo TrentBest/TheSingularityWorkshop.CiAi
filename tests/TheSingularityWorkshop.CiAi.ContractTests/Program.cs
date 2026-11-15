@@ -666,21 +666,6 @@ void RunSuite(string name, Action action)
     }
 }
 
-void RunSuite(string name, Action action)
-{
-    try
-    {
-        action();
-        trx.RecordPassed($"suite:{name}", "Suite completed successfully.");
-        Console.WriteLine($"PASS suite {name}");
-    }
-    catch (Exception exception)
-    {
-        trx.RecordFailed($"suite:{name}", exception);
-        Console.Error.WriteLine($"FAIL suite {name}: {exception}");
-    }
-}
-
 async Task RunSuiteAsync(string name, Func<Task> action)
 {
     try
