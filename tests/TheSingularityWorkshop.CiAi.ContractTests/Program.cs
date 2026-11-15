@@ -651,6 +651,21 @@ trx.Write("artifacts/source-evidence/results.trx");
 Console.WriteLine($"CiAi harness summary: {passed} assertions reported by suites; {trx.ResultCount} suite/check records; {trx.FailedCount} failed records.");
 if (trx.FailedCount > 0) Environment.ExitCode = 1;
 
+void RunSuite(string name, Action action)
+{
+    try
+    {
+        action();
+        trx.RecordPassed($"suite:{name}", "Suite completed successfully.");
+        Console.WriteLine($"PASS suite {name}");
+    }
+    catch (Exception exception)
+    {
+        trx.RecordFailed($"suite:{name}", exception);
+        Console.Error.WriteLine($"FAIL suite {name}: {exception}");
+    }
+}
+
 void RunSuite(string name, Func<int> action)
 {
     try
