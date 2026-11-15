@@ -236,11 +236,11 @@ jobs:
           {
             echo "## CiAi exact commit evidence"
             echo
-            echo "- Repository: `$REPOSITORY`"
-            echo "- Branch: `$BRANCH`"
-            echo "- Source SHA: `$SHA`"
-            echo "- Authoritative workflow: `.github/workflows/ci.yml`"
-            echo "- Source run / attempt: `$RUN_ID` / `$RUN_ATTEMPT`"
+            echo "- Repository: \`$REPOSITORY\`"
+            echo "- Branch: \`$BRANCH\`"
+            echo "- Source SHA: \`$SHA\`"
+            echo "- Authoritative workflow: \`.github/workflows/ci.yml\`"
+            echo "- Source run / attempt: \`$RUN_ID\` / \`$RUN_ATTEMPT\`"
             echo "- Source conclusion: **$CONCLUSION**"
             echo "- CiAi evidence lane: **$OBSERVER_STATUS**"
             echo
