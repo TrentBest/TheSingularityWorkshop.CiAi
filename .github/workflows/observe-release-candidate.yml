@@ -49,7 +49,7 @@ jobs:
           echo "Verified GrammarAi=$grammar_sha ProtocolAi=$protocol_sha"
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
       - name: Validate candidate identity
         shell: bash
         env:
