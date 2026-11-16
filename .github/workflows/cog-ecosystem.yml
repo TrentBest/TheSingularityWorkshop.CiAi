@@ -64,7 +64,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: TrentBest/TheSingularityWorkshop.ProtocolAi
-          ref: development
+          ref: 024ca3f2fac486d5aefa6f276c5203d5bdfe3bcf
           path: ProtocolAi
       - name: Checkout CogA
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -110,6 +110,7 @@ jobs:
         run: dotnet run --project integration/CogEcosystem.ContractTests --configuration Release --no-build
 
   verify-live-provider-evidence:
+    if: github.event_name != 'pull_request'
     needs: vertical-contract
     runs-on: ubuntu-latest
     steps:
@@ -133,7 +134,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: TrentBest/TheSingularityWorkshop.ProtocolAi
-          ref: development
+          ref: 024ca3f2fac486d5aefa6f276c5203d5bdfe3bcf
           path: ProtocolAi
       - name: Checkout CogA
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683

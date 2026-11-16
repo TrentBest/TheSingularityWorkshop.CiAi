@@ -11,6 +11,9 @@ public sealed record CiWorkflowRunObservation(
     string Event,
     IReadOnlyList<int> PullRequestNumbers)
 {
+    /// <summary>The workflow-definition ref encoded in GitHub's workflow path, when supplied by the API.</summary>
+    public string? WorkflowRef { get; init; }
+
     /// <summary>The exact provider status string, retained for diagnosis when GitHub adds new values.</summary>
     public string ProviderStatus { get; init; } = string.Empty;
 }
@@ -116,7 +119,9 @@ public sealed class GitHubActionsWorkflowRunCollector
 
         var runId = RequiredInt64(root, "id");
         if (runId <= 0) throw new InvalidDataException("GitHub workflow run ID must be positive.");
-        var attempt = root.TryGetProperty("run_attempt", out var attemptValue) && attemptValue.TryGetInt32(out var parsedAttempt)
+        var attempt = root.TryGetProperty("run_attempt", out var attemptValue) &&
+            attemptValue.ValueKind == JsonValueKind.Number &&
+            attemptValue.TryGetInt32(out var parsedAttempt)
             ? parsedAttempt : 0;
         if (attempt <= 0) throw new InvalidDataException("GitHub workflow run attempt must be a positive integer.");
 
@@ -158,24 +163,59 @@ public sealed class GitHubActionsWorkflowRunCollector
             System.Globalization.DateTimeStyles.AssumeUniversal, out var updatedAt))
             throw new InvalidDataException("GitHub workflow run contains an invalid updated_at timestamp.");
 
+        var eventName = RequiredString(root, "event");
         var path = RequiredString(root, "path");
-        // GitHub may suffix a workflow path with its ref (for example @refs/heads/development).
-        // The stable policy identity is the repository-relative workflow file path.
+        // Preserve workflow-definition provenance separately from the run's event/head SHA.
+        string? workflowRef = null;
         var refSuffix = path.IndexOf('@');
         if (refSuffix > 0)
+        {
+            workflowRef = path[(refSuffix + 1)..];
+            if (!workflowRef.StartsWith("refs/", StringComparison.Ordinal) ||
+                workflowRef.Any(char.IsControl) || workflowRef.Any(char.IsWhiteSpace))
+                throw new InvalidDataException("GitHub workflow path contains an invalid workflow-definition ref.");
             path = path[..refSuffix];
-        var eventName = RequiredString(root, "event");
+        }
+        else if (eventName is "push" or "workflow_dispatch")
+        {
+            // GitHub's REST workflow-run path normally omits the workflow-ref suffix. For
+            // branch-triggered runs, derive the ref from the provider-observed head_branch;
+            // never use the workflow-side provenance payload as the source of this value.
+            var headBranch = RequiredString(root, "head_branch");
+            if (!IsValidBranchName(headBranch))
+                throw new InvalidDataException("GitHub workflow run contains an invalid provider-observed head_branch.");
+            workflowRef = "refs/heads/" + headBranch;
+        }
         var snapshot = new CiRunSnapshot(repository, runId, name, sha, status, conclusion, url, updatedAt);
         var prNumbers = new List<int>();
         if (root.TryGetProperty("pull_requests", out var prs) && prs.ValueKind == JsonValueKind.Array)
         {
             foreach (var pr in prs.EnumerateArray())
-                if (pr.TryGetProperty("number", out var number) && number.TryGetInt32(out var prNumber) && prNumber > 0)
+                if (pr.TryGetProperty("number", out var number) && number.ValueKind == JsonValueKind.Number &&
+                    number.TryGetInt32(out var prNumber) && prNumber > 0)
                     prNumbers.Add(prNumber);
         }
 
         return new CiWorkflowRunObservation(snapshot, attempt, path, eventName,
-            Array.AsReadOnly(prNumbers.Distinct().ToArray())) { ProviderStatus = statusText };
+            Array.AsReadOnly(prNumbers.Distinct().ToArray()))
+        {
+            ProviderStatus = statusText,
+            WorkflowRef = workflowRef
+        };
+    }
+
+    private static bool IsValidBranchName(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length > 255 ||
+            value.StartsWith("/", StringComparison.Ordinal) || value.EndsWith("/", StringComparison.Ordinal) ||
+            value.Contains("//", StringComparison.Ordinal) || value.Contains("..", StringComparison.Ordinal) ||
+            value.Contains("@{", StringComparison.Ordinal) || value.Any(character =>
+                char.IsControl(character) || char.IsWhiteSpace(character) ||
+                "~^:?*[\\]".IndexOf(character) >= 0))
+            return false;
+        return value.Split('/').All(segment =>
+            segment.Length > 0 && !segment.StartsWith(".", StringComparison.Ordinal) &&
+            !segment.EndsWith(".", StringComparison.Ordinal));
     }
 
     private static string RequiredString(JsonElement root, string property)
@@ -195,14 +235,14 @@ public sealed class GitHubActionsWorkflowRunCollector
 
     private static long RequiredInt64(JsonElement root, string property)
     {
-        if (!root.TryGetProperty(property, out var value) || !value.TryGetInt64(out var result))
+        if (!root.TryGetProperty(property, out var value) || value.ValueKind != JsonValueKind.Number || !value.TryGetInt64(out var result))
             throw new InvalidDataException($"GitHub workflow collection is missing valid field '{property}'.");
         return result;
     }
 
     private static int RequiredInt32(JsonElement root, string property)
     {
-        if (!root.TryGetProperty(property, out var value) || !value.TryGetInt32(out var result) || result < 0)
+        if (!root.TryGetProperty(property, out var value) || value.ValueKind != JsonValueKind.Number || !value.TryGetInt32(out var result) || result < 0)
             throw new InvalidDataException($"GitHub workflow collection is missing valid field '{property}'.");
         return result;
     }

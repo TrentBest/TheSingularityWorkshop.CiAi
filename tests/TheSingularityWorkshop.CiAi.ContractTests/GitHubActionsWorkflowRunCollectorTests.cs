@@ -23,6 +23,25 @@ internal static class GitHubActionsWorkflowRunCollectorTests
         }
         """;
 
+        var apiPathWithoutWorkflowRef = page
+            .Replace(".yml@refs/heads/development", ".yml", StringComparison.Ordinal)
+            .Replace("\"event\": \"push\"", "\"event\": \"push\", \"head_branch\": \"development\"", StringComparison.Ordinal);
+        using (var client = new HttpClient(new StubHandler((_, _) => Task.FromResult(JsonResponse(apiPathWithoutWorkflowRef)))))
+        {
+            var collection = await new GitHubActionsWorkflowRunCollector(client)
+                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha);
+            Assert(collection.Runs[0].WorkflowRef == "refs/heads/development",
+                "workflow ref was not derived from provider head_branch when REST omitted the path suffix");
+        }
+
+        var invalidProviderBranch = apiPathWithoutWorkflowRef.Replace(
+            "\"head_branch\": \"development\"", "\"head_branch\": \"bad..branch\"", StringComparison.Ordinal);
+        using (var client = new HttpClient(new StubHandler((_, _) => Task.FromResult(JsonResponse(invalidProviderBranch)))))
+        {
+            await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowRunCollector(client)
+                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha));
+        }
+
         using (var client = new HttpClient(new StubHandler((request, _) =>
         {
             Assert(request.Method == HttpMethod.Get, "collector must be read-only");
@@ -47,6 +66,22 @@ internal static class GitHubActionsWorkflowRunCollectorTests
                 "PR correlation was not retained");
             Assert(collection.Runs[0].Run.Conclusion == CiRunConclusion.Failure,
                 "failed conclusion was not preserved");
+            Assert(collection.Runs[0].WorkflowRef == "refs/heads/development",
+                "provider-observed workflow-definition ref was not preserved independently");
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+            Task.FromResult(JsonResponse(page.Replace("\"id\": 42", "\"id\": \"42\"", StringComparison.Ordinal))))))
+        {
+            await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowRunCollector(client)
+                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha));
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+            Task.FromResult(JsonResponse(page.Replace("\"run_attempt\": 2", "\"run_attempt\": \"2\"", StringComparison.Ordinal))))))
+        {
+            await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowRunCollector(client)
+                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha));
         }
 
         using (var client = new HttpClient(new StubHandler((request, _) =>
@@ -130,7 +165,91 @@ internal static class GitHubActionsWorkflowRunCollectorTests
                 "raw unknown provider status was not preserved for diagnosis");
         }
 
-        Console.WriteLine("PASS: 8 GitHub Actions workflow collector checks.");
+        var terminalConclusions = new[]
+        {
+            ("cancelled", CiRunConclusion.Cancelled),
+            ("skipped", CiRunConclusion.Skipped),
+            ("stale", CiRunConclusion.Stale),
+            ("timed_out", CiRunConclusion.TimedOut),
+            ("action_required", CiRunConclusion.ActionRequired),
+            ("neutral", CiRunConclusion.Neutral)
+        };
+        foreach (var (providerConclusion, expectedConclusion) in terminalConclusions)
+        {
+            using var client = new HttpClient(new StubHandler((_, _) =>
+                Task.FromResult(JsonResponse(page.Replace("\"conclusion\": \"failure\"",
+                    "\"conclusion\": \"" + providerConclusion + "\"", StringComparison.Ordinal)))));
+            var result = await new GitHubActionsWorkflowRunCollector(client)
+                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha);
+            Assert(result.Runs[0].Run.Status == CiRunStatus.Completed &&
+                result.Runs[0].Run.Conclusion == expectedConclusion &&
+                !result.Runs[0].Run.IsSuccessful,
+                $"terminal provider conclusion '{providerConclusion}' was not preserved as non-success");
+        }
+
+        foreach (var (providerStatus, expectedStatus) in new[]
+        {
+            ("queued", CiRunStatus.Queued),
+            ("in_progress", CiRunStatus.InProgress),
+            ("pending", CiRunStatus.Pending)
+        })
+        {
+            using var client = new HttpClient(new StubHandler((_, _) =>
+                Task.FromResult(JsonResponse(page.Replace(
+                    "\"status\": \"completed\", \"conclusion\": \"failure\"",
+                    "\"status\": \"" + providerStatus + "\", \"conclusion\": null", StringComparison.Ordinal)))));
+            var result = await new GitHubActionsWorkflowRunCollector(client)
+                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha);
+            Assert(result.Runs[0].Run.Status == expectedStatus &&
+                result.Runs[0].Run.Conclusion == CiRunConclusion.None &&
+                !result.Runs[0].Run.IsSuccessful,
+                $"nonterminal provider status '{providerStatus}' was not failed closed");
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+            Task.FromResult(JsonResponse(page.Replace(
+                ".yml@refs/heads/development", ".yml@not-a-ref", StringComparison.Ordinal))))))
+        {
+            await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowRunCollector(client)
+                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha));
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+            Task.FromResult(JsonResponse(page.Replace(
+                "https://github.com/TrentBest/SimpleDemos/actions/runs/42",
+                "https://evil.example/TrentBest/SimpleDemos/actions/runs/42", StringComparison.Ordinal))))))
+        {
+            await ThrowsAsync<ArgumentException>(() => new GitHubActionsWorkflowRunCollector(client)
+                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha));
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+            Task.FromResult(JsonResponse(page.Replace(
+                "\"updated_at\": \"2026-10-24T04:00:00Z\"",
+                "\"updated_at\": \"not-a-timestamp\"", StringComparison.Ordinal))))))
+        {
+            await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowRunCollector(client)
+                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha));
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+            Task.FromResult(JsonResponse(page.Replace(
+                "\"conclusion\": \"failure\"", "\"conclusion\": null", StringComparison.Ordinal))))))
+        {
+            await ThrowsAsync<InvalidDataException>(() => new GitHubActionsWorkflowRunCollector(client)
+                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha));
+        }
+
+        using (var client = new HttpClient(new StubHandler((_, _) =>
+            Task.FromResult(JsonResponse("{\"total_count\":0,\"workflow_runs\":[]}")))))
+        {
+            var empty = await new GitHubActionsWorkflowRunCollector(client)
+                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha);
+            Assert(empty.Runs.Count == 0 && empty.TotalCount == 0 && !empty.IsTruncated,
+                "zero-run discovery was not represented as a complete empty collection");
+        }
+
+        Console.WriteLine("PASS: expanded GitHub Actions workflow collector checks.");
     }
 
     private static HttpResponseMessage JsonResponse(string json) => new(HttpStatusCode.OK)
