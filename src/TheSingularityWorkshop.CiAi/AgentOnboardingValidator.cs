@@ -138,7 +138,7 @@ public static class AgentOnboardingValidator
             "human approval"
         };
         var missingStatements = requiredStatements
-            .Where(statement => !source.Content.Contains(statement, StringComparison.Ordinal))
+            .Where(statement => source.Content.IndexOf(statement, StringComparison.OrdinalIgnoreCase) < 0)
             .ToArray();
         if (missingStatements.Length > 0)
             return Reject(repository, requestedSha, path, "onboarding.contract-incomplete",
