@@ -41,7 +41,7 @@ jobs:
           submodules: recursive
       - name: Verify pinned ProtocolAi source revision
         env:
-          EXPECTED_PROTOCOL_AI_SHA: 024ca3f2fac486d5aefa6f276c5203d5bdfe3bcf
+          EXPECTED_PROTOCOL_AI_SHA: 13e86c23c8eab6a33f3f124342b54598748e8756
         run: |
           set -euo pipefail
           actual_sha="$(git -C CiAi/external/ProtocolAi rev-parse HEAD)"
@@ -52,7 +52,7 @@ jobs:
       - name: Verify pinned GrammarAi source revision
         working-directory: CiAi
         env:
-          EXPECTED_GRAMMAR_AI_SHA: 2582362ad233faeffe82c2de28d464efffb0cda4
+          EXPECTED_GRAMMAR_AI_SHA: 028b1d1f707e3e0614c680d6fc4a556424e2e02a
         run: |
           set -euo pipefail
           actual_sha="$(git -C external/GrammarAi rev-parse HEAD)"
@@ -64,7 +64,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: TrentBest/TheSingularityWorkshop.ProtocolAi
-          ref: 024ca3f2fac486d5aefa6f276c5203d5bdfe3bcf
+          ref: 13e86c23c8eab6a33f3f124342b54598748e8756
           path: ProtocolAi
       - name: Checkout CogA
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -122,7 +122,7 @@ jobs:
       - name: Verify pinned GrammarAi source revision
         working-directory: CiAi
         env:
-          EXPECTED_GRAMMAR_AI_SHA: 2582362ad233faeffe82c2de28d464efffb0cda4
+          EXPECTED_GRAMMAR_AI_SHA: 028b1d1f707e3e0614c680d6fc4a556424e2e02a
         run: |
           set -euo pipefail
           actual_sha="$(git -C external/GrammarAi rev-parse HEAD)"
@@ -134,7 +134,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: TrentBest/TheSingularityWorkshop.ProtocolAi
-          ref: 024ca3f2fac486d5aefa6f276c5203d5bdfe3bcf
+          ref: 13e86c23c8eab6a33f3f124342b54598748e8756
           path: ProtocolAi
       - name: Checkout CogA
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
