@@ -10,7 +10,7 @@ This alpha remains read-only with respect to CI-provider operations. Typed hando
 
 - Package: `TheSingularityWorkshop.CiAi`
 - Version: `0.1.0-alpha.1`
-- Target: `.NET 8`
+- Target: `.NET 10`
 - License: MIT
 - External dependencies in the core library: none
 - Release branch: `development`; the release candidate must be reviewed before any merge or publication.
@@ -22,7 +22,7 @@ This alpha remains read-only with respect to CI-provider operations. Typed hando
 - **Package state:** `0.1.0-alpha.1` remains an alpha candidate. This document does not authorize publication. The CODE RED producer/handoff work is being reviewed in [CiAi PR #65](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/pull/65), which remains draft and unmerged.
 - **Evidence producer:** PR #65 adds the canonical `ciai.workflow-evidence.v1`, `ciai.workflow-provenance.v1`, and `ciai.test-results.v1` contracts; exact-run/attempt binding; independent provider artifact metadata observation; required-job binding; bounded archive/TRX verification; report normalization; durable outbox/receipt handling; and the Foundry notice sender/delivery coordinator.
 - **Exact-source proof:** candidate `5dbdb8cae5ec3ff8375314ef2e56f6ff613c6a19` passed authoritative push run [43686607144](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/43686607144): 74 individual checks, 109 suite/check records, zero failed records; the dedicated TRX report suite passed 52 checks. Exact-source observer [43686607156](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/43686607156) validated that exact run/attempt and retained JSON, Markdown, and test-result evidence.
-- **Current PR head:** `211a1c15e4ffad9902acf5f444e14473e0bd23e6`. It includes the test-result evidence guide and animated SVG linked from README/Gallery, plus a correction to pin the vertical proof's ProtocolAi checkout to the already-declared net8-compatible immutable revision. Exact-head Contract Verification and Cog Ecosystem Integration are pending; do not treat the earlier green run as proof of this newer head.
+- **Exact-head validation:** each candidate SHA must pass its own authoritative Contract Verification and exact-source evidence runs. Historical green runs do not validate a later commit.
 - **Still required for full CODE RED proof:** production host implementation of authenticated archive download/redirect/DNS-safe transport and report publication; authenticated Foundry ingress and retrieval; independently verified acceptance receipt; lifecycle application; bounded HeadlessAi proposal; and an Experiences/Minesweeper exact-SHA end-to-end exercise. These are distinct gates and must not be inferred from producer contract tests.
 - **Publication gates:** confirm package identity/version and package contents against the final release candidate; review public API and embedded README; verify external NuGet credentials/permissions; obtain explicit owner approval. No CI pass, report verdict, artifact receipt, or model proposal substitutes for that approval.
 
