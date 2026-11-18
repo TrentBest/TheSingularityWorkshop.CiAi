@@ -1,3 +1,7 @@
+## Next design direction — recipe-style CI and governed publication
+
+This alpha remains read-only with respect to CI-provider operations. Typed handoff contracts, bounded caller-supplied stream reads, local byte-integrity verification, provider provenance reconciliation, and a durable local receipt deduplication ledger now exist. The client still does not fetch the manifest URI or authenticate the provider, and there is no end-to-end authoritative provider CI correlation. The in-process catalog-to-request-to-result vertical proof now exists, but it does not prove remote retrieval, authenticated notification/acknowledgement, or provider run verification. HeadlessAi invocation, ProtocolAi vocabulary integration, host authorization, cross-repository dispatch, persistent idempotency/history, and a complete request/result round trip are not implemented in CiAi. No publish or deploy action is exposed by this library.
+
 # CiAi Release Readiness
 
 **Status: alpha candidate; not approved for publication.** Readiness is tracked by explicit gates rather than percentage estimates without a defined scoring model.
