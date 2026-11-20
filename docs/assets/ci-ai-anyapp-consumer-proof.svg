@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 420" role="img" aria-labelledby="title desc">
+<title id="title">AnyApp consumer pilot evidence</title><desc id="desc">AnyApp's authoritative build runs for a pinned commit. A separate read-only CiAi observer collects the workflow evidence and uploads a report. The observer workflow succeeds while the observed application integration test fails, demonstrating separate result identities.</desc>
+<defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#101a2b"/><stop offset="1" stop-color="#1a2d42"/></linearGradient></defs>
+<style>
+text{font-family:Inter,Segoe UI,Arial,sans-serif;fill:#e8f1fb}.muted{fill:#a9bbcf;font-size:14px}.head{font-size:18px;font-weight:700}.panel{fill:#20374c;stroke:#5b8ba8;stroke-width:1.5}.ok{fill:#153b3b;stroke:#50cbb5;stroke-width:1.5}.fail{fill:#3b2c29;stroke:#d69b65;stroke-width:1.5}.arrow{stroke:#62d7c5;stroke-width:2.5;fill:none;stroke-dasharray:6 7;animation:dash 4s linear infinite}@keyframes dash{to{stroke-dashoffset:-120}}
+</style>
+<rect width="1100" height="420" rx="22" fill="url(#bg)"/><text x="42" y="48" font-size="27" font-weight="700">One commit. Two workflows. Two different truths.</text><text x="42" y="76" class="muted">The observer's success must never overwrite the application's result</text>
+<g transform="translate(42 130)"><rect class="panel" width="235" height="160" rx="14"/><text x="18" y="36" class="head">AnyApp commit</text><text x="18" y="76" class="muted">One exact full SHA</text><text x="18" y="101" class="muted">Authoritative .NET workflow</text><text x="18" y="126" class="muted">Build + integration tests</text></g>
+<path d="M277 210H322" class="arrow"/>
+<g transform="translate(322 130)"><rect class="fail" width="270" height="160" rx="14"/><text x="18" y="36" class="head">Observed app workflow</text><text x="18" y="76" class="muted">Build steps completed</text><text x="18" y="101" font-size="14" fill="#f2b477">Integration-test step failed</text><text x="18" y="126" class="muted">Publish steps skipped</text></g>
+<path d="M592 210H638" class="arrow"/>
+<g transform="translate(638 130)"><rect class="ok" width="190" height="160" rx="14"/><text x="18" y="36" class="head">CiAi observer</text><text x="18" y="76" class="muted">Read-only collection</text><text x="18" y="101" class="muted">Identity + evidence checks</text><text x="18" y="126" font-size="14" fill="#7fe6d7">Observer run succeeded</text></g>
+<path d="M828 210H870" class="arrow"/>
+<g transform="translate(870 130)"><rect class="panel" width="188" height="160" rx="14"/><text x="18" y="36" class="head">Evidence artifact</text><text x="18" y="76" class="muted">JSON + Markdown</text><text x="18" y="101" class="muted">Application result retained</text><text x="18" y="126" class="muted">Policy = incomplete</text></g>
+<rect x="42" y="330" width="1016" height="50" rx="10" fill="#122638" stroke="#d69b65"/><text x="64" y="361" font-size="16" font-weight="700">Successful observation ≠ successful application build. CiAi preserves the distinction.</text>
+</svg>
