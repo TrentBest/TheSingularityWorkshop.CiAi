@@ -11,6 +11,8 @@ CiAi is the application-owned boundary between continuous-integration systems an
 
 ## 01 — See CiAi
 
+**[Read the Workshop article: CiAi — Making a Growing Software Ecosystem Understandable to AI](docs/articles/CiAi-Making-a-Growing-Software-Ecosystem-Understandable-to-AI.md)** — the story behind the evidence boundary, Sith governance, five Cogs, AnyApp proof, and the authority model.
+
 **[Preview the interactive CiAi experience source](index.html)** — explore the evidence-observation flow, test an illustrative fail-closed gate, and follow the links to the Workshop capabilities that support it. The page and Pages deployment workflow are staged on `development`; the hosted experience will be available after the reviewed promotion to `master`. The browser walkthrough uses clearly labeled synthetic data; it does not claim to connect to GitHub.
 
 ## 02 — See the implementation in a minute
