@@ -3,6 +3,7 @@
 <title id="title">NuGet University — a living classroom in perspective</title>
 <desc id="desc">View from the back-left corner of a classroom. Rows of named NuGet package students sit at desks in the foreground. The windows fill the far wall with moving package traffic outside. CiAi teaches at a presentation area on the right-hand side wall.</desc>
 <defs>
+ <clipPath id="windowView"><path d="M49 163L701 188V429L49 462z"/></clipPath>
  <linearGradient id="ceiling" x2="0" y2="1"><stop stop-color="#f9f4ff"/><stop offset="1" stop-color="#e2dcf4"/></linearGradient>
  <linearGradient id="farwall" x2="0" y2="1"><stop stop-color="#dbe8fa"/><stop offset="1" stop-color="#b8c9e6"/></linearGradient>
  <linearGradient id="sidewall" x2="1" y2="0"><stop stop-color="#d7dff2"/><stop offset="1" stop-color="#aebcda"/></linearGradient>
@@ -15,17 +16,17 @@
  .student{animation:seatbob 2.8s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
  .delay1{animation-delay:-.8s}.delay2{animation-delay:-1.5s}.delay3{animation-delay:-2.1s}
  .blink{animation:blink 5s infinite;transform-box:fill-box;transform-origin:center}
- .traffic{animation:drift 13s linear infinite}.traffic.rev{animation-direction:reverse;animation-duration:17s}.cloud{animation:cloud 28s ease-in-out infinite alternate}
+ .traffic{animation:drift 13s linear infinite}.traffic.rev{animation-direction:reverse;animation-duration:17s}.cloud{animation:cloud 34s ease-in-out infinite alternate}
  .wave{animation:wave 1.4s ease-in-out infinite;transform-box:fill-box;transform-origin:15% 90%}
  .glow{animation:glow 2.4s ease-in-out infinite alternate}.spark{animation:spark 2s ease-in-out infinite}
- @keyframes seatbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+ @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}\n @keyframes seatbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
  @keyframes blink{0%,44%,48%,100%{transform:scaleY(1)}46%{transform:scaleY(.08)}}
  @keyframes drift{from{transform:translateX(-190px)}to{transform:translateX(1100px)}}
- @keyframes cloud{from{transform:translateX(-20px)}to{transform:translateX(40px)}}
+ @keyframes cloud{from{transform:translateX(-115px)}to{transform:translateX(145px)}}
  @keyframes wave{0%,100%{transform:rotate(0)}50%{transform:rotate(-23deg)}}
  @keyframes glow{from{opacity:.55}to{opacity:1}}
  @keyframes spark{0%,100%{opacity:.2;transform:scale(.7)}50%{opacity:1;transform:scale(1.2)}}
- @media(prefers-reduced-motion:reduce){.student,.blink,.traffic,.cloud,.wave,.glow,.spark{animation:none}}
+ @media(prefers-reduced-motion:reduce){.student,.blink,.traffic,.cloud,.wave,.glow,.spark,.sun-rays{animation:none}}
  </style>
  <g id="package">
   <path d="M7 27L-4 5 19 15M67 15L89 4 78 30" fill="currentColor" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
@@ -55,10 +56,22 @@
  <path d="M38 153L713 178V440L38 474z" fill="#fff" stroke="#fff" stroke-width="12"/>
  <path d="M49 163L701 188V429L49 462z" fill="url(#sky)"/>
 </g>
-<g clip-path="none">
+<g clip-path="url(#windowView)">
  <path d="M49 360q155-70 300-20t352-2v91L49 462z" fill="#73c58a"/>
  <g class="cloud" fill="#fff" opacity=".86"><path d="M100 235q-9-26 21-34 14-37 48-17 28-6 36 26 29 0 25 25z"/></g>
  <g class="cloud" fill="#fff" opacity=".75" style="animation-delay:-12s"><path d="M490 236q-8-24 19-31 13-33 43-15 26-6 33 23 27 0 23 23z"/></g>
+ <!-- animated sun centered high in the window -->
+ <g transform="translate(375 213)">
+  <g class="sun-rays" style="transform-origin:0 0;animation:spin 42s linear infinite">
+   <g stroke="#ffd56c" stroke-width="7" stroke-linecap="round">
+    <path d="M0 -49v-18M0 49v18M-49 0h-18M49 0h18M-35 -35l-13 -13M35 35l13 13M35 -35l13 -13M-35 35l-13 13"/>
+   </g>
+  </g>
+  <circle r="39" fill="#ffd45f" stroke="#fff3b2" stroke-width="5"/>
+  <path d="M-14 -3q5-7 10 0M7 -3q5-7 10 0" fill="none" stroke="#805b35" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M-13 13q13 12 26 0" fill="none" stroke="#805b35" stroke-width="4" stroke-linecap="round"/>
+  <g fill="#ff9e85"><circle cx="-23" cy="9" r="5"/><circle cx="23" cy="9" r="5"/></g>
+ </g>
  <g fill="#8798bf" stroke="#fff" stroke-width="3"><path d="M105 365V284l66 2v72zM195 361V235l92 3v117zM315 357V285l72 2v66zM525 355V255l94 3v91z"/></g>
  <g fill="#d8f5ff"><path d="M118 301h15v19h-15zM147 302h15v19h-15zM213 258h18v23h-18zM250 259h18v23h-18zM544 277h18v22h-18zM583 278h18v22h-18z"/></g>
  <!-- distant package traffic crossing the outdoor campus -->
