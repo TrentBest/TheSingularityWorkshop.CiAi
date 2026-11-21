@@ -33,8 +33,13 @@
   <rect x="4" y="22" width="78" height="70" rx="17" fill="currentColor" stroke="#fff" stroke-width="4"/>
   <path d="M4 40l39-18 39 18-39 18z" fill="#fff" opacity=".34"/>
   <g class="blink"><ellipse cx="29" cy="55" rx="8" ry="10" fill="#fff"/><ellipse cx="57" cy="55" rx="8" ry="10" fill="#fff"/><circle cx="31" cy="57" r="4.5" fill="#1b2948"/><circle cx="55" cy="57" r="4.5" fill="#1b2948"/></g>
+  <path d="M18 45q8-7 16-1M52 44q8-6 15 1" fill="none" stroke="#243554" stroke-width="2.5" stroke-linecap="round"/>
+  <ellipse cx="17" cy="67" rx="5" ry="3" fill="#ffb1ae" opacity=".8"/><ellipse cx="69" cy="67" rx="5" ry="3" fill="#ffb1ae" opacity=".8"/>
   <path d="M31 73q12 10 24 0" fill="none" stroke="#243554" stroke-width="3.5" stroke-linecap="round"/>
   <path d="M8 68l-13 10M78 68l13 10" stroke="#455579" stroke-width="5" stroke-linecap="round"/>
+  <path d="M8 30l35-15 35 15M8 86l35 5 35-5" fill="none" stroke="#fff" stroke-width="2" opacity=".65"/>
+  <rect x="25" y="79" width="36" height="9" rx="3" fill="#fff" opacity=".8"/>
+  <circle cx="43" cy="83.5" r="2.5" fill="#536bc0"/>
  </g>
  <g id="desk">
   <path d="M0 0h170l-12 17H12z" fill="url(#wood)" stroke="#754a35" stroke-width="3"/>
