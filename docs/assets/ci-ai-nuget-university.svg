@@ -80,10 +80,10 @@
  <g fill="#8798bf" stroke="#fff" stroke-width="3"><path d="M105 365V284l66 2v72zM195 361V235l92 3v117zM315 357V285l72 2v66zM525 355V255l94 3v91z"/></g>
  <g fill="#d8f5ff"><path d="M118 301h15v19h-15zM147 302h15v19h-15zM213 258h18v23h-18zM250 259h18v23h-18zM544 277h18v22h-18zM583 278h18v22h-18z"/></g>
  <!-- distant package traffic crossing the outdoor campus -->
- <g class="traffic" style="color:#f2a34e"><use href="#package" transform="translate(90 275) scale(.38)"/><text x="90" y="318" class="pkgname">FSM_API</text></g>
- <g class="traffic rev" style="color:#8c80d9"><use href="#package" transform="translate(270 320) scale(.34)"/><text x="270" y="358" class="pkgname">GrammarAi</text></g>
- <g class="traffic" style="animation-delay:-6s;color:#62b8a4"><use href="#package" transform="translate(490 275) scale(.36)"/><text x="490" y="316" class="pkgname">Physics</text></g>
- <g class="traffic rev" style="animation-delay:-8s;color:#e77d9a"><use href="#package" transform="translate(620 325) scale(.32)"/><text x="620" y="362" class="pkgname">Renderer</text></g>
+ <g class="traffic" style="color:#f2a34e"><use href="#package" transform="translate(90 320) scale(.38)"/><text x="90" y="360" class="pkgname">FSM_API</text></g>
+ <g class="traffic rev" style="color:#8c80d9"><use href="#package" transform="translate(270 309) scale(.34)"/><text x="270" y="345" class="pkgname">GrammarAi</text></g>
+ <g class="traffic" style="animation-delay:-6s;color:#62b8a4"><use href="#package" transform="translate(490 305) scale(.36)"/><text x="490" y="343" class="pkgname">Physics</text></g>
+ <g class="traffic rev" style="animation-delay:-8s;color:#e77d9a"><use href="#package" transform="translate(620 310) scale(.32)"/><text x="620" y="344" class="pkgname">Renderer</text></g>
 </g>
 <!-- window frame perspective -->
 <path d="M49 163L701 188M49 462L701 429M49 163V462M701 188V429M250 171V452M475 180V440M49 310L701 309" fill="none" stroke="#fff" stroke-width="9"/>
@@ -132,6 +132,5 @@
 <!-- laptop screens and small activity lights on desks -->
 <g class="glow" fill="#263e70" stroke="#8ee8ff" stroke-width="3"><path d="M235 620l78-7 16 35-79 8zM555 604l72-7 14 31-72 8zM865 585l62-6 13 28-63 7z"/></g>
 <g fill="#9cf1ff"><circle cx="273" cy="637" r="4"/><circle cx="592" cy="620" r="4"/><circle cx="897" cy="601" r="4"/></g>
-<g fill="#fff2a8"><path class="spark" d="M52 510l5 12 12 5-12 5-5 12-5-12-12-5 12-5z"/><path class="spark" style="animation-delay:-1s" d="M1140 460l4 9 9 4-9 4-4 9-4-9-9-4 9-4z"/></g>
 <text x="600" y="800" text-anchor="middle" font-family="Trebuchet MS,Arial" font-size="14" font-weight="700" fill="#eef4ff">A living classroom: packages learn, collaborate, and move through the wider ecosystem.</text>
 </svg>
