@@ -157,7 +157,7 @@ AnyApp is CiAi's first source-based consumer pilot. It is a real .NET desktop ap
 
 For a development commit, the consumer workflow waits for the authoritative .NET workflow to finish for the same full SHA. It resolves the matching run and attempt, checks out CiAi at a pinned immutable source revision, invokes the read-only observer, and uploads JSON and Markdown evidence reports. The token is limited to read-only Actions and contents access.
 
-The first verified observation is especially instructive.
+The first verified observation is especially instructive: [the CiAi consumer evidence run](https://github.com/TrentBest/AnyApp/actions/runs/41281306728) correlated [the authoritative AnyApp workflow run](https://github.com/TrentBest/AnyApp/actions/runs/41281306660).
 
 For AnyApp commit **4d40f584fa4011179a731962afdd755fa85e8063**, the CiAi observer successfully collected the evidence from the authoritative AnyApp workflow. The observer's own workflow completed successfully. But the observed AnyApp build/test workflow had failed two integration tests before executable publishing.
 
