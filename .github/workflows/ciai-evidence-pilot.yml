@@ -1,0 +1,50 @@
+name: CiAi Read-only Evidence Pilot
+
+# Deliberately manual and advisory. This workflow does not run on push/PR,
+# does not become a required check, and has no write permissions.
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Existing GitHub Actions run ID in TrentBest/TheSingularityWorkshop.CiAi"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ciai-evidence-pilot-${{ github.ref }}-${{ inputs.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  observe:
+    name: Observe authoritative provider evidence
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate run ID
+        shell: bash
+        env:
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$RUN_ID" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::run_id must be a positive decimal integer."
+            exit 2
+          fi
+
+      - name: Check out CiAi source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Observe selected run through CiAi
+        env:
+          CIAI_GITHUB_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          dotnet run --project samples/TheSingularityWorkshop.CiAi.ObserveRun --configuration Release -- TrentBest/TheSingularityWorkshop.CiAi "$RUN_ID"
