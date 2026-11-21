@@ -3,248 +3,294 @@
 
 # CiAi: Making a Growing Software Ecosystem Understandable to AI
 
-*An evidence boundary between continuous integration, applications, and language models—and a foundation for development that can explain what it knows before it acts.*
+*How do you help an AI understand a whole workshop of software—without handing it the keys?*
 
-A green checkmark is reassuring. But what, exactly, does it prove?
+A green checkmark feels good. It tells us that something worked.
 
-Did the right commit build? Did every required workflow run? Are we looking at the latest attempt, or an earlier retry? Did the tests pass, or did the workflow merely finish? Was a required check skipped? Is the evidence complete—or did the system simply fail to find the rest?
+But what was it? Was it the latest version of the code? Did all the required tests run? Did they pass, or did the workflow simply finish? And does that green checkmark belong to the application we're interested in—or to a separate process that was only looking at it?
 
-These questions become harder as a software project grows.
+Those details matter.
 
-Imagine a workshop with dozens of specialized machines. Each machine has its own controls, status lights, operating instructions, and maintenance history. One light means a task started. Another means it finished. A third means the operator inspected the result. If you walk into that workshop and see a row of green lights, you still cannot safely conclude that the whole operation is ready. You need to know what each light means, which machine it belongs to, what job it was running, and whether the evidence is current.
+When a project has one repository and one build, a person can usually keep the story straight. A growing software ecosystem is different. It may contain dozens of repositories, shared libraries, applications, tests, package releases, and automated agents. Each part has its own history and its own view of what happened.
 
-A growing software ecosystem has the same problem. Its machines are repositories. Its work orders are commits. Its activity is distributed across build systems, test suites, workflows, package pipelines, and documentation. Each system can report what happened locally. The difficult part is understanding how all those reports fit together—and knowing what they do *not* authorize.
+An AI assistant entering that workshop faces a very human problem: **it needs to know which machine did what, which version it worked on, and whether the result can be trusted.**
 
-That is the problem CiAi is being built to solve.
+That is where CiAi comes in.
 
-## CI can execute work. Can it explain the evidence?
+## First, what is CiAi?
 
-Continuous integration already does something essential: it builds software, runs tests, and records the results. GitHub Actions, for example, knows which workflow ran, which commit it checked out, which jobs and steps executed, and what conclusion the provider recorded.
+CiAi helps applications and AI systems understand evidence from continuous integration.
 
-But that information is distributed across provider-specific APIs and pages. A human can click around and piece it together. An application can call APIs and write custom glue. An LLM can summarize text. None of those approaches, by itself, guarantees that the summary refers to the right repository, the right commit, the right attempt, or a complete set of required checks.
+Continuous integration, usually shortened to **CI**, is the automation that builds software and runs tests when code changes. GitHub Actions is one system that performs that work and records the results.
 
-A language model needs more than a green badge or a paragraph saying “the build passed.” It needs bounded, structured facts with source identity and uncertainty preserved.
+CiAi does not replace the build system. It does not build the application for it, and it does not invent a successful result.
 
-CiAi starts with a deliberately narrow idea:
+Instead, CiAi reads the evidence, checks whether it is complete and belongs to the exact source version under discussion, and presents what it can establish in consistent formats.
 
-> **Expose continuous integration to AI without turning AI into the authority that runs it.**
+Think of it this way:
 
-The lowercase **i** in CiAi is intentional. CI remains the execution system. CiAi supplies an application-owned boundary through which software and language models can observe, verify, correlate, and understand CI evidence.
+- **CI does the work.**
+- **CiAi checks and explains the evidence.**
+- **An application or AI can use that explanation.**
+- **The authorized owner or host decides what may happen next.**
 
-GitHub Actions remains authoritative for its workflow execution and reported run state. CiAi does not replace the provider, re-run its jobs, or manufacture a successful result. It reads the provider's evidence, checks that evidence against trusted expectations, and makes the outcome available in stable contracts.
+The lowercase i in CiAi is intentional. CiAi is not an AI-powered build runner. It is an application-owned information boundary between CI systems and AI.
 
-That distinction is the foundation—not a footnote.
+That boundary matters because an AI should not have to guess what a green checkmark means—and it should not gain authority just because it can read one.
 
-## The commit is the anchor
+## Why a checkmark isn't the whole story
 
-The first question should not be “Did the repository pass?”
+Imagine walking into a workshop with dozens of machines. Every machine has a status light.
 
-It should be:
+A green light might mean the machine finished its last job. It might mean the job passed inspection. It might even belong to yesterday's job. Unless you know which machine you're looking at, what it was asked to do, and when it did it, the light is not enough to make a decision.
 
-**What do we know about this exact commit?**
+Software builds have the same problem.
 
-A commit SHA is a content-derived identifier: effectively a fingerprint for one particular source revision. If two workflow runs refer to different SHAs, their results must not be casually combined. A successful run from yesterday does not prove that today's source is healthy. A report for one branch tip does not prove anything about a different commit that happens to have a similar name.
+A workflow can finish successfully while the tests it was meant to run have failed. A report can be collected successfully even when the application build being inspected failed. A required check might be missing entirely. And a successful run for an older version of the code does not prove that the newest version works.
 
-CiAi's observer therefore works from an explicit repository identity and a full commit SHA. It discovers matching GitHub Actions workflow runs, preserves run and attempt identity, and collects job and step evidence using bounded pagination. It can then produce machine-readable JSON and a human-readable Markdown report.
+So CiAi asks a more careful question:
 
-The observer keeps important distinctions visible:
+> **What can we prove about this exact version of the software?**
 
-- **Discovery completeness:** did the observer finish discovering the matching runs within its configured bounds?
-- **Evidence completeness:** was the required evidence actually found?
-- **Terminality:** have the relevant workflows reached a final state?
-- **Success:** did the provider report successful completion?
+## Every answer needs to point to the right version
 
-Those are separate facts. A workflow can be finished but unsuccessful. A report can be collected successfully while the build it describes failed. A missing workflow is not a successful workflow. An unknown provider conclusion is not a pass.
+A commit is a recorded snapshot of a repository's source code. Its full identifier, called a **commit SHA**, acts like a fingerprint for that particular snapshot.
 
-This is why CiAi fails closed when required evidence is missing, duplicated, non-terminal, unsuccessful, or incomplete. If the system cannot establish the required facts, it must say so rather than quietly turning uncertainty into success.
+Why insist on it? Because “the build passed” is incomplete unless we know which source was built. A result from one commit cannot safely be borrowed by another. Even two runs with similar names may refer to different versions, different attempts, or different outcomes.
+
+CiAi starts with a specific repository and full commit SHA. It discovers matching GitHub Actions workflow runs, preserves the identity of each run and attempt, and collects the associated jobs and steps using bounded pagination.
+
+It then produces two views of the same observation:
+
+- **JSON** for software that needs structured data.
+- **Markdown** for people who want a readable report.
+
+And it keeps four questions separate:
+
+| Question | What it tells us |
+|---|---|
+| **Did we find everything?** | Discovery completeness: did the observer finish looking within its configured limits? |
+| **Is the evidence present?** | Evidence completeness: did we find the checks that were required? |
+| **Is the work finished?** | Terminality: have the relevant workflows reached a final state? |
+| **Did it pass?** | Success: did the provider report a successful result? |
+
+These are not four ways of saying the same thing. A workflow may be finished but failed. The observer may have collected every available detail about that failure. A required workflow may not have appeared at all. Sometimes the observer cannot tell whether the evidence is complete.
+
+CiAi keeps those outcomes distinct. When required evidence is missing, duplicated, unfinished, unsuccessful, or incomplete, it fails closed: it reports that the required proof has not been established rather than treating uncertainty as success.
 
 ~~~mermaid
-flowchart LR
-    A["Repository + exact commit SHA"] --> B["GitHub Actions"]
-    B --> C["Runs and attempts"]
-    C --> D["Jobs and steps"]
-    D --> E["CiAi observation"]
-    E --> F["JSON + Markdown evidence"]
-    F --> G["Application or LLM"]
-    G -. "reason over evidence" .-> H["Human / host-owned decision"]
-    style E fill:#123a39,stroke:#66e0be,color:#edf7ff
-    style H fill:#3a2d18,stroke:#ffd27d,color:#edf7ff
+flowchart TD
+    A["A repository and exact commit"] --> B["CI provider runs the build and tests"]
+    B --> C["The provider records runs, jobs, and steps"]
+    C --> D["CiAi checks identity and evidence"]
+    D --> E["A structured report and a readable report"]
+    E --> F["An application or AI uses the facts"]
+    F --> G["The host or authorized owner decides what happens next"]
+    style D fill:#123a39,stroke:#66e0be,color:#edf7ff
+    style G fill:#3a2d18,stroke:#ffd27d,color:#edf7ff
 ~~~
 
-*The provider executes and reports. CiAi observes and verifies. The host and repository owner retain authority over what happens next.*
+*The green light is only the beginning. The useful part is knowing what it belongs to and what it actually proves.*
 
-## A growing ecosystem needs rules, not just status lights
+## A workshop needs shared rules, too
 
-The evidence problem is only half the story. As repositories multiply, so does operational complexity.
+Understanding individual builds is one challenge. Keeping a whole ecosystem organized is another.
 
-A project with a handful of repositories can survive on informal conventions. A workshop with dozens of interconnected repositories cannot. Branches accumulate, dependency relationships become harder to reason about, and an agent can waste time inspecting stale or ambiguous source.
+As repositories multiply, people and automation need predictable answers to basic questions: Where does active work happen? Which branch represents the released version? Which dependencies are being built? Is the repository following the agreed rules—or could we not verify it?
 
-The Workshop's Sith policy addresses one piece of that problem with a simple rule: an active ecosystem repository should have exactly two permanent branches.
+The Workshop uses a convention called the **Sith policy**. An active ecosystem repository should have exactly two permanent branches:
 
-| Branch | Responsibility |
+| Branch | In everyday terms |
 |---|---|
-| **development** | The active source of truth and normal place for ongoing work and dependency builds |
-| **master** | The last released, stable state aligned with published package versions |
+| **development** | Where active work happens and where new dependency builds begin |
+| **master** | The stable, last-released state aligned with published package versions |
 
-The intent is not merely aesthetic. It gives people and automation a predictable answer to two different questions: “What are we working on?” and “What is the released state?”
+This gives everyone a shared map: development is where the project is moving; master is the released reference point.
 
-The release process is correspondingly deliberate: bring the release branch into alignment with development, validate the dependency graph and package candidates, and publish only after the owner explicitly authorizes publication.
+A release is not just a branch rename or a green build. The intended process brings master into alignment with development, validates the dependency graph and package candidates, and then waits for the owner's explicit authorization before publication.
 
-CiAi's ecosystem governance should make this kind of state understandable to automation. The Sith policy workflow evaluates branch inventory and reports one of three states:
+CiAi's branch-policy workflow reports one of three outcomes:
 
-- **COMPLIANT** — the required branch inventory was verified.
-- **NON-COMPLIANT** — the inventory was retrieved and violates the policy.
+- **COMPLIANT** — the branch inventory was retrieved and matches the rule.
+- **NON-COMPLIANT** — the inventory was retrieved and does not match the rule.
 - **UNVERIFIED** — the system could not establish the inventory.
 
-That third state matters. An API failure or incomplete inventory must not be presented as compliance. The policy workflow reports what it can prove; it does not silently delete branches or take ownership of repository history. Destructive cleanup remains a separate, deliberate action.
+That last result is essential. If GitHub cannot provide the information, CiAi must not pretend the repository is compliant. And reporting a branch-policy problem does not authorize CiAi to delete branches. Cleanup is a separate, deliberate action.
 
-The larger lesson is that automation needs both evidence and explicit rules for interpreting it. A status without its policy is just a light on a dashboard.
+Automation needs both facts and rules for interpreting those facts.
 
-## Five Cogs, five responsibilities
+## Five small parts that work together: the Cogs
 
-CiAi is being organized around five small control-plane responsibilities called **Cogs**. They are not five names for one large service, and they are not intended to become a new repository for every feature. Each Cog owns a distinct part of the coordination problem.
+CiAi is organized around five focused responsibilities called **Cogs**. Think of them as stations in the workshop. Each handles a different part of coordinating work.
 
-| Cog | Responsibility | Plain-language question |
+| Cog | Its job | The everyday question |
 |---|---|---|
 | **CogA — Catalog** | Describes repositories, capabilities, versions, and contracts | What is available? |
 | **CogD — Policy** | Evaluates whether an operation is permitted for a caller and target | Is this allowed? |
-| **CogB — Request** | Creates a bounded, correlated request with pinned inputs | What exactly are we asking for? |
-| **CogC — Result** | Correlates and validates the returned result | Does this answer belong to that request? |
-| **CogE — Projection** | Presents verified lifecycle facts and diagnostics | What happened, and what do we know now? |
+| **CogB — Request** | Creates a bounded request with its inputs pinned | What exactly are we asking for? |
+| **CogC — Result** | Checks that a returned result belongs to the request | Is this the answer we asked for? |
+| **CogE — Projection** | Presents verified lifecycle facts and diagnostics | What happened, and what do we know? |
 
-The order above describes the intended decision flow: identify a capability, evaluate policy, form a bounded request, validate the result, and project the resulting facts.
+The intended flow is straightforward: find a capability, check the rules, make a specific request, verify the response, and present the resulting facts.
 
-Each Cog has an independently testable implementation slice. The current integration proof pins the Cog sources and exercises their contracts together in-process: catalog lookup, default-deny policy, bounded request creation, result correlation, parent-level artifact and receipt verification, and lifecycle projection.
+The Cogs are designed to be independently testable. Their current integration proof brings the source-pinned components together in one process. It exercises catalog lookup, default-deny policy, bounded request creation, result correlation, artifact and receipt verification, and lifecycle reporting.
 
-That is useful proof—but it is important to name its boundary. It demonstrates that the contracts can work together in one process. It does not yet demonstrate a complete remote request/result network, authenticated notification and acknowledgement, or an autonomous agent completing work across repositories.
+That is meaningful progress, but it is not yet a complete networked system. The current proof does not demonstrate a full remote request-and-result journey, authenticated notifications and acknowledgements, or an autonomous agent completing work across repositories.
 
-Keeping that distinction explicit makes the architecture stronger. It tells us what is already reusable and exactly what still needs to be built.
+Being clear about that boundary is part of being trustworthy. It tells us what works today and what still needs to be connected.
 
-## Evidence is not authority
+## The most important rule: evidence is not permission
 
-This is the most important design rule in CiAi:
+Here is the boundary CiAi is designed to protect:
 
-**Knowing that something happened is not the same as being allowed to make it happen again.**
+> **Knowing that something happened does not mean you are allowed to make it happen again.**
 
-Consider the different responsibilities involved in an autonomous development system:
+A report can show that a build passed. It cannot approve a release. A model can recommend a code change. That recommendation does not authorize a merge. A repository can contain instructions for an agent. Those instructions do not grant the agent permissions.
 
-| Part | Owns |
+Different parts of the larger system have different jobs:
+
+| Part | Responsibility |
 |---|---|
-| GitHub Actions | Executing workflows and reporting provider-owned run evidence |
-| CiAi | Observing, verifying, correlating, and presenting CI facts and admission-contract results |
-| ProtocolAi | Stable protocol vocabulary and identity primitives |
-| GrammarAi | Structural and grammar validation |
-| HeadlessAi | Model invocation |
-| FSM_Foundry | Task acceptance, leases, model-turn orchestration, authorization, and handoff |
-| Host adapter | Authenticated provider access and concrete dispatch |
-| Repository owner | Approval of consequential repository changes and releases |
+| **GitHub Actions** | Runs workflows and reports what happened |
+| **CiAi** | Observes, verifies, correlates, and explains CI evidence |
+| **ProtocolAi** | Provides shared protocol vocabulary and identity primitives |
+| **GrammarAi** | Checks structure and grammar |
+| **HeadlessAi** | Handles model invocation |
+| **FSM_Foundry** | Orchestrates task acceptance, leases, model turns, authorization, and handoff |
+| **Host adapter** | Connects to providers and performs authorized dispatch |
+| **Repository owner** | Retains approval over consequential changes and releases |
 
-These boundaries prevent a model-generated sentence, repository instruction, or callback payload from becoming an authorization token.
+These boundaries matter because AI systems work with text—and text can be misleading, incomplete, or untrusted.
 
-For example, CiAi now has an **AgentOnboarding admission contract**. It validates a root-level AgentOnboarding.md against the exact commit being evaluated. The validator checks the source identity, document structure, size limit, and content digest, then returns a deterministic eligibility outcome and machine-readable failure reason.
+CiAi includes an **AgentOnboarding admission contract**. It checks a repository's root-level AgentOnboarding.md against the exact commit being evaluated. It validates the source identity, document structure, size limit, and content digest, then returns a deterministic eligibility result with a machine-readable reason when validation fails.
 
-But the onboarding document is still untrusted repository data. It can explain how a repository should be approached; it cannot grant permissions, override host policy, or approve a merge. A passing validation result is necessary for admission, not sufficient for autonomous work.
+In plain language, it checks that the onboarding instructions are the expected document from the expected version of the repository.
 
-The host must retrieve the document from the exact commit and report which commit it actually read. Foundry must enforce the admission result before accepting work and before subsequent autonomous turns or mutations. The validator exists; that end-to-end runtime enforcement is still being integrated. CiAi does not currently own a live autonomous-dispatch path.
+But passing that check does not make the document an authority. The document can explain how to approach a repository; it cannot grant permissions, override host policy, or approve a merge.
 
-That is not a weakness to hide. It is a boundary to preserve while the rest of the system is built.
+The host must retrieve the document from the exact commit and report which commit it actually read. Foundry must enforce the admission result before accepting work and before later autonomous turns or mutations. The validator exists, but that complete runtime enforcement is still being integrated. CiAi does not currently own a live autonomous-dispatch path.
 
-## The first consumer: AnyApp
+This is how the system can become more capable without quietly becoming less safe.
 
-Architecture becomes much more convincing when another application can use it.
+## A real application puts CiAi to work: AnyApp
 
-AnyApp is CiAi's first source-based consumer pilot. It is a real .NET desktop application with its own build and test workflow. Rather than asking CiAi to build AnyApp, the integration lets AnyApp's existing GitHub Actions workflow remain the authoritative executor.
+An architecture becomes more convincing when another application can actually use it.
 
-For a development commit, the consumer workflow waits for the authoritative .NET workflow to finish for the same full SHA. It resolves the matching run and attempt, checks out CiAi at a pinned immutable source revision, invokes the read-only observer, and uploads JSON and Markdown evidence reports. The token is limited to read-only Actions and contents access.
+**AnyApp is CiAi's first source-based consumer pilot.** AnyApp has its own .NET desktop application and its own GitHub Actions build and test workflow. CiAi does not take over that workflow. AnyApp's existing workflow remains the authority that builds and tests the application.
 
-The first verified observation is especially instructive: [the CiAi consumer evidence run](https://github.com/TrentBest/AnyApp/actions/runs/41281306728) correlated [the authoritative AnyApp workflow run](https://github.com/TrentBest/AnyApp/actions/runs/41281306660).
+Instead, the integration lets CiAi observe the result for the exact AnyApp commit. It waits for the authoritative workflow to finish, matches the full commit SHA and run attempt, checks out CiAi at a pinned source revision, and runs the read-only observer. The resulting JSON and Markdown reports are uploaded as evidence. The token is limited to read-only Actions and contents access.
 
-For AnyApp commit **4d40f584fa4011179a731962afdd755fa85e8063**, the CiAi observer successfully collected the evidence from the authoritative AnyApp workflow. The observer's own workflow completed successfully. But the observed AnyApp build/test workflow had failed two integration tests before executable publishing.
+Here are the two runs from the first verified observation:
 
-CiAi reported that distinction correctly:
+- [CiAi consumer evidence run](https://github.com/TrentBest/AnyApp/actions/runs/41281306728)
+- [Authoritative AnyApp workflow run](https://github.com/TrentBest/AnyApp/actions/runs/41281306660)
 
-- Discovery was complete.
-- Required evidence was present.
-- The observed workflow was terminal.
-- The observed workflow was **not successful**.
+The example is especially useful because it did **not** end with a successful application build.
+
+For AnyApp commit **4d40f584fa4011179a731962afdd755fa85e8063**, CiAi successfully collected evidence from the authoritative workflow. The observer's own workflow completed successfully. But the AnyApp build-and-test workflow it inspected had failed two integration tests before executable publishing.
+
+CiAi reported exactly that:
+
+- It completed discovery.
+- It found the required evidence.
+- The observed workflow had finished.
+- The observed workflow had **not** succeeded.
 - The required-workflow evidence state was **failed**, not passed.
 
-This is the point of the exercise. The evidence collector can succeed at its job while accurately reporting that the build it inspected failed.
+That is the behavior we want. The observer succeeded at observing. The application workflow failed its tests. Those two facts can both be true at the same time.
 
-A less careful integration might show a green check beside the observer workflow and leave a reader with the wrong impression. CiAi preserves the identity of the thing being observed, so the success of the observer cannot be mistaken for the success of the application build.
+Without that distinction, someone might see a green check beside the observer workflow and mistakenly assume the application itself passed. CiAi keeps the identity of the observed workflow visible, so one success cannot be mistaken for another.
 
-That is a small but meaningful step toward software that can explain its own development history.
+It is a modest first integration, but it demonstrates something important: another application can use CiAi to get a more precise account of its own development evidence.
 
-## A living picture, not just a document
+## See the idea, not just the explanation
 
-The best way to understand a system like CiAi is to see its evidence move through the boundary.
+A system like this should be understandable by looking at it, not only by reading about it.
 
-The [interactive CiAi experience](../../index.html) is the companion demonstration. It introduces the provider-to-verification flow and lets a visitor explore complete-evidence and missing-evidence scenarios. Its browser walkthrough uses explicitly labeled illustrative data; it does not connect to GitHub or claim to display a live CI result.
+The [interactive CiAi experience](../../index.html) is a companion introduction. It walks through the path from a CI provider to evidence verification and lets visitors explore complete-evidence and missing-evidence scenarios.
 
-The distinction between the demonstration and the implementation is intentional:
+One important note: the browser walkthrough uses clearly labeled illustrative data. It does not connect to GitHub and does not claim to show live build results.
 
-- The **interactive page** teaches the concepts.
-- The **source and tests** define the behavior.
-- The **GitHub Actions runs and artifacts** provide execution evidence.
-- The **consumer integration** shows how another repository can use the observer.
+There are several ways to see CiAi, and each has a different purpose:
 
-A useful next evolution is to connect more of the living picture to source-derived facts: repository topology, exact dependency revisions, branch-policy states, workflow evidence, and the lifecycle state of cross-repository requests. The visual should never invent a green light. It should show verified, missing, contradictory, and unknown states as different things.
+- **The interactive page** introduces the ideas.
+- **The source code and tests** define the actual behavior.
+- **GitHub Actions runs and artifacts** provide execution evidence.
+- **The AnyApp integration** demonstrates another repository consuming the observer.
 
-That is what makes a living picture more than decoration: it is a view of the same facts the system reasons over.
+The next evolution of this living picture is to connect more of it to verified source facts: repository relationships, exact dependency revisions, branch-policy states, workflow evidence, and the lifecycle of cross-repository requests.
 
-## What exists now—and what comes next
+A visualization should never invent a green light. It should make successful, failed, missing, contradictory, and unknown states visibly different.
 
-CiAi is a working set of evidence and coordination building blocks, not yet a finished autonomous development platform.
+That is what turns a picture into a useful instrument.
 
-**Implemented and exercised today:**
+## What works today, and what is still ahead?
 
-- Read-only GitHub Actions observation by repository and exact full commit SHA.
+CiAi is a growing set of evidence and coordination building blocks. It is not yet a finished autonomous development platform.
+
+**Implemented and exercised today**
+
+- Read-only GitHub Actions observation for a repository and exact full commit SHA.
 - Matching workflow-run discovery with attempt identity and bounded job/step collection.
-- JSON and Markdown evidence reports with fail-closed handling of incomplete required evidence.
+- JSON and Markdown reports with fail-closed handling of incomplete required evidence.
 - Provider-neutral run snapshots and exact identity reconciliation.
 - Typed artifact, ready-notice, receipt, and payload-integrity contracts, including bounded stream reading and a local durable receipt ledger.
-- Standalone CogA–CogE contract slices and a pinned in-process vertical integration proof.
+- Standalone CogA–CogE contract slices and a source-pinned, in-process integration proof.
 - Exact-commit AgentOnboarding document validation.
-- An AnyApp consumer pilot that demonstrates source-pinned, read-only evidence collection against a real application workflow.
+- An AnyApp consumer pilot demonstrating source-pinned, read-only evidence collection against a real application workflow.
 
-**Still being built or deliberately left to host systems:**
+**Still being built, or intentionally owned elsewhere**
 
 - A complete authenticated remote request/result lifecycle.
-- Provider-side artifact retrieval and end-to-end authoritative provider correlation for remote handoffs.
-- Durable cross-repository notification, acknowledgement, replay, and idempotency behavior.
+- Provider-side artifact retrieval and end-to-end authoritative correlation for remote handoffs.
+- Durable cross-repository notification, acknowledgement, replay, and idempotency.
 - Foundry runtime enforcement of onboarding admission and task authorization.
 - Live HeadlessAi-driven autonomous dispatch through a host adapter.
-- A complete, end-to-end CI policy system that connects repository-defined checks to provider-hosted execution.
-- Any CiAi-controlled publication or deployment authority.
+- A complete end-to-end CI policy system connecting repository-defined checks to provider-hosted execution.
+- Any CiAi-controlled authority to publish or deploy.
 
-The current package candidate is **TheSingularityWorkshop.CiAi 0.1.0-alpha.1**, targeting .NET 8 and carrying no external dependencies in its core library. Its build, contract checks, package creation, and isolated package-consumer validation have been exercised in CI. That makes it a candidate—not a published package. Publication remains a separate owner decision and has not been authorized by a passing workflow.
+The current package candidate is **TheSingularityWorkshop.CiAi 0.1.0-alpha.1**. It targets .NET 8 and has no external dependencies in its core library. CI has exercised its build, contract checks, package creation, and isolated package-consumer validation.
 
-This separation is deliberate. An evidence report can inform a decision. A policy evaluator can say whether a bounded operation is eligible. A model can propose a change. None of those facts should silently become permission to merge, publish, deploy, or delete.
+That makes it a package candidate—not a published package. A successful workflow does not authorize publication. Publishing remains a separate decision for the owner.
 
-## The larger idea
+This distinction is intentional. An evidence report can inform a decision. A policy evaluator can say whether a bounded operation is eligible. A model can suggest a change. None of those things should silently become permission to merge, publish, deploy, or delete.
 
-A software ecosystem should not require an AI to guess how it works.
+## Where this can lead
 
-Each repository should be able to expose what it provides, what it consumes, which source revision is under discussion, what evidence supports its current state, and which actions remain outside the agent's authority. CiAi is one part of making that possible: a common evidence boundary that lets applications and models reason about development without confusing observation with control.
+Imagine an ecosystem where an AI assistant can enter any repository and quickly answer:
 
-The goal is not to give an LLM a bigger button.
+- What is this repository responsible for?
+- Which version am I looking at?
+- What does it depend on?
+- What checks were supposed to run?
+- What actually ran, and what did the results say?
+- What is missing or uncertain?
+- What am I allowed to do—and who must approve the next step?
 
-The goal is to give it a better understanding of the system before anyone decides whether it should press one.
+That is the larger direction.
 
-**Let CI execute. Let CiAi explain the evidence. Let the host enforce policy. Keep consequential authority with the owner.**
+A growing software ecosystem should not require an AI to guess how it works. Each repository should be able to expose what it provides, what it consumes, which source revision is under discussion, what evidence supports its current state, and which actions remain outside the agent's authority.
+
+CiAi is one part of making that possible: a common evidence boundary that lets applications and AI systems understand development without confusing observation with control.
+
+The goal is not to give an AI a bigger button.
+
+**The goal is to help it understand the workshop before anyone decides whether it should touch a machine.**
+
+Let CI do the work. Let CiAi explain the evidence. Let the host enforce the rules. Keep consequential authority with the owner.
 
 ---
 
-## Explore the implementation
+## Want to explore further?
 
-- [Interactive CiAi experience](../../index.html)
-- [CiAi source repository](https://github.com/TrentBest/TheSingularityWorkshop.CiAi)
-- [Implementation overview](../../README.md)
-- [CiAi gallery and proof links](../../Gallery.md)
-- [Cogs and capability providers](../COGS_VS_CAPABILITIES.md)
-- [AgentOnboarding admission contract](../AGENT_ONBOARDING_ADMISSION_V1.md)
-- [AnyApp consumer walkthrough](../Samples/AnyApp.md)
-- [Release readiness and publication boundary](../RELEASE_READINESS.md)
+- [Try the interactive CiAi experience](../../index.html)
+- [Explore the CiAi source repository](https://github.com/TrentBest/TheSingularityWorkshop.CiAi)
+- [Read the implementation overview](../../README.md)
+- [Browse the CiAi Gallery and proof links](../../Gallery.md)
+- [Learn how Cogs and capability providers fit together](../COGS_VS_CAPABILITIES.md)
+- [Read the AgentOnboarding admission contract](../AGENT_ONBOARDING_ADMISSION_V1.md)
+- [Follow the AnyApp consumer walkthrough](../Samples/AnyApp.md)
+- [Review release readiness and the publication boundary](../RELEASE_READINESS.md)
 
 ---
 
