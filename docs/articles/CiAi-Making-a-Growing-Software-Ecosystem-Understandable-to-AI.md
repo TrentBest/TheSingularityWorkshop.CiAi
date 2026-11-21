@@ -46,6 +46,8 @@ A green light might mean the machine finished its last job. It might mean the jo
 
 Software builds have the same problem.
 
+![Sanitized conceptual illustration of CI evidence scattered across separate workflows before CiAi](https://raw.githubusercontent.com/TrentBest/TheSingularityWorkshop.CiAi/development/docs/assets/coderlegion-ci-before.svg)
+
 A workflow can finish successfully while the tests it was meant to run have failed. A report can be collected successfully even when the application build being inspected failed. A required check might be missing entirely. And a successful run for an older version of the code does not prove that the newest version works.
 
 So CiAi asks a more careful question:
@@ -59,6 +61,8 @@ A commit is a recorded snapshot of a repository's source code. Its full identifi
 Why insist on it? Because “the build passed” is incomplete unless we know which source was built. A result from one commit cannot safely be borrowed by another. Even two runs with similar names may refer to different versions, different attempts, or different outcomes.
 
 CiAi starts with a specific repository and full commit SHA. It discovers matching GitHub Actions workflow runs, preserves the identity of each run and attempt, and collects the associated jobs and steps using bounded pagination.
+
+![Sanitized conceptual illustration of CI evidence flowing into CiAi for structured observation while the owner retains release authority](https://raw.githubusercontent.com/TrentBest/TheSingularityWorkshop.CiAi/development/docs/assets/coderlegion-ci-after.svg)
 
 It then produces two views of the same observation:
 
@@ -116,6 +120,22 @@ CiAi's branch-policy workflow reports one of three outcomes:
 - **UNVERIFIED** — the system could not establish the inventory.
 
 That last result is essential. If GitHub cannot provide the information, CiAi must not pretend the repository is compliant. And reporting a branch-policy problem does not authorize CiAi to delete branches. Cleanup is a separate, deliberate action.
+
+The badge makes that policy visible. Each repository's branch inventory is evaluated and projected into a living SVG badge, with a machine-readable JSON record behind it. Here are two real repository examples from the November 20, 2026 evaluations.
+
+**COMPLIANT — the duel continues**
+
+![GrammarAi Sith Policy badge — compliant](https://raw.githubusercontent.com/TrentBest/TheSingularityWorkshop.GrammarAi/master/assets/sith-policy.svg)
+
+GrammarAi had exactly the two required branches: `master` and `development`.
+
+**NON-COMPLIANT — the training ground is empty**
+
+![FSM_API Sith Policy badge — non-compliant](https://raw.githubusercontent.com/TrentBest/FSM_API/master/assets/sith-policy.svg)
+
+FSM_API reported 23 branches in its November 20 evaluation. That is precisely the kind of branch sprawl the policy is intended to make visible.
+
+The underlying `assets/sith-policy.json` record preserves the repository, required and observed branches, branch count, status, evaluation time, workflow run, and triggering commit. If the inventory cannot be retrieved, the badge reports `UNVERIFIED` rather than guessing. The workflow identifies branches that need attention; it does not delete them.
 
 Automation needs both facts and rules for interpreting those facts.
 
