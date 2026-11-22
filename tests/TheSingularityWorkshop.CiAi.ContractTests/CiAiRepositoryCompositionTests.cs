@@ -58,7 +58,8 @@ internal static class CiAiRepositoryCompositionTests
         const string workflowSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
         const string providerHeadSha = "dddddddddddddddddddddddddddddddddddddddd";
         const string eventSha = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-        const string checkoutSha = "cccccccccccccccccccccccccccccccccccccccc";
+        const string baseSha = "cccccccccccccccccccccccccccccccccccccccc";
+        const string checkoutSha = eventSha;
         var provenanceJson = $$"""
         {
           "schema": "{{CiWorkflowProvenanceRecord.CurrentSchema}}",
@@ -76,7 +77,7 @@ internal static class CiAiRepositoryCompositionTests
             "pullRequest": {
               "number": 10,
               "head": { "ref": "feature/integration", "sha": "{{providerHeadSha}}" },
-              "base": { "ref": "development", "sha": "{{checkoutSha}}" }
+              "base": { "ref": "development", "sha": "{{baseSha}}" }
             }
           },
           "checkout": {
@@ -90,7 +91,7 @@ internal static class CiAiRepositoryCompositionTests
             bytes, repository, 123, 1,
             Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant());
         var trustPolicy = new CiWorkflowDefinitionTrustPolicy(
-            repository, workflowPath, "refs/heads/development", checkoutSha);
+            repository, workflowPath, "refs/heads/development", baseSha);
         var approvedBytes = Encoding.UTF8.GetBytes("name: Build\non: [push, pull_request]\n");
         var trusted = trustPolicy.Evaluate(provenance, approvedBytes, approvedBytes);
         Assert(trusted.IsTrusted && trusted.IsFor(provenance) &&
@@ -98,7 +99,7 @@ internal static class CiAiRepositoryCompositionTests
             "matching protected workflow content was not trusted with exact identity");
         var pullRequestIdentity = new CiPullRequestProviderIdentity(
             10, "feature/integration", providerHeadSha,
-            "development", checkoutSha, eventSha, new[] { providerHeadSha, checkoutSha });
+            "development", baseSha, eventSha, new[] { providerHeadSha, baseSha });
         Assert(pullRequestIdentity.Matches(provenance),
             "provider-observed PR head/base and merge-parent identities did not match provenance");
         Throws<ArgumentException>(() => new CiPullRequestProviderIdentity(
