@@ -41,7 +41,7 @@ The CiAi workflow pins its observer source to an immutable commit. It checks out
 
 The required workflow selector includes the exact Pages run ID and attempt. CiAi preserves separate facts for discovery completeness, evidence completeness, terminality, and success. A failed deployment remains failed evidence; it is not hidden by the observer workflow's successful report generation.
 
-## Next integration steps
+## Rulebook identity and cover validation\n\nSURPS is defining a descriptor-backed sourcebook identity contract. Canonical titles follow `Singularity Universal Roleplaying System - {Category} - LOD {N} - {Rulebook Title}`. Each book must have a machine-readable descriptor, a matching LOD badge, and a real cover image checked into the repository. SURPS owns this schema and its validator; CiAi remains read-only and observes exact-commit evidence from the validator workflow. It must not create or repair metadata, substitute missing covers, or authorize publication/deployment.\n\nTracking: [CiAi issue #85 — SURPS rulebook identity and cover validation](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/85).\n\n## Next integration steps
 
 1. Diagnose the Pages deployment failure using the GitHub Pages environment/deployment evidence; do not weaken the evidence policy to make the report green.
 2. Add a source-validation workflow appropriate to the documentation-first SURPS repository (link integrity, Markdown/front-matter checks, and static-site validation).
