@@ -48,7 +48,11 @@ internal static class CiWorkflowEvidencePacketTests
         var (runCollection, jobCollection) = CreateCollections();
         var factoryPacket = CiWorkflowEvidencePacket.FromCollections(
             runCollection, jobCollection, 42, 2, DateTimeOffset.Parse("2026-10-31T01:02:00Z"),
-            provenance, workflowDefinitionTrusted: true);
+            provenance, workflowDefinitionTrusted: true,
+            pullRequestIdentity: new CiPullRequestProviderIdentity(
+                17, "feature/fix", ProviderHeadSha,
+                "development", "dddddddddddddddddddddddddddddddddddddddd",
+                EventSha, new[] { ProviderHeadSha, "dddddddddddddddddddddddddddddddddddddddd" }));
         Assert(factoryPacket.IsSuccessful && factoryPacket.Provenance.WorkflowSha == WorkflowSha,
             "v1 collection factory did not preserve the independently observed workflow ref");
         var mismatchedWorkflowRefCollection = runCollection with
@@ -201,7 +205,15 @@ internal static class CiWorkflowEvidencePacketTests
             DateTimeOffset.Parse("2026-10-31T01:00:00Z"));
         var observation = new CiWorkflowRunObservation(
             snapshot, 2, ".github/workflows/ci.yml", "pull_request",
-            Array.Empty<int>()) { WorkflowRef = "refs/heads/development" };
+            new[] { 17 })
+        {
+            WorkflowRef = "refs/heads/development",
+            PullRequestIdentities = new[]
+            {
+                new CiProviderPullRequestObservation(17, "feature/fix",
+                    ProviderHeadSha, "development", "dddddddddddddddddddddddddddddddddddddddd")
+            }
+        };
         var runs = new CiWorkflowRunCollection(
             "TrentBest/CiAi", ProviderHeadSha, new[] { observation }, 1, 1, false);
         var job = new CiWorkflowJobObservation(
@@ -232,7 +244,13 @@ internal static class CiWorkflowEvidencePacketTests
             CiRunStatus.Completed, CiRunConclusion.Success,
             new Uri($"https://github.com/TrentBest/CiAi/actions/runs/{runId}"),
             DateTimeOffset.Parse("2026-10-31T01:01:00Z"),
-            Array.AsReadOnly(new[] { job }), true, true);
+            Array.AsReadOnly(new[] { job }), true, true)
+        {
+            ProviderPullRequestIdentity = new CiPullRequestProviderIdentity(
+                17, "feature/fix", ProviderHeadSha,
+                "development", "dddddddddddddddddddddddddddddddddddddddd",
+                EventSha, new[] { ProviderHeadSha, "dddddddddddddddddddddddddddddddddddddddd" })
+        };
     }
 
     private static string CreateProvenance() => $$"""
