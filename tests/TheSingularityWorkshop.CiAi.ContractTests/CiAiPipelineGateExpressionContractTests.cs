@@ -95,6 +95,38 @@ internal static class CiAiPipelineGateExpressionContractTests
             Throws<ArgumentException>(() => new CiAiAnyOf(Array.Empty<CiAiGateExpression>()));
         });
 
+        Check("waiting gates suppress LLM allocation without polling or dispatch", () =>
+        {
+            var admission = CiAiPipelineGateAdmissionPolicy.Evaluate(CiAiPipelineGateState.Waiting);
+            Assert(admission.State == CiAiPipelineGateAdmissionState.DormantWaiting &&
+                   !admission.MayAllocateLlm && admission.Reason == "pipeline.gates-waiting",
+                "waiting gate allowed LLM allocation or lost its durable disposition");
+        });
+
+        Check("blocked gates deny LLM allocation", () =>
+        {
+            var admission = CiAiPipelineGateAdmissionPolicy.Evaluate(CiAiPipelineGateState.Blocked);
+            Assert(admission.State == CiAiPipelineGateAdmissionState.DeniedBlocked &&
+                   !admission.MayAllocateLlm,
+                "blocked gate allowed LLM allocation");
+        });
+
+        Check("satisfied gates make a repository eligible for normal LLM allocation", () =>
+        {
+            var admission = CiAiPipelineGateAdmissionPolicy.Evaluate(CiAiPipelineGateState.Satisfied);
+            Assert(admission.State == CiAiPipelineGateAdmissionState.Eligible &&
+                   admission.MayAllocateLlm,
+                "satisfied gate did not restore eligibility");
+        });
+
+        Check("unknown gate states fail closed", () =>
+        {
+            var admission = CiAiPipelineGateAdmissionPolicy.Evaluate((CiAiPipelineGateState)99);
+            Assert(admission.State == CiAiPipelineGateAdmissionState.DeniedBlocked &&
+                   !admission.MayAllocateLlm,
+                "unknown gate state was treated as eligible");
+        });
+
         return passed;
 
         void Check(string name, Action action)
