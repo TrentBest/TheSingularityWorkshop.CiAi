@@ -23,6 +23,46 @@ internal static class CiAiPipelineGateExpressionContractTests
                 "unexpected composite gate schema version");
         });
 
+        Check("identical versioned expressions have a stable definition digest", () =>
+        {
+            var copy = CiAiPipelineGateExpression.ForPipeline(
+                "PipelineA",
+                new CiAiAnyOf(new CiAiGateExpression[]
+                {
+                    new CiAiAllOf(new CiAiGateExpression[] { b, c }),
+                    d
+                }));
+            Assert(expression.DefinitionSha256.Length == 64 &&
+                   expression.DefinitionSha256 == copy.DefinitionSha256,
+                "identical expression definitions did not produce the same SHA-256");
+        });
+
+        Check("pipeline identity participates in the definition digest", () =>
+        {
+            var otherPipeline = CiAiPipelineGateExpression.ForPipeline(
+                "PipelineB",
+                new CiAiAnyOf(new CiAiGateExpression[]
+                {
+                    new CiAiAllOf(new CiAiGateExpression[] { b, c }),
+                    d
+                }));
+            Assert(expression.DefinitionSha256 != otherPipeline.DefinitionSha256,
+                "pipeline name was omitted from expression identity");
+        });
+
+        Check("ordered child definitions participate in the definition digest", () =>
+        {
+            var reordered = CiAiPipelineGateExpression.ForPipeline(
+                "PipelineA",
+                new CiAiAnyOf(new CiAiGateExpression[]
+                {
+                    d,
+                    new CiAiAllOf(new CiAiGateExpression[] { c, b })
+                }));
+            Assert(expression.DefinitionSha256 != reordered.DefinitionSha256,
+                "child order was omitted from expression identity");
+        });
+
         Check("B and C together satisfy the composite alternative", () =>
         {
             var result = CiAiPipelineGateEvaluator.Evaluate(expression, new Dictionary<string, DependencyReleaseGateEvaluation>
