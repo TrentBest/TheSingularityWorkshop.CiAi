@@ -1,5 +1,9 @@
 # CiAi Repository Integration Samples
 
+<!-- CIAI:BADGES:START -->
+[![Sith Policy](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/workflows/sith-policy.yml/badge.svg)](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/workflows/sith-policy.yml)
+<!-- CIAI:BADGES:END -->
+
 This directory contains one repository-specific proposal per repository visible in the connected TrentBest GitHub inventory at the time these samples were drafted.
 
 These are **integration plans**, not assertions that every repository already has a CiAi client, a complete workflow audit, or machine-readable capability declarations. Several repository roles are inferred from names and prior ecosystem work and must be confirmed by their maintainers.
