@@ -390,7 +390,13 @@ internal static class CiTestResultReportTests
             CiRunStatus.Completed,
             conclusion == "success" ? CiRunConclusion.Success : CiRunConclusion.Failure,
             new Uri($"https://github.com/{Repository}/actions/runs/{RunId}"),
-            ObservedAt, Array.AsReadOnly(new[] { job }), true, true);
+            ObservedAt, Array.AsReadOnly(new[] { job }), true, true)
+        {
+            ProviderPullRequestIdentity = new CiPullRequestProviderIdentity(
+                17, "feature/minesweeper-domain-pilot", ProviderHeadSha,
+                "development", "dddddddddddddddddddddddddddddddddddddddd",
+                CandidateSha, new[] { ProviderHeadSha, "dddddddddddddddddddddddddddddddddddddddd" })
+        };
         return CiWorkflowEvidencePacket.FromValidatedProvenance(
             observed, provenance, workflowTrusted);
     }
