@@ -11,6 +11,7 @@ public enum CiAiPipelineGateState
 /// <summary>A bounded, immutable Boolean prerequisite tree for one named development pipeline.</summary>
 public sealed record CiAiPipelineGateExpression
 {
+    public const int CurrentSchemaVersion = 1;
     public const int MaximumDepth = 8;
     public const int MaximumNodes = 32;
 
@@ -33,6 +34,7 @@ public sealed record CiAiPipelineGateExpression
         Leaves = Array.AsReadOnly(leaves.ToArray());
     }
 
+    public int SchemaVersion => CurrentSchemaVersion;
     public string Pipeline { get; }
     public CiAiGateExpression Root { get; }
     public IReadOnlyList<CiAiRepositoryGateReference> Leaves { get; }
