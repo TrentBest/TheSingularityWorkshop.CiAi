@@ -1,5 +1,9 @@
 # Cog Ecosystem Integration Contract Tests
 
+<!-- CIAI:BADGES:START -->
+[![Sith Policy](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/workflows/sith-policy.yml/badge.svg)](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/workflows/sith-policy.yml)
+<!-- CIAI:BADGES:END -->
+
 **Purpose:** prove that the five standalone CiAi cogs can participate in one bounded request-to-result flow together with the parent CiAi artifact contracts.
 
 This is a local, deterministic contract proof. It does not contact a provider, authenticate a remote service, or claim end-to-end network orchestration.
