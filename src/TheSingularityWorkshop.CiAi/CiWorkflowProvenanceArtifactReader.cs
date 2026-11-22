@@ -57,7 +57,7 @@ public static class CiWorkflowProvenanceArtifactReader
         string expectedWorkflowSha,
         string expectedEventName,
         string expectedEventRef,
-        CiWorkflowPullRequestProvenance? expectedPullRequest = null)
+        CiProviderPullRequestObservation? expectedPullRequest = null)
     {
         ArgumentNullException.ThrowIfNull(profile);
         return ReadCore(archiveBytes, providerArtifact,
@@ -135,7 +135,11 @@ public static class CiWorkflowProvenanceArtifactReader
         var pullRequestIdentityVerified = provenance.PullRequest is null;
         if (provenance.PullRequest is not null && expectedPullRequest is not null)
         {
-            if (provenance.PullRequest != expectedPullRequest)
+            if (provenance.PullRequest.Number != expectedPullRequest.Number ||
+                !string.Equals(provenance.PullRequest.HeadRef, expectedPullRequest.HeadRef, StringComparison.Ordinal) ||
+                !string.Equals(provenance.PullRequest.HeadSha, expectedPullRequest.HeadSha, StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(provenance.PullRequest.BaseRef, expectedPullRequest.BaseRef, StringComparison.Ordinal) ||
+                !string.Equals(provenance.PullRequest.BaseSha, expectedPullRequest.BaseSha, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("Pull-request head/base identities do not match the independent provider observation.");
             pullRequestIdentityVerified = true;
         }
