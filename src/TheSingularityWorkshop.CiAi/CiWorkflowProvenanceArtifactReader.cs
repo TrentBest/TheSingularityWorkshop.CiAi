@@ -11,7 +11,10 @@ public sealed record CiWorkflowProvenanceArtifactEvidence(
     CiProviderArtifactObservation ProviderArtifact,
     CiWorkflowProvenanceRecord Provenance,
     string PayloadSha256,
-    int PayloadSizeBytes);
+    int PayloadSizeBytes)
+{
+    public bool PullRequestIdentityVerified { get; init; }
+}
 
 public static class CiWorkflowProvenanceArtifactReader
 {
@@ -33,7 +36,7 @@ public static class CiWorkflowProvenanceArtifactReader
         => ReadCore(archiveBytes, providerArtifact, expectedArtifactName, expectedEntryName,
             expectedRepository, expectedRunId, expectedRunAttempt, expectedHeadSha, expectedHeadSha,
             expectedHeadSha, expectedWorkflowPath: ".github/workflows/ci.yml", expectedWorkflowRef,
-            expectedWorkflowSha, expectedEventName, expectedEventRef);
+            expectedWorkflowSha, expectedEventName, expectedEventRef, expectedPullRequest: null);
 
     /// <summary>
     /// Reads an external workflow profile. Provider head, event SHA, and checkout SHA remain separate
@@ -53,14 +56,15 @@ public static class CiWorkflowProvenanceArtifactReader
         string expectedWorkflowRef,
         string expectedWorkflowSha,
         string expectedEventName,
-        string expectedEventRef)
+        string expectedEventRef,
+        CiWorkflowPullRequestProvenance? expectedPullRequest = null)
     {
         ArgumentNullException.ThrowIfNull(profile);
         return ReadCore(archiveBytes, providerArtifact,
             profile.ProvenanceArtifactName(expectedRunId, expectedRunAttempt),
             profile.ProvenanceEntryName, expectedRepository, expectedRunId, expectedRunAttempt,
             expectedProviderHeadSha, expectedEventSha, expectedCheckoutSha, profile.WorkflowPath,
-            expectedWorkflowRef, expectedWorkflowSha, expectedEventName, expectedEventRef);
+            expectedWorkflowRef, expectedWorkflowSha, expectedEventName, expectedEventRef, expectedPullRequest);
     }
 
     private static CiWorkflowProvenanceArtifactEvidence ReadCore(
@@ -78,7 +82,8 @@ public static class CiWorkflowProvenanceArtifactReader
         string expectedWorkflowRef,
         string expectedWorkflowSha,
         string expectedEventName,
-        string expectedEventRef)
+        string expectedEventRef,
+        CiWorkflowPullRequestProvenance? expectedPullRequest)
     {
         ArgumentNullException.ThrowIfNull(providerArtifact);
         ArgumentException.ThrowIfNullOrWhiteSpace(expectedArtifactName);
@@ -127,6 +132,13 @@ public static class CiWorkflowProvenanceArtifactReader
         var payloadDigest = Convert.ToHexString(SHA256.HashData(payload)).ToLowerInvariant();
         var provenance = CiWorkflowProvenanceRecord.ParseAndValidate(
             payload, expectedRepository, expectedRunId, expectedRunAttempt, payloadDigest);
+        var pullRequestIdentityVerified = provenance.PullRequest is null;
+        if (provenance.PullRequest is not null && expectedPullRequest is not null)
+        {
+            if (provenance.PullRequest != expectedPullRequest)
+                throw new InvalidDataException("Pull-request head/base identities do not match the independent provider observation.");
+            pullRequestIdentityVerified = true;
+        }
 
         var expectedFullWorkflowRef = expectedRepository + "/" + expectedWorkflowPath + "@" + expectedWorkflowRef;
         if (!string.Equals(provenance.WorkflowPath, expectedWorkflowPath, StringComparison.Ordinal) ||
@@ -140,7 +152,10 @@ public static class CiWorkflowProvenanceArtifactReader
             throw new InvalidDataException("Workflow provenance does not match the independently trusted workflow, event, and checkout policy.");
 
         return new CiWorkflowProvenanceArtifactEvidence(
-            providerArtifact, provenance, payloadDigest, payload.Length);
+            providerArtifact, provenance, payloadDigest, payload.Length)
+        {
+            PullRequestIdentityVerified = pullRequestIdentityVerified
+        };
     }
 
     private static byte[] ReadBounded(ZipArchiveEntry entry)
