@@ -21,7 +21,7 @@ on:
       - "NuGet.config"
       - ".config/**"
   pull_request:
-    branches: [development, master, feature/ciai-external-observer-and-composition]
+    branches: [development, master]
     paths:
       - "src/**"
       - "integration/**"
