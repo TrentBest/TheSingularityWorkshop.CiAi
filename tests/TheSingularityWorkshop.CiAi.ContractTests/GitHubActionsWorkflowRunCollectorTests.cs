@@ -18,7 +18,11 @@ internal static class GitHubActionsWorkflowRunCollectorTests
             "event": "push", "html_url": "https://github.com/TrentBest/SimpleDemos/actions/runs/42",
             "updated_at": "2026-10-24T04:00:00Z",
             "repository": { "full_name": "TrentBest/SimpleDemos" },
-            "pull_requests": [{ "number": 35 }]
+            "pull_requests": [{
+              "number": 35,
+              "head": { "ref": "feature/pull-request", "sha": "1111111111111111111111111111111111111111" },
+              "base": { "ref": "development", "sha": "2222222222222222222222222222222222222222" }
+            }]
           }]
         }
         """;
@@ -64,6 +68,11 @@ internal static class GitHubActionsWorkflowRunCollectorTests
                 "workflow path was not retained");
             Assert(collection.Runs[0].PullRequestNumbers.SequenceEqual(new[] { 35 }),
                 "PR correlation was not retained");
+            Assert(collection.Runs[0].PullRequestIdentities.Single().HeadSha ==
+                "1111111111111111111111111111111111111111" &&
+                collection.Runs[0].PullRequestIdentities.Single().BaseRef == "development" &&
+                collection.Runs[0].PullRequestIdentitiesComplete,
+                "provider-observed PR head/base identities were not retained independently");
             Assert(collection.Runs[0].Run.Conclusion == CiRunConclusion.Failure,
                 "failed conclusion was not preserved");
             Assert(collection.Runs[0].WorkflowRef == "refs/heads/development",

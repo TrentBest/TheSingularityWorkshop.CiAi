@@ -145,8 +145,20 @@ internal static class CiAiRepositoryCompositionTests
             DateTimeOffset.Parse("2026-11-21T12:00:00Z"),
             Array.Empty<CiWorkflowJobObservation>(), true, true)
         {
+            ProviderPullRequestObservation = new CiProviderPullRequestObservation(
+                10, "feature/integration", providerHeadSha, "development", baseSha),
             ProviderPullRequestIdentity = pullRequestIdentity
         };
+        var structuralOnlyRun = observedRun with { ProviderPullRequestIdentity = null };
+        var structuralOnlyPacket = CiWorkflowEvidencePacket.FromValidatedProvenance(
+            structuralOnlyRun, provenance, workflowDefinitionTrusted: false);
+        Assert(!structuralOnlyPacket.IsSuccessful && !structuralOnlyPacket.CheckoutVerified &&
+            !structuralOnlyPacket.PullRequestIdentityVerified &&
+            structuralOnlyPacket.BlockingReasons.Contains("pull-request.provider-identity-unverified") &&
+            structuralOnlyPacket.BlockingReasons.Contains("workflow.definition-untrusted"),
+            "PR evidence without verified merge parents was not retained as structural, non-actionable evidence");
+        Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromValidatedProvenance(
+            structuralOnlyRun, provenance, trusted, pullRequestIdentity: null));
         var trustedPacket = CiWorkflowEvidencePacket.FromValidatedProvenance(
             observedRun, provenance, trusted, pullRequestIdentity);
         Assert(trustedPacket.WorkflowDefinitionTrusted && trustedPacket.CheckoutVerified &&

@@ -392,6 +392,9 @@ internal static class CiTestResultReportTests
             new Uri($"https://github.com/{Repository}/actions/runs/{RunId}"),
             ObservedAt, Array.AsReadOnly(new[] { job }), true, true)
         {
+            ProviderPullRequestObservation = new CiProviderPullRequestObservation(
+                17, "feature/minesweeper-domain-pilot", ProviderHeadSha,
+                "development", "dddddddddddddddddddddddddddddddddddddddd"),
             ProviderPullRequestIdentity = new CiPullRequestProviderIdentity(
                 17, "feature/minesweeper-domain-pilot", ProviderHeadSha,
                 "development", "dddddddddddddddddddddddddddddddddddddddd",

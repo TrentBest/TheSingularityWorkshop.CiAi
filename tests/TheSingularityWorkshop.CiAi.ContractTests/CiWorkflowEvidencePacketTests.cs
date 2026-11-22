@@ -116,8 +116,11 @@ internal static class CiWorkflowEvidencePacketTests
         var wrongEventShaProvenance = CiWorkflowProvenanceRecord.ParseAndValidate(
             wrongEventShaBytes, "TrentBest/CiAi", 42, 2,
             Convert.ToHexString(SHA256.HashData(wrongEventShaBytes)));
-        Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromValidatedProvenance(
-            CreateObservedRun(), wrongEventShaProvenance, workflowDefinitionTrusted: true));
+        var wrongEventShaPacket = CiWorkflowEvidencePacket.FromValidatedProvenance(
+            CreateObservedRun(), wrongEventShaProvenance, workflowDefinitionTrusted: true);
+        Assert(!wrongEventShaPacket.CheckoutVerified && !wrongEventShaPacket.IsSuccessful &&
+            wrongEventShaPacket.BlockingReasons.Contains("pull-request.provider-identity-unverified"),
+            "a mismatched PR merge/event SHA was not retained as structurally observed but non-actionable");
 
         Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromValidatedProvenance(
             CreateObservedRun(runId: 43), provenance, workflowDefinitionTrusted: true));
@@ -135,8 +138,10 @@ internal static class CiWorkflowEvidencePacketTests
         var mismatchedCheckout = CiWorkflowProvenanceRecord.ParseAndValidate(
             mismatchedCheckoutBytes, "TrentBest/CiAi", 42, 2,
             Convert.ToHexString(SHA256.HashData(mismatchedCheckoutBytes)));
-        Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromValidatedProvenance(
-            CreateObservedRun(), mismatchedCheckout, workflowDefinitionTrusted: true));
+        var mismatchedCheckoutPacket = CiWorkflowEvidencePacket.FromValidatedProvenance(
+            CreateObservedRun(), mismatchedCheckout, workflowDefinitionTrusted: true);
+        Assert(!mismatchedCheckoutPacket.CheckoutVerified && !mismatchedCheckoutPacket.IsSuccessful,
+            "mismatched PR checkout SHA was not retained as non-actionable evidence");
 
         Console.WriteLine("PASS: 12 CI workflow evidence packet v1 contract checks.");
         return 12;
@@ -241,6 +246,9 @@ internal static class CiWorkflowEvidencePacketTests
             DateTimeOffset.Parse("2026-10-31T01:01:00Z"),
             Array.AsReadOnly(new[] { job }), true, true)
         {
+            ProviderPullRequestObservation = new CiProviderPullRequestObservation(
+                17, "feature/fix", ProviderHeadSha,
+                "development", "dddddddddddddddddddddddddddddddddddddddd"),
             ProviderPullRequestIdentity = new CiPullRequestProviderIdentity(
                 17, "feature/fix", ProviderHeadSha,
                 "development", "dddddddddddddddddddddddddddddddddddddddd",

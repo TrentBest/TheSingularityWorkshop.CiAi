@@ -108,11 +108,17 @@ public sealed record CiWorkflowEvidencePacket
         {
             var providerPullRequests = observation.PullRequestIdentities
                 .Where(item => item.Number == provenance.PullRequest.Number).ToArray();
-            if (!observation.PullRequestIdentitiesComplete || providerPullRequests.Length != 1 ||
-                pullRequestIdentity is null || !pullRequestIdentity.Matches(provenance) ||
-                !pullRequestIdentity.Matches(providerPullRequests[0]))
-                throw new InvalidDataException("Pull-request evidence requires exact provider head/base and merge-parent identity.");
-            observedRun = observedRun with { ProviderPullRequestIdentity = pullRequestIdentity };
+            if (observation.PullRequestIdentitiesComplete && providerPullRequests.Length == 1)
+                observedRun = observedRun with { ProviderPullRequestObservation = providerPullRequests[0] };
+
+            if (pullRequestIdentity is not null)
+            {
+                if (!pullRequestIdentity.Matches(provenance) ||
+                    providerPullRequests.Length != 1 ||
+                    !pullRequestIdentity.Matches(providerPullRequests[0]))
+                    throw new InvalidDataException("Supplied pull-request merge identity does not match the provider's exact head/base observation.");
+                observedRun = observedRun with { ProviderPullRequestIdentity = pullRequestIdentity };
+            }
         }
         else if (pullRequestIdentity is not null)
             throw new InvalidDataException("Pull-request provider identity was supplied for a non-pull-request run.");
@@ -136,14 +142,24 @@ public sealed record CiWorkflowEvidencePacket
         ArgumentNullException.ThrowIfNull(provenance);
         if (!trustDecision.IsFor(provenance))
             throw new InvalidDataException("Workflow trust decision does not identify this exact provenance record.");
-        if (provenance.PullRequest is not null &&
-            (pullRequestIdentity is null || !pullRequestIdentity.Matches(provenance) ||
-             observedRun.ProviderPullRequestIdentity is null ||
-             !observedRun.ProviderPullRequestIdentity.Matches(provenance) ||
-             observedRun.ProviderPullRequestIdentity != pullRequestIdentity))
-            throw new InvalidDataException("Pull-request evidence requires independently verified head, base, merge commit, and merge-parent identities.");
-        if (provenance.PullRequest is null && pullRequestIdentity is not null)
+        if (provenance.PullRequest is not null && pullRequestIdentity is not null)
+        {
+            if (!pullRequestIdentity.Matches(provenance) ||
+                observedRun.ProviderPullRequestObservation is null ||
+                !pullRequestIdentity.Matches(observedRun.ProviderPullRequestObservation))
+                throw new InvalidDataException("Pull-request merge identity does not match the independently observed provider head/base facts.");
+            observedRun = observedRun with { ProviderPullRequestIdentity = pullRequestIdentity };
+        }
+        else if (provenance.PullRequest is null && pullRequestIdentity is not null)
             throw new InvalidDataException("Pull-request provider identity was supplied for a non-pull-request run.");
+
+        var pullRequestIdentityVerified = provenance.PullRequest is null ||
+            observedRun.ProviderPullRequestObservation is not null &&
+            observedRun.ProviderPullRequestIdentity is not null &&
+            observedRun.ProviderPullRequestIdentity.Matches(provenance) &&
+            observedRun.ProviderPullRequestIdentity.Matches(observedRun.ProviderPullRequestObservation);
+        if (trustDecision.IsTrusted && !pullRequestIdentityVerified)
+            throw new InvalidDataException("A trusted pull-request verdict requires independently verified head, base, merge commit, and merge-parent identities.");
         return FromValidatedProvenance(observedRun, provenance, trustDecision.IsTrusted, candidateCheckoutEvidence);
     }
 
@@ -161,18 +177,28 @@ public sealed record CiWorkflowEvidencePacket
             observedRun.RunAttempt != provenance.RunAttempt)
             throw new InvalidDataException("Workflow provenance does not identify the exact observed repository, run, and attempt.");
 
-        if (provenance.PullRequest is not null &&
-            (observedRun.ProviderPullRequestIdentity is null ||
-             !observedRun.ProviderPullRequestIdentity.Matches(provenance)))
-            throw new InvalidDataException("Pull-request evidence requires independently observed PR head/base and merge-parent identities.");
-
         // GitHub reports the PR source head in workflow-run head_sha, while a pull_request
-        // workflow executes against the synthetic merge commit. Keep those identities distinct.
+        // workflow executes against the synthetic merge commit. Preserve both provider identities.
+        var providerPullRequestMatches = provenance.PullRequest is null ||
+            observedRun.ProviderPullRequestObservation is not null &&
+            observedRun.ProviderPullRequestObservation.Number == provenance.PullRequest.Number &&
+            string.Equals(observedRun.ProviderPullRequestObservation.HeadRef, provenance.PullRequest.HeadRef, StringComparison.Ordinal) &&
+            string.Equals(observedRun.ProviderPullRequestObservation.HeadSha, provenance.PullRequest.HeadSha, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(observedRun.ProviderPullRequestObservation.BaseRef, provenance.PullRequest.BaseRef, StringComparison.Ordinal) &&
+            string.Equals(observedRun.ProviderPullRequestObservation.BaseSha, provenance.PullRequest.BaseSha, StringComparison.OrdinalIgnoreCase);
         var providerHeadMatches = provenance.PullRequest is null
             ? string.Equals(observedRun.WorkflowSha, provenance.EventSha, StringComparison.OrdinalIgnoreCase)
-            : string.Equals(observedRun.WorkflowSha, provenance.PullRequest.HeadSha, StringComparison.OrdinalIgnoreCase);
-        if (!providerHeadMatches)
+            : providerPullRequestMatches &&
+              string.Equals(observedRun.WorkflowSha, provenance.PullRequest.HeadSha, StringComparison.OrdinalIgnoreCase);
+        if (provenance.PullRequest is null && !providerHeadMatches)
             throw new InvalidDataException("Workflow provenance does not match the independently observed provider head identity.");
+
+        var pullRequestIdentityVerified = provenance.PullRequest is null ||
+            providerPullRequestMatches &&
+            observedRun.ProviderPullRequestIdentity is not null &&
+            observedRun.ProviderPullRequestIdentity.Matches(provenance) &&
+            observedRun.ProviderPullRequestObservation is not null &&
+            observedRun.ProviderPullRequestIdentity.Matches(observedRun.ProviderPullRequestObservation);
 
         if (!string.Equals(observedRun.WorkflowPath, provenance.WorkflowPath, StringComparison.Ordinal))
             throw new InvalidDataException("Workflow provenance path does not match the observed workflow path.");
@@ -204,6 +230,9 @@ public sealed record CiWorkflowEvidencePacket
                 string.Equals(provenance.CheckoutSha, provenance.EventSha, StringComparison.OrdinalIgnoreCase);
         }
 
+        if (provenance.PullRequest is not null)
+            checkoutVerified = checkoutVerified && providerHeadMatches && pullRequestIdentityVerified;
+
         return new CiWorkflowEvidencePacket(
             observedRun, provenance, workflowDefinitionTrusted, checkoutVerified);
     }
@@ -216,6 +245,11 @@ public sealed record CiWorkflowEvidencePacket
     public string CandidateRef { get; }
     public string CandidateSha { get; }
     public bool CheckoutVerified { get; }
+    public bool PullRequestIdentityVerified => Provenance.PullRequest is null ||
+        ObservedRun.ProviderPullRequestObservation is not null &&
+        ObservedRun.ProviderPullRequestIdentity is not null &&
+        ObservedRun.ProviderPullRequestIdentity.Matches(Provenance) &&
+        ObservedRun.ProviderPullRequestIdentity.Matches(ObservedRun.ProviderPullRequestObservation);
     public bool EvidenceComplete => ObservedRun.EvidenceComplete;
     public bool IsSuccessful =>
         WorkflowDefinitionTrusted &&
@@ -359,6 +393,8 @@ public sealed record CiWorkflowEvidencePacket
 
         if (!WorkflowDefinitionTrusted)
             yield return "workflow.definition-untrusted";
+        if (Provenance.PullRequest is not null && !PullRequestIdentityVerified)
+            yield return "pull-request.provider-identity-unverified";
         if (!CheckoutVerified)
             yield return "candidate.checkout-unverified";
     }
