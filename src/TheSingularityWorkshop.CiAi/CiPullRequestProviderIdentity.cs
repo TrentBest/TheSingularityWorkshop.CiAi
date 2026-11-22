@@ -47,6 +47,14 @@ public sealed record CiPullRequestProviderIdentity
     public string MergeCommitSha { get; }
     public IReadOnlyList<string> MergeParentShas { get; }
 
+    public bool Matches(CiProviderPullRequestObservation observation)
+        => observation is not null &&
+           observation.Number == Number &&
+           string.Equals(observation.HeadRef, HeadRef, StringComparison.Ordinal) &&
+           string.Equals(observation.HeadSha, HeadSha, StringComparison.OrdinalIgnoreCase) &&
+           string.Equals(observation.BaseRef, BaseRef, StringComparison.Ordinal) &&
+           string.Equals(observation.BaseSha, BaseSha, StringComparison.OrdinalIgnoreCase);
+
     public bool Matches(CiWorkflowProvenanceRecord provenance)
     {
         ArgumentNullException.ThrowIfNull(provenance);
