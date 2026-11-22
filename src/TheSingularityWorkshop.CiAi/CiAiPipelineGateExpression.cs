@@ -172,3 +172,33 @@ public static class CiAiPipelineGateEvaluator
         }
     }
 }
+
+
+/// <summary>LLM allocation disposition derived from a composite prerequisite result.</summary>
+public enum CiAiPipelineGateAdmissionState
+{
+    DormantWaiting = 0,
+    DeniedBlocked = 1,
+    Eligible = 2
+}
+
+/// <summary>A deterministic admission decision; it does not itself dispatch or schedule an LLM call.</summary>
+public sealed record CiAiPipelineGateAdmission(CiAiPipelineGateAdmissionState State, string Reason)
+{
+    public bool MayAllocateLlm => State == CiAiPipelineGateAdmissionState.Eligible;
+}
+
+/// <summary>Prevents a repository with unresolved prerequisites from consuming LLM allocation.</summary>
+public static class CiAiPipelineGateAdmissionPolicy
+{
+    public static CiAiPipelineGateAdmission Evaluate(CiAiPipelineGateState gateState) => gateState switch
+    {
+        CiAiPipelineGateState.Satisfied =>
+            new(CiAiPipelineGateAdmissionState.Eligible, "pipeline.gates-satisfied"),
+        CiAiPipelineGateState.Waiting =>
+            new(CiAiPipelineGateAdmissionState.DormantWaiting, "pipeline.gates-waiting"),
+        CiAiPipelineGateState.Blocked =>
+            new(CiAiPipelineGateAdmissionState.DeniedBlocked, "pipeline.gates-blocked"),
+        _ => new(CiAiPipelineGateAdmissionState.DeniedBlocked, "pipeline.gates-state-unknown")
+    };
+}
