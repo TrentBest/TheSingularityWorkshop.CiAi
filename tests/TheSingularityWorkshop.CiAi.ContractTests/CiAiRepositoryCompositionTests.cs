@@ -89,7 +89,8 @@ internal static class CiAiRepositoryCompositionTests
         Assert(profile.WorkflowPath == ".github/workflows/build.yml" &&
             profile.ProvenanceArtifactName(44892052947, 1) == "rawwar-workflow-provenance-1" &&
             profile.TestArtifactName(44892052947, 1) == "rawwar-contract-results-44892052947-1" &&
-            profile.RequiredJobKey == "build-and-contracts",
+            profile.RequiredJobKey == "build-and-contracts" &&
+            profile.RequiredJobName == "build-and-contracts",
             "raWWar observer profile did not resolve the exact provider contract");
         Assert(CiWorkflowObserverProfile.CiAiDefault.ProvenanceArtifactName(42, 3) ==
             "ciai-workflow-provenance-3",
