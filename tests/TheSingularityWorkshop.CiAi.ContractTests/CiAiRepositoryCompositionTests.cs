@@ -156,7 +156,13 @@ internal static class CiAiRepositoryCompositionTests
             "pull_request", "Build", CiRunStatus.Completed, CiRunConclusion.Success,
             new Uri("https://github.com/TrentBest/raWWar/actions/runs/123"),
             DateTimeOffset.Parse("2026-11-21T12:00:00Z"),
-            Array.Empty<CiWorkflowJobObservation>(), true, true)
+            new[]
+            {
+                new CiWorkflowJobObservation(
+                    100, 123, 1, "build-and-contracts", "completed", "success",
+                    new Uri("https://github.com/TrentBest/raWWar/actions/runs/123/job/100"),
+                    Array.Empty<CiWorkflowStepObservation>())
+            }, true, true)
         {
             ProviderPullRequestObservation = new CiProviderPullRequestObservation(
                 10, "feature/integration", providerHeadSha, "development", baseSha),
@@ -177,6 +183,9 @@ internal static class CiAiRepositoryCompositionTests
         Assert(trustedPacket.WorkflowDefinitionTrusted && trustedPacket.CheckoutVerified &&
             trustedPacket.CandidateSha == eventSha,
             "trusted PR evidence did not preserve the verified merge checkout as the candidate SHA");
+        var requiredJobPolicy = profile.CreateRequiredJobPolicy(123, 1);
+        Assert(requiredJobPolicy.Evaluate(trustedPacket, 100, "build-and-contracts") == CiRequiredCheckStatus.Passed,
+            "raWWar profile required-job policy did not accept the provider-observed job key/name");
         var untrusted = trustPolicy.Evaluate(provenance, Encoding.UTF8.GetBytes("name: candidate workflow"), approvedBytes);
         Assert(!untrusted.IsTrusted &&
             untrusted.ReasonCode == "workflow-definition.content-mismatch" &&
