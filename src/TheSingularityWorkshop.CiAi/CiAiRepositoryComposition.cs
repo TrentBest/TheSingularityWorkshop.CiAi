@@ -110,7 +110,7 @@ public static class Gauntlet
 }
 
 /// <summary>Immutable repository-level CiAi configuration.</summary>
-public sealed record CiAiRepositoryConfiguration
+public sealed partial record CiAiRepositoryConfiguration
 {
     internal CiAiRepositoryConfiguration(
         string repository,
@@ -211,7 +211,7 @@ public sealed class CiAiRepositoryBuilder
 /// Deterministically stamps the managed badge block in README.md files. Text outside the block is preserved.
 /// Call StampRepositoryReadmes from a trusted build/maintenance host; it never changes CI policy or Git state.
 /// </summary>
-public static class CiAiReadmeBadgeStamper
+public static partial class CiAiReadmeBadgeStamper
 {
     public const string StartMarker = "<!-- CIAI:BADGES:START -->";
     public const string EndMarker = "<!-- CIAI:BADGES:END -->";
