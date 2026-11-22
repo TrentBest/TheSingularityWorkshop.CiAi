@@ -89,6 +89,24 @@ internal static class CiAiPipelineGateExpressionContractTests
             Throws<ArgumentException>(() => CiAiPipelineGateExpression.ForPipeline("PipelineA", nested));
         });
 
+        Check("expression node count is bounded", () =>
+        {
+            var leaves = Enumerable.Range(0, CiAiPipelineGateExpression.MaximumNodes)
+                .Select(index => (CiAiGateExpression)new CiAiRepositoryGateReference(
+                    "gate-" + index, "TrentBest/Repo" + index, "candidate-" + index, new string('a', 40)))
+                .ToArray();
+            Throws<ArgumentException>(() => CiAiPipelineGateExpression.ForPipeline(
+                "PipelineA", new CiAiAllOf(leaves)));
+        });
+
+        Check("gate and candidate identities reject control characters", () =>
+        {
+            Throws<ArgumentException>(() => new CiAiRepositoryGateReference(
+                "gate\ninvalid", "TrentBest/B", "candidate", new string('b', 40)));
+            Throws<ArgumentException>(() => new CiAiRepositoryGateReference(
+                "gate", "TrentBest/B", "candidate\ninvalid", new string('b', 40)));
+        });
+
         Check("empty AND/OR nodes are rejected", () =>
         {
             Throws<ArgumentException>(() => new CiAiAllOf(Array.Empty<CiAiGateExpression>()));
