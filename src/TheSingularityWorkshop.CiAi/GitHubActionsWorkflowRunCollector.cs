@@ -16,6 +16,14 @@ public sealed record CiWorkflowRunObservation(
 
     /// <summary>The exact provider status string, retained for diagnosis when GitHub adds new values.</summary>
     public string ProviderStatus { get; init; } = string.Empty;
+
+    /// <summary>Head/base identities independently returned by GitHub for each associated pull request.</summary>
+    public IReadOnlyList<CiProviderPullRequestObservation> PullRequestIdentities { get; init; }
+        = Array.Empty<CiProviderPullRequestObservation>();
+
+    public bool PullRequestIdentitiesComplete
+        => Event != "pull_request" || PullRequestNumbers.Count > 0 &&
+            PullRequestIdentities.Count == PullRequestNumbers.Count;
 }
 
 /// <summary>A bounded page collection. Truncation is explicit and must not be interpreted as complete discovery.</summary>
@@ -188,19 +196,42 @@ public sealed class GitHubActionsWorkflowRunCollector
         }
         var snapshot = new CiRunSnapshot(repository, runId, name, sha, status, conclusion, url, updatedAt);
         var prNumbers = new List<int>();
+        var prIdentities = new List<CiProviderPullRequestObservation>();
         if (root.TryGetProperty("pull_requests", out var prs) && prs.ValueKind == JsonValueKind.Array)
         {
             foreach (var pr in prs.EnumerateArray())
-                if (pr.TryGetProperty("number", out var number) && number.ValueKind == JsonValueKind.Number &&
-                    number.TryGetInt32(out var prNumber) && prNumber > 0)
-                    prNumbers.Add(prNumber);
+            {
+                if (!pr.TryGetProperty("number", out var number) || number.ValueKind != JsonValueKind.Number ||
+                    !number.TryGetInt32(out var prNumber) || prNumber <= 0)
+                    continue;
+                prNumbers.Add(prNumber);
+                if (!pr.TryGetProperty("head", out var head) || head.ValueKind != JsonValueKind.Object ||
+                    !pr.TryGetProperty("base", out var @base) || @base.ValueKind != JsonValueKind.Object)
+                    continue;
+                if (!head.TryGetProperty("ref", out var headRef) || headRef.ValueKind != JsonValueKind.String ||
+                    !head.TryGetProperty("sha", out var headSha) || headSha.ValueKind != JsonValueKind.String ||
+                    !@base.TryGetProperty("ref", out var baseRef) || baseRef.ValueKind != JsonValueKind.String ||
+                    !@base.TryGetProperty("sha", out var baseSha) || baseSha.ValueKind != JsonValueKind.String)
+                    continue;
+                try
+                {
+                    prIdentities.Add(new CiProviderPullRequestObservation(
+                        prNumber, headRef.GetString()!, headSha.GetString()!,
+                        baseRef.GetString()!, baseSha.GetString()!));
+                }
+                catch (ArgumentException)
+                {
+                    // Keep the run observable, but do not manufacture a complete PR identity.
+                }
+            }
         }
 
         return new CiWorkflowRunObservation(snapshot, attempt, path, eventName,
             Array.AsReadOnly(prNumbers.Distinct().ToArray()))
         {
             ProviderStatus = statusText,
-            WorkflowRef = workflowRef
+            WorkflowRef = workflowRef,
+            PullRequestIdentities = Array.AsReadOnly(prIdentities.ToArray())
         };
     }
 
