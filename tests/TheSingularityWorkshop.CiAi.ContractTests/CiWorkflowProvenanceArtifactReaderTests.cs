@@ -120,7 +120,7 @@ internal static class CiWorkflowProvenanceArtifactReaderTests
             raWWarArchive, raWWarArtifact, CiWorkflowObserverProfile.RaWWar,
             "TrentBest/raWWar", 44892052947, 1,
             raWWarHead, raWWarMerge, raWWarMerge,
-            "TrentBest/raWWar/.github/workflows/build.yml@refs/pull/10/merge",
+            "refs/pull/10/merge",
             raWWarMerge, "pull_request", "refs/pull/10/merge",
             new CiProviderPullRequestObservation(
                 10, "integration/autonomous-development-pipeline", raWWarHead,
