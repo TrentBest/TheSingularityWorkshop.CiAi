@@ -20,16 +20,16 @@ The first read-only evidence lane is implemented on SURPS `development`.
 
 | Evidence | Exact result |
 |---|---|
-| SURPS target commit | `5086151e0724b3456572ea430561912e45ae3426` |
+| SURPS target commit | `4c135bc5b7109515e55bb1f1e3476a550d4da723` |
 | CiAi observer source pin | `66af59177bbe67275915a4e11fd66ee05166fb6a` |
 | AgentOnboarding contract | `ciai.agent-onboarding.v1` — **ELIGIBLE** |
 | Onboarding content SHA-256 | `bab414bb994cb4b45198b614e8e7f195780b28aaad25d3dce151f7bca0bd2c0e` |
-| CiAi evidence workflow | [run #45065198390](https://github.com/TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem/actions/runs/45065198390) — succeeded |
-| Authoritative Pages workflow | [run #45065198365](https://github.com/TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem/actions/runs/45065198365) — terminal, failed |
+| CiAi evidence workflow | [run #45065589819](https://github.com/TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem/actions/runs/45065589819) — succeeded |
+| Authoritative Pages workflow | [run #45065589875](https://github.com/TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem/actions/runs/45065589875) — terminal, failed |
 
 The CiAi report marked discovery complete, required evidence complete, and the Pages workflow terminal. It correctly marked required workflow success false. The Pages build/upload job passed; the deployment job failed. The deployment root cause remains unresolved, so the hosted site is not yet considered verified.
 
-The CiAi observer workflow's own success means it built the pinned observer, evaluated the exact commit's onboarding document, generated and schema-checked the evidence report, and uploaded the report. It does **not** mean the Pages deployment succeeded.
+The CiAi observer workflow's own success means it built the pinned observer, evaluated the exact commit's onboarding document, generated and schema-checked the evidence report, and uploaded both the observation report and the admission result (artifact ID `14770094697`). It does **not** mean the Pages deployment succeeded.
 
 ## Evidence workflow
 
