@@ -37,6 +37,13 @@ public sealed record CiAiPipelineGateExpression
     public CiAiGateExpression Root { get; }
     public IReadOnlyList<CiAiRepositoryGateReference> Leaves { get; }
 
+    /// <summary>Returns whether a verified leaf-gate event should trigger reevaluation of this pipeline.</summary>
+    public bool DependsOnGate(string gateId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(gateId);
+        return Leaves.Any(leaf => string.Equals(leaf.GateId, gateId, StringComparison.Ordinal));
+    }
+
     public static CiAiPipelineGateExpression ForPipeline(string pipeline, CiAiGateExpression root) =>
         new(pipeline, root);
 
