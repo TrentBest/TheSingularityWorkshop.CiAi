@@ -61,6 +61,14 @@ internal static class CiAiRepositoryCompositionTests
                 preview.Changes.Select(change => change.RelativePath).SequenceEqual(
                     preview.Changes.Select(change => change.RelativePath).OrderBy(path => path, StringComparer.Ordinal)),
                 "README preview was not complete and deterministically ordered");
+            Assert(File.ReadAllText(Path.Combine(temporaryRoot, "README.md")) == "# Root\\n",
+                "README preview modified a file before explicit apply");
+            var nestedReadme = Path.Combine(temporaryRoot, "docs", "readme.MD");
+            File.WriteAllText(nestedReadme, "# Changed after preview\\n");
+            Throws<IOException>(() => CiAiReadmeBadgeStamper.ApplyReadmeStampPlan(preview));
+            Assert(File.ReadAllText(Path.Combine(temporaryRoot, "README.md")) == "# Root\\n",
+                "stale-plan rejection partially applied an earlier README");
+            File.WriteAllText(nestedReadme, "# Nested\\n");
             Assert(CiAiReadmeBadgeStamper.ApplyReadmeStampPlan(preview) == 2,
                 "explicit README plan apply did not update both owned files");
             Assert(CiAiReadmeBadgeStamper.StampRepositoryReadmes(temporaryRoot, configuration) == 0,
