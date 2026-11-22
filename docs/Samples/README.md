@@ -25,6 +25,8 @@ These are **integration plans**, not assertions that every repository already ha
 
 ## Repository samples
 
+- [SingularityUniversalRoleplayingSystem](./SingularityUniversalRoleplayingSystem.md) — roleplaying ontology; exact-commit AgentOnboarding v1 admission is green, while its first Pages deployment evidence is correctly reported failed and remains under investigation.
+
 - [Tutorials](./Tutorials.md) — Tutorials/examples repository; CiAi should treat tutorial builds as reproducibility and documentation evidence.
 - [TrentCoRetailManager](./TrentCoRetailManager.md) — Legacy retail-management application; integrate only if it remains actively maintained, with its own build/test evidence.
 - [ConstructorBots](./ConstructorBots.md) — Bot/automation project; validate its declared runtime and safety tests before joining ecosystem integration.
