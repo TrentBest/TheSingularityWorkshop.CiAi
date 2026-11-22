@@ -33,7 +33,7 @@ dotnet run --project tools/CiAi.Repository -- --stamp-readmes
 dotnet run --project tools/CiAi.Repository -- --check-readmes
 ```
 
-The checked-in `.ciai/repository.json` is the declarative source of enabled badges, dependencies, and extensions. The CLI validates the manifest repository against `GITHUB_REPOSITORY` in CI. It stamps all repository-owned `README.md` files recursively (case-insensitive), excluding Git metadata, generated directories, and nested Git submodules. The reusable workflow below runs the read-only check in CI; it never commits to a canonical branch.
+The checked-in `.ciai/repository.json` is the declarative source of enabled badges, dependencies, extensions, and an optional built-in `observerProfile`. The profile binds the workflow path, required job, artifact templates, and archive entry names. `WithObserverProfile(...)` exposes the same contract in the fluent API. The CLI validates the manifest repository against `GITHUB_REPOSITORY` in CI. It stamps all repository-owned `README.md` files recursively (case-insensitive), excluding Git metadata, generated directories, and nested Git submodules. The reusable workflow below runs the read-only check in CI; it never commits to a canonical branch.
 
 A consumer opts in with a small caller workflow:
 
