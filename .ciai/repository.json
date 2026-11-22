@@ -1,0 +1,31 @@
+{
+  "schema": "ciai.repository.v1",
+  "repository": "TrentBest/TheSingularityWorkshop.CiAi",
+  "badges": [
+    {
+      "id": "sith-policy",
+      "label": "Sith Policy",
+      "workflowFile": "sith-policy.yml"
+    }
+  ],
+  "dependencies": [
+    {
+      "repository": "TrentBest/TheSingularityWorkshop.CommandAi",
+      "capability": "command-vocabulary"
+    },
+    {
+      "repository": "TrentBest/TheSingularityWorkshop.GrammarAi",
+      "capability": "grammar-vocabulary"
+    },
+    {
+      "repository": "TrentBest/TheSingularityWorkshop.ProtocolAi",
+      "capability": "protocol-vocabulary"
+    }
+  ],
+  "extensions": [
+    {
+      "id": "Gauntlet.Registrar",
+      "version": "1"
+    }
+  ]
+}
