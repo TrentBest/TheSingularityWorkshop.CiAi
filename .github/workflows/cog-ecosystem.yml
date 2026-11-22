@@ -37,6 +37,7 @@ jobs:
       - name: Checkout CiAi
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           path: CiAi
           submodules: recursive
       - name: Verify pinned ProtocolAi source revision
@@ -116,6 +117,7 @@ jobs:
       - name: Checkout CiAi
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           path: CiAi
           submodules: recursive
       - name: Verify pinned GrammarAi source revision
@@ -178,5 +180,7 @@ jobs:
         working-directory: CiAi
         env:
           CIAI_VERIFY_PROVIDER_EVIDENCE: "1"
+          CIAI_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          CIAI_CANDIDATE_REF: ${{ github.event.pull_request.head.ref && format('refs/heads/{0}', github.event.pull_request.head.ref) || github.ref }}
           GH_TOKEN: ${{ github.token }}
         run: dotnet run --project integration/CogEcosystem.ContractTests --configuration Release --no-build
