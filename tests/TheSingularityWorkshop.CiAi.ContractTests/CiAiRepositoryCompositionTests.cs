@@ -56,6 +56,7 @@ internal static class CiAiRepositoryCompositionTests
         const string repository = "TrentBest/raWWar";
         const string workflowPath = ".github/workflows/build.yml";
         const string workflowSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        const string providerHeadSha = "dddddddddddddddddddddddddddddddddddddddd";
         const string eventSha = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
         const string checkoutSha = "cccccccccccccccccccccccccccccccccccccccc";
         var provenanceJson = $$"""
@@ -74,7 +75,7 @@ internal static class CiAiRepositoryCompositionTests
             "sha": "{{eventSha}}",
             "pullRequest": {
               "number": 10,
-              "head": { "ref": "feature/integration", "sha": "{{eventSha}}" },
+              "head": { "ref": "feature/integration", "sha": "{{providerHeadSha}}" },
               "base": { "ref": "development", "sha": "{{checkoutSha}}" }
             }
           },
@@ -95,6 +96,25 @@ internal static class CiAiRepositoryCompositionTests
         Assert(trusted.IsTrusted && trusted.IsFor(provenance) &&
             trusted.ReasonCode == "workflow-definition.matches-approved-protected-content",
             "matching protected workflow content was not trusted with exact identity");
+        var pullRequestIdentity = new CiPullRequestProviderIdentity(
+            10, "feature/integration", providerHeadSha,
+            "development", checkoutSha, eventSha, new[] { providerHeadSha, checkoutSha });
+        Assert(pullRequestIdentity.Matches(provenance),
+            "provider-observed PR head/base and merge-parent identities did not match provenance");
+        Throws<ArgumentException>(() => new CiPullRequestProviderIdentity(
+            10, "feature/integration", providerHeadSha,
+            "development", checkoutSha, eventSha, new[] { providerHeadSha, new string('e', 40) }));
+        var observedRun = new CiWorkflowRunEvidenceObservation(
+            repository, workflowPath, 123, 1, "refs/pull/10/merge", providerHeadSha,
+            "pull_request", "Build", CiRunStatus.Completed, CiRunConclusion.Success,
+            new Uri("https://github.com/TrentBest/raWWar/actions/runs/123"),
+            DateTimeOffset.Parse("2026-11-21T12:00:00Z"),
+            Array.Empty<CiWorkflowJobObservation>(), true, true);
+        var trustedPacket = CiWorkflowEvidencePacket.FromValidatedProvenance(
+            observedRun, provenance, trusted, pullRequestIdentity);
+        Assert(trustedPacket.WorkflowDefinitionTrusted && trustedPacket.CheckoutVerified &&
+            trustedPacket.CandidateSha == eventSha,
+            "trusted PR evidence did not preserve the verified merge checkout as the candidate SHA");
         var untrusted = trustPolicy.Evaluate(provenance, Encoding.UTF8.GetBytes("name: candidate workflow"), approvedBytes);
         Assert(!untrusted.IsTrusted &&
             untrusted.ReasonCode == "workflow-definition.content-mismatch" &&
