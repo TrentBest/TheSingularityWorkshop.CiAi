@@ -123,6 +123,9 @@ public sealed record CiWorkflowRunEvidenceObservation
     public bool JobsComplete { get; }
     public IReadOnlyList<Uri> ArtifactReferences { get; }
 
+    /// <summary>Host-verified pull-request merge and parent identity, when the run is a PR event.</summary>
+    public CiPullRequestProviderIdentity? ProviderPullRequestIdentity { get; init; }
+
     /// <summary>Compatibility aliases for GitHub's run-level head fields; these are workflow provenance, not candidate provenance.</summary>
     [JsonIgnore]
     public string HeadRef => WorkflowRef;
