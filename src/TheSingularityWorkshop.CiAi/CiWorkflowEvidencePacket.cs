@@ -110,6 +110,19 @@ public sealed record CiWorkflowEvidencePacket
             candidateCheckoutEvidence);
     }
 
+    /// <summary>Builds evidence using a trust decision produced by the protected workflow-definition policy.</summary>
+    public static CiWorkflowEvidencePacket FromValidatedProvenance(
+        CiWorkflowRunEvidenceObservation observedRun,
+        CiWorkflowProvenanceRecord provenance,
+        CiWorkflowDefinitionTrustDecision trustDecision,
+        CiWorkflowCandidateCheckoutEvidence? candidateCheckoutEvidence = null)
+    {
+        ArgumentNullException.ThrowIfNull(trustDecision);
+        if (!trustDecision.IsFor(provenance))
+            throw new InvalidDataException("Workflow trust decision does not identify this exact provenance record.");
+        return FromValidatedProvenance(observedRun, provenance, trustDecision.IsTrusted, candidateCheckoutEvidence);
+    }
+
     public static CiWorkflowEvidencePacket FromValidatedProvenance(
         CiWorkflowRunEvidenceObservation observedRun,
         CiWorkflowProvenanceRecord provenance,
