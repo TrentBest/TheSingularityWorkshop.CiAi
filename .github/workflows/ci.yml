@@ -346,4 +346,4 @@ jobs:
   repository-badges:
     uses: ./.github/workflows/ciai-repository.yml
     with:
-      ciai-ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
+      ciai-ref: ${{ github.sha }}
