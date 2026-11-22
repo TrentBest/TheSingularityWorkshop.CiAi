@@ -87,7 +87,7 @@ public sealed record CiWorkflowObserverProfile
         "results.trx",
         "GitHub Actions",
         "build-and-contracts",
-        "Build and contract verification");
+        "build-and-contracts");
 
     private static string Expand(string template, long runId, int attempt)
     {
