@@ -120,11 +120,11 @@ internal static class CiAiRepositoryBuilderContractTests
         {
             Throws<ArgumentOutOfRangeException>(() => new CiAiAdpSettings(maximumRepairAttempts: 11));
             Throws<ArgumentOutOfRangeException>(() => CiAi.ForRepository("TrentBest/A")
-                .WithLLMAllocation(a => a.SetMaximumConcurrentCalls(0)));
+                .WithLLMAllocation(a => a.SetProvider("OpenAI").SetModel("gpt").SetMaximumConcurrentCalls(0)));
             Throws<ArgumentOutOfRangeException>(() => CiAi.ForRepository("TrentBest/A")
-                .WithLLMAllocation(a => a.SetMaximumTokensPerWindow(0)));
+                .WithLLMAllocation(a => a.SetProvider("OpenAI").SetModel("gpt").SetMaximumTokensPerWindow(0)));
             Throws<ArgumentOutOfRangeException>(() => CiAi.ForRepository("TrentBest/A")
-                .WithLLMAllocation(a => a.SetPriority((CiAiLlmPriority)99)));
+                .WithLLMAllocation(a => a.SetProvider("OpenAI").SetModel("gpt").SetPriority((CiAiLlmPriority)99)));
             Throws<InvalidOperationException>(() => CiAi.ForRepository("TrentBest/A")
                 .WithLLMAllocation(_ => { }));
         });
