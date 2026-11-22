@@ -41,7 +41,10 @@ public static partial class CiAiReadmeBadgeStamper
             foreach (var directory in Directory.EnumerateDirectories(current, "*", SearchOption.TopDirectoryOnly))
             {
                 var name = Path.GetFileName(directory);
-                if (excluded.Contains(name) || (File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0)
+                if (excluded.Contains(name) ||
+                    File.Exists(Path.Combine(directory, ".git")) ||
+                    Directory.Exists(Path.Combine(directory, ".git")) ||
+                    (File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0)
                     continue;
                 pending.Push(directory);
             }
