@@ -3,7 +3,9 @@
 
 # The Singularity Workshop CiAi
 
-[![Sith Policy](assets/sith-policy.svg)](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/workflows/sith-policy.yml)
+<!-- CIAI:BADGES:START -->
+[![Sith Policy](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/workflows/sith-policy.yml/badge.svg)](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/workflows/sith-policy.yml)
+<!-- CIAI:BADGES:END -->
 
 **CiAi exposes CI to AI. It is not an AI-powered CI runner.** The lowercase `i` is intentional: CiAi supplies bounded capabilities and verified facts that an LLM can use.
 
