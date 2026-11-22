@@ -21,6 +21,39 @@ internal static class CiAiRepositoryCompositionTests
             "Sith badge did not use the live workflow SVG");
         Assert(configuration.ToJson() == configuration.ToJson(),
             "repository manifest serialization is not deterministic");
+        var roundTrip = CiAiRepositoryConfiguration.ParseJson(configuration.ToJson());
+        Assert(roundTrip.Repository == configuration.Repository &&
+            roundTrip.Badges.Single().Id == "sith-policy" &&
+            roundTrip.Dependencies.Single().Repository == "TrentBest/TheSingularityWorkshop.FSM_API" &&
+            roundTrip.Extensions.Single().Id == "Gauntlet.Registrar",
+            "repository manifest parser did not round-trip the fluent configuration");
+
+        var temporaryRoot = Path.Combine(Path.GetTempPath(), "ciai-readmes-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(temporaryRoot);
+            Directory.CreateDirectory(Path.Combine(temporaryRoot, "docs"));
+            Directory.CreateDirectory(Path.Combine(temporaryRoot, ".git"));
+            Directory.CreateDirectory(Path.Combine(temporaryRoot, "external", "Submodule"));
+            File.WriteAllText(Path.Combine(temporaryRoot, "README.md"), "# Root\\n");
+            File.WriteAllText(Path.Combine(temporaryRoot, "docs", "readme.MD"), "# Nested\\n");
+            File.WriteAllText(Path.Combine(temporaryRoot, ".git", "README.md"), "# Git metadata\\n");
+            File.WriteAllText(Path.Combine(temporaryRoot, "external", "Submodule", ".git"), "gitdir: ../.git/modules/Submodule");
+            File.WriteAllText(Path.Combine(temporaryRoot, "external", "Submodule", "README.md"), "# Submodule\\n");
+            Assert(CiAiReadmeBadgeStamper.FindUnstampedRepositoryReadmes(temporaryRoot, configuration).Count == 2,
+                "readme checker did not discover case-insensitive nested README.md files or exclude metadata/submodules");
+            Assert(CiAiReadmeBadgeStamper.StampRepositoryReadmes(temporaryRoot, configuration) == 2,
+                "repository stamper did not update both owned README.md files");
+            Assert(CiAiReadmeBadgeStamper.FindUnstampedRepositoryReadmes(temporaryRoot, configuration).Count == 0,
+                "readme checker still reports drift after stamping");
+            Assert(File.ReadAllText(Path.Combine(temporaryRoot, ".git", "README.md")) == "# Git metadata\\n" &&
+                File.ReadAllText(Path.Combine(temporaryRoot, "external", "Submodule", "README.md")) == "# Submodule\\n",
+                "README stamping modified Git metadata or a nested submodule");
+        }
+        finally
+        {
+            if (Directory.Exists(temporaryRoot)) Directory.Delete(temporaryRoot, recursive: true);
+        }
 
         Throws<InvalidOperationException>(() =>
             CiAi.WithBadge(Badges.SithPolicy()).WithBadge(Badges.SithPolicy()));
