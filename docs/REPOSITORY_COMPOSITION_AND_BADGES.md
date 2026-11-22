@@ -62,3 +62,6 @@ The current raWWar PR #10 fixture remains structurally observable but non-action
 CiAi enrollment will be driven by an explicit repository registry with an owner-approved scope and per-repository profile. Start with active Workshop source repositories and proven pilots; then expand to dependency-free repositories; finally add dependency-heavy repositories after dependency graph and release-gate evidence is reliable. Legacy bots, historical snapshots, benchmarks, private research repositories, and unrelated repositories must be classified before opt-in.
 
 No package publication, merge, release, deployment, canonical-branch mutation, or branch deletion follows from enrollment or a passing badge.
+
+
+The current implementation branch is undergoing exact-head contract verification; this document remains a proposed opt-in contract until its PR is reviewed and accepted.
