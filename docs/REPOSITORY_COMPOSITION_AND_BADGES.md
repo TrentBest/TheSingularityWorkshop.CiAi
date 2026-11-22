@@ -9,7 +9,7 @@ CiAi configuration is declarative. It describes repository capabilities; it does
 \`\`\`csharp
 var configuration = CiAi
     .WithBadge(Badges.SithPolicy())
-    .WithDependency(CiAi.Resolve("TrentBest/TheSingularityWorkshop.FSM_API", "runtime"))
+    .WithDependency(CiAi.Resolve("FSM_API", "runtime"))
     .ExtendWith(Gauntlet.Registrar())
     .Build("TrentBest/TheSingularityWorkshop.CiAi");
 \`\`\`

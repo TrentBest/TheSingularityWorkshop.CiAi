@@ -11,7 +11,11 @@ public static class CiAi
     public static CiAiRepositoryBuilder WithBadge(CiAiBadgeDefinition badge)
         => new CiAiRepositoryBuilder().WithBadge(badge);
 
-    /// <summary>Creates a typed dependency reference. Resolution is declarative; it performs no network or repository mutation.</summary>
+    /// <summary>
+    /// Creates a typed dependency reference. A short repository name resolves to the owner of
+    /// the repository passed to Build; an owner/repository identity remains explicit.
+    /// Resolution is declarative and performs no network or repository mutation.
+    /// </summary>
     public static CiAiDependencyReference Resolve(string repository, string? capability = null)
         => new(repository, capability);
 }
@@ -71,8 +75,8 @@ public sealed record CiAiDependencyReference
 {
     public CiAiDependencyReference(string repository, string? capability = null)
     {
-        if (!RepositoryIdentity.IsValid(repository))
-            throw new ArgumentException("Dependency must use canonical owner/repository identity.", nameof(repository));
+        if (!RepositoryIdentity.IsValid(repository) && !IsShortRepositoryName(repository))
+            throw new ArgumentException("Dependency must be a repository name or canonical owner/repository identity.", nameof(repository));
         if (capability is { Length: > 100 } || capability?.Any(char.IsControl) == true)
             throw new ArgumentException("Dependency capability is invalid.", nameof(capability));
         Repository = repository;
@@ -81,6 +85,15 @@ public sealed record CiAiDependencyReference
 
     public string Repository { get; }
     public string? Capability { get; }
+
+    internal CiAiDependencyReference ResolveForOwner(string owner)
+        => RepositoryIdentity.IsValid(Repository) ? this : new CiAiDependencyReference($"{owner}/{Repository}", Capability);
+
+    private static bool IsShortRepositoryName(string value)
+        => !string.IsNullOrWhiteSpace(value) &&
+           value.Length <= 100 &&
+           value is not "." and not ".." &&
+           value.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.');
 }
 
 /// <summary>A declarative extension point. Extensions are identifiers and versions, never executable model-authored code.</summary>
@@ -199,11 +212,30 @@ public sealed class CiAiRepositoryBuilder
         return new(_badges, _dependencies, _extensions.Append(extension).ToArray());
     }
 
+    private sealed class StringTupleComparer : IEqualityComparer<(string Repository, string? Capability)>
+    {
+        public static StringTupleComparer Instance { get; } = new();
+        public bool Equals((string Repository, string? Capability) x, (string Repository, string? Capability) y)
+            => string.Equals(x.Repository, y.Repository, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(x.Capability, y.Capability, StringComparison.Ordinal);
+        public int GetHashCode((string Repository, string? Capability) obj)
+            => HashCode.Combine(StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Repository),
+                obj.Capability is null ? 0 : StringComparer.Ordinal.GetHashCode(obj.Capability));
+    }
+
     public CiAiRepositoryConfiguration Build(string repository)
     {
         if (!RepositoryIdentity.IsValid(repository))
             throw new ArgumentException("Repository must use canonical owner/repository identity.", nameof(repository));
-        return new(repository, _badges, _dependencies, _extensions);
+        var owner = repository[..repository.IndexOf('/')];
+        var dependencies = _dependencies.Select(item => item.ResolveForOwner(owner)).ToArray();
+        if (dependencies.Any(item => string.Equals(item.Repository, repository, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("A repository cannot declare itself as a dependency.");
+        var duplicate = dependencies.GroupBy(item => (item.Repository, item.Capability), StringTupleComparer.Instance)
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicate is not null)
+            throw new InvalidOperationException($"Dependency '{duplicate.Key.Repository}' is declared more than once.");
+        return new(repository, _badges, dependencies, _extensions);
     }
 }
 

@@ -28,6 +28,18 @@ internal static class CiAiRepositoryCompositionTests
             roundTrip.Extensions.Single().Id == "Gauntlet.Registrar",
             "repository manifest parser did not round-trip the fluent configuration");
 
+        var shortNameConfiguration = CiAi
+            .WithBadge(Badges.SithPolicy())
+            .WithDependency(CiAi.Resolve("OtherRepo", "runtime"))
+            .Build("TrentBest/ThisRepo");
+        Assert(shortNameConfiguration.Dependencies.Single().Repository == "TrentBest/OtherRepo",
+            "short dependency name was not resolved against the configured repository owner");
+        var externalConfiguration = CiAi
+            .WithDependency(CiAi.Resolve("AnotherOwner/ExternalRepo", "contract"))
+            .Build("TrentBest/ThisRepo");
+        Assert(externalConfiguration.Dependencies.Single().Repository == "AnotherOwner/ExternalRepo",
+            "explicit external owner/repository identity was not preserved");
+
         var temporaryRoot = Path.Combine(Path.GetTempPath(), "ciai-readmes-" + Guid.NewGuid().ToString("N"));
         try
         {
@@ -57,7 +69,7 @@ internal static class CiAiRepositoryCompositionTests
 
         Throws<InvalidOperationException>(() =>
             CiAi.WithBadge(Badges.SithPolicy()).WithBadge(Badges.SithPolicy()));
-        Throws<ArgumentException>(() => CiAi.Resolve("not-a-repository"));
+        Throws<ArgumentException>(() => CiAi.Resolve("bad/repository/identity"));
 
         const string readme = "# Example\n\nIntroductory text.\n\n## More\n";
         var stamped = CiAiReadmeBadgeStamper.Stamp(readme, configuration);
