@@ -48,7 +48,7 @@ on:
         default: ""
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ciai-contract-${{ github.ref }}-${{ inputs.target_branch || 'default' }}
@@ -347,3 +347,4 @@ jobs:
     uses: ./.github/workflows/ciai-repository.yml
     with:
       ciai-ref: ${{ github.sha }}
+      stamp-pr: true
