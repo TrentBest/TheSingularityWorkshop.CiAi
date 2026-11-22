@@ -89,6 +89,29 @@ public sealed record CiWorkflowObserverProfile
         "build-and-contracts",
         "build-and-contracts");
 
+    public static CiWorkflowObserverProfile AnyApp { get; } = new(
+        "anyapp-development-v1",
+        ".github/workflows/dotnet.yml",
+        "ciai-workflow-provenance-{runId}-{attempt}",
+        "ciai-test-results-{runId}-{attempt}-build",
+        "ciai-workflow-provenance.json",
+        "anyapp.trx",
+        "AnyApp .NET tests",
+        "build",
+        "build");
+
+    public static CiWorkflowObserverProfile Resolve(string id)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        return id switch
+        {
+            "ciai-default" => CiAiDefault,
+            "rawwar-contracts-v1" => RaWWar,
+            "anyapp-development-v1" => AnyApp,
+            _ => throw new InvalidDataException($"Unknown built-in CiAi observer profile '{id}'.")
+        };
+    }
+
     private static string Expand(string template, long runId, int attempt)
     {
         if (runId <= 0) throw new ArgumentOutOfRangeException(nameof(runId));

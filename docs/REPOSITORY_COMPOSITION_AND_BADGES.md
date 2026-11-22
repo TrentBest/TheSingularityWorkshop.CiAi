@@ -10,6 +10,7 @@ CiAi configuration is declarative. It describes repository capabilities; it does
 var configuration = CiAi
     .WithBadge(Badges.SithPolicy())
     .WithDependency(CiAi.Resolve("FSM_API", "runtime"))
+    .WithObserverProfile(CiWorkflowObserverProfile.CiAiDefault)
     .ExtendWith(Gauntlet.Registrar())
     .Build("TrentBest/TheSingularityWorkshop.CiAi");
 \`\`\`

@@ -14,7 +14,7 @@ A repository may be enrolled at level 1 without being trusted for level 2 or aut
 
 | Repository | Current state | Evidence / next step |
 |---|---|---|
-| `TheSingularityWorkshop.CiAi` | Self-hosting draft PR #77 | Manifest, fluent configuration, README stamper/CLI, reusable workflow, observer profiles, trust and PR identity contracts. Exact head `ade96a15bf3e97659c62a1aac3339179c872b9a5` passed 74 individual checks / 111 records / 0 failures. |
+| `TheSingularityWorkshop.CiAi` | Self-hosting draft PR #77 | Manifest, fluent configuration, README stamper/CLI, reusable workflow, observer profiles, trust and PR identity contracts. Exact head `ade96a15bf3e97659c62a1aac3339179c872b9a5` passed 74 individual checks / 111 records / 0 failures (latest passing run before the observer-profile manifest extension). |
 | `raWWar` | Repository-contract draft PR #10 | 14 README files stamped; `MicroBundleDomain` dependency declared; reusable workflow pinned to the exact CiAi commit. Repository contract, build, and Pages PR runs are green. External observer profile exists, but its PR evidence remains non-actionable until host-side workflow and merge-parent identities are independently bound. |
 | `AnyApp` | Repository-contract draft PR #63 | 2 README files stamped; dependency manifest reflects direct package and source-MicroBundle references; reusable workflow and existing exact-run observer are pinned to the exact CiAi commit. Repository-contract runs are green; Windows .NET PR validation is still running. |
 

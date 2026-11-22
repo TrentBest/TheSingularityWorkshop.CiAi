@@ -1,6 +1,7 @@
 {
   "schema": "ciai.repository.v1",
   "repository": "TrentBest/TheSingularityWorkshop.CiAi",
+  "observerProfile": "ciai-default",
   "badges": [
     {
       "id": "sith-policy",

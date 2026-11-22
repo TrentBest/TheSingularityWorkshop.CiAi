@@ -41,6 +41,14 @@ public sealed partial record CiAiRepositoryConfiguration
             builder = builder.ExtendWith(new CiAiExtensionDefinition(
                 RequiredString(extension, "id"), RequiredString(extension, "version")));
 
+        if (root.TryGetProperty("observerProfile", out var observerProfile))
+        {
+            if (observerProfile.ValueKind == JsonValueKind.String)
+                builder = builder.WithObserverProfile(CiWorkflowObserverProfile.Resolve(observerProfile.GetString()!));
+            else if (observerProfile.ValueKind != JsonValueKind.Null)
+                throw new InvalidDataException("observerProfile must be a built-in profile ID or null.");
+        }
+
         return builder.Build(repository);
     }
 

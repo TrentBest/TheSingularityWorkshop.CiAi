@@ -26,6 +26,10 @@ public static class CiAi
     /// <summary>Starts a repository configuration with one declarative extension.</summary>
     public static CiAiRepositoryBuilder ExtendWith(CiAiExtensionDefinition extension)
         => new CiAiRepositoryBuilder().ExtendWith(extension);
+
+    /// <summary>Starts a repository configuration with a built-in or host-defined observer profile.</summary>
+    public static CiAiRepositoryBuilder WithObserverProfile(CiWorkflowObserverProfile profile)
+        => new CiAiRepositoryBuilder().WithObserverProfile(profile);
 }
 
 /// <summary>A declarative, validated badge definition. URLs are derived only when a repository is bound.</summary>
@@ -137,18 +141,25 @@ public sealed partial record CiAiRepositoryConfiguration
         string repository,
         IReadOnlyList<CiAiBadgeDefinition> badges,
         IReadOnlyList<CiAiDependencyReference> dependencies,
-        IReadOnlyList<CiAiExtensionDefinition> extensions)
+        IReadOnlyList<CiAiExtensionDefinition> extensions,
+        CiWorkflowObserverProfile? observerProfile)
     {
         Repository = repository;
         Badges = Array.AsReadOnly(badges.ToArray());
         Dependencies = Array.AsReadOnly(dependencies.ToArray());
         Extensions = Array.AsReadOnly(extensions.ToArray());
+        ObserverProfile = observerProfile;
     }
 
     public string Repository { get; }
     public IReadOnlyList<CiAiBadgeDefinition> Badges { get; }
     public IReadOnlyList<CiAiDependencyReference> Dependencies { get; }
     public IReadOnlyList<CiAiExtensionDefinition> Extensions { get; }
+    public CiWorkflowObserverProfile? ObserverProfile { get; }
+
+    public CiRequiredJobPolicy CreateRequiredJobPolicy(long runId, int attempt)
+        => ObserverProfile?.CreateRequiredJobPolicy(runId, attempt)
+            ?? throw new InvalidOperationException("No observer profile is configured for this repository.");
 
     /// <summary>Stable JSON representation suitable for a checked-in repository manifest.</summary>
     public string ToJson()
@@ -157,6 +168,7 @@ public sealed partial record CiAiRepositoryConfiguration
         {
             schema = "ciai.repository.v1",
             repository = Repository,
+            observerProfile = ObserverProfile?.Id,
             badges = Badges.OrderBy(x => x.Id, StringComparer.Ordinal).Select(x => new
             {
                 id = x.Id, label = x.Label, workflowFile = x.WorkflowFile
@@ -181,18 +193,21 @@ public sealed class CiAiRepositoryBuilder
     private readonly CiAiBadgeDefinition[] _badges;
     private readonly CiAiDependencyReference[] _dependencies;
     private readonly CiAiExtensionDefinition[] _extensions;
+    private readonly CiWorkflowObserverProfile? _observerProfile;
 
     public CiAiRepositoryBuilder()
-        : this(Array.Empty<CiAiBadgeDefinition>(), Array.Empty<CiAiDependencyReference>(), Array.Empty<CiAiExtensionDefinition>()) { }
+        : this(Array.Empty<CiAiBadgeDefinition>(), Array.Empty<CiAiDependencyReference>(), Array.Empty<CiAiExtensionDefinition>(), null) { }
 
     private CiAiRepositoryBuilder(
         CiAiBadgeDefinition[] badges,
         CiAiDependencyReference[] dependencies,
-        CiAiExtensionDefinition[] extensions)
+        CiAiExtensionDefinition[] extensions,
+        CiWorkflowObserverProfile? observerProfile)
     {
         _badges = badges;
         _dependencies = dependencies;
         _extensions = extensions;
+        _observerProfile = observerProfile;
     }
 
     public CiAiRepositoryBuilder WithBadge(CiAiBadgeDefinition badge)
@@ -200,7 +215,7 @@ public sealed class CiAiRepositoryBuilder
         ArgumentNullException.ThrowIfNull(badge);
         if (_badges.Any(x => string.Equals(x.Id, badge.Id, StringComparison.Ordinal)))
             throw new InvalidOperationException($"Badge '{badge.Id}' is already enabled.");
-        return new(_badges.Append(badge).ToArray(), _dependencies, _extensions);
+        return new(_badges.Append(badge).ToArray(), _dependencies, _extensions, _observerProfile);
     }
 
     public CiAiRepositoryBuilder WithDependency(CiAiDependencyReference dependency)
@@ -209,7 +224,7 @@ public sealed class CiAiRepositoryBuilder
         if (_dependencies.Any(x => string.Equals(x.Repository, dependency.Repository, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(x.Capability, dependency.Capability, StringComparison.Ordinal)))
             throw new InvalidOperationException("The dependency is already declared.");
-        return new(_badges, _dependencies.Append(dependency).ToArray(), _extensions);
+        return new(_badges, _dependencies.Append(dependency).ToArray(), _extensions, _observerProfile);
     }
 
     public CiAiRepositoryBuilder ExtendWith(CiAiExtensionDefinition extension)
@@ -217,7 +232,15 @@ public sealed class CiAiRepositoryBuilder
         ArgumentNullException.ThrowIfNull(extension);
         if (_extensions.Any(x => string.Equals(x.Id, extension.Id, StringComparison.Ordinal)))
             throw new InvalidOperationException($"Extension '{extension.Id}' is already registered.");
-        return new(_badges, _dependencies, _extensions.Append(extension).ToArray());
+        return new(_badges, _dependencies, _extensions.Append(extension).ToArray(), _observerProfile);
+    }
+
+    public CiAiRepositoryBuilder WithObserverProfile(CiWorkflowObserverProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        if (_observerProfile is not null)
+            throw new InvalidOperationException("An observer profile is already configured.");
+        return new(_badges, _dependencies, _extensions, profile);
     }
 
     private sealed class StringTupleComparer : IEqualityComparer<(string Repository, string? Capability)>
@@ -243,7 +266,7 @@ public sealed class CiAiRepositoryBuilder
             .FirstOrDefault(group => group.Count() > 1);
         if (duplicate is not null)
             throw new InvalidOperationException($"Dependency '{duplicate.Key.Repository}' is declared more than once.");
-        return new(repository, _badges, dependencies, _extensions);
+        return new(repository, _badges, dependencies, _extensions, _observerProfile);
     }
 }
 

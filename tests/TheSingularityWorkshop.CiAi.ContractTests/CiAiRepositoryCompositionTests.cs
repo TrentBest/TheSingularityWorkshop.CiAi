@@ -10,6 +10,7 @@ internal static class CiAiRepositoryCompositionTests
             .WithBadge(Badges.SithPolicy())
             .WithDependency(CiAi.Resolve("FSM_API", "runtime"))
             .ExtendWith(Gauntlet.Registrar())
+            .WithObserverProfile(CiWorkflowObserverProfile.CiAiDefault)
             .Build("TrentBest/TheSingularityWorkshop.CiAi");
 
         Assert(configuration.Badges.Count == 1 &&
@@ -25,7 +26,8 @@ internal static class CiAiRepositoryCompositionTests
         Assert(roundTrip.Repository == configuration.Repository &&
             roundTrip.Badges.Single().Id == "sith-policy" &&
             roundTrip.Dependencies.Single().Repository == "TrentBest/FSM_API" &&
-            roundTrip.Extensions.Single().Id == "Gauntlet.Registrar",
+            roundTrip.Extensions.Single().Id == "Gauntlet.Registrar" &&
+            roundTrip.ObserverProfile?.Id == "ciai-default",
             "repository manifest parser did not round-trip the fluent configuration");
 
         var shortNameConfiguration = CiAi
@@ -95,6 +97,18 @@ internal static class CiAiRepositoryCompositionTests
         Assert(CiWorkflowObserverProfile.CiAiDefault.ProvenanceArtifactName(42, 3) ==
             "ciai-workflow-provenance-3",
             "CiAi default observer profile changed its existing artifact convention");
+        var anyAppProfile = CiWorkflowObserverProfile.AnyApp;
+        Assert(anyAppProfile.WorkflowPath == ".github/workflows/dotnet.yml" &&
+            anyAppProfile.ProvenanceArtifactName(44972141331, 1) == "ciai-workflow-provenance-44972141331-1" &&
+            anyAppProfile.TestArtifactName(44972141331, 1) == "ciai-test-results-44972141331-1-build" &&
+            anyAppProfile.ProvenanceEntryName == "ciai-workflow-provenance.json" &&
+            anyAppProfile.TrxEntryName == "anyapp.trx" &&
+            anyAppProfile.RequiredJobKey == "build" &&
+            anyAppProfile.RequiredJobName == "build" &&
+            CiWorkflowObserverProfile.Resolve("anyapp-development-v1") == anyAppProfile,
+            "AnyApp observer profile did not bind its exact workflow, artifacts, and required job");
+        Assert(configuration.CreateRequiredJobPolicy(42, 3) is not null,
+            "repository configuration did not expose its observer profile's required-job policy");
         Throws<ArgumentException>(() => new CiWorkflowObserverProfile(
             "bad", "../workflow.yml", "provenance-{attempt}", "tests-{runId}",
             "provenance.json", "results.trx", "provider", "job", "Job"));
