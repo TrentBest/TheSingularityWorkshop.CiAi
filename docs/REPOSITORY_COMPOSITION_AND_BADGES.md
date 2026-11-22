@@ -25,6 +25,25 @@ The built-in \`Badges.SithPolicy()\` uses GitHub's live workflow badge SVG for \
 
 ## README stamping
 
+Run the repository tool from the repository root:
+
+```bash
+dotnet run --project tools/CiAi.Repository -- --stamp-readmes
+dotnet run --project tools/CiAi.Repository -- --check-readmes
+```
+
+The checked-in `.ciai/repository.json` is the declarative source of enabled badges, dependencies, and extensions. The CLI validates the manifest repository against `GITHUB_REPOSITORY` in CI. It stamps all repository-owned `README.md` files recursively (case-insensitive), excluding Git metadata, generated directories, and nested Git submodules. The reusable workflow below runs the read-only check in CI; it never commits to a canonical branch.
+
+A consumer opts in with a small caller workflow:
+
+```yaml
+jobs:
+  ciai-repository:
+    uses: TrentBest/TheSingularityWorkshop.CiAi/.github/workflows/ciai-repository.yml@development
+    with:
+      ciai-ref: development
+```
+
 \`CiAiReadmeBadgeStamper.Stamp\` owns only the region between:
 
 \`\`\`markdown

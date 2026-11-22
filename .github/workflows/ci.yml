@@ -210,8 +210,6 @@ jobs:
       - name: Build
         id: build
         run: dotnet build CiAi.slnx --configuration Release --no-restore
-      - name: Verify managed README badge state
-        run: dotnet run --no-build --project tools/CiAi.Repository -- --check-readmes
       - name: Install .NET coverage tool
         run: dotnet tool install --global dotnet-coverage
       - name: Run contract checks with coverage
@@ -344,3 +342,8 @@ jobs:
         run: |
           echo "::error::The CiAi contract test suite failed; source diagnostics were retained, but the required gate remains failed."
           exit 1
+
+  repository-badges:
+    uses: ./.github/workflows/ciai-repository.yml
+    with:
+      ciai-ref: ${{ github.event.pull_request.head.ref || github.ref_name }}

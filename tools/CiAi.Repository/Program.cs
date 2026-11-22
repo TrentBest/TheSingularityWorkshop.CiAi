@@ -26,6 +26,14 @@ catch (Exception exception) when (exception is IOException or JsonException or A
     return 2;
 }
 
+var expectedRepository = Environment.GetEnvironmentVariable("GITHUB_REPOSITORY");
+if (!string.IsNullOrWhiteSpace(expectedRepository) &&
+    !string.Equals(expectedRepository, configuration.Repository, StringComparison.OrdinalIgnoreCase))
+{
+    Console.Error.WriteLine($"Manifest repository '{configuration.Repository}' does not match workflow repository '{expectedRepository}'.");
+    return 2;
+}
+
 if (args[0] == "--stamp-readmes")
 {
     var changed = CiAiReadmeBadgeStamper.StampRepositoryReadmes(root, configuration);

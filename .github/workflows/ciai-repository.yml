@@ -1,0 +1,34 @@
+name: CiAi Repository Contract
+
+on:
+  workflow_call:
+    inputs:
+      ciai-ref:
+        description: "CiAi source branch or immutable commit containing the repository tool."
+        required: false
+        type: string
+        default: development
+
+permissions:
+  contents: read
+
+jobs:
+  repository:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the consuming repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Check out CiAi repository tooling
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: TrentBest/TheSingularityWorkshop.CiAi
+          ref: ${{ inputs.ciai-ref }}
+          path: .ciai-tool
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          dotnet-version: 10.0.x
+      - name: Verify repository manifest and README badges
+        run: dotnet run --project .ciai-tool/tools/CiAi.Repository -- --check-readmes
