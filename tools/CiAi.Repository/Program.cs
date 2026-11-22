@@ -20,7 +20,7 @@ try
 {
     configuration = CiAiRepositoryConfiguration.ParseJson(File.ReadAllText(manifestPath));
 }
-catch (Exception exception) when (exception is IOException or JsonException or InvalidDataException or ArgumentException)
+catch (Exception exception) when (exception is IOException or JsonException or ArgumentException)
 {
     Console.Error.WriteLine($"Invalid CiAi repository manifest: {exception.Message}");
     return 2;
