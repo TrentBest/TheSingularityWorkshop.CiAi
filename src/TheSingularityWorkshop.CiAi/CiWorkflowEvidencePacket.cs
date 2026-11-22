@@ -115,11 +115,18 @@ public sealed record CiWorkflowEvidencePacket
         CiWorkflowRunEvidenceObservation observedRun,
         CiWorkflowProvenanceRecord provenance,
         CiWorkflowDefinitionTrustDecision trustDecision,
+        CiPullRequestProviderIdentity? pullRequestIdentity = null,
         CiWorkflowCandidateCheckoutEvidence? candidateCheckoutEvidence = null)
     {
         ArgumentNullException.ThrowIfNull(trustDecision);
+        ArgumentNullException.ThrowIfNull(provenance);
         if (!trustDecision.IsFor(provenance))
             throw new InvalidDataException("Workflow trust decision does not identify this exact provenance record.");
+        if (provenance.PullRequest is not null &&
+            (pullRequestIdentity is null || !pullRequestIdentity.Matches(provenance)))
+            throw new InvalidDataException("Pull-request evidence requires independently verified head, base, merge commit, and merge-parent identities.");
+        if (provenance.PullRequest is null && pullRequestIdentity is not null)
+            throw new InvalidDataException("Pull-request provider identity was supplied for a non-pull-request run.");
         return FromValidatedProvenance(observedRun, provenance, trustDecision.IsTrusted, candidateCheckoutEvidence);
     }
 
@@ -137,11 +144,13 @@ public sealed record CiWorkflowEvidencePacket
             observedRun.RunAttempt != provenance.RunAttempt)
             throw new InvalidDataException("Workflow provenance does not identify the exact observed repository, run, and attempt.");
 
-        // The internal observation's WorkflowSha slot is retained here only as the
-        // run API's triggering/head SHA observation. Bind the workflow-side event SHA to
-        // that independent provider observation before accepting the v1 envelope.
-        if (!string.Equals(observedRun.WorkflowSha, provenance.EventSha, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("Workflow provenance event SHA does not match the exact observed run SHA.");
+        // GitHub reports the PR source head in workflow-run head_sha, while a pull_request
+        // workflow executes against the synthetic merge commit. Keep those identities distinct.
+        var providerHeadMatches = provenance.PullRequest is null
+            ? string.Equals(observedRun.WorkflowSha, provenance.EventSha, StringComparison.OrdinalIgnoreCase)
+            : string.Equals(observedRun.WorkflowSha, provenance.PullRequest.HeadSha, StringComparison.OrdinalIgnoreCase);
+        if (!providerHeadMatches)
+            throw new InvalidDataException("Workflow provenance does not match the independently observed provider head identity.");
 
         if (!string.Equals(observedRun.WorkflowPath, provenance.WorkflowPath, StringComparison.Ordinal))
             throw new InvalidDataException("Workflow provenance path does not match the observed workflow path.");
