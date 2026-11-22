@@ -18,6 +18,14 @@ public static class CiAi
     /// </summary>
     public static CiAiDependencyReference Resolve(string repository, string? capability = null)
         => new(repository, capability);
+
+    /// <summary>Starts a repository configuration with one dependency declaration.</summary>
+    public static CiAiRepositoryBuilder WithDependency(CiAiDependencyReference dependency)
+        => new CiAiRepositoryBuilder().WithDependency(dependency);
+
+    /// <summary>Starts a repository configuration with one declarative extension.</summary>
+    public static CiAiRepositoryBuilder ExtendWith(CiAiExtensionDefinition extension)
+        => new CiAiRepositoryBuilder().ExtendWith(extension);
 }
 
 /// <summary>A declarative, validated badge definition. URLs are derived only when a repository is bound.</summary>
