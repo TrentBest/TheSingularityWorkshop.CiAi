@@ -9,9 +9,20 @@ internal static class CiAiRepositoryCompositionTests
         var configuration = CiAi
             .WithBadge(Badges.SithPolicy())
             .WithDependency(CiAi.Resolve("FSM_API", "runtime"))
-            .ExtendWith(Gauntlet.Registrar())
+            .WithGauntlet()
             .WithObserverProfile(CiWorkflowObserverProfile.CiAiDefault)
             .Build("TrentBest/TheSingularityWorkshop.CiAi");
+
+        var optedOut = new CiAiRepositoryBuilder().Build("TrentBest/OptedOut");
+        var optedIn = CiAi.WithGauntlet().Build("TrentBest/OptedIn");
+        Assert(!optedOut.Extensions.Any(extension => extension.Id == "Gauntlet.Registrar") &&
+            optedIn.Extensions.Count == 1 &&
+            optedIn.Extensions.Single().Id == "Gauntlet.Registrar",
+            "Gauntlet was not strictly opt-in through the repository composition API");
+        Assert(CiAi.WithGauntlet().Build("TrentBest/OptedIn").ToJson() ==
+            optedIn.ToJson(),
+            "Gauntlet opt-in manifest serialization was not deterministic");
+        Throws<InvalidOperationException>(() => CiAi.WithGauntlet().WithGauntlet());
 
         Assert(configuration.Badges.Count == 1 &&
             configuration.Dependencies.Count == 1 &&
