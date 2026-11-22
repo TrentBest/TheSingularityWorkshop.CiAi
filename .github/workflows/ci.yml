@@ -48,7 +48,7 @@ on:
         default: ""
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ciai-contract-${{ github.ref }}-${{ inputs.target_branch || 'default' }}
@@ -342,9 +342,3 @@ jobs:
         run: |
           echo "::error::The CiAi contract test suite failed; source diagnostics were retained, but the required gate remains failed."
           exit 1
-
-  repository-badges:
-    uses: ./.github/workflows/ciai-repository.yml
-    with:
-      ciai-ref: ${{ github.sha }}
-      stamp-pr: true
