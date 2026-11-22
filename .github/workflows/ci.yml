@@ -210,6 +210,8 @@ jobs:
       - name: Build
         id: build
         run: dotnet build CiAi.slnx --configuration Release --no-restore
+      - name: Verify managed README badge state
+        run: dotnet run --no-build --project tools/CiAi.Repository -- --check-readmes
       - name: Install .NET coverage tool
         run: dotnet tool install --global dotnet-coverage
       - name: Run contract checks with coverage
