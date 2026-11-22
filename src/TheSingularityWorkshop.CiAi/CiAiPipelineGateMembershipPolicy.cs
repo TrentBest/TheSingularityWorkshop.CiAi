@@ -57,6 +57,7 @@ public sealed record CiAiCrossPipelineGateGrant
 
     internal static string ValidateName(string value, string parameterName, int maximumLength)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
         var normalized = value.Trim();
         if (normalized.Length > maximumLength || normalized.Any(char.IsControl))
             throw new ArgumentException($"Value must be at most {maximumLength} printable characters.", parameterName);
