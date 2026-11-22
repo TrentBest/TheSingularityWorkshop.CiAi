@@ -60,3 +60,7 @@ ServerSC2 is the next CODE RED evidence integration. ServerSC2 owns authoritativ
 - [FSM_COS coordination notes](FSM_COSLLM.md) — read-only evidence pilot and cross-repository contract.
 
 The visitor experience is an introduction, not a substitute for source, tests, CI runs, or the implementation status recorded by each owning repository.
+
+## Composite development-pipeline gates
+
+The implementation and trust boundaries for cross-repository AND/OR prerequisites, exact-SHA gate evidence, LLM allocation suppression, and explicit cross-pipeline grants are documented in [Composite Cross-Repository Pipeline Gates](docs/COMPOSITE_PIPELINE_GATES.md).
