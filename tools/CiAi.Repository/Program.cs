@@ -1,3 +1,4 @@
+using System.Text.Json;
 using TheSingularityWorkshop.CiAi;
 
 if (args.Length != 1 || args[0] is not ("--stamp-readmes" or "--check-readmes"))
