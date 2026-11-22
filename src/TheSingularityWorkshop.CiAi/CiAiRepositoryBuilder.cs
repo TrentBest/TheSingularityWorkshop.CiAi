@@ -68,8 +68,8 @@ public sealed record CiAiLlmAllocation
 /// <summary>Mutable only while declaring a repository's requested LLM capacity.</summary>
 public sealed class CiAiLlmAllocationBuilder
 {
-    private string _provider = "unspecified";
-    private string _model = "unspecified";
+    private string? _provider;
+    private string? _model;
     private int _maximumConcurrentCalls = 1;
     private int _maximumCallsPerWindow = 60;
     private long _maximumTokensPerWindow = 100_000;
@@ -120,9 +120,15 @@ public sealed class CiAiLlmAllocationBuilder
         return this;
     }
 
-    internal CiAiLlmAllocation Build() => new(
-        _provider, _model, _maximumConcurrentCalls, _maximumCallsPerWindow,
-        _maximumTokensPerWindow, _window, _priority);
+    internal CiAiLlmAllocation Build()
+    {
+        if (string.IsNullOrWhiteSpace(_provider))
+            throw new InvalidOperationException("An LLM provider must be selected.");
+        if (string.IsNullOrWhiteSpace(_model))
+            throw new InvalidOperationException("An LLM model must be selected.");
+        return new(_provider, _model, _maximumConcurrentCalls, _maximumCallsPerWindow,
+            _maximumTokensPerWindow, _window, _priority);
+    }
 }
 
 /// <summary>One declared upstream repository dependency or ordered fallback expression.</summary>
@@ -179,13 +185,13 @@ public sealed record CiAiRepositoryDefinition
 {
     internal CiAiRepositoryDefinition(
         string repository,
-        string? namedDevelopmentPipeline,
+         IReadOnlyList<string> namedDevelopmentPipelines,
         IReadOnlyList<CiAiDependencyExpression> dependencies,
         CiAiAdpSettings? adpSettings,
         CiAiLlmAllocation? llmAllocation)
     {
         Repository = repository;
-        NamedDevelopmentPipeline = namedDevelopmentPipeline;
+        NamedDevelopmentPipelines = Array.AsReadOnly(namedDevelopmentPipelines.ToArray());
         Dependencies = Array.AsReadOnly(dependencies.ToArray());
         AdpSettings = adpSettings;
         LlmAllocation = llmAllocation;
@@ -193,8 +199,10 @@ public sealed record CiAiRepositoryDefinition
 
     public const string DefaultDevelopmentPipeline = "default";
     public string Repository { get; }
-    public string DevelopmentPipeline => NamedDevelopmentPipeline ?? DefaultDevelopmentPipeline;
-    public string? NamedDevelopmentPipeline { get; }
+    public IReadOnlyList<string> NamedDevelopmentPipelines { get; }
+    public IReadOnlyList<string> DevelopmentPipelines => NamedDevelopmentPipelines.Count == 0
+        ? Array.AsReadOnly(new[] { DefaultDevelopmentPipeline })
+        : NamedDevelopmentPipelines;
     public IReadOnlyList<CiAiDependencyExpression> Dependencies { get; }
     public CiAiAdpSettings? AdpSettings { get; }
     public CiAiLlmAllocation? LlmAllocation { get; }
@@ -233,7 +241,7 @@ public sealed class CiAiRepositoryBuilder
 {
     private readonly string _repository;
     private readonly List<CiAiDependencyExpression> _dependencies = [];
-    private string? _namedDevelopmentPipeline;
+    private readonly List<string> _namedDevelopmentPipelines = [];
     private CiAiAdpSettings? _adpSettings;
     private CiAiLlmAllocation? _llmAllocation;
     private bool _built;
@@ -271,10 +279,8 @@ public sealed class CiAiRepositoryBuilder
         var normalized = name.Trim();
         if (normalized.Length > 100 || normalized.Any(char.IsControl))
             throw new ArgumentException("Pipeline names must be at most 100 printable characters.", nameof(name));
-        if (_namedDevelopmentPipeline is not null &&
-            !string.Equals(_namedDevelopmentPipeline, normalized, StringComparison.Ordinal))
-            throw new InvalidOperationException("A repository can belong to only one named development pipeline.");
-        _namedDevelopmentPipeline = normalized;
+        if (!_namedDevelopmentPipelines.Contains(normalized, StringComparer.Ordinal))
+            _namedDevelopmentPipelines.Add(normalized);
         return this;
     }
 
@@ -300,7 +306,7 @@ public sealed class CiAiRepositoryBuilder
     {
         EnsureMutable();
         _built = true;
-        return new(_repository, _namedDevelopmentPipeline, _dependencies, _adpSettings, _llmAllocation);
+        return new(_repository, _namedDevelopmentPipelines, _dependencies, _adpSettings, _llmAllocation);
     }
 
     private void EnsureMutable()
