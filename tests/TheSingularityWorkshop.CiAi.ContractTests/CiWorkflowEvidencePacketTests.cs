@@ -39,11 +39,20 @@ internal static class CiWorkflowEvidencePacketTests
         }
         var serializedBytes = Encoding.UTF8.GetBytes(serialized);
         var packetDigest = Convert.ToHexString(SHA256.HashData(serializedBytes));
+        var trustPolicy = new CiWorkflowDefinitionTrustPolicy(
+            "TrentBest/CiAi", ".github/workflows/ci.yml",
+            "refs/heads/development", "dddddddddddddddddddddddddddddddddddddddd");
+        var approvedWorkflow = Encoding.UTF8.GetBytes("name: CI\\non: [push]\\n");
+        var trustDecision = trustPolicy.Evaluate(provenance, approvedWorkflow, approvedWorkflow);
         var roundTrip = CiWorkflowEvidencePacket.FromJson(
-            serialized, "TrentBest/CiAi", 42, 2, packetDigest, workflowDefinitionTrusted: true);
+            serialized, "TrentBest/CiAi", 42, 2, packetDigest, trustDecision,
+            new CiPullRequestProviderIdentity(
+                17, "feature/fix", ProviderHeadSha,
+                "development", "dddddddddddddddddddddddddddddddddddddddd",
+                EventSha, new[] { ProviderHeadSha, "dddddddddddddddddddddddddddddddddddddddd" }));
         Assert(roundTrip.IsSuccessful && roundTrip.Provenance.WorkflowSha == WorkflowSha &&
-            roundTrip.CandidateSha == CheckoutSha,
-            "v1 durable round-trip lost validated provenance");
+            roundTrip.CandidateSha == CheckoutSha && roundTrip.PullRequestIdentityVerified,
+            "v1 durable round-trip lost host-issued trust or independently verified PR identity");
 
         var (runCollection, jobCollection) = CreateCollections();
         var factoryPacket = CiWorkflowEvidencePacket.FromCollections(
@@ -55,6 +64,13 @@ internal static class CiWorkflowEvidencePacketTests
                 EventSha, new[] { ProviderHeadSha, "dddddddddddddddddddddddddddddddddddddddd" }));
         Assert(factoryPacket.IsSuccessful && factoryPacket.Provenance.WorkflowSha == WorkflowSha,
             "v1 collection factory did not preserve the independently observed workflow ref");
+        var structuralFactoryPacket = CiWorkflowEvidencePacket.FromCollections(
+            runCollection, jobCollection, 42, 2, DateTimeOffset.Parse("2026-10-31T01:02:00Z"),
+            provenance, workflowDefinitionTrusted: false);
+        Assert(!structuralFactoryPacket.IsSuccessful && !structuralFactoryPacket.CheckoutVerified &&
+            !structuralFactoryPacket.PullRequestIdentityVerified &&
+            structuralFactoryPacket.BlockingReasons.Contains("pull-request.provider-identity-unverified"),
+            "PR collection without merge-parent verification was not retained as structural, non-actionable evidence");
         var mismatchedWorkflowRefCollection = runCollection with
         {
             Runs = new[]

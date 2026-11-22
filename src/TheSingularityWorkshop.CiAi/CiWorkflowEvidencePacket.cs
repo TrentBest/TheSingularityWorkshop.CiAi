@@ -73,7 +73,7 @@ public sealed record CiWorkflowEvidencePacket
         var observation = matchingRuns[0];
         if (!string.Equals(observation.Run.Repository, runCollection.Repository, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(observation.Run.HeadSha, runCollection.HeadSha, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("Run observation does not match the collection repository and exact event SHA.");
+            throw new InvalidDataException("Run observation does not match the collection repository and exact provider head SHA.");
 
         var workflowRefSeparator = provenance.WorkflowRef.LastIndexOf('@');
         if (workflowRefSeparator <= 0)
@@ -113,7 +113,8 @@ public sealed record CiWorkflowEvidencePacket
 
             if (pullRequestIdentity is not null)
             {
-                if (!pullRequestIdentity.Matches(provenance) ||
+                if (!observation.PullRequestIdentitiesComplete ||
+                    !pullRequestIdentity.Matches(provenance) ||
                     providerPullRequests.Length != 1 ||
                     !pullRequestIdentity.Matches(providerPullRequests[0]))
                     throw new InvalidDataException("Supplied pull-request merge identity does not match the provider's exact head/base observation.");
@@ -354,6 +355,28 @@ public sealed record CiWorkflowEvidencePacket
             provenance,
             workflowDefinitionTrusted,
             observedRun.CandidateCheckoutEvidence);
+    }
+
+    /// <summary>Reloads evidence using a host-issued protected workflow trust decision.</summary>
+    public static CiWorkflowEvidencePacket FromJson(
+        string json,
+        string expectedRepository,
+        long expectedRunId,
+        int expectedRunAttempt,
+        string expectedPacketSha256,
+        CiWorkflowDefinitionTrustDecision trustDecision,
+        CiPullRequestProviderIdentity? pullRequestIdentity = null)
+    {
+        ArgumentNullException.ThrowIfNull(trustDecision);
+        var observed = FromJson(
+            json, expectedRepository, expectedRunId, expectedRunAttempt,
+            expectedPacketSha256, workflowDefinitionTrusted: false);
+        return FromValidatedProvenance(
+            observed.ObservedRun,
+            observed.Provenance,
+            trustDecision,
+            pullRequestIdentity,
+            observed.ObservedRun.CandidateCheckoutEvidence);
     }
 
     private static JsonSerializerOptions ObservationJsonOptions => new()
