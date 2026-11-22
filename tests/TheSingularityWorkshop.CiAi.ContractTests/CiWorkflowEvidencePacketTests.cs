@@ -116,10 +116,8 @@ internal static class CiWorkflowEvidencePacketTests
         var wrongEventShaProvenance = CiWorkflowProvenanceRecord.ParseAndValidate(
             wrongEventShaBytes, "TrentBest/CiAi", 42, 2,
             Convert.ToHexString(SHA256.HashData(wrongEventShaBytes)));
-        var wrongEventShaPacket = CiWorkflowEvidencePacket.FromValidatedProvenance(
-            CreateObservedRun(), wrongEventShaProvenance, workflowDefinitionTrusted: true);
-        Assert(!wrongEventShaPacket.CheckoutVerified && !wrongEventShaPacket.IsSuccessful,
-            "a mismatched PR merge/event SHA was not kept non-actionable");
+        Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromValidatedProvenance(
+            CreateObservedRun(), wrongEventShaProvenance, workflowDefinitionTrusted: true));
 
         Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromValidatedProvenance(
             CreateObservedRun(runId: 43), provenance, workflowDefinitionTrusted: true));
@@ -137,11 +135,8 @@ internal static class CiWorkflowEvidencePacketTests
         var mismatchedCheckout = CiWorkflowProvenanceRecord.ParseAndValidate(
             mismatchedCheckoutBytes, "TrentBest/CiAi", 42, 2,
             Convert.ToHexString(SHA256.HashData(mismatchedCheckoutBytes)));
-        var failClosed = CiWorkflowEvidencePacket.FromValidatedProvenance(
-            CreateObservedRun(), mismatchedCheckout, workflowDefinitionTrusted: true);
-        Assert(!failClosed.CheckoutVerified && !failClosed.IsSuccessful &&
-            failClosed.BlockingReasons.Contains("candidate.checkout-unverified"),
-            "checkout SHA differing from event SHA was not failed closed");
+        Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromValidatedProvenance(
+            CreateObservedRun(), mismatchedCheckout, workflowDefinitionTrusted: true));
 
         Console.WriteLine("PASS: 12 CI workflow evidence packet v1 contract checks.");
         return 12;
