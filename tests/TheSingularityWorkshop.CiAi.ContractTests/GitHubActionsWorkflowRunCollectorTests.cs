@@ -53,6 +53,8 @@ internal static class GitHubActionsWorkflowRunCollectorTests
                 string.Empty, StringComparison.Ordinal)
             .Replace("\"base\": { \"ref\": \"development\", \"sha\": \"2222222222222222222222222222222222222222\" }",
                 string.Empty, StringComparison.Ordinal);
+        incompletePullRequestPage = incompletePullRequestPage.Replace(
+            "\"number\": 35,", "\"number\": 35", StringComparison.Ordinal);
         using (var client = new HttpClient(new StubHandler((_, _) => Task.FromResult(JsonResponse(incompletePullRequestPage)))))
         {
             var collection = await new GitHubActionsWorkflowRunCollector(client)
