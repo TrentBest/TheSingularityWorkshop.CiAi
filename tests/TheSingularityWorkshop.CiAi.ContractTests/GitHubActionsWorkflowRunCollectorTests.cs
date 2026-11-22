@@ -38,7 +38,30 @@ internal static class GitHubActionsWorkflowRunCollectorTests
                 "workflow ref was not derived from provider head_branch when REST omitted the path suffix");
         }
 
-        var pullRequestEventPage = page.Replace("\\\"event\\\": \\\"push\\\"", "\\\"event\\\": \\\"pull_request\\\"", StringComparison.Ordinal);
+        var pullRequestEventPage = page.Replace("\"event\": \"push\"", "\"event\": \"pull_request\"", StringComparison.Ordinal);
+        using (var client = new HttpClient(new StubHandler((_, _) => Task.FromResult(JsonResponse(pullRequestEventPage)))))
+        {
+            var collection = await new GitHubActionsWorkflowRunCollector(client)
+                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha);
+            Assert(collection.Runs[0].PullRequestIdentitiesComplete &&
+                collection.Runs[0].PullRequestIdentities.Count == 1,
+                "complete PR event did not retain its provider head/base identities");
+        }
+
+        var incompletePullRequestPage = pullRequestEventPage
+            .Replace("\"head\": { \"ref\": \"feature/pull-request\", \"sha\": \"1111111111111111111111111111111111111111\" },",
+                string.Empty, StringComparison.Ordinal)
+            .Replace("\"base\": { \"ref\": \"development\", \"sha\": \"2222222222222222222222222222222222222222\" }",
+                string.Empty, StringComparison.Ordinal);
+        using (var client = new HttpClient(new StubHandler((_, _) => Task.FromResult(JsonResponse(incompletePullRequestPage)))))
+        {
+            var collection = await new GitHubActionsWorkflowRunCollector(client)
+                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha);
+            Assert(!collection.Runs[0].PullRequestIdentitiesComplete &&
+                collection.Runs[0].PullRequestIdentities.Count == 0,
+                "incomplete PR provider metadata was incorrectly marked complete");
+        }
+
         using (var client = new HttpClient(new StubHandler((_, _) => Task.FromResult(JsonResponse(pullRequestEventPage)))))
         {
             var collection = await new GitHubActionsWorkflowRunCollector(client)
