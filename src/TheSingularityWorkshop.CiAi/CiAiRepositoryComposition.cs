@@ -249,16 +249,8 @@ public static partial class CiAiReadmeBadgeStamper
         var root = Path.GetFullPath(repositoryRoot);
         if (!Directory.Exists(root)) throw new DirectoryNotFoundException(root);
         var changed = 0;
-        foreach (var path in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+        foreach (var path in EnumerateReadmes(root))
         {
-            if (!string.Equals(Path.GetFileName(path), "README.md", StringComparison.OrdinalIgnoreCase))
-                continue;
-            var relative = Path.GetRelativePath(root, path);
-            if (relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-                .Any(part => part is ".git" or "bin" or "obj" or "node_modules" or ".vs"))
-                continue;
-            if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
-                continue;
             var original = File.ReadAllText(path, Encoding.UTF8);
             var stamped = Stamp(original, configuration);
             if (string.Equals(original, stamped, StringComparison.Ordinal))
