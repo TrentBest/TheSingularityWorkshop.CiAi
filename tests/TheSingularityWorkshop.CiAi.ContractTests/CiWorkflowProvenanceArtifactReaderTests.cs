@@ -92,14 +92,30 @@ internal static class CiWorkflowProvenanceArtifactReaderTests
         var raWWarHead = "3704d9258b88593831efd1fd98327952939adab3";
         var raWWarMerge = "d045c5cb01f1b2bea5ee267183109a56fe6b0deb";
         var raWWarBase = "ddd4c0b5ce34d4a1291b76824b265701cb32e436";
-        var raWWarArtifact = new CiProviderArtifactObservation(
-            "TrentBest/raWWar", 44892052947, raWWarHead, 14701779950,
-            "rawwar-workflow-provenance-1", 537,
-            "sha256:ee855a4bf0bb934d4baee8dd47e3c0419bd065dce6b2e986047e35542f29fe20",
-            DateTimeOffset.Parse("2026-11-21T09:58:19Z"),
-            DateTimeOffset.Parse("2026-12-05T09:58:18Z"),
-            false,
-            new Uri("https://api.github.com/repos/TrentBest/raWWar/actions/artifacts/14701779950/zip"));
+        const string raWWarArtifactName = "rawwar-workflow-provenance-1";
+        using var raWWarClient = new HttpClient(new StubHandler(request =>
+        {
+            var requestPath = request.RequestUri!.AbsolutePath;
+            if (requestPath.EndsWith("/actions/runs/44892052947/artifacts", StringComparison.Ordinal))
+                return Json("{\\"total_count\\":1,\\"artifacts\\":[{\\"id\\":14701779950,\\"name\\":\\"rawwar-workflow-provenance-1\\"}]}");
+            if (requestPath.EndsWith("/actions/artifacts/14701779950", StringComparison.Ordinal))
+                return Json("""
+                {
+                  "id": 14701779950,
+                  "name": "rawwar-workflow-provenance-1",
+                  "size_in_bytes": 537,
+                  "digest": "sha256:ee855a4bf0bb934d4baee8dd47e3c0419bd065dce6b2e986047e35542f29fe20",
+                  "expired": false,
+                  "created_at": "2026-11-21T09:58:19Z",
+                  "expires_at": "2099-12-31T00:00:00Z",
+                  "workflow_run": { "id": 44892052947, "head_sha": "3704d9258b88593831efd1fd98327952939adab3" },
+                  "archive_download_url": "https://api.github.com/repos/TrentBest/raWWar/actions/artifacts/14701779950/zip"
+                }
+                """);
+            throw new InvalidOperationException("Unexpected raWWar artifact API request: " + request.RequestUri);
+        }));
+        var raWWarArtifact = await new GitHubActionsArtifactCollector(raWWarClient)
+            .GetRequiredArtifactAsync("TrentBest/raWWar", 44892052947, raWWarHead, raWWarArtifactName);
         var raWWarEvidence = CiWorkflowProvenanceArtifactReader.Read(
             raWWarArchive, raWWarArtifact, CiWorkflowObserverProfile.RaWWar,
             "TrentBest/raWWar", 44892052947, 1,
