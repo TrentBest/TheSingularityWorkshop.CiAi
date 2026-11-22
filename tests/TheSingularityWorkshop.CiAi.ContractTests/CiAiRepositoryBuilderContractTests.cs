@@ -36,8 +36,8 @@ internal static class CiAiRepositoryBuilderContractTests
         Check("unnamed repositories join the default development pipeline", () =>
         {
             var definition = CiAi.ForRepository("TrentBest/A").Build();
-            Assert(definition.NamedDevelopmentPipeline is null, "default membership was stored as named membership");
-            Assert(definition.DevelopmentPipeline == CiAiRepositoryDefinition.DefaultDevelopmentPipeline,
+            Assert(definition.NamedDevelopmentPipelines.Count == 0, "default membership was stored as named membership");
+            Assert(definition.DevelopmentPipelines.SequenceEqual(new[] { CiAiRepositoryDefinition.DefaultDevelopmentPipeline }),
                 "unnamed repository did not resolve to the default pipeline");
         });
 
@@ -49,11 +49,15 @@ internal static class CiAiRepositoryBuilderContractTests
             Assert(definition.DevelopmentPipeline == "PipelineA", "named pipeline was not preserved");
         });
 
-        Check("a repository cannot silently join two named pipelines", () =>
+        Check("a repository can explicitly join multiple named pipelines without duplicate membership", () =>
         {
-            Throws<InvalidOperationException>(() => CiAi.ForRepository("TrentBest/A")
+            var definition = CiAi.ForRepository("TrentBest/A")
                 .WithNamedDevelopmentPipeline("PipelineA")
-                .WithNamedDevelopmentPipeline("PipelineB"));
+                .WithNamedDevelopmentPipeline("PipelineB")
+                .WithNamedDevelopmentPipeline("PipelineA")
+                .Build();
+            Assert(definition.DevelopmentPipelines.SequenceEqual(new[] { "PipelineA", "PipelineB" }),
+                "named pipeline memberships were lost, reordered, or duplicated");
         });
 
         Check("ADP is opt-in and does not gate ordinary CI composition", () =>
@@ -121,6 +125,8 @@ internal static class CiAiRepositoryBuilderContractTests
                 .WithLLMAllocation(a => a.SetMaximumTokensPerWindow(0)));
             Throws<ArgumentOutOfRangeException>(() => CiAi.ForRepository("TrentBest/A")
                 .WithLLMAllocation(a => a.SetPriority((CiAiLlmPriority)99)));
+            Throws<InvalidOperationException>(() => CiAi.ForRepository("TrentBest/A")
+                .WithLLMAllocation(_ => { }));
         });
 
         return _passed;
