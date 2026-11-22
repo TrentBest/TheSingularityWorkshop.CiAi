@@ -56,7 +56,14 @@ internal static class CiAiRepositoryCompositionTests
             File.WriteAllText(Path.Combine(temporaryRoot, "external", "Submodule", "README.md"), "# Submodule\\n");
             Assert(CiAiReadmeBadgeStamper.FindUnstampedRepositoryReadmes(temporaryRoot, configuration).Count == 2,
                 "readme checker did not discover case-insensitive nested README.md files or exclude metadata/submodules");
-            Assert(CiAiReadmeBadgeStamper.StampRepositoryReadmes(temporaryRoot, configuration) == 2,
+            var preview = CiAiReadmeBadgeStamper.CreateReadmeStampPlan(temporaryRoot, configuration);
+            Assert(preview.Changes.Count == 2 &&
+                preview.Changes.Select(change => change.RelativePath).SequenceEqual(
+                    preview.Changes.Select(change => change.RelativePath).OrderBy(path => path, StringComparer.Ordinal)),
+                "README preview was not complete and deterministically ordered");
+            Assert(CiAiReadmeBadgeStamper.ApplyReadmeStampPlan(preview) == 2,
+                "explicit README plan apply did not update both owned files");
+            Assert(CiAiReadmeBadgeStamper.StampRepositoryReadmes(temporaryRoot, configuration) == 0,
                 "repository stamper did not update both owned README.md files");
             Assert(CiAiReadmeBadgeStamper.FindUnstampedRepositoryReadmes(temporaryRoot, configuration).Count == 0,
                 "readme checker still reports drift after stamping");

@@ -1,9 +1,9 @@
 using System.Text.Json;
 using TheSingularityWorkshop.CiAi;
 
-if (args.Length != 1 || args[0] is not ("--stamp-readmes" or "--check-readmes"))
+if (args.Length != 1 || args[0] is not ("--preview-readmes" or "--apply-readmes" or "--stamp-readmes" or "--check-readmes"))
 {
-    Console.Error.WriteLine("Usage: dotnet run --project tools/CiAi.Repository -- --stamp-readmes|--check-readmes");
+    Console.Error.WriteLine("Usage: dotnet run --project tools/CiAi.Repository -- --preview-readmes|--apply-readmes|--check-readmes");
     return 2;
 }
 
@@ -34,10 +34,14 @@ if (!string.IsNullOrWhiteSpace(expectedRepository) &&
     return 2;
 }
 
-if (args[0] == "--stamp-readmes")
+if (args[0] is "--preview-readmes" or "--apply-readmes" or "--stamp-readmes")
 {
-    var changed = CiAiReadmeBadgeStamper.StampRepositoryReadmes(root, configuration);
-    Console.WriteLine($"Stamped {changed} README.md file(s) for {configuration.Repository}.");
+    var plan = CiAiReadmeBadgeStamper.CreateReadmeStampPlan(root, configuration);
+    Console.WriteLine($"README plan for {configuration.Repository}: {plan.Changes.Count} file(s) to update.");
+    foreach (var change in plan.Changes) Console.WriteLine($" - {change.RelativePath}");
+    if (args[0] == "--preview-readmes") return 0;
+    var changed = CiAiReadmeBadgeStamper.ApplyReadmeStampPlan(plan);
+    Console.WriteLine($"Applied {changed} README.md update(s).");
     return 0;
 }
 

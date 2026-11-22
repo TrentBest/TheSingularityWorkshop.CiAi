@@ -305,24 +305,73 @@ public static partial class CiAiReadmeBadgeStamper
         return insertion + newline + newline + block + (remainder.Length == 0 ? string.Empty : newline + remainder);
     }
 
-    public static int StampRepositoryReadmes(string repositoryRoot, CiAiRepositoryConfiguration configuration)
+    /// <summary>Builds a complete, deterministic README change plan without modifying the repository.</summary>
+    public static CiAiReadmeStampPlan CreateReadmeStampPlan(
+        string repositoryRoot, CiAiRepositoryConfiguration configuration)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(repositoryRoot);
         ArgumentNullException.ThrowIfNull(configuration);
         var root = Path.GetFullPath(repositoryRoot);
         if (!Directory.Exists(root)) throw new DirectoryNotFoundException(root);
-        var changed = 0;
+        var changes = new List<CiAiReadmeStampPlan.Change>();
         foreach (var path in EnumerateReadmes(root))
         {
+            if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
+                continue;
             var original = File.ReadAllText(path, Encoding.UTF8);
             var stamped = Stamp(original, configuration);
-            if (string.Equals(original, stamped, StringComparison.Ordinal))
-                continue;
-            File.WriteAllText(path, stamped, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-            changed++;
+            if (!string.Equals(original, stamped, StringComparison.Ordinal))
+            {
+                var relative = Path.GetRelativePath(root, path).Replace(Path.DirectorySeparatorChar, '/');
+                changes.Add(new CiAiReadmeStampPlan.Change(relative, original, stamped));
+            }
         }
-        return changed;
+        return new CiAiReadmeStampPlan(root, changes.OrderBy(change => change.RelativePath, StringComparer.Ordinal).ToArray());
     }
+
+    /// <summary>
+    /// Applies a preview only after every target is revalidated and every replacement is staged.
+    /// Each replacement is atomic; a filesystem failure during the final replacement sequence can
+    /// still leave a subset applied.
+    /// </summary>
+    public static int ApplyReadmeStampPlan(CiAiReadmeStampPlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        if (!Directory.Exists(plan.RepositoryRoot))
+            throw new DirectoryNotFoundException(plan.RepositoryRoot);
+        var targets = new List<(string Path, string TemporaryPath, string Content)>();
+        foreach (var change in plan.Entries)
+        {
+            var path = Path.GetFullPath(Path.Combine(plan.RepositoryRoot, change.RelativePath.Replace('/', Path.DirectorySeparatorChar)));
+            var relative = Path.GetRelativePath(plan.RepositoryRoot, path);
+            if (Path.IsPathRooted(relative) || relative == ".." ||
+                relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+                throw new InvalidDataException("README stamp plan contains a path outside the repository root.");
+            if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException($"README target became a reparse point: {change.RelativePath}");
+            var current = File.ReadAllText(path, Encoding.UTF8);
+            if (!string.Equals(current, change.OriginalContent, StringComparison.Ordinal))
+                throw new IOException($"README changed after preview; refusing to apply stale plan: {change.RelativePath}");
+            targets.Add((path, path + ".ciai-" + Guid.NewGuid().ToString("N") + ".tmp", change.StampedContent));
+        }
+        try
+        {
+            foreach (var target in targets)
+                File.WriteAllText(target.TemporaryPath, target.Content, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            foreach (var target in targets)
+                File.Move(target.TemporaryPath, target.Path, overwrite: true);
+            return targets.Count;
+        }
+        finally
+        {
+            foreach (var target in targets)
+                if (File.Exists(target.TemporaryPath)) File.Delete(target.TemporaryPath);
+        }
+    }
+
+    /// <summary>Compatibility convenience API; plans the complete change set before applying it.</summary>
+    public static int StampRepositoryReadmes(string repositoryRoot, CiAiRepositoryConfiguration configuration)
+        => ApplyReadmeStampPlan(CreateReadmeStampPlan(repositoryRoot, configuration));
 
     private static string RenderBlock(CiAiRepositoryConfiguration configuration, string newline)
     {

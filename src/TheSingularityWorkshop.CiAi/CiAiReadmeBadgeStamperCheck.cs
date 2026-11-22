@@ -36,7 +36,8 @@ public static partial class CiAiReadmeBadgeStamper
         {
             var current = pending.Pop();
             foreach (var file in Directory.EnumerateFiles(current, "*", SearchOption.TopDirectoryOnly))
-                if (string.Equals(Path.GetFileName(file), "README.md", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(Path.GetFileName(file), "README.md", StringComparison.OrdinalIgnoreCase) &&
+                    (File.GetAttributes(file) & FileAttributes.ReparsePoint) == 0)
                     yield return file;
             foreach (var directory in Directory.EnumerateDirectories(current, "*", SearchOption.TopDirectoryOnly))
             {
