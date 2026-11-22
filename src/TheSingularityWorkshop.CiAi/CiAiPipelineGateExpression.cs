@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+
 namespace TheSingularityWorkshop.CiAi;
 
 /// <summary>Three-valued result of evaluating a composite prerequisite expression.</summary>
@@ -32,12 +35,16 @@ public sealed record CiAiPipelineGateExpression
 
         Root = root;
         Leaves = Array.AsReadOnly(leaves.ToArray());
+        var canonical = $"v{CurrentSchemaVersion}:{Encode(Pipeline)}:{Canonicalize(root)}";
+        DefinitionSha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical))).ToLowerInvariant();
     }
 
     public int SchemaVersion => CurrentSchemaVersion;
     public string Pipeline { get; }
     public CiAiGateExpression Root { get; }
     public IReadOnlyList<CiAiRepositoryGateReference> Leaves { get; }
+    /// <summary>Canonical SHA-256 identity of this exact versioned expression definition.</summary>
+    public string DefinitionSha256 { get; }
 
     /// <summary>Returns whether a verified leaf-gate event should trigger reevaluation of this pipeline.</summary>
     public bool DependsOnGate(string gateId)
@@ -48,6 +55,21 @@ public sealed record CiAiPipelineGateExpression
 
     public static CiAiPipelineGateExpression ForPipeline(string pipeline, CiAiGateExpression root) =>
         new(pipeline, root);
+
+    private static string Encode(string value) => value.Length.ToString(System.Globalization.CultureInfo.InvariantCulture) + ":" + value;
+
+    private static string Canonicalize(CiAiGateExpression expression) => expression switch
+    {
+        CiAiRepositoryGateReference leaf =>
+            "L" + Encode(leaf.GateId) + Encode(leaf.Repository) + Encode(leaf.CandidateId) + Encode(leaf.CommitSha),
+        CiAiAllOf all =>
+            "A" + all.Children.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + ":" +
+            string.Concat(all.Children.Select(Canonicalize)),
+        CiAiAnyOf any =>
+            "O" + any.Children.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + ":" +
+            string.Concat(any.Children.Select(Canonicalize)),
+        _ => throw new ArgumentException("Unsupported gate expression node.", nameof(expression))
+    };
 
     private static int Validate(CiAiGateExpression expression, int depth, ICollection<CiAiRepositoryGateReference> leaves)
     {
