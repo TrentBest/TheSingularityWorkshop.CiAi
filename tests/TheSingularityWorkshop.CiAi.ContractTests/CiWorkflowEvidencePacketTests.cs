@@ -5,6 +5,7 @@ using TheSingularityWorkshop.CiAi;
 internal static class CiWorkflowEvidencePacketTests
 {
     private const string EventSha = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    private const string ProviderHeadSha = "cccccccccccccccccccccccccccccccccccccccc";
     private const string CheckoutSha = EventSha;
     private const string WorkflowSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
@@ -111,8 +112,10 @@ internal static class CiWorkflowEvidencePacketTests
         var wrongEventShaProvenance = CiWorkflowProvenanceRecord.ParseAndValidate(
             wrongEventShaBytes, "TrentBest/CiAi", 42, 2,
             Convert.ToHexString(SHA256.HashData(wrongEventShaBytes)));
-        Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromValidatedProvenance(
-            CreateObservedRun(), wrongEventShaProvenance, workflowDefinitionTrusted: true));
+        var wrongEventShaPacket = CiWorkflowEvidencePacket.FromValidatedProvenance(
+            CreateObservedRun(), wrongEventShaProvenance, workflowDefinitionTrusted: true);
+        Assert(!wrongEventShaPacket.CheckoutVerified && !wrongEventShaPacket.IsSuccessful,
+            "a mismatched PR merge/event SHA was not kept non-actionable");
 
         Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromValidatedProvenance(
             CreateObservedRun(runId: 43), provenance, workflowDefinitionTrusted: true));
@@ -192,7 +195,7 @@ internal static class CiWorkflowEvidencePacketTests
     private static (CiWorkflowRunCollection Runs, CiWorkflowJobCollection Jobs) CreateCollections()
     {
         var snapshot = new CiRunSnapshot(
-            "TrentBest/CiAi", 42, "CI", EventSha,
+            "TrentBest/CiAi", 42, "CI", ProviderHeadSha,
             CiRunStatus.Completed, CiRunConclusion.Success,
             new Uri("https://github.com/TrentBest/CiAi/actions/runs/42"),
             DateTimeOffset.Parse("2026-10-31T01:00:00Z"));
@@ -200,7 +203,7 @@ internal static class CiWorkflowEvidencePacketTests
             snapshot, 2, ".github/workflows/ci.yml", "pull_request",
             Array.Empty<int>()) { WorkflowRef = "refs/heads/development" };
         var runs = new CiWorkflowRunCollection(
-            "TrentBest/CiAi", EventSha, new[] { observation }, 1, 1, false);
+            "TrentBest/CiAi", ProviderHeadSha, new[] { observation }, 1, 1, false);
         var job = new CiWorkflowJobObservation(
             100, 42, 2, "build-and-test", "completed", "success",
             new Uri("https://github.com/TrentBest/CiAi/actions/runs/42/job/100"),
@@ -225,7 +228,7 @@ internal static class CiWorkflowEvidencePacketTests
             }));
         return new CiWorkflowRunEvidenceObservation(
             "TrentBest/CiAi", workflowPath, runId, 2,
-            "refs/heads/development", EventSha, "pull_request", "CI",
+            "refs/heads/development", ProviderHeadSha, "pull_request", "CI",
             CiRunStatus.Completed, CiRunConclusion.Success,
             new Uri($"https://github.com/TrentBest/CiAi/actions/runs/{runId}"),
             DateTimeOffset.Parse("2026-10-31T01:01:00Z"),
