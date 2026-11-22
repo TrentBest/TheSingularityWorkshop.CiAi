@@ -12,6 +12,13 @@ public static class CiAi
         => new CiAiRepositoryBuilder().WithBadge(badge);
 
     /// <summary>
+    /// Voluntarily opts this repository into the Gauntlet evidence-provider capability.
+    /// This is a declarative opt-in only; it performs no campaign, network request, or CI write.
+    /// </summary>
+    public static CiAiRepositoryBuilder WithGauntlet()
+        => new CiAiRepositoryBuilder().WithGauntlet();
+
+    /// <summary>
     /// Creates a typed dependency reference. A short repository name resolves to the owner of
     /// the repository passed to Build; an owner/repository identity remains explicit.
     /// Resolution is declarative and performs no network or repository mutation.
@@ -217,6 +224,13 @@ public sealed class CiAiRepositoryBuilder
             throw new InvalidOperationException($"Badge '{badge.Id}' is already enabled.");
         return new(_badges.Append(badge).ToArray(), _dependencies, _extensions, _observerProfile);
     }
+
+    /// <summary>
+    /// Opts this repository into the Gauntlet registrar. The declaration is serialized with the
+    /// repository manifest; a host adapter must still be explicitly configured to execute campaigns.
+    /// </summary>
+    public CiAiRepositoryBuilder WithGauntlet()
+        => ExtendWith(Gauntlet.Registrar());
 
     public CiAiRepositoryBuilder WithDependency(CiAiDependencyReference dependency)
     {
