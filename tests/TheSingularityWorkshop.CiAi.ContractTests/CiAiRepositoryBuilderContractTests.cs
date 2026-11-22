@@ -46,7 +46,7 @@ internal static class CiAiRepositoryBuilderContractTests
             var definition = CiAi.ForRepository("TrentBest/A")
                 .WithNamedDevelopmentPipeline("PipelineA")
                 .Build();
-            Assert(definition.DevelopmentPipeline == "PipelineA", "named pipeline was not preserved");
+            Assert(definition.DevelopmentPipelines.SequenceEqual(new[] { "PipelineA" }), "named pipeline was not preserved");
         });
 
         Check("a repository can explicitly join multiple named pipelines without duplicate membership", () =>
