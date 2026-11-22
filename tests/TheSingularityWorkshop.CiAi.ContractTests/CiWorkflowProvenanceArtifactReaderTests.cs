@@ -97,7 +97,7 @@ internal static class CiWorkflowProvenanceArtifactReaderTests
         {
             var requestPath = request.RequestUri!.AbsolutePath;
             if (requestPath.EndsWith("/actions/runs/44892052947/artifacts", StringComparison.Ordinal))
-                return Json("{\\"total_count\\":1,\\"artifacts\\":[{\\"id\\":14701779950,\\"name\\":\\"rawwar-workflow-provenance-1\\"}]}");
+                return Json("{\"total_count\":1,\"artifacts\":[{\"id\":14701779950,\"name\":\"rawwar-workflow-provenance-1\"}]}");
             if (requestPath.EndsWith("/actions/artifacts/14701779950", StringComparison.Ordinal))
                 return Json("""
                 {
