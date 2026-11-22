@@ -110,7 +110,10 @@ internal static class CiAiRepositoryCompositionTests
             "pull_request", "Build", CiRunStatus.Completed, CiRunConclusion.Success,
             new Uri("https://github.com/TrentBest/raWWar/actions/runs/123"),
             DateTimeOffset.Parse("2026-11-21T12:00:00Z"),
-            Array.Empty<CiWorkflowJobObservation>(), true, true);
+            Array.Empty<CiWorkflowJobObservation>(), true, true)
+        {
+            ProviderPullRequestIdentity = pullRequestIdentity
+        };
         var trustedPacket = CiWorkflowEvidencePacket.FromValidatedProvenance(
             observedRun, provenance, trusted, pullRequestIdentity);
         Assert(trustedPacket.WorkflowDefinitionTrusted && trustedPacket.CheckoutVerified &&
