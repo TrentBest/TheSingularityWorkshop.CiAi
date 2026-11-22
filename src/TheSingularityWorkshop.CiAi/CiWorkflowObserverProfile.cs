@@ -56,6 +56,17 @@ public sealed record CiWorkflowObserverProfile
     public string TestArtifactName(long runId, int attempt)
         => Expand(TestArtifactNameTemplate, runId, attempt);
 
+    /// <summary>Creates the exact required-job policy for one source run attempt.</summary>
+    public CiRequiredJobPolicy CreateRequiredJobPolicy(long runId, int attempt)
+        => new(new[]
+        {
+            new CiRequiredJobDefinition(
+                WorkflowPath,
+                RequiredJobKey,
+                RequiredJobName,
+                TestArtifactName(runId, attempt))
+        });
+
     public static CiWorkflowObserverProfile CiAiDefault { get; } = new(
         "ciai-default",
         ".github/workflows/ci.yml",
