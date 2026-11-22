@@ -8,7 +8,7 @@ internal static class CiAiRepositoryCompositionTests
     {
         var configuration = CiAi
             .WithBadge(Badges.SithPolicy())
-            .WithDependency(CiAi.Resolve("TrentBest/TheSingularityWorkshop.FSM_API", "runtime"))
+            .WithDependency(CiAi.Resolve("FSM_API", "runtime"))
             .ExtendWith(Gauntlet.Registrar())
             .Build("TrentBest/TheSingularityWorkshop.CiAi");
 
@@ -24,7 +24,7 @@ internal static class CiAiRepositoryCompositionTests
         var roundTrip = CiAiRepositoryConfiguration.ParseJson(configuration.ToJson());
         Assert(roundTrip.Repository == configuration.Repository &&
             roundTrip.Badges.Single().Id == "sith-policy" &&
-            roundTrip.Dependencies.Single().Repository == "TrentBest/TheSingularityWorkshop.FSM_API" &&
+            roundTrip.Dependencies.Single().Repository == "TrentBest/FSM_API" &&
             roundTrip.Extensions.Single().Id == "Gauntlet.Registrar",
             "repository manifest parser did not round-trip the fluent configuration");
 
