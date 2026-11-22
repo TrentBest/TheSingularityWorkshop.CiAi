@@ -5,6 +5,7 @@ using TheSingularityWorkshop.CiAi.RepositoryCommands;
 var passed = 0;
 passed += AgentOnboardingValidatorTests.Run();
 passed += AiCiBuilderContractTests.Run();
+passed += CiAiRepositoryBuilderContractTests.Run();
 passed += CiPipelineDefinitionContractTests.Run();
 passed += CiWorkflowDomainCatalogContractTests.Run();
 passed += CiWorkflowDomainEvaluatorContractTests.Run();
