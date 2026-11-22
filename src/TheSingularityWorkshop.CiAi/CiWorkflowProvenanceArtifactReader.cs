@@ -83,7 +83,7 @@ public static class CiWorkflowProvenanceArtifactReader
         string expectedWorkflowSha,
         string expectedEventName,
         string expectedEventRef,
-        CiWorkflowPullRequestProvenance? expectedPullRequest)
+        CiProviderPullRequestObservation? expectedPullRequest)
     {
         ArgumentNullException.ThrowIfNull(providerArtifact);
         ArgumentException.ThrowIfNullOrWhiteSpace(expectedArtifactName);
