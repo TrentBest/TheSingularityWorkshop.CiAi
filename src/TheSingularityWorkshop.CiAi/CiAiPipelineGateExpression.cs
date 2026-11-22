@@ -76,9 +76,16 @@ public sealed record CiAiRepositoryGateReference : CiAiGateExpression
         if (commitSha is null || commitSha.Length != 40 || !commitSha.All(Uri.IsHexDigit))
             throw new ArgumentException("A full 40-character source commit SHA is required.", nameof(commitSha));
 
-        GateId = gateId.Trim();
+        var normalizedGateId = gateId.Trim();
+        var normalizedCandidateId = candidateId.Trim();
+        if (normalizedGateId.Length > 128 || normalizedGateId.Any(char.IsControl))
+            throw new ArgumentException("Gate IDs must be at most 128 printable characters.", nameof(gateId));
+        if (normalizedCandidateId.Length > 256 || normalizedCandidateId.Any(char.IsControl))
+            throw new ArgumentException("Candidate IDs must be at most 256 printable characters.", nameof(candidateId));
+
+        GateId = normalizedGateId;
         Repository = repository;
-        CandidateId = candidateId.Trim();
+        CandidateId = normalizedCandidateId;
         CommitSha = commitSha.ToLowerInvariant();
     }
 
