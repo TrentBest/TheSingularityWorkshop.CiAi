@@ -11,6 +11,7 @@ internal static class CiTestResultReportTests
 {
     private const string Repository = "TrentBest/Experiences";
     private const string CandidateSha = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    private const string ProviderHeadSha = "cccccccccccccccccccccccccccccccccccccccc";
     private const string WorkflowSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     private const long RunId = 41234078182;
     private const int RunAttempt = 1;
@@ -357,7 +358,7 @@ internal static class CiTestResultReportTests
             "sha": "{{CandidateSha}}",
             "pullRequest": {
               "number": 17,
-              "head": { "ref": "feature/minesweeper-domain-pilot", "sha": "cccccccccccccccccccccccccccccccccccccccc" },
+              "head": { "ref": "feature/minesweeper-domain-pilot", "sha": "{{ProviderHeadSha}}" },
               "base": { "ref": "development", "sha": "dddddddddddddddddddddddddddddddddddddddd" }
             }
           },
@@ -385,7 +386,7 @@ internal static class CiTestResultReportTests
         };
         var observed = new CiWorkflowRunEvidenceObservation(
             Repository, ".github/workflows/ci.yml", RunId, RunAttempt,
-            "refs/heads/development", CandidateSha, "pull_request", "Validation",
+            "refs/heads/development", ProviderHeadSha, "pull_request", "Validation",
             CiRunStatus.Completed,
             conclusion == "success" ? CiRunConclusion.Success : CiRunConclusion.Failure,
             new Uri($"https://github.com/{Repository}/actions/runs/{RunId}"),
@@ -426,7 +427,7 @@ internal static class CiTestResultReportTests
             created_at = providerCreatedAt,
             expires_at = ExpiresAt,
             archive_download_url = $"https://api.github.com/repos/{artifactRepository}/actions/artifacts/{providerArtifactId}/zip",
-            workflow_run = new { id = RunId, head_sha = CandidateSha }
+            workflow_run = new { id = RunId, head_sha = ProviderHeadSha }
         });
         var artifactListing = JsonSerializer.Serialize(new
         {
@@ -438,7 +439,7 @@ internal static class CiTestResultReportTests
             $"/repos/{artifactRepository}/actions/runs/{RunId}/artifacts",
             $"/repos/{artifactRepository}/actions/artifacts/{providerArtifactId}"));
         var observedArtifact = new GitHubActionsArtifactCollector(http)
-            .GetRequiredArtifactAsync(artifactRepository, RunId, CandidateSha, "minesweeper-test-results")
+            .GetRequiredArtifactAsync(artifactRepository, RunId, ProviderHeadSha, "minesweeper-test-results")
             .GetAwaiter().GetResult();
         var binding = CiTestResultProviderArtifactBinding.FromObservedArtifact(
             observedArtifact, evidence, RequiredPolicy, jobId ?? JobId, jobKey ?? JobKey);
