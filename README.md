@@ -63,4 +63,4 @@ The visitor experience is an introduction, not a substitute for source, tests, C
 
 ## Composite development-pipeline gates
 
-The implementation and trust boundaries for cross-repository AND/OR prerequisites, exact-SHA gate evidence, LLM allocation suppression, and explicit cross-pipeline grants are documented in [Composite Cross-Repository Pipeline Gates](docs/COMPOSITE_PIPELINE_GATES.md).
+The implementation and trust boundaries for cross-repository AND/OR prerequisites, exact-SHA gate evidence, LLM allocation suppression, and explicit cross-pipeline grants are documented in [Composite Cross-Repository Pipeline Gates](docs/COMPOSITE_PIPELINE_GATES.md). The distinction between unfinished providers and failed providers is defined in [Dependency Readiness Policy](docs/DEPENDENCY_READINESS_POLICY.md), tracked by [issue #83](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/83).
