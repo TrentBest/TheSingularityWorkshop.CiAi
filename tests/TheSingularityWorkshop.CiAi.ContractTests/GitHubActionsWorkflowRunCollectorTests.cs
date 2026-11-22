@@ -62,30 +62,6 @@ internal static class GitHubActionsWorkflowRunCollectorTests
                 "incomplete PR provider metadata was incorrectly marked complete");
         }
 
-        using (var client = new HttpClient(new StubHandler((_, _) => Task.FromResult(JsonResponse(pullRequestEventPage)))))
-        {
-            var collection = await new GitHubActionsWorkflowRunCollector(client)
-                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha);
-            Assert(collection.Runs[0].PullRequestIdentitiesComplete &&
-                collection.Runs[0].PullRequestIdentities.Count == 1,
-                "complete PR event did not retain its provider head/base identities");
-        }
-
-        var incompletePullRequestPage = pullRequestEventPage.Replace(
-            "\\\"head\\\": { \\\"ref\\\": \\\"feature/pull-request\\\", \\\"sha\\\": \\\"1111111111111111111111111111111111111111\\\" },\\n              ",
-            string.Empty, StringComparison.Ordinal);
-        incompletePullRequestPage = incompletePullRequestPage.Replace(
-            "\\\"base\\\": { \\\"ref\\\": \\\"development\\\", \\\"sha\\\": \\\"2222222222222222222222222222222222222222\\\" }",
-            string.Empty, StringComparison.Ordinal);
-        using (var client = new HttpClient(new StubHandler((_, _) => Task.FromResult(JsonResponse(incompletePullRequestPage)))))
-        {
-            var collection = await new GitHubActionsWorkflowRunCollector(client)
-                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha);
-            Assert(!collection.Runs[0].PullRequestIdentitiesComplete &&
-                collection.Runs[0].PullRequestIdentities.Count == 0,
-                "incomplete PR provider metadata was incorrectly marked complete");
-        }
-
         var invalidProviderBranch = apiPathWithoutWorkflowRef.Replace(
             "\"head_branch\": \"development\"", "\"head_branch\": \"bad..branch\"", StringComparison.Ordinal);
         using (var client = new HttpClient(new StubHandler((_, _) => Task.FromResult(JsonResponse(invalidProviderBranch)))))
