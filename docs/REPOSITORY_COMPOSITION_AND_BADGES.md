@@ -84,3 +84,8 @@ No package publication, merge, release, deployment, canonical-branch mutation, o
 
 
 The current implementation branch is undergoing exact-head contract verification; this document remains a proposed opt-in contract until its PR is reviewed and accepted.
+
+
+## Ecosystem enrollment
+
+See [the repository enrollment matrix](REPOSITORY_ENROLLMENT_MATRIX.md) for the active workstream inventory, adoption state, and rollout order. Repository-contract enrollment, trusted CI observation, and autonomous repair are tracked as separate maturity levels.
