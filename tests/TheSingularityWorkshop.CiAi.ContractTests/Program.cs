@@ -4,6 +4,7 @@ using TheSingularityWorkshop.CiAi.RepositoryCommands;
 
 var passed = 0;
 passed += CiAiPipelineGateExpressionContractTests.Run();
+passed += CiAiPipelineGateMembershipPolicyContractTests.Run();
 passed += AgentOnboardingValidatorTests.Run();
 passed += AiCiBuilderContractTests.Run();
 passed += CiPipelineDefinitionContractTests.Run();
