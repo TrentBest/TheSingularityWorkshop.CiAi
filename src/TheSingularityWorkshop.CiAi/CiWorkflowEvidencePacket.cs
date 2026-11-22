@@ -161,6 +161,11 @@ public sealed record CiWorkflowEvidencePacket
             observedRun.RunAttempt != provenance.RunAttempt)
             throw new InvalidDataException("Workflow provenance does not identify the exact observed repository, run, and attempt.");
 
+        if (provenance.PullRequest is not null &&
+            (observedRun.ProviderPullRequestIdentity is null ||
+             !observedRun.ProviderPullRequestIdentity.Matches(provenance)))
+            throw new InvalidDataException("Pull-request evidence requires independently observed PR head/base and merge-parent identities.");
+
         // GitHub reports the PR source head in workflow-run head_sha, while a pull_request
         // workflow executes against the synthetic merge commit. Keep those identities distinct.
         var providerHeadMatches = provenance.PullRequest is null
