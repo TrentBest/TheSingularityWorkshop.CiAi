@@ -13,7 +13,7 @@ public sealed record CiWorkflowProvenanceArtifactEvidence(
     string PayloadSha256,
     int PayloadSizeBytes)
 {
-    public bool PullRequestIdentityVerified { get; init; }
+    public bool PullRequestHeadBaseVerified { get; init; }
 }
 
 public static class CiWorkflowProvenanceArtifactReader
@@ -132,7 +132,7 @@ public static class CiWorkflowProvenanceArtifactReader
         var payloadDigest = Convert.ToHexString(SHA256.HashData(payload)).ToLowerInvariant();
         var provenance = CiWorkflowProvenanceRecord.ParseAndValidate(
             payload, expectedRepository, expectedRunId, expectedRunAttempt, payloadDigest);
-        var pullRequestIdentityVerified = provenance.PullRequest is null;
+        var pullRequestHeadBaseVerified = provenance.PullRequest is null;
         if (provenance.PullRequest is not null && expectedPullRequest is not null)
         {
             if (provenance.PullRequest.Number != expectedPullRequest.Number ||
@@ -141,7 +141,7 @@ public static class CiWorkflowProvenanceArtifactReader
                 !string.Equals(provenance.PullRequest.BaseRef, expectedPullRequest.BaseRef, StringComparison.Ordinal) ||
                 !string.Equals(provenance.PullRequest.BaseSha, expectedPullRequest.BaseSha, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("Pull-request head/base identities do not match the independent provider observation.");
-            pullRequestIdentityVerified = true;
+            pullRequestHeadBaseVerified = true;
         }
 
         var expectedFullWorkflowRef = expectedRepository + "/" + expectedWorkflowPath + "@" + expectedWorkflowRef;
@@ -158,7 +158,7 @@ public static class CiWorkflowProvenanceArtifactReader
         return new CiWorkflowProvenanceArtifactEvidence(
             providerArtifact, provenance, payloadDigest, payload.Length)
         {
-            PullRequestIdentityVerified = pullRequestIdentityVerified
+            PullRequestHeadBaseVerified = pullRequestHeadBaseVerified
         };
     }
 
