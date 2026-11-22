@@ -44,6 +44,16 @@ internal static class CiAiPipelineGateExpressionContractTests
             Assert(result == CiAiPipelineGateState.Satisfied, "D did not satisfy the complete alternative");
         });
 
+        Check("gate events identify only pipelines containing the changed leaf", () =>
+        {
+            Assert(expression.DependsOnGate("gate-b") &&
+                   expression.DependsOnGate("gate-c") &&
+                   expression.DependsOnGate("gate-d"),
+                "declared leaf event was not associated with the pipeline");
+            Assert(!expression.DependsOnGate("gate-unrelated"),
+                "unrelated gate event would wake this pipeline");
+        });
+
         Check("blocked alternatives remain blocked until a complete alternative passes", () =>
         {
             var result = CiAiPipelineGateEvaluator.Evaluate(expression, new Dictionary<string, DependencyReleaseGateEvaluation>
