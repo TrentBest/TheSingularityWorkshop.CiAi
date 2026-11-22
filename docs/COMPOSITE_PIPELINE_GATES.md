@@ -8,7 +8,7 @@ CiAi represents this as a bounded Boolean expression over independently verified
 
 ## Expression semantics
 
-The current expression schema is version 1. Trees are immutable and bounded to depth 8 and 32 total nodes. AND/OR nodes require at least two children. Leaf gate IDs must be unique within an expression.
+The current expression schema is version 1. Trees are immutable and bounded to depth 8 and 32 total nodes. AND/OR nodes require at least two children. Leaf gate IDs must be unique within an expression. Each definition also exposes a canonical SHA-256 digest over its schema version, pipeline identity, ordered tree structure, and exact leaf identities. Reordered children therefore produce a different definition digest; the authored expression is retained exactly rather than silently normalized.
 
 Example: either repositories B and C must both pass, or D must pass as a complete alternative.
 
