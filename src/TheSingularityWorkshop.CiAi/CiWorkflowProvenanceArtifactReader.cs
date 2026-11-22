@@ -30,6 +30,55 @@ public static class CiWorkflowProvenanceArtifactReader
         string expectedWorkflowSha,
         string expectedEventName,
         string expectedEventRef)
+        => ReadCore(archiveBytes, providerArtifact, expectedArtifactName, expectedEntryName,
+            expectedRepository, expectedRunId, expectedRunAttempt, expectedHeadSha, expectedHeadSha,
+            expectedHeadSha, expectedWorkflowPath: ".github/workflows/ci.yml", expectedWorkflowRef,
+            expectedWorkflowSha, expectedEventName, expectedEventRef);
+
+    /// <summary>
+    /// Reads an external workflow profile. Provider head, event SHA, and checkout SHA remain separate
+    /// arguments so PR merge runs cannot collapse source-head and merge-checkout identities.
+    /// The host must independently observe each supplied identity.
+    /// </summary>
+    public static CiWorkflowProvenanceArtifactEvidence Read(
+        ReadOnlyMemory<byte> archiveBytes,
+        CiProviderArtifactObservation providerArtifact,
+        CiWorkflowObserverProfile profile,
+        string expectedRepository,
+        long expectedRunId,
+        int expectedRunAttempt,
+        string expectedProviderHeadSha,
+        string expectedEventSha,
+        string expectedCheckoutSha,
+        string expectedWorkflowRef,
+        string expectedWorkflowSha,
+        string expectedEventName,
+        string expectedEventRef)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        return ReadCore(archiveBytes, providerArtifact,
+            profile.ProvenanceArtifactName(expectedRunId, expectedRunAttempt),
+            profile.ProvenanceEntryName, expectedRepository, expectedRunId, expectedRunAttempt,
+            expectedProviderHeadSha, expectedEventSha, expectedCheckoutSha, profile.WorkflowPath,
+            expectedWorkflowRef, expectedWorkflowSha, expectedEventName, expectedEventRef);
+    }
+
+    private static CiWorkflowProvenanceArtifactEvidence ReadCore(
+        ReadOnlyMemory<byte> archiveBytes,
+        CiProviderArtifactObservation providerArtifact,
+        string expectedArtifactName,
+        string expectedEntryName,
+        string expectedRepository,
+        long expectedRunId,
+        int expectedRunAttempt,
+        string expectedProviderHeadSha,
+        string expectedEventSha,
+        string expectedCheckoutSha,
+        string expectedWorkflowPath,
+        string expectedWorkflowRef,
+        string expectedWorkflowSha,
+        string expectedEventName,
+        string expectedEventRef)
     {
         ArgumentNullException.ThrowIfNull(providerArtifact);
         ArgumentException.ThrowIfNullOrWhiteSpace(expectedArtifactName);
@@ -38,7 +87,9 @@ public static class CiWorkflowProvenanceArtifactReader
         ArgumentException.ThrowIfNullOrWhiteSpace(expectedWorkflowRef);
         ArgumentException.ThrowIfNullOrWhiteSpace(expectedEventName);
         ArgumentException.ThrowIfNullOrWhiteSpace(expectedEventRef);
-        ValidateSha(expectedHeadSha, nameof(expectedHeadSha));
+        ValidateSha(expectedProviderHeadSha, nameof(expectedProviderHeadSha));
+        ValidateSha(expectedEventSha, nameof(expectedEventSha));
+        ValidateSha(expectedCheckoutSha, nameof(expectedCheckoutSha));
         ValidateSha(expectedWorkflowSha, nameof(expectedWorkflowSha));
         if (expectedRunId <= 0) throw new ArgumentOutOfRangeException(nameof(expectedRunId));
         if (expectedRunAttempt <= 0) throw new ArgumentOutOfRangeException(nameof(expectedRunAttempt));
@@ -48,7 +99,7 @@ public static class CiWorkflowProvenanceArtifactReader
             throw new InvalidDataException("Workflow provenance artifact is expired.");
         if (!string.Equals(providerArtifact.Repository, expectedRepository, StringComparison.OrdinalIgnoreCase) ||
             providerArtifact.RunId != expectedRunId ||
-            !string.Equals(providerArtifact.HeadSha, expectedHeadSha, StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(providerArtifact.HeadSha, expectedProviderHeadSha, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(providerArtifact.ArtifactName, expectedArtifactName, StringComparison.Ordinal))
             throw new InvalidDataException("Provider artifact metadata does not match the exact expected repository, run, SHA, and artifact name.");
         if (archiveBytes.IsEmpty || archiveBytes.Length != providerArtifact.ArchiveSizeBytes ||
@@ -77,15 +128,15 @@ public static class CiWorkflowProvenanceArtifactReader
         var provenance = CiWorkflowProvenanceRecord.ParseAndValidate(
             payload, expectedRepository, expectedRunId, expectedRunAttempt, payloadDigest);
 
-        var expectedFullWorkflowRef = expectedRepository + "/.github/workflows/ci.yml@" + expectedWorkflowRef;
-        if (!string.Equals(provenance.WorkflowPath, ".github/workflows/ci.yml", StringComparison.Ordinal) ||
+        var expectedFullWorkflowRef = expectedRepository + "/" + expectedWorkflowPath + "@" + expectedWorkflowRef;
+        if (!string.Equals(provenance.WorkflowPath, expectedWorkflowPath, StringComparison.Ordinal) ||
             !string.Equals(provenance.WorkflowRef, expectedFullWorkflowRef, StringComparison.Ordinal) ||
             !string.Equals(provenance.WorkflowSha, expectedWorkflowSha, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(provenance.EventName, expectedEventName, StringComparison.Ordinal) ||
             !string.Equals(provenance.EventRef, expectedEventRef, StringComparison.Ordinal) ||
-            !string.Equals(provenance.EventSha, expectedHeadSha, StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(provenance.EventSha, expectedEventSha, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(provenance.CheckoutRef, expectedEventRef, StringComparison.Ordinal) ||
-            !string.Equals(provenance.CheckoutSha, expectedHeadSha, StringComparison.OrdinalIgnoreCase))
+            !string.Equals(provenance.CheckoutSha, expectedCheckoutSha, StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("Workflow provenance does not match the independently trusted workflow, event, and checkout policy.");
 
         return new CiWorkflowProvenanceArtifactEvidence(
