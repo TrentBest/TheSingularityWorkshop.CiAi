@@ -78,10 +78,10 @@ internal static class CiAiPipelineGateMembershipPolicyContractTests
         {
             Throws<ArgumentException>(() => new CiAiCrossPipelineGateGrant(
                 "grant-invalid", "TrentBest/D", "candidate-d", shaD,
-                "PipelineB", "PipelineA", "policy-1", 1, " ", DateTimeOffset.UtcNow));
+                "PipelineB", "PipelineA", "policy-1", 1, " ", DateTimeOffset.Parse("2026-11-22T00:00:00Z")));
             Throws<ArgumentOutOfRangeException>(() => new CiAiCrossPipelineGateGrant(
                 "grant-invalid", "TrentBest/D", "candidate-d", shaD,
-                "PipelineB", "PipelineA", "policy-1", 0, "human", DateTimeOffset.UtcNow));
+                "PipelineB", "PipelineA", "policy-1", 0, "human", DateTimeOffset.Parse("2026-11-22T00:00:00Z")));
         });
 
         return passed;
