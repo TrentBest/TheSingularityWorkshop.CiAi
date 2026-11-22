@@ -16,6 +16,13 @@ internal static class CiAiPipelineGateExpressionContractTests
                 d
             }));
 
+        Check("composite gate expression declares its schema version", () =>
+        {
+            Assert(expression.SchemaVersion == CiAiPipelineGateExpression.CurrentSchemaVersion &&
+                   expression.SchemaVersion == 1,
+                "unexpected composite gate schema version");
+        });
+
         Check("B and C together satisfy the composite alternative", () =>
         {
             var result = CiAiPipelineGateEvaluator.Evaluate(expression, new Dictionary<string, DependencyReleaseGateEvaluation>
