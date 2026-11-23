@@ -33,11 +33,11 @@ The coordinator stops the batch on authentication failure, authorization denial,
 
 The host supplies:
 - an `HttpClient` configured with automatic redirects disabled;
-- a host-owned credential provider that obtains a narrow, short-lived bearer token for the registered Foundry endpoint;
+- a host-owned credential provider that obtains a narrow, short-lived bearer token for the registered FSM_Execution endpoint;
 - protected outbox and receipt-ledger paths; and
 - a scheduler or operator that decides when to invoke the next bounded pass.
 
-The sender transmits only `ArtifactReadyNotice` metadata. Artifact retrieval, digest/size verification, provider acknowledgement delivery, and Foundry's task orchestration are separate responsibilities.
+The sender transmits only `ArtifactReadyNotice` metadata. Artifact retrieval, digest/size verification, provider acknowledgement delivery, and FSM_Execution's task orchestration are separate responsibilities.
 
 ---
 
