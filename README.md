@@ -103,7 +103,7 @@ The read-only GitHub Actions client validates provider identity and preserves un
 
 The AiCi repository builder emits enriched **CommandAi/1** atomic commands. Repository identity is the command target; the isolated feature branch and exact base commit SHA are the command scope. Each command receives a deterministic command GUID and a separate deterministic idempotency identity derived from the exact proposal context and operation data. File paths, content, expected source SHA-256 digests, patches, package IDs, and versions remain ordered typed arguments.
 
-The builder declares a shared expected repository-operation outcome shape. It does not invent a precondition grammar: the preconditions collection remains empty until a trusted grammar/evaluator is registered. Foundry/host must independently revalidate the base SHA, file digest, live repository state, authorization, and approval before execution. AiCi only constructs an immutable proposal; it does not access Git or execute operations.
+The builder declares a shared expected repository-operation outcome shape. It does not invent a precondition grammar: the preconditions collection remains empty until a trusted grammar/evaluator is registered. FSM_Execution/host must independently revalidate the base SHA, file digest, live repository state, authorization, and approval before execution. AiCi only constructs an immutable proposal; it does not access Git or execute operations.
 
 See [AiCi repository command contract](docs/AI_CI_REPOSITORY_COMMANDS.md) and the [enriched CommandAi/1 decision](https://github.com/TrentBest/TheSingularityWorkshop.CommandAi/issues/1).
 
