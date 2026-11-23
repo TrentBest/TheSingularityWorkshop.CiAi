@@ -141,7 +141,7 @@ An invalidation follows the same pattern with `AwaitGateEventKind.Invalidated` a
 This slice provides versioned contracts, deterministic fail-closed evaluation, immutable local stores, event correlation, and receipt persistence. It does not yet provide:
 
 - A trusted host adapter that authenticates provider artifacts and human approval records
-- Cross-repository registration/discovery or Foundry transport
+- Cross-repository registration/discovery or FSM_Execution transport
 - Host-owned retry scheduling, notification delivery, or consumer LLM invocation
 - A complete multi-event transition coordinator that automatically derives satisfied/invalidated events from provider updates
 - A real cross-repository consumer integration test
