@@ -7,7 +7,7 @@
 
 CiAi has one canonical workflow-evidence outbox and one matching receipt ledger for the `ciai.workflow-evidence.v1` delivery family. The outbox persists exact packet bytes before transport; the ledger records receiver acknowledgements against the same delivery identity.
 
-The Foundry artifact-ready notice outbox is a separate transport queue for the outer metadata-only notice. It does not create a second workflow-evidence packet schema or a parallel v2/v3 evidence ledger.
+The FSM_Execution artifact-ready notice outbox is a separate transport queue for the outer metadata-only notice. It does not create a second workflow-evidence packet schema or a parallel v2/v3 evidence ledger.
 
 ## Delivery identity
 
