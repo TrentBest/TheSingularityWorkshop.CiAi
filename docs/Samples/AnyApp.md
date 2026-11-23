@@ -85,7 +85,7 @@ The source SHA in the report must match the AnyApp commit. A report for another 
 3. Capture and report resolved SHAs for AnyApp's sibling source checkouts, not only the AnyApp source SHA.
 4. Make provider evidence and artifact links easy to consume in a stable JSON/Markdown report contract.
 5. Connect the trusted host artifact retriever to CiAi's provenance/TRX parser; verify provider ZIP digests, safe extraction, exact job ID/name binding, and workflow-definition trust.
-6. Deliver the normalized diagnostic report into the same Foundry task, then drive a bounded HeadlessAi proposal through independent host authorization and exact-SHA revalidation.
+6. Deliver the normalized diagnostic report into the same FSM_Execution task, then drive a bounded HeadlessAi proposal through independent host authorization and exact-SHA revalidation.
 7. Keep the observer read-only and the integration non-blocking until evidence semantics have been exercised against real consumer runs.
 
 This is a source-based consumer and diagnostic-producer pilot, not a completed reusable GitHub Actions host adapter or self-repair loop. AnyApp's build/test workflow remains authoritative. No NuGet package publication, GitHub Release, deployment, or merge is part of this example.
