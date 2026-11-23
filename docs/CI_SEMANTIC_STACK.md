@@ -13,7 +13,7 @@ The dependency direction is intentional:
 - **GrammarAi** represents generic productions and protocol-qualified terminals. Its host-supplied resolver checks whether referenced protocol and symbol identities exist. It does not load ProtocolAi or interpret CI meaning.
 - **CiAi** owns the CI vocabulary, grammar, workflow-domain catalog, plan validation, evidence semantics, and CI-specific constraints.
 - **CommandAi** represents bounded command intent. A valid CI grammar or command proposal does not prove permission or execution.
-- **Foundry/host** owns live-state validation, approval, authorization, replay/delivery, dispatch, and execution control.
+- **FSM_Execution/host** owns live-state validation, approval, authorization, replay/delivery, dispatch, and execution control.
 - **Provider adapters/runners** remain authoritative for provider-side execution and observed run facts.
 
 ## Protocol vocabulary
