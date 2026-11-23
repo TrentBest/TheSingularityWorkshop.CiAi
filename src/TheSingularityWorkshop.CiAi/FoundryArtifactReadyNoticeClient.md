@@ -7,11 +7,11 @@
 
 ## Purpose
 
-**FoundryArtifactReadyNoticeClient** sends the metadata-only **ArtifactReadyNotice v1** contract to Foundry's host-owned HTTPS ingress:
+**FoundryArtifactReadyNoticeClient** sends the metadata-only **ArtifactReadyNotice v1** contract to FSM_Execution's host-owned HTTPS ingress:
 
 POST /api/v1/integrations/ciai/artifact-ready
 
-It implements the sender side of [Foundry's normative callback contract](https://github.com/TrentBest/TheSingularityWorkshop.Foundry/blob/work/code-red-task-lifecycle/docs/CIAI_ARTIFACT_CALLBACK_CONTRACT.md). It does not send evidence bytes, retrieve artifacts, authorize repository operations, or decide whether CI passed.
+It implements the sender side of [FSM_Execution's normative callback contract](https://github.com/TrentBest/TheSingularityWorkshop.FSM_Execution/blob/work/code-red-task-lifecycle/docs/CIAI_ARTIFACT_CALLBACK_CONTRACT.md). It does not send evidence bytes, retrieve artifacts, authorize repository operations, or decide whether CI passed.
 
 ## Authentication boundary
 
@@ -39,9 +39,9 @@ The client performs one HTTP attempt and has ten focused transport contract chec
 
 ## Current boundary
 
-This is a durable sender-side notice pipeline with a bounded delivery coordinator, not yet a complete remote artifact handoff. CiAi still needs an immutable artifact publisher/hosting adapter, a concrete host-managed credential integration, and the provider-side authenticated receipt acknowledgement sender. The credential provider remains an injected host boundary; CiAi does not mint or store JWTs. Foundry separately owns ingress hosting, JWT validation, durable receiver receipts, safe artifact retrieval, evidence reconciliation, and task orchestration.
+This is a durable sender-side notice pipeline with a bounded delivery coordinator, not yet a complete remote artifact handoff. CiAi still needs an immutable artifact publisher/hosting adapter, a concrete host-managed credential integration, and the provider-side authenticated receipt acknowledgement sender. The credential provider remains an injected host boundary; CiAi does not mint or store JWTs. FSM_Execution separately owns ingress hosting, JWT validation, durable receiver receipts, safe artifact retrieval, evidence reconciliation, and task orchestration.
 
-A 202 receipt means only that Foundry durably recorded the notice. It does not prove artifact retrieval, digest verification, packet acceptance, successful CI, review readiness, or authorization to change a repository.
+A 202 receipt means only that FSM_Execution durably recorded the notice. It does not prove artifact retrieval, digest verification, packet acceptance, successful CI, review readiness, or authorization to change a repository.
 
 ---
 
