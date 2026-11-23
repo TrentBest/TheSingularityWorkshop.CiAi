@@ -39,6 +39,7 @@ jobs:
         with:
           path: CiAi
           submodules: recursive
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Verify pinned ProtocolAi source revision
         env:
           EXPECTED_PROTOCOL_AI_SHA: 13e86c23c8eab6a33f3f124342b54598748e8756
@@ -118,6 +119,7 @@ jobs:
         with:
           path: CiAi
           submodules: recursive
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Verify pinned GrammarAi source revision
         working-directory: CiAi
         env:
@@ -178,5 +180,7 @@ jobs:
         working-directory: CiAi
         env:
           CIAI_VERIFY_PROVIDER_EVIDENCE: "1"
+          CIAI_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          CIAI_CANDIDATE_REF: ${{ github.event.pull_request.head.ref && format('refs/heads/{0}', github.event.pull_request.head.ref) || github.ref }}
           GH_TOKEN: ${{ github.token }}
         run: dotnet run --project integration/CogEcosystem.ContractTests --configuration Release --no-build
