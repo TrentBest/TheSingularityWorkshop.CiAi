@@ -15,7 +15,7 @@ This page explains the end-to-end trust path for a test-result report. The repor
 | GitHub Actions | Authoritative workflow/run/job state and provider artifact metadata | CiAi's normalized contract |
 | CiAi producer | Exact-run evidence validation, artifact binding checks, TRX normalization, versioned report | Host authorization or downstream task lifecycle |
 | Trusted host / retriever | Independent provider observations, archive download, provider digest verification, safe extraction, accepted-byte identity | Reinterpreting untrusted report fields as provider facts |
-| Foundry | Accepted-evidence context, task/lease/replay lifecycle, authorization, governed execution | Producing the original CI verdict |
+| FSM_Execution | Accepted-evidence context, task/lease/replay lifecycle, authorization, governed execution | Producing the original CI verdict |
 | HeadlessAi | Consuming bounded accepted context and returning a proposal | Provider authentication, task authorization, or execution |
 
 The core rule is that **report JSON cannot authenticate itself**. In particular, the host-observed artifact-to-job binding is separate from the report and must be constructed from independently observed provider metadata.
@@ -70,13 +70,13 @@ Before accepting a report, the host must independently verify:
 - Replay/idempotency handling binds the same key to the same immutable report and source-artifact identity.
 - Any ambiguity, stale evidence, mismatch, duplicate identity, incomplete retrieval, or unsupported contract version fails closed.
 
-CiAi's source artifact verifier proves byte and archive consistency within its stated boundary. It does not authenticate the sender or prove that a notice was accepted by Foundry. Those remain host responsibilities.
+CiAi's source artifact verifier proves byte and archive consistency within its stated boundary. It does not authenticate the sender or prove that a notice was accepted by FSM_Execution. Those remain host responsibilities.
 
 ## 5. Repair handoff and authorization
 
 Only an accepted `ActionableFailure` report with the required source-artifact binding may be supplied as repair context. HeadlessAi may use that context to explain a failure and propose a bounded change. Its response remains untrusted proposal data.
 
-Foundry and the host retain control over candidate identity, leases, replay protection, authorization, validation, and execution. A model-generated statement, tool call suggestion, report field, or successful CI run cannot grant merge, package publication, release, deployment, or command-execution authority.
+FSM_Execution and the host retain control over candidate identity, leases, replay protection, authorization, validation, and execution. A model-generated statement, tool call suggestion, report field, or successful CI run cannot grant merge, package publication, release, deployment, or command-execution authority.
 
 ## 6. Limits and non-goals
 
@@ -96,10 +96,10 @@ This contract does not, by itself:
 - [Workflow provenance implementation](../src/TheSingularityWorkshop.CiAi/CiWorkflowProvenanceRecord.cs)
 - [Artifact archive verifier](../src/TheSingularityWorkshop.CiAi/CiTestResultArtifactArchive.cs)
 - [Required job policy](../src/TheSingularityWorkshop.CiAi/CiRequiredJobPolicy.cs)
-- [Foundry notice enqueuer](../src/TheSingularityWorkshop.CiAi/CiTestResultFoundryNoticeEnqueuer.md)
+- [FSM_Execution notice enqueuer](../src/TheSingularityWorkshop.CiAi/CiTestResultFoundryNoticeEnqueuer.md)
 - [Release readiness and authorization gates](RELEASE_READINESS.md)
 - [HeadlessAi accepted CI context](https://github.com/TrentBest/TheSingularityWorkshop.HeadlessAi/pull/13)
-- [Foundry accepted CI report integration](https://github.com/TrentBest/TheSingularityWorkshop.FSM_Foundry/pull/15)
+- [FSM_Execution accepted CI report integration](https://github.com/TrentBest/TheSingularityWorkshop.FSM_Execution/pull/15)
 
 ## 8. Evidence and validation
 
