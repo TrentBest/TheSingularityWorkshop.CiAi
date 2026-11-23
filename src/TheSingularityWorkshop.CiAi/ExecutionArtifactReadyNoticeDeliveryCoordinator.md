@@ -1,13 +1,13 @@
 <!-- The Singularity Workshop moniker -->
 <p align="center"><a href="https://github.com/TrentBest"><img src="https://raw.githubusercontent.com/TrentBest/TheSingularityWorkshop.Visualize/development/docs/assets/moniker.svg" alt="The Singularity Workshop animated moniker" width="720" /></a></p>
 
-# FoundryArtifactReadyNoticeDeliveryCoordinator
+# ExecutionArtifactReadyNoticeDeliveryCoordinator
 
 **User moniker:** Durable Notice Courier
 
 ## Purpose
 
-`FoundryArtifactReadyNoticeDeliveryCoordinator` connects CiAi's durable metadata-only notice outbox, authenticated HTTPS sender, and local receipt ledger for one bounded delivery pass.
+`ExecutionArtifactReadyNoticeDeliveryCoordinator` connects CiAi's durable metadata-only notice outbox, authenticated HTTPS sender, and local receipt ledger for one bounded delivery pass.
 
 It does not create notices, transfer artifact bytes, schedule retries, or authorize repository actions.
 
@@ -16,7 +16,7 @@ It does not create notices, transfer artifact bytes, schedule retries, or author
 1. Read the receipt ledger's acknowledged notice IDs.
 2. Read the exact pending serialized notices from the outbox.
 3. Attempt each selected notice once, sequentially, up to the configured maximum (1–100; default 20).
-4. Persist only authenticated `Accepted` or `Duplicate` receipts returned by `FoundryArtifactReadyNoticeClient`.
+4. Persist only authenticated `Accepted` or `Duplicate` receipts returned by `ExecutionArtifactReadyNoticeClient`.
 5. Re-read pending notices and return attempted, acknowledged, and remaining counts with per-notice outcomes.
 
 The coordinator stops the batch on authentication failure, authorization denial, rate limiting, retryable transport failure, or a rejected/malformed receiver response. It preserves `RetryAfter` for the caller and leaves unacknowledged notices pending. Notice-specific `InvalidRequest` and `Conflict` outcomes remain visible in the result but do not prevent later independent notices from being attempted. Each attempt result also preserves the HTTP status, receiver receipt, error code, retry metadata, and local receipt-ledger outcome so the host can retain diagnostics without treating a negative response as acknowledgement.

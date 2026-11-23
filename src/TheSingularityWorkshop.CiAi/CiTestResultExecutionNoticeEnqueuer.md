@@ -1,11 +1,11 @@
 <!-- The Singularity Workshop animated moniker -->
 <p align="center"><a href="https://github.com/TrentBest"><img src="https://raw.githubusercontent.com/TrentBest/TheSingularityWorkshop.Visualize/development/docs/assets/moniker.svg" alt="The Singularity Workshop animated moniker" width="720" /></a></p>
 
-# CiTestResultFoundryNoticeEnqueuer
+# CiTestResultExecutionNoticeEnqueuer
 
 ## Purpose
 
-`CiTestResultFoundryNoticeEnqueuer` connects CiAi's canonical `ciai.test-results.v1` report to FSM_Execution's metadata-only `ArtifactReadyNotice` transport.
+`CiTestResultExecutionNoticeEnqueuer` connects CiAi's canonical `ciai.test-results.v1` report to FSM_Execution's metadata-only `ArtifactReadyNotice` transport.
 
 It does not send test-result JSON inside the notice. A host-supplied `ICiTestResultArtifactPublisher` stores the exact canonical report bytes and returns an `ArtifactManifest` that points to the stored object. CiAi validates that manifest before it persists a notice in the FSM_Execution notice outbox.
 
@@ -25,7 +25,7 @@ A mismatch prevents the notice from entering the durable outbox. The notice then
 
 ## Delivery
 
-`FoundryArtifactReadyNoticeDeliveryCoordinator` reads pending notices, sends them through `FoundryArtifactReadyNoticeClient`, and records only matching durable Accepted/Duplicate receipts. Transient failures leave the same notice pending for a later bounded pass. Retries reuse the same notice ID and idempotency key.
+`ExecutionArtifactReadyNoticeDeliveryCoordinator` reads pending notices, sends them through `ExecutionArtifactReadyNoticeClient`, and records only matching durable Accepted/Duplicate receipts. Transient failures leave the same notice pending for a later bounded pass. Retries reuse the same notice ID and idempotency key.
 
 ## Host responsibilities and limits
 

@@ -1,11 +1,11 @@
 using System.Security.Cryptography;
 using TheSingularityWorkshop.CiAi;
 
-internal static class CiTestResultFoundryNoticeEnqueuerTests
+internal static class CiTestResultExecutionNoticeEnqueuerTests
 {
     public static async Task<int> RunAsync()
     {
-        var root = Path.Combine(Path.GetTempPath(), "ciai-foundry-report-" + Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(Path.GetTempPath(), "ciai-execution-report-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
         {
@@ -15,13 +15,13 @@ internal static class CiTestResultFoundryNoticeEnqueuerTests
             var notifiedAt = report.ObservedAt.AddMinutes(2);
             var publisher = new FakePublisher((value, payload) =>
                 CreateManifest(value, payload.Span, recipient, digestOverride: null, sourceShaOverride: null));
-            var outbox = new FileFoundryArtifactReadyNoticeOutbox(Path.Combine(root, "notices.jsonl"));
-            var enqueuer = new CiTestResultFoundryNoticeEnqueuer(publisher, outbox);
+            var outbox = new FileExecutionArtifactReadyNoticeOutbox(Path.Combine(root, "notices.jsonl"));
+            var enqueuer = new CiTestResultExecutionNoticeEnqueuer(publisher, outbox);
 
             var first = await enqueuer.PublishAndEnqueueAsync(
                 report, recipient, "notice-report-42-1", notifiedAt);
-            Assert(first == FoundryArtifactNoticeEnqueueOutcome.Enqueued,
-                "canonical report was not durably enqueued for Foundry");
+            Assert(first == ExecutionArtifactNoticeEnqueueOutcome.Enqueued,
+                "canonical report was not durably enqueued for FSM_Execution");
             Assert(publisher.PublishedBytes is not null && publisher.PublishedBytes.SequenceEqual(bytes),
                 "artifact publisher did not receive the exact canonical report bytes");
 
@@ -32,45 +32,45 @@ internal static class CiTestResultFoundryNoticeEnqueuerTests
                 pending[0].Notice.Manifest.IdempotencyKey == report.ReportIdentity &&
                 pending[0].Notice.Manifest.SourceSha == report.CandidateSha &&
                 pending[0].Notice.Manifest.ProviderRunId == report.RunId,
-                "Foundry notice did not preserve report digest, size, identity, and exact run/candidate lineage");
+                "FSM_Execution notice did not preserve report digest, size, identity, and exact run/candidate lineage");
 
             var duplicate = await enqueuer.PublishAndEnqueueAsync(
                 report, recipient, "notice-report-42-1", notifiedAt);
-            Assert(duplicate == FoundryArtifactNoticeEnqueueOutcome.Duplicate,
+            Assert(duplicate == ExecutionArtifactNoticeEnqueueOutcome.Duplicate,
                 "identical report notice retry was not idempotent");
 
-            var badDigestOutbox = new FileFoundryArtifactReadyNoticeOutbox(Path.Combine(root, "bad-digest.jsonl"));
+            var badDigestOutbox = new FileExecutionArtifactReadyNoticeOutbox(Path.Combine(root, "bad-digest.jsonl"));
             var badDigestPublisher = new FakePublisher((value, payload) =>
                 CreateManifest(value, payload.Span, recipient, new string('0', 64), null));
-            var badDigestEnqueuer = new CiTestResultFoundryNoticeEnqueuer(badDigestPublisher, badDigestOutbox);
+            var badDigestEnqueuer = new CiTestResultExecutionNoticeEnqueuer(badDigestPublisher, badDigestOutbox);
             await AssertThrowsAsync<InvalidDataException>(() => badDigestEnqueuer.PublishAndEnqueueAsync(
                 report, recipient, "notice-bad-digest", notifiedAt));
             Assert(badDigestOutbox.ReadPending().Count == 0,
                 "invalid publisher digest was persisted as a deliverable notice");
 
-            var tamperedReportOutbox = new FileFoundryArtifactReadyNoticeOutbox(Path.Combine(root, "tampered-report.jsonl"));
+            var tamperedReportOutbox = new FileExecutionArtifactReadyNoticeOutbox(Path.Combine(root, "tampered-report.jsonl"));
             var tamperedReportPublisher = new FakePublisher((value, payload) =>
             {
                 var alteredBytes = payload.ToArray();
                 alteredBytes[0] ^= 0x01;
                 return CreateManifest(value, alteredBytes, recipient, digestOverride: null, sourceShaOverride: null);
             });
-            var tamperedReportEnqueuer = new CiTestResultFoundryNoticeEnqueuer(tamperedReportPublisher, tamperedReportOutbox);
+            var tamperedReportEnqueuer = new CiTestResultExecutionNoticeEnqueuer(tamperedReportPublisher, tamperedReportOutbox);
             await AssertThrowsAsync<InvalidDataException>(() => tamperedReportEnqueuer.PublishAndEnqueueAsync(
                 report, recipient, "notice-tampered-report", notifiedAt));
             Assert(tamperedReportOutbox.ReadPending().Count == 0,
-                "publisher-substituted report bytes were persisted as a deliverable Foundry notice");
+                "publisher-substituted report bytes were persisted as a deliverable FSM_Execution notice");
 
-            var wrongCandidateOutbox = new FileFoundryArtifactReadyNoticeOutbox(Path.Combine(root, "wrong-candidate.jsonl"));
+            var wrongCandidateOutbox = new FileExecutionArtifactReadyNoticeOutbox(Path.Combine(root, "wrong-candidate.jsonl"));
             var wrongCandidatePublisher = new FakePublisher((value, payload) =>
                 CreateManifest(value, payload.Span, recipient, null, new string('f', 40)));
-            var wrongCandidateEnqueuer = new CiTestResultFoundryNoticeEnqueuer(wrongCandidatePublisher, wrongCandidateOutbox);
+            var wrongCandidateEnqueuer = new CiTestResultExecutionNoticeEnqueuer(wrongCandidatePublisher, wrongCandidateOutbox);
             await AssertThrowsAsync<UnauthorizedAccessException>(() => wrongCandidateEnqueuer.PublishAndEnqueueAsync(
                 report, recipient, "notice-wrong-candidate", notifiedAt));
             Assert(wrongCandidateOutbox.ReadPending().Count == 0,
                 "wrong candidate SHA was persisted as a deliverable notice");
 
-            Console.WriteLine("PASS: 7 canonical report-to-Foundry notice binding checks.");
+            Console.WriteLine("PASS: 7 canonical report-to-FSM_Execution notice binding checks.");
             return 7;
         }
         finally
@@ -92,15 +92,15 @@ internal static class CiTestResultFoundryNoticeEnqueuerTests
             "operation-" + report.RunId,
             report.ReportIdentity,
             report.Repository,
-            CiTestResultFoundryNoticeEnqueuer.CapabilityId,
-            CiTestResultFoundryNoticeEnqueuer.CapabilityVersion,
+            CiTestResultExecutionNoticeEnqueuer.CapabilityId,
+            CiTestResultExecutionNoticeEnqueuer.CapabilityVersion,
             report.WorkflowDefinitionSha,
             $"ciai-test-results-{report.RunId}-{report.RunAttempt}",
             "1",
             sourceShaOverride ?? report.CandidateSha,
             "SHA-256",
             digestOverride ?? digest,
-            CiTestResultFoundryNoticeEnqueuer.MediaType,
+            CiTestResultExecutionNoticeEnqueuer.MediaType,
             bytes.Length,
             new Uri("https://artifacts.example.com/ciai/test-results/report.json"),
             report.ObservedAt.AddSeconds(1),

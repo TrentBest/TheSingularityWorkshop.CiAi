@@ -1,11 +1,13 @@
-# TheSingularityWorkshop.Foundry: CiAi Integration Sample
+# TheSingularityWorkshop.Execution: CiAi Integration Sample
 
 ## Intended role
-Build/foundry tooling; validate generated outputs, package provenance, and reproducible builds.
+
+Execution tooling; validate generated outputs, package provenance, and reproducible builds.
 
 This is a repository-specific integration proposal. Verify the role, workflow inventory, and source contracts before making it a required check.
 
 ## Evidence CiAi should consume
+
 - Repository/ref, tested commit SHA, workflow file/event, run ID/attempt, status/conclusion, timestamps.
 - Job/step results and direct provider log/artifact links.
 - Exact resolved dependency SHAs/package versions, not just moving branch names.
@@ -13,6 +15,7 @@ This is a repository-specific integration proposal. Verify the role, workflow in
 - Distinct successful, failed, cancelled, skipped, not-triggered, unavailable, and unknown states.
 
 ## How to consume CiAi
+
 1. Existing GitHub Actions/provider CI remains the executor and authoritative evidence source.
 2. Declare purpose, API/packages, capabilities, dependencies, supported runtimes, and examples.
 3. Publish normalized evidence tied to commit and run attempt.
@@ -21,9 +24,11 @@ This is a repository-specific integration proposal. Verify the role, workflow in
 6. Integrate read-only/advisory first. No package publication or deployment authority is granted to CiAi.
 
 ## Repository-specific priority
+
 Reproducible generated artifacts, provenance, clean-checkout build, and package integrity.
 
 ## Rollout and acceptance
+
 - Inventory workflows, permissions, dependencies, and action pins.
 - Normalize provider evidence without changing existing gates.
 - Correlate jobs to tested commit and resolved dependency versions.

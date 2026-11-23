@@ -1,40 +1,40 @@
 using TheSingularityWorkshop.CiAi;
 
-internal static class FoundryArtifactReadyNoticeOutboxTests
+internal static class ExecutionArtifactReadyNoticeOutboxTests
 {
     public static int Run()
     {
-        var root = Path.Combine(Path.GetTempPath(), "ciai-foundry-notices-" + Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(Path.GetTempPath(), "ciai-execution-notices-" + Guid.NewGuid().ToString("N"));
         var outboxPath = Path.Combine(root, "notices.jsonl");
         var receiptPath = Path.Combine(root, "receipts.jsonl");
         try
         {
             var notice = CreateNotice();
-            var delivery = new FoundryArtifactReadyNoticeDelivery(notice);
-            var outbox = new FileFoundryArtifactReadyNoticeOutbox(outboxPath);
-            Assert(outbox.Enqueue(delivery) == FoundryArtifactNoticeEnqueueOutcome.Enqueued,
+            var delivery = new ExecutionArtifactReadyNoticeDelivery(notice);
+            var outbox = new FileExecutionArtifactReadyNoticeOutbox(outboxPath);
+            Assert(outbox.Enqueue(delivery) == ExecutionArtifactNoticeEnqueueOutcome.Enqueued,
                 "first notice was not durably enqueued");
-            Assert(outbox.Enqueue(delivery) == FoundryArtifactNoticeEnqueueOutcome.Duplicate,
+            Assert(outbox.Enqueue(delivery) == ExecutionArtifactNoticeEnqueueOutcome.Duplicate,
                 "exact notice retry was not deduplicated");
 
-            var reopened = new FileFoundryArtifactReadyNoticeOutbox(outboxPath);
+            var reopened = new FileExecutionArtifactReadyNoticeOutbox(outboxPath);
             var pending = reopened.ReadPending();
             Assert(pending.Count == 1 && pending[0].Payload == delivery.Payload &&
                 pending[0].PayloadSha256 == delivery.PayloadSha256,
                 "restart replay did not preserve exact notice bytes and digest");
 
-            var changedSameNotice = new FoundryArtifactReadyNoticeDelivery(
+            var changedSameNotice = new ExecutionArtifactReadyNoticeDelivery(
                 CreateNotice(noticeId: notice.NoticeId, digest: new string('b', 64)));
-            Assert(reopened.Enqueue(changedSameNotice) == FoundryArtifactNoticeEnqueueOutcome.Conflict,
+            Assert(reopened.Enqueue(changedSameNotice) == ExecutionArtifactNoticeEnqueueOutcome.Conflict,
                 "changed payload reused an existing notice identity");
-            var changedNoticeId = new FoundryArtifactReadyNoticeDelivery(
+            var changedNoticeId = new ExecutionArtifactReadyNoticeDelivery(
                 CreateNotice(noticeId: "notice-2"));
-            Assert(reopened.Enqueue(changedNoticeId) == FoundryArtifactNoticeEnqueueOutcome.Conflict,
+            Assert(reopened.Enqueue(changedNoticeId) == ExecutionArtifactNoticeEnqueueOutcome.Conflict,
                 "idempotency key was reused under a different notice ID");
 
             var receipt = CreateReceipt(delivery, "receipt-1", "accepted");
-            var ledger = new FileFoundryArtifactIngressReceiptLedger(receiptPath);
-            Assert(ledger.Record(receipt, delivery) == FoundryArtifactIngressReceiptRecordOutcome.Recorded,
+            var ledger = new FileExecutionArtifactIngressReceiptLedger(receiptPath);
+            Assert(ledger.Record(receipt, delivery) == ExecutionArtifactIngressReceiptRecordOutcome.Recorded,
                 "durable accepted receipt was not recorded");
             Assert(ledger.ReadAcknowledgedNoticeIds().Contains(notice.NoticeId),
                 "accepted receipt did not acknowledge the exact notice");
@@ -42,37 +42,37 @@ internal static class FoundryArtifactReadyNoticeOutboxTests
                 "accepted notice was replayed after restart");
 
             var duplicateReceipt = CreateReceipt(delivery, "receipt-1", "duplicate");
-            Assert(ledger.Record(duplicateReceipt, delivery) == FoundryArtifactIngressReceiptRecordOutcome.Duplicate,
+            Assert(ledger.Record(duplicateReceipt, delivery) == ExecutionArtifactIngressReceiptRecordOutcome.Duplicate,
                 "same stable receipt returned as duplicate was treated as conflict");
             Assert(ledger.ReadReceipts().Single().Outcome == "accepted",
                 "duplicate retry overwrote the original durable receipt");
 
-            var wrongReceipt = new FoundryArtifactIngressReceipt(
-                FoundryArtifactReadyNoticeClient.Contract, "receipt-wrong", "other-notice",
+            var wrongReceipt = new ExecutionArtifactIngressReceipt(
+                ExecutionArtifactReadyNoticeClient.Contract, "receipt-wrong", "other-notice",
                 delivery.IdempotencyKey, "accepted", DateTimeOffset.Parse("2026-10-31T00:02:00Z"));
             AssertThrows<ArgumentException>(() => ledger.Record(wrongReceipt, delivery));
 
-            var wrongIdempotencyReceipt = new FoundryArtifactIngressReceipt(
-                FoundryArtifactReadyNoticeClient.Contract, "receipt-wrong-key", notice.NoticeId,
+            var wrongIdempotencyReceipt = new ExecutionArtifactIngressReceipt(
+                ExecutionArtifactReadyNoticeClient.Contract, "receipt-wrong-key", notice.NoticeId,
                 "different-report-identity", "accepted", DateTimeOffset.Parse("2026-10-31T00:02:00Z"));
             AssertThrows<ArgumentException>(() => ledger.Record(wrongIdempotencyReceipt, delivery));
 
-            var alteredReceiptReuse = new FoundryArtifactIngressReceipt(
-                FoundryArtifactReadyNoticeClient.Contract, "receipt-1", notice.NoticeId,
+            var alteredReceiptReuse = new ExecutionArtifactIngressReceipt(
+                ExecutionArtifactReadyNoticeClient.Contract, "receipt-1", notice.NoticeId,
                 delivery.IdempotencyKey, "accepted", DateTimeOffset.Parse("2026-10-31T00:02:01Z"));
-            Assert(ledger.Record(alteredReceiptReuse, delivery) == FoundryArtifactIngressReceiptRecordOutcome.Conflict,
+            Assert(ledger.Record(alteredReceiptReuse, delivery) == ExecutionArtifactIngressReceiptRecordOutcome.Conflict,
                 "a reused receipt identity with altered acceptance time was not rejected as a conflict");
 
             var tornOutbox = Path.Combine(root, "torn-outbox.jsonl");
             File.WriteAllText(tornOutbox, "partial");
             AssertThrows<InvalidDataException>(() =>
-                new FileFoundryArtifactReadyNoticeOutbox(tornOutbox).ReadPending());
+                new FileExecutionArtifactReadyNoticeOutbox(tornOutbox).ReadPending());
             var tornLedger = Path.Combine(root, "torn-ledger.jsonl");
             File.WriteAllText(tornLedger, "partial");
             AssertThrows<InvalidDataException>(() =>
-                new FileFoundryArtifactIngressReceiptLedger(tornLedger).ReadAcknowledgedNoticeIds());
+                new FileExecutionArtifactIngressReceiptLedger(tornLedger).ReadAcknowledgedNoticeIds());
 
-            Console.WriteLine("PASS: 15 Foundry notice outbox and receipt ledger contract checks.");
+            Console.WriteLine("PASS: 15 FSM_Execution notice outbox and receipt ledger contract checks.");
             return 15;
         }
         finally
@@ -97,9 +97,9 @@ internal static class FoundryArtifactReadyNoticeOutboxTests
             DateTimeOffset.Parse("2026-10-31T00:01:00Z"));
     }
 
-    private static FoundryArtifactIngressReceipt CreateReceipt(
-        FoundryArtifactReadyNoticeDelivery delivery, string receiptId, string outcome) =>
-        new(FoundryArtifactReadyNoticeClient.Contract, receiptId, delivery.NoticeId,
+    private static ExecutionArtifactIngressReceipt CreateReceipt(
+        ExecutionArtifactReadyNoticeDelivery delivery, string receiptId, string outcome) =>
+        new(ExecutionArtifactReadyNoticeClient.Contract, receiptId, delivery.NoticeId,
             delivery.IdempotencyKey, outcome, DateTimeOffset.Parse("2026-10-31T00:02:00Z"));
 
     private static void Assert(bool condition, string message)

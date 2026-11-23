@@ -5,13 +5,13 @@ using System.Text.Json;
 namespace TheSingularityWorkshop.CiAi;
 
 /// <summary>Immutable, byte-stable notice delivery persisted before any remote send attempt.</summary>
-public sealed record FoundryArtifactReadyNoticeDelivery
+public sealed record ExecutionArtifactReadyNoticeDelivery
 {
-    public FoundryArtifactReadyNoticeDelivery(ArtifactReadyNotice notice)
+    public ExecutionArtifactReadyNoticeDelivery(ArtifactReadyNotice notice)
     {
         ArgumentNullException.ThrowIfNull(notice);
         Notice = notice;
-        Payload = FoundryArtifactReadyNoticeClient.SerializeNotice(notice);
+        Payload = ExecutionArtifactReadyNoticeClient.SerializeNotice(notice);
         PayloadSha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Payload))).ToLowerInvariant();
         NoticeId = notice.NoticeId;
         IdempotencyKey = notice.Manifest.IdempotencyKey;
@@ -24,7 +24,7 @@ public sealed record FoundryArtifactReadyNoticeDelivery
     public string PayloadSha256 { get; }
 }
 
-public enum FoundryArtifactNoticeEnqueueOutcome
+public enum ExecutionArtifactNoticeEnqueueOutcome
 {
     Enqueued,
     Duplicate,
@@ -32,21 +32,21 @@ public enum FoundryArtifactNoticeEnqueueOutcome
 }
 
 /// <summary>
-/// Durable append-only outbox for Foundry artifact-ready notices. Replays the exact serialized notice
+/// Durable append-only outbox for FSM_Execution artifact-ready notices. Replays the exact serialized notice
 /// after restart and suppresses delivery only when a matching remote durable receipt is recorded.
 /// </summary>
-public sealed class FileFoundryArtifactReadyNoticeOutbox
+public sealed class FileExecutionArtifactReadyNoticeOutbox
 {
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
     private readonly string _path;
 
-    public FileFoundryArtifactReadyNoticeOutbox(string path)
+    public FileExecutionArtifactReadyNoticeOutbox(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         _path = Path.GetFullPath(path);
     }
 
-    public FoundryArtifactNoticeEnqueueOutcome Enqueue(FoundryArtifactReadyNoticeDelivery delivery)
+    public ExecutionArtifactNoticeEnqueueOutcome Enqueue(ExecutionArtifactReadyNoticeDelivery delivery)
     {
         ArgumentNullException.ThrowIfNull(delivery);
         using var fileLock = AcquireFileLock();
@@ -55,21 +55,21 @@ public sealed class FileFoundryArtifactReadyNoticeOutbox
             string.Equals(item.NoticeId, delivery.NoticeId, StringComparison.Ordinal));
         if (byNotice is not null)
             return string.Equals(byNotice.PayloadSha256, delivery.PayloadSha256, StringComparison.Ordinal)
-                ? FoundryArtifactNoticeEnqueueOutcome.Duplicate
-                : FoundryArtifactNoticeEnqueueOutcome.Conflict;
+                ? ExecutionArtifactNoticeEnqueueOutcome.Duplicate
+                : ExecutionArtifactNoticeEnqueueOutcome.Conflict;
 
         var byKey = records.FirstOrDefault(item =>
             string.Equals(item.IdempotencyKey, delivery.IdempotencyKey, StringComparison.Ordinal));
         if (byKey is not null)
-            return FoundryArtifactNoticeEnqueueOutcome.Conflict;
+            return ExecutionArtifactNoticeEnqueueOutcome.Conflict;
 
         var record = new NoticeRecord(delivery.NoticeId, delivery.IdempotencyKey,
             delivery.Payload, delivery.PayloadSha256);
         AppendRecord(record);
-        return FoundryArtifactNoticeEnqueueOutcome.Enqueued;
+        return ExecutionArtifactNoticeEnqueueOutcome.Enqueued;
     }
 
-    public IReadOnlyList<FoundryArtifactReadyNoticeDelivery> ReadPending(
+    public IReadOnlyList<ExecutionArtifactReadyNoticeDelivery> ReadPending(
         IReadOnlySet<string>? acknowledgedNoticeIds = null)
     {
         using var fileLock = AcquireFileLock();
@@ -77,8 +77,8 @@ public sealed class FileFoundryArtifactReadyNoticeOutbox
             .Where(item => acknowledgedNoticeIds is null || !acknowledgedNoticeIds.Contains(item.NoticeId))
             .Select(item =>
             {
-                var notice = FoundryArtifactReadyNoticeClient.DeserializeNotice(item.Payload);
-                var delivery = new FoundryArtifactReadyNoticeDelivery(notice);
+                var notice = ExecutionArtifactReadyNoticeClient.DeserializeNotice(item.Payload);
+                var delivery = new ExecutionArtifactReadyNoticeDelivery(notice);
                 if (!string.Equals(delivery.NoticeId, item.NoticeId, StringComparison.Ordinal) ||
                     !string.Equals(delivery.IdempotencyKey, item.IdempotencyKey, StringComparison.Ordinal) ||
                     !string.Equals(delivery.PayloadSha256, item.PayloadSha256, StringComparison.Ordinal) ||
@@ -127,7 +127,7 @@ public sealed class FileFoundryArtifactReadyNoticeOutbox
             var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(item.Payload))).ToLowerInvariant();
             if (!string.Equals(digest, item.PayloadSha256, StringComparison.Ordinal))
                 throw new InvalidDataException("Notice outbox payload digest validation failed.");
-            var notice = FoundryArtifactReadyNoticeClient.DeserializeNotice(item.Payload);
+            var notice = ExecutionArtifactReadyNoticeClient.DeserializeNotice(item.Payload);
             if (!string.Equals(notice.NoticeId, item.NoticeId, StringComparison.Ordinal) ||
                 !string.Equals(notice.Manifest.IdempotencyKey, item.IdempotencyKey, StringComparison.Ordinal))
                 throw new InvalidDataException("Notice outbox record does not match its notice payload.");
@@ -154,7 +154,7 @@ public sealed class FileFoundryArtifactReadyNoticeOutbox
         string PayloadSha256);
 }
 
-public enum FoundryArtifactIngressReceiptRecordOutcome
+public enum ExecutionArtifactIngressReceiptRecordOutcome
 {
     Recorded,
     Duplicate,
@@ -162,34 +162,34 @@ public enum FoundryArtifactIngressReceiptRecordOutcome
 }
 
 /// <summary>
-/// Durable local acknowledgement ledger for Foundry's accepted/duplicate ingress receipts.
+/// Durable local acknowledgement ledger for FSM_Execution's accepted/duplicate ingress receipts.
 /// It verifies correlation to the exact persisted notice; it does not cryptographically authenticate
 /// a response. Callers must record only receipts returned by the authenticated HTTPS sender.
 /// </summary>
-public sealed class FileFoundryArtifactIngressReceiptLedger
+public sealed class FileExecutionArtifactIngressReceiptLedger
 {
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
     private readonly string _path;
 
-    public FileFoundryArtifactIngressReceiptLedger(string path)
+    public FileExecutionArtifactIngressReceiptLedger(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         _path = Path.GetFullPath(path);
     }
 
-    public FoundryArtifactIngressReceiptRecordOutcome Record(
-        FoundryArtifactIngressReceipt receipt,
-        FoundryArtifactReadyNoticeDelivery delivery)
+    public ExecutionArtifactIngressReceiptRecordOutcome Record(
+        ExecutionArtifactIngressReceipt receipt,
+        ExecutionArtifactReadyNoticeDelivery delivery)
     {
         ArgumentNullException.ThrowIfNull(receipt);
         ArgumentNullException.ThrowIfNull(delivery);
-        if (!string.Equals(receipt.Contract, FoundryArtifactReadyNoticeClient.Contract, StringComparison.Ordinal) ||
+        if (!string.Equals(receipt.Contract, ExecutionArtifactReadyNoticeClient.Contract, StringComparison.Ordinal) ||
             !string.Equals(receipt.NoticeId, delivery.NoticeId, StringComparison.Ordinal) ||
             !string.Equals(receipt.IdempotencyKey, delivery.IdempotencyKey, StringComparison.Ordinal) ||
             string.IsNullOrWhiteSpace(receipt.ReceiptId) || receipt.ReceiptId.Length > 200 ||
             receipt.ReceiptId.Any(char.IsControl) ||
             receipt.Outcome is not ("accepted" or "duplicate"))
-            throw new ArgumentException("Foundry receipt does not match the exact durable notice delivery.", nameof(receipt));
+            throw new ArgumentException("FSM_Execution receipt does not match the exact durable notice delivery.", nameof(receipt));
 
         using var fileLock = AcquireFileLock();
         var records = ReadRecords();
@@ -197,20 +197,20 @@ public sealed class FileFoundryArtifactIngressReceiptLedger
             string.Equals(item.ReceiptId, receipt.ReceiptId, StringComparison.Ordinal));
         if (existingByReceipt is not null)
             return IsSameReceiptIdentity(existingByReceipt, receipt, delivery)
-                ? FoundryArtifactIngressReceiptRecordOutcome.Duplicate
-                : FoundryArtifactIngressReceiptRecordOutcome.Conflict;
+                ? ExecutionArtifactIngressReceiptRecordOutcome.Duplicate
+                : ExecutionArtifactIngressReceiptRecordOutcome.Conflict;
 
         var existingByNotice = records.FirstOrDefault(item =>
             string.Equals(item.NoticeId, receipt.NoticeId, StringComparison.Ordinal));
         if (existingByNotice is not null)
             return IsSameReceiptIdentity(existingByNotice, receipt, delivery)
-                ? FoundryArtifactIngressReceiptRecordOutcome.Duplicate
-                : FoundryArtifactIngressReceiptRecordOutcome.Conflict;
+                ? ExecutionArtifactIngressReceiptRecordOutcome.Duplicate
+                : ExecutionArtifactIngressReceiptRecordOutcome.Conflict;
 
         var json = JsonSerializer.Serialize(receipt);
         AppendRecord(new ReceiptRecord(receipt.ReceiptId, receipt.NoticeId,
             receipt.IdempotencyKey, delivery.PayloadSha256, json));
-        return FoundryArtifactIngressReceiptRecordOutcome.Recorded;
+        return ExecutionArtifactIngressReceiptRecordOutcome.Recorded;
     }
 
     public IReadOnlySet<string> ReadAcknowledgedNoticeIds()
@@ -219,25 +219,25 @@ public sealed class FileFoundryArtifactIngressReceiptLedger
         return new HashSet<string>(ReadRecords().Select(item => item.NoticeId), StringComparer.Ordinal);
     }
 
-    public IReadOnlyList<FoundryArtifactIngressReceipt> ReadReceipts()
+    public IReadOnlyList<ExecutionArtifactIngressReceipt> ReadReceipts()
     {
         using var fileLock = AcquireFileLock();
         return Array.AsReadOnly(ReadRecords().Select(item =>
-            JsonSerializer.Deserialize<FoundryArtifactIngressReceipt>(item.ReceiptJson)
-            ?? throw new InvalidDataException("Foundry receipt ledger contains an empty receipt.")).ToArray());
+            JsonSerializer.Deserialize<ExecutionArtifactIngressReceipt>(item.ReceiptJson)
+            ?? throw new InvalidDataException("FSM_Execution receipt ledger contains an empty receipt.")).ToArray());
     }
 
     private static bool IsSameReceiptIdentity(
         ReceiptRecord existing,
-        FoundryArtifactIngressReceipt receipt,
-        FoundryArtifactReadyNoticeDelivery delivery)
+        ExecutionArtifactIngressReceipt receipt,
+        ExecutionArtifactReadyNoticeDelivery delivery)
     {
         if (!string.Equals(existing.ReceiptId, receipt.ReceiptId, StringComparison.Ordinal) ||
             !string.Equals(existing.NoticeId, receipt.NoticeId, StringComparison.Ordinal) ||
             !string.Equals(existing.IdempotencyKey, receipt.IdempotencyKey, StringComparison.Ordinal) ||
             !string.Equals(existing.NoticeSha256, delivery.PayloadSha256, StringComparison.Ordinal))
             return false;
-        var original = JsonSerializer.Deserialize<FoundryArtifactIngressReceipt>(existing.ReceiptJson);
+        var original = JsonSerializer.Deserialize<ExecutionArtifactIngressReceipt>(existing.ReceiptJson);
         return original is not null && original.AcceptedAt == receipt.AcceptedAt;
     }
 
@@ -254,22 +254,22 @@ public sealed class FileFoundryArtifactIngressReceiptLedger
         using var input = new FileStream(_path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         if (input.Length == 0) return Array.Empty<ReceiptRecord>();
         if (input.Length > int.MaxValue)
-            throw new InvalidDataException("Foundry receipt ledger exceeds the supported 2 GiB scan limit.");
+            throw new InvalidDataException("FSM_Execution receipt ledger exceeds the supported 2 GiB scan limit.");
         var bytes = new byte[(int)input.Length];
         input.ReadExactly(bytes);
         if (bytes[^1] != (byte)'\n')
-            throw new InvalidDataException("Foundry receipt ledger ends with an incomplete record; refusing to discard receipts.");
+            throw new InvalidDataException("FSM_Execution receipt ledger ends with an incomplete record; refusing to discard receipts.");
 
         var lines = StrictUtf8.GetString(bytes).Split('\n');
         var records = new List<ReceiptRecord>(Math.Max(0, lines.Length - 1));
         for (var index = 0; index < lines.Length - 1; index++)
         {
             if (string.IsNullOrWhiteSpace(lines[index]))
-                throw new InvalidDataException("Foundry receipt ledger contains an empty record.");
+                throw new InvalidDataException("FSM_Execution receipt ledger contains an empty record.");
             var item = JsonSerializer.Deserialize<ReceiptRecord>(lines[index])
-                ?? throw new InvalidDataException("Foundry receipt ledger contains an empty record.");
-            var receipt = JsonSerializer.Deserialize<FoundryArtifactIngressReceipt>(item.ReceiptJson)
-                ?? throw new InvalidDataException("Foundry receipt ledger contains an empty receipt.");
+                ?? throw new InvalidDataException("FSM_Execution receipt ledger contains an empty record.");
+            var receipt = JsonSerializer.Deserialize<ExecutionArtifactIngressReceipt>(item.ReceiptJson)
+                ?? throw new InvalidDataException("FSM_Execution receipt ledger contains an empty receipt.");
             var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(item.ReceiptJson))).ToLowerInvariant();
             if (string.IsNullOrWhiteSpace(item.ReceiptId) ||
                 string.IsNullOrWhiteSpace(item.NoticeId) ||
@@ -280,14 +280,14 @@ public sealed class FileFoundryArtifactIngressReceiptLedger
                 !string.Equals(item.ReceiptId, receipt.ReceiptId, StringComparison.Ordinal) ||
                 !string.Equals(item.NoticeId, receipt.NoticeId, StringComparison.Ordinal) ||
                 !string.Equals(item.IdempotencyKey, receipt.IdempotencyKey, StringComparison.Ordinal) ||
-                !string.Equals(receipt.Contract, FoundryArtifactReadyNoticeClient.Contract, StringComparison.Ordinal) ||
+                !string.Equals(receipt.Contract, ExecutionArtifactReadyNoticeClient.Contract, StringComparison.Ordinal) ||
                 receipt.Outcome is not ("accepted" or "duplicate"))
-                throw new InvalidDataException("Foundry receipt ledger identity or integrity validation failed.");
+                throw new InvalidDataException("FSM_Execution receipt ledger identity or integrity validation failed.");
             records.Add(item);
         }
         if (records.Select(item => item.ReceiptId).Distinct(StringComparer.Ordinal).Count() != records.Count ||
             records.Select(item => item.NoticeId).Distinct(StringComparer.Ordinal).Count() != records.Count)
-            throw new InvalidDataException("Foundry receipt ledger contains duplicate receipt or notice identities.");
+            throw new InvalidDataException("FSM_Execution receipt ledger contains duplicate receipt or notice identities.");
         return records.ToArray();
     }
 

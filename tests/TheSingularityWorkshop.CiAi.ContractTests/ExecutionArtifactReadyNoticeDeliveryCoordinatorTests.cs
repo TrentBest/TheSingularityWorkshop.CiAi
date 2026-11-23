@@ -3,20 +3,20 @@ using System.Text;
 using System.Text.Json;
 using TheSingularityWorkshop.CiAi;
 
-internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
+internal static class ExecutionArtifactReadyNoticeDeliveryCoordinatorTests
 {
     public static async Task<int> RunAsync()
     {
-        var root = Path.Combine(Path.GetTempPath(), "ciai-foundry-delivery-" + Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(Path.GetTempPath(), "ciai-execution-delivery-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
         {
-            var outbox = new FileFoundryArtifactReadyNoticeOutbox(Path.Combine(root, "notices.jsonl"));
-            var ledger = new FileFoundryArtifactIngressReceiptLedger(Path.Combine(root, "receipts.jsonl"));
-            var first = new FoundryArtifactReadyNoticeDelivery(CreateNotice("notice-1", "request-1:operation-1:1"));
-            var second = new FoundryArtifactReadyNoticeDelivery(CreateNotice("notice-2", "request-2:operation-2:1"));
-            Assert(outbox.Enqueue(first) == FoundryArtifactNoticeEnqueueOutcome.Enqueued &&
-                outbox.Enqueue(second) == FoundryArtifactNoticeEnqueueOutcome.Enqueued,
+            var outbox = new FileExecutionArtifactReadyNoticeOutbox(Path.Combine(root, "notices.jsonl"));
+            var ledger = new FileExecutionArtifactIngressReceiptLedger(Path.Combine(root, "receipts.jsonl"));
+            var first = new ExecutionArtifactReadyNoticeDelivery(CreateNotice("notice-1", "request-1:operation-1:1"));
+            var second = new ExecutionArtifactReadyNoticeDelivery(CreateNotice("notice-2", "request-2:operation-2:1"));
+            Assert(outbox.Enqueue(first) == ExecutionArtifactNoticeEnqueueOutcome.Enqueued &&
+                outbox.Enqueue(second) == ExecutionArtifactNoticeEnqueueOutcome.Enqueued,
                 "test notices were not durably enqueued");
 
             var sendCount = 0;
@@ -31,13 +31,13 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
                     Receipt(noticeId, idempotencyKey, "receipt-" + noticeId, "accepted"));
             })))
             {
-                var coordinator = new FoundryArtifactReadyNoticeDeliveryCoordinator(
-                    outbox, ledger, new FoundryArtifactReadyNoticeClient(http, Endpoint(), new FixtureCredentials()));
+                var coordinator = new ExecutionArtifactReadyNoticeDeliveryCoordinator(
+                    outbox, ledger, new ExecutionArtifactReadyNoticeClient(http, Endpoint(), new FixtureCredentials()));
                 var firstPass = await coordinator.DeliverPendingAsync(maximumDeliveries: 1);
                 Assert(firstPass.PendingAtStart == 2 && firstPass.Attempted == 1 &&
                     firstPass.Acknowledged == 1 && firstPass.RemainingPending == 1,
                     "bounded first pass did not persist exactly one accepted notice");
-                Assert(firstPass.Attempts[0].ReceiptRecordOutcome == FoundryArtifactIngressReceiptRecordOutcome.Recorded &&
+                Assert(firstPass.Attempts[0].ReceiptRecordOutcome == ExecutionArtifactIngressReceiptRecordOutcome.Recorded &&
                     ledger.ReadAcknowledgedNoticeIds().Contains(first.NoticeId),
                     "accepted receipt was not persisted against the exact first notice");
                 Assert(firstPass.Attempts[0].StatusCode == HttpStatusCode.Accepted &&
@@ -60,10 +60,10 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
 
             var mixedRoot = Path.Combine(root, "mixed");
             Directory.CreateDirectory(mixedRoot);
-            var mixedOutbox = new FileFoundryArtifactReadyNoticeOutbox(Path.Combine(mixedRoot, "notices.jsonl"));
-            var mixedLedger = new FileFoundryArtifactIngressReceiptLedger(Path.Combine(mixedRoot, "receipts.jsonl"));
-            mixedOutbox.Enqueue(new FoundryArtifactReadyNoticeDelivery(CreateNotice("invalid-1", "invalid-request-1")));
-            mixedOutbox.Enqueue(new FoundryArtifactReadyNoticeDelivery(CreateNotice("valid-2", "valid-request-2")));
+            var mixedOutbox = new FileExecutionArtifactReadyNoticeOutbox(Path.Combine(mixedRoot, "notices.jsonl"));
+            var mixedLedger = new FileExecutionArtifactIngressReceiptLedger(Path.Combine(mixedRoot, "receipts.jsonl"));
+            mixedOutbox.Enqueue(new ExecutionArtifactReadyNoticeDelivery(CreateNotice("invalid-1", "invalid-request-1")));
+            mixedOutbox.Enqueue(new ExecutionArtifactReadyNoticeDelivery(CreateNotice("valid-2", "valid-request-2")));
             var mixedCount = 0;
             using (var http = new HttpClient(new StubHandler(async (request, cancellationToken) =>
             {
@@ -78,12 +78,12 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
                     Receipt(noticeId, idempotencyKey, "receipt-" + noticeId, "accepted"));
             })))
             {
-                var coordinator = new FoundryArtifactReadyNoticeDeliveryCoordinator(
-                    mixedOutbox, mixedLedger, new FoundryArtifactReadyNoticeClient(http, Endpoint(), new FixtureCredentials()));
+                var coordinator = new ExecutionArtifactReadyNoticeDeliveryCoordinator(
+                    mixedOutbox, mixedLedger, new ExecutionArtifactReadyNoticeClient(http, Endpoint(), new FixtureCredentials()));
                 var batch = await coordinator.DeliverPendingAsync();
                 Assert(batch.Attempted == 2 && batch.Acknowledged == 1 && batch.RemainingPending == 1 &&
-                    batch.Attempts[0].Outcome == FoundryArtifactIngressOutcome.InvalidRequest &&
-                    batch.Attempts[1].Outcome == FoundryArtifactIngressOutcome.Accepted,
+                    batch.Attempts[0].Outcome == ExecutionArtifactIngressOutcome.InvalidRequest &&
+                    batch.Attempts[1].Outcome == ExecutionArtifactIngressOutcome.Accepted,
                     "notice-specific rejection incorrectly blocked an independent pending notice");
                 Assert(mixedCount == 2 && mixedLedger.ReadAcknowledgedNoticeIds().Contains("valid-2") &&
                     !mixedLedger.ReadAcknowledgedNoticeIds().Contains("invalid-1"),
@@ -92,10 +92,10 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
 
             var redirectRoot = Path.Combine(root, "redirect");
             Directory.CreateDirectory(redirectRoot);
-            var redirectOutbox = new FileFoundryArtifactReadyNoticeOutbox(Path.Combine(redirectRoot, "notices.jsonl"));
-            var redirectLedger = new FileFoundryArtifactIngressReceiptLedger(Path.Combine(redirectRoot, "receipts.jsonl"));
-            redirectOutbox.Enqueue(new FoundryArtifactReadyNoticeDelivery(CreateNotice("redirect-1", "redirect-request-1")));
-            redirectOutbox.Enqueue(new FoundryArtifactReadyNoticeDelivery(CreateNotice("redirect-2", "redirect-request-2")));
+            var redirectOutbox = new FileExecutionArtifactReadyNoticeOutbox(Path.Combine(redirectRoot, "notices.jsonl"));
+            var redirectLedger = new FileExecutionArtifactIngressReceiptLedger(Path.Combine(redirectRoot, "receipts.jsonl"));
+            redirectOutbox.Enqueue(new ExecutionArtifactReadyNoticeDelivery(CreateNotice("redirect-1", "redirect-request-1")));
+            redirectOutbox.Enqueue(new ExecutionArtifactReadyNoticeDelivery(CreateNotice("redirect-2", "redirect-request-2")));
             var redirectCount = 0;
             using (var http = new HttpClient(new StubHandler((_, _) =>
             {
@@ -106,11 +106,11 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
                 });
             })))
             {
-                var coordinator = new FoundryArtifactReadyNoticeDeliveryCoordinator(
-                    redirectOutbox, redirectLedger, new FoundryArtifactReadyNoticeClient(http, Endpoint(), new FixtureCredentials()));
+                var coordinator = new ExecutionArtifactReadyNoticeDeliveryCoordinator(
+                    redirectOutbox, redirectLedger, new ExecutionArtifactReadyNoticeClient(http, Endpoint(), new FixtureCredentials()));
                 var batch = await coordinator.DeliverPendingAsync();
                 Assert(batch.Attempted == 1 && batch.Acknowledged == 0 && batch.RemainingPending == 2 &&
-                    batch.Attempts[0].Outcome == FoundryArtifactIngressOutcome.Rejected &&
+                    batch.Attempts[0].Outcome == ExecutionArtifactIngressOutcome.Rejected &&
                     batch.Attempts[0].StatusCode == HttpStatusCode.Redirect,
                     "rejected redirect did not stop the delivery batch and preserve pending notices");
                 Assert(redirectCount == 1, "coordinator followed or continued after an untrusted redirect");
@@ -118,10 +118,10 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
 
             var retryRoot = Path.Combine(root, "retry");
             Directory.CreateDirectory(retryRoot);
-            var retryOutbox = new FileFoundryArtifactReadyNoticeOutbox(Path.Combine(retryRoot, "notices.jsonl"));
-            var retryLedger = new FileFoundryArtifactIngressReceiptLedger(Path.Combine(retryRoot, "receipts.jsonl"));
-            retryOutbox.Enqueue(new FoundryArtifactReadyNoticeDelivery(CreateNotice("retry-1", "retry-request-1")));
-            retryOutbox.Enqueue(new FoundryArtifactReadyNoticeDelivery(CreateNotice("retry-2", "retry-request-2")));
+            var retryOutbox = new FileExecutionArtifactReadyNoticeOutbox(Path.Combine(retryRoot, "notices.jsonl"));
+            var retryLedger = new FileExecutionArtifactIngressReceiptLedger(Path.Combine(retryRoot, "receipts.jsonl"));
+            retryOutbox.Enqueue(new ExecutionArtifactReadyNoticeDelivery(CreateNotice("retry-1", "retry-request-1")));
+            retryOutbox.Enqueue(new ExecutionArtifactReadyNoticeDelivery(CreateNotice("retry-2", "retry-request-2")));
             var retryCount = 0;
             using (var http = new HttpClient(new StubHandler((_, _) =>
             {
@@ -132,11 +132,11 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
                 });
             })))
             {
-                var coordinator = new FoundryArtifactReadyNoticeDeliveryCoordinator(
-                    retryOutbox, retryLedger, new FoundryArtifactReadyNoticeClient(http, Endpoint(), new FixtureCredentials()));
+                var coordinator = new ExecutionArtifactReadyNoticeDeliveryCoordinator(
+                    retryOutbox, retryLedger, new ExecutionArtifactReadyNoticeClient(http, Endpoint(), new FixtureCredentials()));
                 var batch = await coordinator.DeliverPendingAsync();
                 Assert(batch.Attempted == 1 && batch.Acknowledged == 0 && batch.RemainingPending == 2 &&
-                    batch.Attempts[0].Outcome == FoundryArtifactIngressOutcome.RateLimited &&
+                    batch.Attempts[0].Outcome == ExecutionArtifactIngressOutcome.RateLimited &&
                     batch.Attempts[0].RetryAfter == TimeSpan.FromSeconds(9),
                     "rate limit did not stop the batch and preserve Retry-After");
                 Assert(batch.Attempts[0].StatusCode == HttpStatusCode.TooManyRequests,
@@ -146,10 +146,10 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
 
             var policyRoot = Path.Combine(root, "policy");
             Directory.CreateDirectory(policyRoot);
-            var policyOutbox = new FileFoundryArtifactReadyNoticeOutbox(Path.Combine(policyRoot, "notices.jsonl"));
-            var policyLedger = new FileFoundryArtifactIngressReceiptLedger(Path.Combine(policyRoot, "receipts.jsonl"));
-            policyOutbox.Enqueue(new FoundryArtifactReadyNoticeDelivery(CreateNotice("policy-rejected", "policy-request-1")));
-            policyOutbox.Enqueue(new FoundryArtifactReadyNoticeDelivery(CreateNotice("after-policy-rejection", "policy-request-2")));
+            var policyOutbox = new FileExecutionArtifactReadyNoticeOutbox(Path.Combine(policyRoot, "notices.jsonl"));
+            var policyLedger = new FileExecutionArtifactIngressReceiptLedger(Path.Combine(policyRoot, "receipts.jsonl"));
+            policyOutbox.Enqueue(new ExecutionArtifactReadyNoticeDelivery(CreateNotice("policy-rejected", "policy-request-1")));
+            policyOutbox.Enqueue(new ExecutionArtifactReadyNoticeDelivery(CreateNotice("after-policy-rejection", "policy-request-2")));
             var policySendCount = 0;
             using (var http = new HttpClient(new StubHandler(async (request, cancellationToken) =>
             {
@@ -164,18 +164,18 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
                         Receipt(noticeId, idempotencyKey, "receipt-" + noticeId, "accepted"));
             })))
             {
-                var coordinator = new FoundryArtifactReadyNoticeDeliveryCoordinator(
-                    policyOutbox, policyLedger, new FoundryArtifactReadyNoticeClient(http, Endpoint(), new FixtureCredentials()));
+                var coordinator = new ExecutionArtifactReadyNoticeDeliveryCoordinator(
+                    policyOutbox, policyLedger, new ExecutionArtifactReadyNoticeClient(http, Endpoint(), new FixtureCredentials()));
                 var batch = await coordinator.DeliverPendingAsync();
                 Assert(batch.Attempted == 2 && batch.Acknowledged == 1 && batch.RemainingPending == 1,
                     "notice-specific policy rejection incorrectly stopped later independent delivery");
-                Assert(batch.Attempts[0].Outcome == FoundryArtifactIngressOutcome.InvalidRequest &&
-                    batch.Attempts[1].ReceiptRecordOutcome == FoundryArtifactIngressReceiptRecordOutcome.Recorded,
+                Assert(batch.Attempts[0].Outcome == ExecutionArtifactIngressOutcome.InvalidRequest &&
+                    batch.Attempts[1].ReceiptRecordOutcome == ExecutionArtifactIngressReceiptRecordOutcome.Recorded,
                     "policy rejection or subsequent accepted receipt was misclassified");
                 Assert(policySendCount == 2, "coordinator did not continue after a notice-specific rejection");
             }
 
-            Console.WriteLine("PASS: 21 Foundry notice delivery coordinator checks.");
+            Console.WriteLine("PASS: 21 FSM_Execution notice delivery coordinator checks.");
             return 21;
         }
         finally
@@ -203,7 +203,7 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
     private static string Receipt(string noticeId, string idempotencyKey, string receiptId, string outcome) =>
         JsonSerializer.Serialize(new
         {
-            contract = FoundryArtifactReadyNoticeClient.Contract,
+            contract = ExecutionArtifactReadyNoticeClient.Contract,
             receiptId,
             noticeId,
             idempotencyKey,
@@ -215,9 +215,9 @@ internal static class FoundryArtifactReadyNoticeDeliveryCoordinatorTests
         new(status) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
 
     private static Uri Endpoint() =>
-        new("https://foundry.example" + FoundryArtifactReadyNoticeClient.EndpointPath);
+        new("https://foundry.example" + ExecutionArtifactReadyNoticeClient.EndpointPath);
 
-    private sealed class FixtureCredentials : IFoundryIngressCredentialProvider
+    private sealed class FixtureCredentials : IExecutionIngressCredentialProvider
     {
         public ValueTask<string> GetBearerTokenAsync(CancellationToken cancellationToken = default) =>
             ValueTask.FromResult("fixture-token");

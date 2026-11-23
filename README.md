@@ -59,9 +59,9 @@ The current producer path is documented by its canonical contracts:
 - [Workflow evidence v1](src/TheSingularityWorkshop.CiAi/CiWorkflowEvidencePacket.md) — exact run/attempt envelope and fail-closed trust.
 - [Test-result report v1](src/TheSingularityWorkshop.CiAi/CiTestResultReport.md) — bounded TRX normalization and canonical 1 MiB JSON handoff.
 - [Evidence outbox and receipt ledger](src/TheSingularityWorkshop.CiAi/CiWorkflowEvidenceOutbox.md) — exact-byte persistence, replay protection, and trust reset on reload.
-- [FSM_Execution report notice handoff](src/TheSingularityWorkshop.CiAi/CiTestResultFoundryNoticeEnqueuer.md) — host-published report bytes and manifest-bound notice delivery.
-- [FSM_Execution notice sender](src/TheSingularityWorkshop.CiAi/FoundryArtifactReadyNoticeClient.md) — HTTPS sender, credential boundary, response classification, and retry semantics.
-- [FSM_Execution notice delivery coordinator](src/TheSingularityWorkshop.CiAi/FoundryArtifactReadyNoticeDeliveryCoordinator.md) — bounded durable delivery passes and receipt-ledger behavior.
+- [FSM_Execution report notice handoff](src/TheSingularityWorkshop.CiAi/CiTestResultExecutionNoticeEnqueuer.md) — host-published report bytes and manifest-bound notice delivery.
+- [FSM_Execution notice sender](src/TheSingularityWorkshop.CiAi/ExecutionArtifactReadyNoticeClient.md) — HTTPS sender, credential boundary, response classification, and retry semantics.
+- [FSM_Execution notice delivery coordinator](src/TheSingularityWorkshop.CiAi/ExecutionArtifactReadyNoticeDeliveryCoordinator.md) — bounded durable delivery passes and receipt-ledger behavior.
 
 The host artifact publisher and authenticated FSM_Execution ingress/retrieval deployment remain integration responsibilities; these contracts do not claim live remote acceptance.
 

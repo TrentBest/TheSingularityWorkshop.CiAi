@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using TheSingularityWorkshop.CiAi;
 
-internal static class FoundryArtifactReadyNoticeClientTests
+internal static class ExecutionArtifactReadyNoticeClientTests
 {
     public static async Task<int> RunAsync()
     {
@@ -26,14 +26,14 @@ internal static class FoundryArtifactReadyNoticeClientTests
             };
         })))
         {
-            var sender = new FoundryArtifactReadyNoticeClient(http, Endpoint(),
+            var sender = new ExecutionArtifactReadyNoticeClient(http, Endpoint(),
                 new FixtureCredentials("fixture-token-value"));
             var result = await sender.SendAsync(notice);
-            Assert(result.Outcome == FoundryArtifactIngressOutcome.Accepted && result.IsAcknowledged,
+            Assert(result.Outcome == ExecutionArtifactIngressOutcome.Accepted && result.IsAcknowledged,
                 "202 durable receipt was not accepted");
             Assert(result.Receipt?.ReceiptId == "receipt-1", "receipt identity was not retained");
             Assert(capturedMethod == HttpMethod.Post && capturedUri == Endpoint(),
-                "sender did not POST to the configured Foundry route");
+                "sender did not POST to the configured FSM_Execution route");
             Assert(capturedAuthorizationScheme == "Bearer" &&
                 capturedAuthorizationParameter == "fixture-token-value",
                 "host-managed token was not sent in the Authorization header");
@@ -47,18 +47,18 @@ internal static class FoundryArtifactReadyNoticeClientTests
 
         using (var http = ResponseClient(HttpStatusCode.OK, Receipt(notice, "duplicate")))
         {
-            var result = await new FoundryArtifactReadyNoticeClient(http, Endpoint(),
+            var result = await new ExecutionArtifactReadyNoticeClient(http, Endpoint(),
                 new FixtureCredentials("token")).SendAsync(notice);
-            Assert(result.Outcome == FoundryArtifactIngressOutcome.Duplicate && result.IsAcknowledged,
+            Assert(result.Outcome == ExecutionArtifactIngressOutcome.Duplicate && result.IsAcknowledged,
                 "200 exact-duplicate receipt was not accepted");
         }
 
         using (var http = ResponseClient(HttpStatusCode.Accepted,
             Receipt(notice, "accepted", noticeId: "different-notice")))
         {
-            var result = await new FoundryArtifactReadyNoticeClient(http, Endpoint(),
+            var result = await new ExecutionArtifactReadyNoticeClient(http, Endpoint(),
                 new FixtureCredentials("token")).SendAsync(notice);
-            Assert(result.Outcome == FoundryArtifactIngressOutcome.Rejected &&
+            Assert(result.Outcome == ExecutionArtifactIngressOutcome.Rejected &&
                 result.ErrorCode == "receipt.provenance-mismatch",
                 "receipt for a different notice was accepted");
         }
@@ -66,9 +66,9 @@ internal static class FoundryArtifactReadyNoticeClientTests
         using (var http = new HttpClient(new StubHandler((_, _) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized)))))
         {
-            var result = await new FoundryArtifactReadyNoticeClient(http, Endpoint(),
+            var result = await new ExecutionArtifactReadyNoticeClient(http, Endpoint(),
                 new FixtureCredentials("token")).SendAsync(notice);
-            Assert(result.Outcome == FoundryArtifactIngressOutcome.AuthenticationRequired && !result.IsAcknowledged,
+            Assert(result.Outcome == ExecutionArtifactIngressOutcome.AuthenticationRequired && !result.IsAcknowledged,
                 "401 did not pause delivery for re-authentication");
         }
 
@@ -78,9 +78,9 @@ internal static class FoundryArtifactReadyNoticeClientTests
                 Headers = { RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.FromSeconds(7)) }
             }))))
         {
-            var result = await new FoundryArtifactReadyNoticeClient(http, Endpoint(),
+            var result = await new ExecutionArtifactReadyNoticeClient(http, Endpoint(),
                 new FixtureCredentials("token")).SendAsync(notice);
-            Assert(result.Outcome == FoundryArtifactIngressOutcome.RateLimited &&
+            Assert(result.Outcome == ExecutionArtifactIngressOutcome.RateLimited &&
                 result.RetryAfter == TimeSpan.FromSeconds(7),
                 "429 Retry-After was not preserved");
         }
@@ -88,9 +88,9 @@ internal static class FoundryArtifactReadyNoticeClientTests
         using (var http = new HttpClient(new StubHandler((_, _) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)))))
         {
-            var result = await new FoundryArtifactReadyNoticeClient(http, Endpoint(),
+            var result = await new ExecutionArtifactReadyNoticeClient(http, Endpoint(),
                 new FixtureCredentials("token")).SendAsync(notice);
-            Assert(result.Outcome == FoundryArtifactIngressOutcome.RetryableFailure && !result.IsAcknowledged,
+            Assert(result.Outcome == ExecutionArtifactIngressOutcome.RetryableFailure && !result.IsAcknowledged,
                 "5xx was not left retryable");
         }
 
@@ -100,18 +100,18 @@ internal static class FoundryArtifactReadyNoticeClientTests
                 Content = new StringContent(Receipt(notice, "accepted"), Encoding.UTF8, "text/plain")
             }))))
         {
-            var result = await new FoundryArtifactReadyNoticeClient(http, Endpoint(),
+            var result = await new ExecutionArtifactReadyNoticeClient(http, Endpoint(),
                 new FixtureCredentials("token")).SendAsync(notice);
-            Assert(result.Outcome == FoundryArtifactIngressOutcome.Rejected &&
+            Assert(result.Outcome == ExecutionArtifactIngressOutcome.Rejected &&
                 result.ErrorCode == "receipt.content-type-invalid",
                 "non-JSON receipt content type was accepted");
         }
 
         using (var http = ResponseClient(HttpStatusCode.Accepted, "{malformed"))
         {
-            var result = await new FoundryArtifactReadyNoticeClient(http, Endpoint(),
+            var result = await new ExecutionArtifactReadyNoticeClient(http, Endpoint(),
                 new FixtureCredentials("token")).SendAsync(notice);
-            Assert(result.Outcome == FoundryArtifactIngressOutcome.Rejected &&
+            Assert(result.Outcome == ExecutionArtifactIngressOutcome.Rejected &&
                 result.ErrorCode == "receipt.malformed",
                 "malformed durable receipt was treated as acknowledgement");
         }
@@ -119,27 +119,27 @@ internal static class FoundryArtifactReadyNoticeClientTests
         using (var http = new HttpClient(new StubHandler((_, _) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.Forbidden)))))
         {
-            var result = await new FoundryArtifactReadyNoticeClient(http, Endpoint(),
+            var result = await new ExecutionArtifactReadyNoticeClient(http, Endpoint(),
                 new FixtureCredentials("token")).SendAsync(notice);
-            Assert(result.Outcome == FoundryArtifactIngressOutcome.AuthorizationDenied && !result.IsAcknowledged,
+            Assert(result.Outcome == ExecutionArtifactIngressOutcome.AuthorizationDenied && !result.IsAcknowledged,
                 "403 did not remain an authorization denial");
         }
 
         using (var http = new HttpClient(new StubHandler((_, _) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.Conflict)))))
         {
-            var result = await new FoundryArtifactReadyNoticeClient(http, Endpoint(),
+            var result = await new ExecutionArtifactReadyNoticeClient(http, Endpoint(),
                 new FixtureCredentials("token")).SendAsync(notice);
-            Assert(result.Outcome == FoundryArtifactIngressOutcome.Conflict && !result.IsAcknowledged,
+            Assert(result.Outcome == ExecutionArtifactIngressOutcome.Conflict && !result.IsAcknowledged,
                 "409 did not remain an idempotency conflict");
         }
 
         using (var http = new HttpClient(new StubHandler((_, _) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.TemporaryRedirect)))))
         {
-            var result = await new FoundryArtifactReadyNoticeClient(http, Endpoint(),
+            var result = await new ExecutionArtifactReadyNoticeClient(http, Endpoint(),
                 new FixtureCredentials("token")).SendAsync(notice);
-            Assert(result.Outcome == FoundryArtifactIngressOutcome.Rejected &&
+            Assert(result.Outcome == ExecutionArtifactIngressOutcome.Rejected &&
                 result.ErrorCode == "receiver.redirect-rejected",
                 "redirect response was not rejected");
         }
@@ -150,9 +150,9 @@ internal static class FoundryArtifactReadyNoticeClientTests
                 Content = new StringContent(@"{""code"":""policy.invalid""}", Encoding.UTF8, "application/json")
             }))))
         {
-            var result = await new FoundryArtifactReadyNoticeClient(http, Endpoint(),
+            var result = await new ExecutionArtifactReadyNoticeClient(http, Endpoint(),
                 new FixtureCredentials("token")).SendAsync(notice);
-            Assert(result.Outcome == FoundryArtifactIngressOutcome.InvalidRequest &&
+            Assert(result.Outcome == ExecutionArtifactIngressOutcome.InvalidRequest &&
                 result.ErrorCode == "policy.invalid",
                 "safe receiver error code was not retained");
         }
@@ -164,9 +164,9 @@ internal static class FoundryArtifactReadyNoticeClientTests
                     Encoding.UTF8, "application/json")
             }))))
         {
-            var result = await new FoundryArtifactReadyNoticeClient(http, Endpoint(),
+            var result = await new ExecutionArtifactReadyNoticeClient(http, Endpoint(),
                 new FixtureCredentials("token")).SendAsync(notice);
-            Assert(result.Outcome == FoundryArtifactIngressOutcome.Rejected &&
+            Assert(result.Outcome == ExecutionArtifactIngressOutcome.Rejected &&
                 !result.IsAcknowledged,
                 "mismatched receipt was acknowledged");
         }
@@ -174,13 +174,13 @@ internal static class FoundryArtifactReadyNoticeClientTests
         using (var http = new HttpClient(new StubHandler((_, _) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.Accepted)
             {
-                Content = new StringContent(new string('x', FoundryArtifactReadyNoticeClient.MaximumNoticeBytes + 1),
+                Content = new StringContent(new string('x', ExecutionArtifactReadyNoticeClient.MaximumNoticeBytes + 1),
                     Encoding.UTF8, "application/json")
             }))))
         {
-            var result = await new FoundryArtifactReadyNoticeClient(http, Endpoint(),
+            var result = await new ExecutionArtifactReadyNoticeClient(http, Endpoint(),
                 new FixtureCredentials("token")).SendAsync(notice);
-            Assert(result.Outcome == FoundryArtifactIngressOutcome.Rejected &&
+            Assert(result.Outcome == ExecutionArtifactIngressOutcome.Rejected &&
                 result.ErrorCode == "receipt.exceeds-response-limit",
                 "oversized receiver receipt was not rejected");
         }
@@ -191,9 +191,9 @@ internal static class FoundryArtifactReadyNoticeClientTests
                 Content = new StringContent(Receipt(notice, "duplicate"), Encoding.UTF8, "application/json")
             }))))
         {
-            var result = await new FoundryArtifactReadyNoticeClient(http, Endpoint(),
+            var result = await new ExecutionArtifactReadyNoticeClient(http, Endpoint(),
                 new FixtureCredentials("token")).SendAsync(notice);
-            Assert(result.Outcome == FoundryArtifactIngressOutcome.Rejected &&
+            Assert(result.Outcome == ExecutionArtifactIngressOutcome.Rejected &&
                 result.ErrorCode == "receipt.outcome-mismatch",
                 "duplicate receipt on a 202 response was accepted");
         }
@@ -201,9 +201,9 @@ internal static class FoundryArtifactReadyNoticeClientTests
         using (var http = new HttpClient(new StubHandler((_, _) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.Accepted)))))
         {
-            var result = await new FoundryArtifactReadyNoticeClient(http, Endpoint(),
+            var result = await new ExecutionArtifactReadyNoticeClient(http, Endpoint(),
                 new FixtureCredentials("  ")).SendAsync(notice);
-            Assert(result.Outcome == FoundryArtifactIngressOutcome.AuthenticationRequired &&
+            Assert(result.Outcome == ExecutionArtifactIngressOutcome.AuthenticationRequired &&
                 result.ErrorCode == "credential.invalid",
                 "empty bearer credential was sent");
         }
@@ -211,28 +211,28 @@ internal static class FoundryArtifactReadyNoticeClientTests
         using (var http = new HttpClient(new StubHandler((_, _) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.Accepted)))))
         {
-            var result = await new FoundryArtifactReadyNoticeClient(http, Endpoint(),
+            var result = await new ExecutionArtifactReadyNoticeClient(http, Endpoint(),
                 new ThrowingCredentials()).SendAsync(notice);
-            Assert(result.Outcome == FoundryArtifactIngressOutcome.AuthenticationRequired &&
+            Assert(result.Outcome == ExecutionArtifactIngressOutcome.AuthenticationRequired &&
                 result.ErrorCode == "credential.unavailable",
                 "credential-provider failure was not fail-closed");
         }
 
-        AssertThrows<ArgumentException>(() => new FoundryArtifactReadyNoticeClient(
-            new HttpClient(), new Uri("https://user:secret@foundry.example" + FoundryArtifactReadyNoticeClient.EndpointPath),
+        AssertThrows<ArgumentException>(() => new ExecutionArtifactReadyNoticeClient(
+            new HttpClient(), new Uri("https://user:secret@foundry.example" + ExecutionArtifactReadyNoticeClient.EndpointPath),
             new FixtureCredentials("token")));
-        AssertThrows<ArgumentException>(() => new FoundryArtifactReadyNoticeClient(
-            new HttpClient(), new Uri("https://foundry.example" + FoundryArtifactReadyNoticeClient.EndpointPath + "?redirect=1"),
+        AssertThrows<ArgumentException>(() => new ExecutionArtifactReadyNoticeClient(
+            new HttpClient(), new Uri("https://foundry.example" + ExecutionArtifactReadyNoticeClient.EndpointPath + "?redirect=1"),
             new FixtureCredentials("token")));
 
-        AssertThrows<ArgumentException>(() => new FoundryArtifactReadyNoticeClient(
-            new HttpClient(), new Uri("http://foundry.example" + FoundryArtifactReadyNoticeClient.EndpointPath),
+        AssertThrows<ArgumentException>(() => new ExecutionArtifactReadyNoticeClient(
+            new HttpClient(), new Uri("http://foundry.example" + ExecutionArtifactReadyNoticeClient.EndpointPath),
             new FixtureCredentials("token")));
-        AssertThrows<ArgumentException>(() => new FoundryArtifactReadyNoticeClient(
+        AssertThrows<ArgumentException>(() => new ExecutionArtifactReadyNoticeClient(
             new HttpClient(), new Uri("https://foundry.example/api/v1/other"),
             new FixtureCredentials("token")));
 
-        Console.WriteLine("PASS: 19 Foundry artifact-ready ingress client contract checks.");
+        Console.WriteLine("PASS: 19 FSM_Execution artifact-ready ingress client contract checks.");
         return 19;
     }
 
@@ -242,7 +242,7 @@ internal static class FoundryArtifactReadyNoticeClientTests
             Content = new StringContent(body, Encoding.UTF8, "application/json")
         })));
 
-    private static Uri Endpoint() => new("https://foundry.example" + FoundryArtifactReadyNoticeClient.EndpointPath);
+    private static Uri Endpoint() => new("https://foundry.example" + ExecutionArtifactReadyNoticeClient.EndpointPath);
 
     private static ArtifactReadyNotice CreateNotice()
     {
@@ -263,7 +263,7 @@ internal static class FoundryArtifactReadyNoticeClientTests
     private static string Receipt(ArtifactReadyNotice notice, string outcome, string? noticeId = null) =>
         JsonSerializer.Serialize(new
         {
-            contract = FoundryArtifactReadyNoticeClient.Contract,
+            contract = ExecutionArtifactReadyNoticeClient.Contract,
             receiptId = "receipt-1",
             noticeId = noticeId ?? notice.NoticeId,
             idempotencyKey = notice.Manifest.IdempotencyKey,
@@ -271,13 +271,13 @@ internal static class FoundryArtifactReadyNoticeClientTests
             acceptedAt = "2026-10-31T00:02:00Z"
         });
 
-    private sealed class FixtureCredentials(string token) : IFoundryIngressCredentialProvider
+    private sealed class FixtureCredentials(string token) : IExecutionIngressCredentialProvider
     {
         public ValueTask<string> GetBearerTokenAsync(CancellationToken cancellationToken = default) =>
             ValueTask.FromResult(token);
     }
 
-    private sealed class ThrowingCredentials : IFoundryIngressCredentialProvider
+    private sealed class ThrowingCredentials : IExecutionIngressCredentialProvider
     {
         public ValueTask<string> GetBearerTokenAsync(CancellationToken cancellationToken = default) =>
             ValueTask.FromException<string>(new InvalidOperationException("fixture credential failure"));

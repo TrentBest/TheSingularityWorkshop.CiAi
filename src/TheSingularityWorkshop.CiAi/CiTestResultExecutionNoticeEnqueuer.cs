@@ -16,20 +16,20 @@ public interface ICiTestResultArtifactPublisher
 
 /// <summary>
 /// Publishes a canonical report, verifies the returned artifact manifest against that report,
-/// and durably enqueues the metadata-only Foundry notice before any network send.
+/// and durably enqueues the metadata-only FSM_Execution notice before any network send.
 /// </summary>
-public sealed class CiTestResultFoundryNoticeEnqueuer
+public sealed class CiTestResultExecutionNoticeEnqueuer
 {
     public const string CapabilityId = "ciai.test-results";
     public const string CapabilityVersion = "1";
     public const string MediaType = "application/json";
 
     private readonly ICiTestResultArtifactPublisher _publisher;
-    private readonly FileFoundryArtifactReadyNoticeOutbox _outbox;
+    private readonly FileExecutionArtifactReadyNoticeOutbox _outbox;
 
-    public CiTestResultFoundryNoticeEnqueuer(
+    public CiTestResultExecutionNoticeEnqueuer(
         ICiTestResultArtifactPublisher publisher,
-        FileFoundryArtifactReadyNoticeOutbox outbox)
+        FileExecutionArtifactReadyNoticeOutbox outbox)
     {
         ArgumentNullException.ThrowIfNull(publisher);
         ArgumentNullException.ThrowIfNull(outbox);
@@ -37,7 +37,7 @@ public sealed class CiTestResultFoundryNoticeEnqueuer
         _outbox = outbox;
     }
 
-    public async Task<FoundryArtifactNoticeEnqueueOutcome> PublishAndEnqueueAsync(
+    public async Task<ExecutionArtifactNoticeEnqueueOutcome> PublishAndEnqueueAsync(
         CiTestResultReport report,
         string recipientIdentity,
         string noticeId,
@@ -51,7 +51,7 @@ public sealed class CiTestResultFoundryNoticeEnqueuer
             throw new ArgumentException("Notice timestamp is required.", nameof(notifiedAt));
         if (!string.Equals(report.Schema, CiTestResultReport.CurrentSchema, StringComparison.Ordinal) ||
             report.ContractVersion != CiTestResultReport.CurrentContractVersion)
-            throw new InvalidDataException("Only the canonical ciai.test-results.v1 report can be published to Foundry.");
+            throw new InvalidDataException("Only the canonical ciai.test-results.v1 report can be published to FSM_Execution.");
 
         var reportBytes = report.ToCanonicalUtf8Bytes();
         var reportDigest = SHA256.HashData(reportBytes);
@@ -65,7 +65,7 @@ public sealed class CiTestResultFoundryNoticeEnqueuer
             recipientIdentity,
             manifest,
             notifiedAt);
-        return _outbox.Enqueue(new FoundryArtifactReadyNoticeDelivery(notice));
+        return _outbox.Enqueue(new ExecutionArtifactReadyNoticeDelivery(notice));
     }
 
     private static void ValidateManifest(

@@ -1,13 +1,13 @@
 <!-- The Singularity Workshop moniker -->
 <p align="center"><a href="https://github.com/TrentBest"><img src="https://raw.githubusercontent.com/TrentBest/TheSingularityWorkshop.Visualize/development/docs/assets/moniker.svg" alt="The Singularity Workshop animated moniker" width="720" /></a></p>
 
-# FoundryArtifactReadyNoticeClient
+# ExecutionArtifactReadyNoticeClient
 
 **User moniker:** Durable Notice, Not Artifact
 
 ## Purpose
 
-**FoundryArtifactReadyNoticeClient** sends the metadata-only **ArtifactReadyNotice v1** contract to FSM_Execution's host-owned HTTPS ingress:
+**ExecutionArtifactReadyNoticeClient** sends the metadata-only **ArtifactReadyNotice v1** contract to FSM_Execution's host-owned HTTPS ingress:
 
 POST /api/v1/integrations/ciai/artifact-ready
 
@@ -15,7 +15,7 @@ It implements the sender side of [FSM_Execution's normative callback contract](h
 
 ## Authentication boundary
 
-- The host supplies an **IFoundryIngressCredentialProvider** backed by its approved secret or workload-identity mechanism.
+- The host supplies an **IExecutionIngressCredentialProvider** backed by its approved secret or workload-identity mechanism.
 - A short-lived bearer token is requested for each delivery attempt and placed only in the HTTP Authorization header.
 - CiAi does not mint JWTs, persist credentials, log token values, or place them in notices or model-visible evidence.
 - The injected **HttpClient** must disable automatic redirects. The client rejects redirect responses, but cannot prevent an injected handler from following a redirect before returning the response.
@@ -35,7 +35,7 @@ Only a valid HTTP 202 **accepted** receipt or HTTP 200 **duplicate** receipt ack
 | 429 | RateLimited; preserve Retry-After |
 | 5xx / transport interruption / incomplete receipt | RetryableFailure; retry the exact same notice |
 
-The client performs one HTTP attempt and has ten focused transport contract checks covering accepted/duplicate receipts, mismatched identity, media type, authentication, rate limiting, transient server failure, malformed responses, and endpoint validation. **FileFoundryArtifactReadyNoticeOutbox** persists the exact serialized notice and digest before sending, then replays those same bytes after restart. **FileFoundryArtifactIngressReceiptLedger** binds a validated remote receipt to the exact notice ID, idempotency key, and local payload digest. Only accepted/duplicate receipts suppress replay; rejected, missing, or mismatched receipts leave the notice pending. The [FoundryArtifactReadyNoticeDeliveryCoordinator](FoundryArtifactReadyNoticeDeliveryCoordinator.md) composes these components for one bounded sequential pass and persists only accepted/duplicate receipts. The host still owns retry scheduling, expiry/budget enforcement, credential refresh, and deciding when to invoke the next pass. It must reuse the same notice ID, manifest, and idempotency key on retry; it must not create a new identity to escape a failed delivery.
+The client performs one HTTP attempt and has ten focused transport contract checks covering accepted/duplicate receipts, mismatched identity, media type, authentication, rate limiting, transient server failure, malformed responses, and endpoint validation. **FileExecutionArtifactReadyNoticeOutbox** persists the exact serialized notice and digest before sending, then replays those same bytes after restart. **FileExecutionArtifactIngressReceiptLedger** binds a validated remote receipt to the exact notice ID, idempotency key, and local payload digest. Only accepted/duplicate receipts suppress replay; rejected, missing, or mismatched receipts leave the notice pending. The [ExecutionArtifactReadyNoticeDeliveryCoordinator](ExecutionArtifactReadyNoticeDeliveryCoordinator.md) composes these components for one bounded sequential pass and persists only accepted/duplicate receipts. The host still owns retry scheduling, expiry/budget enforcement, credential refresh, and deciding when to invoke the next pass. It must reuse the same notice ID, manifest, and idempotency key on retry; it must not create a new identity to escape a failed delivery.
 
 ## Current boundary
 

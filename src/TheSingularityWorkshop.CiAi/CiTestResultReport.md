@@ -61,7 +61,7 @@ The 1 MiB handoff limit matches the FSM_Execution and HeadlessAi consumer contra
 - [CiWorkflowEvidenceOutbox](CiWorkflowEvidenceOutbox.md)
 - [GitHubActionsArtifactCollector](GitHubActionsArtifactCollector.cs)
 - [GitHubActionsWorkflowJobCollector](GitHubActionsWorkflowJobCollector.cs)
-- [CiTestResultFoundryNoticeEnqueuer](CiTestResultFoundryNoticeEnqueuer.md)
+- [CiTestResultExecutionNoticeEnqueuer](CiTestResultExecutionNoticeEnqueuer.md)
 
 ---
 

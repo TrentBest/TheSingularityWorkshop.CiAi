@@ -96,7 +96,7 @@ This contract does not, by itself:
 - [Workflow provenance implementation](../src/TheSingularityWorkshop.CiAi/CiWorkflowProvenanceRecord.cs)
 - [Artifact archive verifier](../src/TheSingularityWorkshop.CiAi/CiTestResultArtifactArchive.cs)
 - [Required job policy](../src/TheSingularityWorkshop.CiAi/CiRequiredJobPolicy.cs)
-- [FSM_Execution notice enqueuer](../src/TheSingularityWorkshop.CiAi/CiTestResultFoundryNoticeEnqueuer.md)
+- [FSM_Execution notice enqueuer](../src/TheSingularityWorkshop.CiAi/CiTestResultExecutionNoticeEnqueuer.md)
 - [Release readiness and authorization gates](RELEASE_READINESS.md)
 - [HeadlessAi accepted CI context](https://github.com/TrentBest/TheSingularityWorkshop.HeadlessAi/pull/13)
 - [FSM_Execution accepted CI report integration](https://github.com/TrentBest/TheSingularityWorkshop.FSM_Execution/pull/15)

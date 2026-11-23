@@ -5,15 +5,15 @@ using System.Text.Json;
 
 namespace TheSingularityWorkshop.CiAi;
 
-/// <summary>Obtains a short-lived Foundry ingress token from host-managed identity or secret storage.</summary>
+/// <summary>Obtains a short-lived FSM_Execution ingress token from host-managed identity or secret storage.</summary>
 /// <remarks>Implementations must never expose token values through logs, diagnostics, or model-visible data.</remarks>
-public interface IFoundryIngressCredentialProvider
+public interface IExecutionIngressCredentialProvider
 {
     ValueTask<string> GetBearerTokenAsync(CancellationToken cancellationToken = default);
 }
 
-/// <summary>One validated durable response from Foundry's v1 artifact-ready ingress.</summary>
-public sealed record FoundryArtifactIngressReceipt(
+/// <summary>One validated durable response from FSM_Execution's v1 artifact-ready ingress.</summary>
+public sealed record ExecutionArtifactIngressReceipt(
     string Contract,
     string ReceiptId,
     string NoticeId,
@@ -21,7 +21,7 @@ public sealed record FoundryArtifactIngressReceipt(
     string Outcome,
     DateTimeOffset AcceptedAt);
 
-public enum FoundryArtifactIngressOutcome
+public enum ExecutionArtifactIngressOutcome
 {
     Accepted,
     Duplicate,
@@ -35,19 +35,19 @@ public enum FoundryArtifactIngressOutcome
 }
 
 /// <summary>Transport result. Only Accepted and Duplicate represent durable receiver acknowledgement.</summary>
-public sealed record FoundryArtifactIngressResult(
-    FoundryArtifactIngressOutcome Outcome,
+public sealed record ExecutionArtifactIngressResult(
+    ExecutionArtifactIngressOutcome Outcome,
     HttpStatusCode? StatusCode = null,
-    FoundryArtifactIngressReceipt? Receipt = null,
+    ExecutionArtifactIngressReceipt? Receipt = null,
     string? ErrorCode = null,
     TimeSpan? RetryAfter = null)
 {
     public bool IsAcknowledged =>
-        Outcome is FoundryArtifactIngressOutcome.Accepted or FoundryArtifactIngressOutcome.Duplicate;
+        Outcome is ExecutionArtifactIngressOutcome.Accepted or ExecutionArtifactIngressOutcome.Duplicate;
 }
 
 /// <summary>
-/// Sends metadata-only ArtifactReadyNotice v1 messages to the Foundry-owned HTTPS ingress.
+/// Sends metadata-only ArtifactReadyNotice v1 messages to the FSM_Execution-owned HTTPS ingress.
 /// The caller retains and retries the same notice after transient failures; this client never
 /// invents a new notice or idempotency identity and never transfers artifact bytes.
 /// </summary>
@@ -57,7 +57,7 @@ public sealed record FoundryArtifactIngressResult(
 /// response reaches this class. Credentials are requested for each attempt and sent only as a bearer
 /// Authorization header. Retry scheduling and durable notice persistence remain host responsibilities.
 /// </remarks>
-public sealed class FoundryArtifactReadyNoticeClient
+public sealed class ExecutionArtifactReadyNoticeClient
 {
     public const string Contract = "foundry.ciai-artifact-ingress.v1";
     public const string EndpointPath = "/api/v1/integrations/ciai/artifact-ready";
@@ -70,12 +70,12 @@ public sealed class FoundryArtifactReadyNoticeClient
 
     private readonly HttpClient _httpClient;
     private readonly Uri _endpoint;
-    private readonly IFoundryIngressCredentialProvider _credentials;
+    private readonly IExecutionIngressCredentialProvider _credentials;
 
-    public FoundryArtifactReadyNoticeClient(
+    public ExecutionArtifactReadyNoticeClient(
         HttpClient httpClient,
         Uri endpoint,
-        IFoundryIngressCredentialProvider credentials)
+        IExecutionIngressCredentialProvider credentials)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
         ArgumentNullException.ThrowIfNull(endpoint);
@@ -84,7 +84,7 @@ public sealed class FoundryArtifactReadyNoticeClient
             !endpoint.IsDefaultPort || !string.IsNullOrEmpty(endpoint.UserInfo) ||
             !string.IsNullOrEmpty(endpoint.Query) || !string.IsNullOrEmpty(endpoint.Fragment) ||
             !string.Equals(endpoint.AbsolutePath, EndpointPath, StringComparison.Ordinal))
-            throw new ArgumentException("Foundry ingress endpoint must be an HTTPS URL on the default port with the exact v1 route and no credentials, query, or fragment.", nameof(endpoint));
+            throw new ArgumentException("FSM_Execution ingress endpoint must be an HTTPS URL on the default port with the exact v1 route and no credentials, query, or fragment.", nameof(endpoint));
 
         _httpClient = httpClient;
         _endpoint = endpoint;
@@ -92,17 +92,17 @@ public sealed class FoundryArtifactReadyNoticeClient
     }
 
     /// <summary>Sends one immutable notice attempt and classifies the receiver's response.</summary>
-    public Task<FoundryArtifactIngressResult> SendAsync(
+    public Task<ExecutionArtifactIngressResult> SendAsync(
         ArtifactReadyNotice notice,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(notice);
-        return SendAsync(new FoundryArtifactReadyNoticeDelivery(notice), cancellationToken);
+        return SendAsync(new ExecutionArtifactReadyNoticeDelivery(notice), cancellationToken);
     }
 
     /// <summary>Sends the exact serialized notice previously persisted in the durable outbox.</summary>
-    public async Task<FoundryArtifactIngressResult> SendAsync(
-        FoundryArtifactReadyNoticeDelivery delivery,
+    public async Task<ExecutionArtifactIngressResult> SendAsync(
+        ExecutionArtifactReadyNoticeDelivery delivery,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(delivery);
@@ -114,7 +114,7 @@ public sealed class FoundryArtifactReadyNoticeClient
         if (!string.Equals(SerializeNotice(notice), delivery.Payload, StringComparison.Ordinal))
             throw new ArgumentException("Delivery payload does not match its immutable notice.", nameof(delivery));
         if (payload.Length > MaximumNoticeBytes)
-            return new FoundryArtifactIngressResult(FoundryArtifactIngressOutcome.InvalidRequest,
+            return new ExecutionArtifactIngressResult(ExecutionArtifactIngressOutcome.InvalidRequest,
                 ErrorCode: "notice.exceeds-64-kib-limit");
 
         string token;
@@ -128,12 +128,12 @@ public sealed class FoundryArtifactReadyNoticeClient
         }
         catch
         {
-            return new FoundryArtifactIngressResult(FoundryArtifactIngressOutcome.AuthenticationRequired,
+            return new ExecutionArtifactIngressResult(ExecutionArtifactIngressOutcome.AuthenticationRequired,
                 ErrorCode: "credential.unavailable");
         }
 
         if (string.IsNullOrWhiteSpace(token) || token.Length > 8192 || token.Any(char.IsControl))
-            return new FoundryArtifactIngressResult(FoundryArtifactIngressOutcome.AuthenticationRequired,
+            return new ExecutionArtifactIngressResult(ExecutionArtifactIngressOutcome.AuthenticationRequired,
                 ErrorCode: "credential.invalid");
 
         using var request = new HttpRequestMessage(HttpMethod.Post, _endpoint);
@@ -153,7 +153,7 @@ public sealed class FoundryArtifactReadyNoticeClient
         }
         catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException or IOException)
         {
-            return new FoundryArtifactIngressResult(FoundryArtifactIngressOutcome.RetryableFailure,
+            return new ExecutionArtifactIngressResult(ExecutionArtifactIngressOutcome.RetryableFailure,
                 ErrorCode: "transport.unavailable");
         }
 
@@ -164,29 +164,29 @@ public sealed class FoundryArtifactReadyNoticeClient
                 return await ReadReceiptAsync(response, notice, cancellationToken).ConfigureAwait(false);
 
             if ((int)status is >= 300 and < 400)
-                return new FoundryArtifactIngressResult(FoundryArtifactIngressOutcome.Rejected, status,
+                return new ExecutionArtifactIngressResult(ExecutionArtifactIngressOutcome.Rejected, status,
                     ErrorCode: "receiver.redirect-rejected");
             if (status == HttpStatusCode.Unauthorized)
-                return new FoundryArtifactIngressResult(FoundryArtifactIngressOutcome.AuthenticationRequired, status,
+                return new ExecutionArtifactIngressResult(ExecutionArtifactIngressOutcome.AuthenticationRequired, status,
                     ErrorCode: "auth.required");
             if (status == HttpStatusCode.Forbidden)
-                return new FoundryArtifactIngressResult(FoundryArtifactIngressOutcome.AuthorizationDenied, status,
+                return new ExecutionArtifactIngressResult(ExecutionArtifactIngressOutcome.AuthorizationDenied, status,
                     ErrorCode: "auth.denied");
             if (status == HttpStatusCode.Conflict)
-                return new FoundryArtifactIngressResult(FoundryArtifactIngressOutcome.Conflict, status,
+                return new ExecutionArtifactIngressResult(ExecutionArtifactIngressOutcome.Conflict, status,
                     ErrorCode: "notice.idempotency-conflict");
             if (status == HttpStatusCode.TooManyRequests)
-                return new FoundryArtifactIngressResult(FoundryArtifactIngressOutcome.RateLimited, status,
+                return new ExecutionArtifactIngressResult(ExecutionArtifactIngressOutcome.RateLimited, status,
                     ErrorCode: "receiver.rate-limited", RetryAfter: GetRetryAfter(response));
             if (status == HttpStatusCode.BadRequest || (int)status == 413 ||
                 status == HttpStatusCode.UnsupportedMediaType || (int)status == 422)
-                return new FoundryArtifactIngressResult(FoundryArtifactIngressOutcome.InvalidRequest, status,
+                return new ExecutionArtifactIngressResult(ExecutionArtifactIngressOutcome.InvalidRequest, status,
                     ErrorCode: await ReadSafeErrorCodeAsync(response, cancellationToken).ConfigureAwait(false));
             if ((int)status >= 500)
-                return new FoundryArtifactIngressResult(FoundryArtifactIngressOutcome.RetryableFailure, status,
+                return new ExecutionArtifactIngressResult(ExecutionArtifactIngressOutcome.RetryableFailure, status,
                     ErrorCode: "receiver.unavailable");
 
-            return new FoundryArtifactIngressResult(FoundryArtifactIngressOutcome.Rejected, status,
+            return new ExecutionArtifactIngressResult(ExecutionArtifactIngressOutcome.Rejected, status,
                 ErrorCode: "receiver.rejected");
         }
     }
@@ -196,9 +196,9 @@ public sealed class FoundryArtifactReadyNoticeClient
 
     internal static ArtifactReadyNotice DeserializeNotice(string payload) =>
         JsonSerializer.Deserialize<ArtifactReadyNotice>(payload, JsonOptions)
-        ?? throw new InvalidDataException("Persisted Foundry notice payload could not be rehydrated.");
+        ?? throw new InvalidDataException("Persisted FSM_Execution notice payload could not be rehydrated.");
 
-    private static async Task<FoundryArtifactIngressResult> ReadReceiptAsync(
+    private static async Task<ExecutionArtifactIngressResult> ReadReceiptAsync(
         HttpResponseMessage response,
         ArtifactReadyNotice notice,
         CancellationToken cancellationToken)
@@ -218,7 +218,7 @@ public sealed class FoundryArtifactReadyNoticeClient
         }
         catch (Exception exception) when (exception is IOException or HttpRequestException or OperationCanceledException)
         {
-            return new FoundryArtifactIngressResult(FoundryArtifactIngressOutcome.RetryableFailure,
+            return new ExecutionArtifactIngressResult(ExecutionArtifactIngressOutcome.RetryableFailure,
                 response.StatusCode, ErrorCode: "receipt.response-incomplete");
         }
         if (bytes is null)
@@ -245,10 +245,10 @@ public sealed class FoundryArtifactReadyNoticeClient
             if (!string.Equals(outcome, expectedOutcome, StringComparison.Ordinal))
                 return InvalidReceipt(response.StatusCode, "receipt.outcome-mismatch");
 
-            var receipt = new FoundryArtifactIngressReceipt(contract, receiptId, noticeId,
+            var receipt = new ExecutionArtifactIngressReceipt(contract, receiptId, noticeId,
                 idempotencyKey, outcome, acceptedAt);
-            return new FoundryArtifactIngressResult(
-                outcome == "accepted" ? FoundryArtifactIngressOutcome.Accepted : FoundryArtifactIngressOutcome.Duplicate,
+            return new ExecutionArtifactIngressResult(
+                outcome == "accepted" ? ExecutionArtifactIngressOutcome.Accepted : ExecutionArtifactIngressOutcome.Duplicate,
                 response.StatusCode, receipt);
         }
         catch (Exception exception) when (exception is JsonException or InvalidOperationException or FormatException)
@@ -325,6 +325,6 @@ public sealed class FoundryArtifactReadyNoticeClient
         return null;
     }
 
-    private static FoundryArtifactIngressResult InvalidReceipt(HttpStatusCode status, string code) =>
-        new(FoundryArtifactIngressOutcome.Rejected, status, ErrorCode: code);
+    private static ExecutionArtifactIngressResult InvalidReceipt(HttpStatusCode status, string code) =>
+        new(ExecutionArtifactIngressOutcome.Rejected, status, ErrorCode: code);
 }
