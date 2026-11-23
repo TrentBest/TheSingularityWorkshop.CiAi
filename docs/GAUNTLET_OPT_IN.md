@@ -64,7 +64,7 @@ Until those host gates are independently qualified, candidate-controlled executi
 - The host owns sandbox provisioning, process isolation, resource limits, credentials, and cleanup.
 - CiAi owns exact-run observation, independent evidence validation, gate policy, and the existing feedback lane.
 - HeadlessAi may assess validated, pinned findings; model output cannot change a verdict.
-- Foundry may coordinate bounded repair and human handoff; it cannot authorize publication.
+- FSM_Execution may coordinate bounded repair and human handoff; it cannot authorize publication.
 - Human approval remains authoritative for merge, publication, release, and deployment.
 
 See [CiAi integration issue #71](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/71) and [Gauntlet release readiness](https://github.com/TrentBest/TheSingularityWorkshop.Gauntlet/blob/development/docs/RELEASE_READINESS.md).
