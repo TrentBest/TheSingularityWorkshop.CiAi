@@ -73,7 +73,7 @@ AiCi deliberately does not invent a grammar version or expression. A future stru
 - Modify operations require a full expected SHA-256 digest.
 - Payloads and proposal size are bounded by CommandAi limits.
 - CommandAi validates the bounded representation only.
-- Foundry/host owns live-state validation, replay/delivery, authorization, approval, dispatch, and execution.
+- FSM_Execution/host owns live-state validation, replay/delivery, authorization, approval, dispatch, and execution.
 - Package publication, release, and deployment remain separate explicit gates.
 
 ## Verification
