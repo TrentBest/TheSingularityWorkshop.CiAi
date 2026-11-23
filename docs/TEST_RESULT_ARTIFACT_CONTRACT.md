@@ -96,7 +96,7 @@ The artifact name binds the run, attempt, and workflow job key. The trusted host
 - **CiAi:** exact-run evidence, required-check policy, test-result normalization, verdict, reason codes, and per-attempt report preservation.
 - **Trusted host:** provider authentication, artifact ZIP digest verification, safe extraction, workflow-definition trust policy, and mapping the artifact to the exact GitHub job.
 - **HeadlessAi:** delivers the bounded report as untrusted context to the assigned LLM; it does not decide CI success.
-- **Foundry:** correlates the report to the task, applies lifecycle and retry/time/cost budgets, and mediates authorized handoffs. It does not reinterpret test output or become a second CI verdict engine.
+- **FSM_Execution:** correlates the report to the task, applies lifecycle and retry/time/cost budgets, and mediates authorized handoffs. It does not reinterpret test output or become a second CI verdict engine.
 - **Repository host/owner:** retains approval of repository mutations and all privileged release actions.
 
 ## 04 — See it in a minute
