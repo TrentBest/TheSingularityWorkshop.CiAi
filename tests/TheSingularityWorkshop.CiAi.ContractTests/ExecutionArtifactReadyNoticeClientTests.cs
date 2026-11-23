@@ -219,17 +219,17 @@ internal static class ExecutionArtifactReadyNoticeClientTests
         }
 
         AssertThrows<ArgumentException>(() => new ExecutionArtifactReadyNoticeClient(
-            new HttpClient(), new Uri("https://user:secret@foundry.example" + ExecutionArtifactReadyNoticeClient.EndpointPath),
+            new HttpClient(), new Uri("https://user:secret@execution.example" + ExecutionArtifactReadyNoticeClient.EndpointPath),
             new FixtureCredentials("token")));
         AssertThrows<ArgumentException>(() => new ExecutionArtifactReadyNoticeClient(
-            new HttpClient(), new Uri("https://foundry.example" + ExecutionArtifactReadyNoticeClient.EndpointPath + "?redirect=1"),
+            new HttpClient(), new Uri("https://execution.example" + ExecutionArtifactReadyNoticeClient.EndpointPath + "?redirect=1"),
             new FixtureCredentials("token")));
 
         AssertThrows<ArgumentException>(() => new ExecutionArtifactReadyNoticeClient(
-            new HttpClient(), new Uri("http://foundry.example" + ExecutionArtifactReadyNoticeClient.EndpointPath),
+            new HttpClient(), new Uri("http://execution.example" + ExecutionArtifactReadyNoticeClient.EndpointPath),
             new FixtureCredentials("token")));
         AssertThrows<ArgumentException>(() => new ExecutionArtifactReadyNoticeClient(
-            new HttpClient(), new Uri("https://foundry.example/api/v1/other"),
+            new HttpClient(), new Uri("https://execution.example/api/v1/other"),
             new FixtureCredentials("token")));
 
         Console.WriteLine("PASS: 19 FSM_Execution artifact-ready ingress client contract checks.");
@@ -242,7 +242,7 @@ internal static class ExecutionArtifactReadyNoticeClientTests
             Content = new StringContent(body, Encoding.UTF8, "application/json")
         })));
 
-    private static Uri Endpoint() => new("https://foundry.example" + ExecutionArtifactReadyNoticeClient.EndpointPath);
+    private static Uri Endpoint() => new("https://execution.example" + ExecutionArtifactReadyNoticeClient.EndpointPath);
 
     private static ArtifactReadyNotice CreateNotice()
     {
