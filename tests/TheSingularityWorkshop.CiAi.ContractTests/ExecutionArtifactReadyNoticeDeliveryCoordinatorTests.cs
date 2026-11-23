@@ -215,7 +215,7 @@ internal static class ExecutionArtifactReadyNoticeDeliveryCoordinatorTests
         new(status) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
 
     private static Uri Endpoint() =>
-        new("https://foundry.example" + ExecutionArtifactReadyNoticeClient.EndpointPath);
+        new("https://execution.example" + ExecutionArtifactReadyNoticeClient.EndpointPath);
 
     private sealed class FixtureCredentials : IExecutionIngressCredentialProvider
     {
