@@ -5,9 +5,9 @@
 
 ## Purpose
 
-`CiTestResultFoundryNoticeEnqueuer` connects CiAi's canonical `ciai.test-results.v1` report to Foundry's metadata-only `ArtifactReadyNotice` transport.
+`CiTestResultFoundryNoticeEnqueuer` connects CiAi's canonical `ciai.test-results.v1` report to FSM_Execution's metadata-only `ArtifactReadyNotice` transport.
 
-It does not send test-result JSON inside the notice. A host-supplied `ICiTestResultArtifactPublisher` stores the exact canonical report bytes and returns an `ArtifactManifest` that points to the stored object. CiAi validates that manifest before it persists a notice in the Foundry notice outbox.
+It does not send test-result JSON inside the notice. A host-supplied `ICiTestResultArtifactPublisher` stores the exact canonical report bytes and returns an `ArtifactManifest` that points to the stored object. CiAi validates that manifest before it persists a notice in the FSM_Execution notice outbox.
 
 ## Byte and lineage binding
 
@@ -29,9 +29,9 @@ A mismatch prevents the notice from entering the durable outbox. The notice then
 
 ## Host responsibilities and limits
 
-This repository defines the publisher interface; it does not contain the production artifact-store implementation, retrieval authorization policy, Foundry ingress credential provider, or deployed receiver. The host must implement those boundaries and verify the remote artifact bytes against the notice manifest.
+This repository defines the publisher interface; it does not contain the production artifact-store implementation, retrieval authorization policy, FSM_Execution ingress credential provider, or deployed receiver. The host must implement those boundaries and verify the remote artifact bytes against the notice manifest.
 
-Foundry owns persisted dispatch/run validation, report consumption, task lifecycle, and any accepted report context passed to HeadlessAi. CiAi does not directly invoke a model or grant repository operations.
+FSM_Execution owns persisted dispatch/run validation, report consumption, task lifecycle, and any accepted report context passed to HeadlessAi. CiAi does not directly invoke a model or grant repository operations.
 
 ---
 
