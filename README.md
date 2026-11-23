@@ -51,12 +51,12 @@ The intended responsibility split is:
 - **CommandAi:** own the generic versioned atomic command representation and codec. CiAi must consume its public types rather than copy them.
 - **GrammarAi / ProtocolAi:** validate structural form and carry interoperable correlation, provenance, and idempotency. Neither grants authority.
 - **HeadlessAi:** own bounded, resumable LLM/repair turns. Model output remains untrusted input.
-- **Foundry / host:** independently authenticate and authorize each proposed operation, enforce branch/base-SHA/path/capability/budget limits, and retain human approval at the host boundary.
+- **FSM_Execution / host:** independently authenticate and authorize each proposed operation, enforce branch/base-SHA/path/capability/budget limits, and retain human approval at the host boundary.
 - **GitHub Actions:** remain the source of truth for workflow runs, exact checked-out commits, jobs, and test artifacts.
 
 The first proof target is the manifest-driven Minesweeper Experience: a failing exact-SHA test artifact must become a provenance-bound diagnostic report, drive a bounded repair proposal for the same task, pass independent host authorization before any isolated-branch change, and then produce a new exact-candidate green verdict. Only after that loop works should the local manifest be loaded and played as an Experience.
 
-**Implementation status:** the repository currently has draft provenance/evidence and TRX diagnostic slices; CommandAi has a separate generic proposal contract; Foundry has draft ingress, report-consumer, and secure-transport foundations. These are not yet a live connected pipeline. The AiCi proposal builder and clean-CI CommandAi source dependency are still being established. No end-to-end red → repair → green CODE RED run is claimed.
+**Implementation status:** the repository currently has draft provenance/evidence and TRX diagnostic slices; CommandAi has a separate generic proposal contract; FSM_Execution has draft ingress, report-consumer, and secure-transport foundations. These are not yet a live connected pipeline. The AiCi proposal builder and clean-CI CommandAi source dependency are still being established. No end-to-end red → repair → green CODE RED run is claimed.
 
 Track the coordinated acceptance path:
 - [CODE RED umbrella and acceptance criteria](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/27)
@@ -67,7 +67,7 @@ Track the coordinated acceptance path:
 
 ## 03 — First self-building consumer: AnyApp
 
-AnyApp is the first repository being wired to build, evaluate, and ultimately improve itself through CiAi. Its existing GitHub Actions workflow remains the authoritative Windows build/test executor; CiAi must evaluate exact-run evidence and diagnostics, while Foundry/host independently authorizes any proposed repository mutation. The first vertical slice is producer-side: AnyApp emits workflow provenance and TRX test artifacts so failures can become structured CiAi diagnostics. The full red → bounded repair → green loop is not yet live.
+AnyApp is the first repository being wired to build, evaluate, and ultimately improve itself through CiAi. Its existing GitHub Actions workflow remains the authoritative Windows build/test executor; CiAi must evaluate exact-run evidence and diagnostics, while FSM_Execution/host independently authorizes any proposed repository mutation. The first vertical slice is producer-side: AnyApp emits workflow provenance and TRX test artifacts so failures can become structured CiAi diagnostics. The full red → bounded repair → green loop is not yet live.
 
 This makes AnyApp the first self-building consumer and practical host-boundary proving surface. The manifest-driven Minesweeper Experience remains the broader end-to-end domain acceptance target for the CODE RED pipeline; these are complementary milestones, not competing ownership claims.
 
