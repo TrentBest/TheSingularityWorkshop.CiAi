@@ -3,6 +3,7 @@ using TheSingularityWorkshop.CiAi;
 using TheSingularityWorkshop.CiAi.RepositoryCommands;
 
 var passed = 0;
+passed += GitHubWorkItemEventTests.Run();
 passed += AgentOnboardingValidatorTests.Run();
 passed += AiCiBuilderContractTests.Run();
 passed += CiPipelineDefinitionContractTests.Run();
