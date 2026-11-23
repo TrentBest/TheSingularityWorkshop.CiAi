@@ -7,7 +7,7 @@
 
 ## Purpose
 
-`CiTestResultReport` is CiAi's canonical, provenance-bound summary of one test job's TRX result. It normalizes test records and diagnostics while preserving exact workflow/run/job/candidate lineage. Foundry consumes this versioned JSON report; HeadlessAi receives accepted opaque bytes from Foundry and does not reinterpret TRX.
+`CiTestResultReport` is CiAi's canonical, provenance-bound summary of one test job's TRX result. It normalizes test records and diagnostics while preserving exact workflow/run/job/candidate lineage. FSM_Execution consumes this versioned JSON report; HeadlessAi receives accepted opaque bytes from FSM_Execution and does not reinterpret TRX.
 
 ## Input validation
 
@@ -53,7 +53,7 @@ The public schema is `ciai.test-results.v1`. `ToCanonicalUtf8Bytes()` returns co
 - `ReportSha256`: lowercase SHA-256 of the exact canonical bytes.
 - `ReportIdentity`: `sha256:` followed by that lowercase digest; it is metadata and is not embedded in the report JSON.
 
-The 1 MiB handoff limit matches the Foundry and HeadlessAi consumer contracts.
+The 1 MiB handoff limit matches the FSM_Execution and HeadlessAi consumer contracts.
 
 ## Related implementation
 
