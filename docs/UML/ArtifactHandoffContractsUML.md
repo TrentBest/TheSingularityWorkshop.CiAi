@@ -108,7 +108,7 @@ classDiagram
 
 For an ordinary run, candidate provenance defaults to the workflow event ref/SHA. For trusted-ref dispatch, the workflow runs from `refs/heads/development` and checks out a separate feature-branch candidate. The packet then carries `CiWorkflowCandidateCheckoutEvidence`; `CandidateCheckoutVerified` is derived from the registered job and successful branch-resolution/checkout-verification steps. A later test failure does not erase checkout provenance, but still makes `IsSuccessful` false.
 
-For v2 artifact handoff, `ArtifactManifest.SourceSha` binds to `candidateSha`, while `ProviderRunId` binds to `runId`. Foundry must independently validate `workflowRef/workflowSha` against its trusted workflow registration and candidate fields against the exact task request.
+For v2 artifact handoff, `ArtifactManifest.SourceSha` binds to `candidateSha`, while `ProviderRunId` binds to `runId`. FSM_Execution must independently validate `workflowRef/workflowSha` against its trusted workflow registration and candidate fields against the exact task request.
 
 ## Sender-side durable notice delivery
 
@@ -143,16 +143,16 @@ sequenceDiagram
     participant Coordinator
     participant Outbox
     participant Client
-    participant Foundry
+    participant FSM_Execution
     participant Ledger
     Host->>Coordinator: DeliverPendingAsync(max)
     Coordinator->>Ledger: ReadAcknowledgedNoticeIds()
     Coordinator->>Outbox: ReadPending(acknowledged)
     loop selected notices, once each
         Coordinator->>Client: SendAsync(exact delivery)
-        Client->>Foundry: POST ArtifactReadyNotice metadata
-        Note over Foundry: Contract-defined receiver; runtime not deployed
-        Foundry-->>Client: 202 accepted / 200 duplicate / error
+        Client->>FSM_Execution: POST ArtifactReadyNotice metadata
+        Note over FSM_Execution: Contract-defined receiver; runtime not deployed
+        FSM_Execution-->>Client: 202 accepted / 200 duplicate / error
         Client-->>Coordinator: validated status, receipt, retry metadata
         alt authenticated accepted or duplicate
             Coordinator->>Ledger: Record(receipt, exact delivery)
@@ -178,7 +178,7 @@ The coordinator attempts at most 100 notices per call (default 20), sequentially
 
 Implemented in CiAi: notice/manifest contracts, metadata-only HTTPS sender, durable notice outbox, durable accepted/duplicate receipt ledger, bounded one-pass delivery coordinator, evidence packet v2, and candidate-checkout provenance derivation.
 
-Not implemented: the remote Foundry receiver/JWT validator, immutable remote artifact hosting and retrieval, provider-side acknowledgement transport, automated retry scheduler, and end-to-end Foundry task orchestration. The receiver shown in the sequence diagram is a contract boundary, not a live service. This UML distinguishes implemented sender-side behavior from the future cross-repository handoff.
+Not implemented: the remote FSM_Execution receiver/JWT validator, immutable remote artifact hosting and retrieval, provider-side acknowledgement transport, automated retry scheduler, and end-to-end FSM_Execution task orchestration. The receiver shown in the sequence diagram is a contract boundary, not a live service. This UML distinguishes implemented sender-side behavior from the future cross-repository handoff.
 
 ---
 
