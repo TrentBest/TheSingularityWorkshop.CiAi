@@ -109,7 +109,7 @@ The file lock serializes outbox writers across processes. `FileCiWorkflowEvidenc
 - Reload deliberately sets workflow-definition trust to false. The host must re-evaluate the full workflow ref/SHA against protected control-plane policy before treating the packet as successful.
 - A remote receipt must match the exact delivery ID, idempotency key, and payload digest. Accepted/duplicate receipts acknowledge that delivery; rejected receipts are retained but do not suppress replay.
 - Receipt correlation is not authentication. The host must authenticate the remote response and validate its contract before recording it.
-- These v3 journals are not yet connected to the Foundry transport/delivery coordinator. They provide durable local contracts, not a live end-to-end v3 delivery path.
+- These v3 journals are not yet connected to the FSM_Execution transport/delivery coordinator. They provide durable local contracts, not a live end-to-end v3 delivery path.
 
 This is still a local filesystem outbox and receipt journal, not a network transport, authenticated webhook receiver, distributed consensus store, or guarantee of remote delivery. **The host must authenticate and validate the remote response before calling `Record`; the ledger verifies correlation, not cryptographic authenticity.** Hosts must protect both journal paths and retain the remote transport's authentication and endpoint policy outside model-visible evidence.
 
