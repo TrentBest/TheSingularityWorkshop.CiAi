@@ -31,7 +31,7 @@ The policy also checks a fresh `CiWorkflowRerunTarget` obtained from GitHub imme
 
 `CiWorkflowRerunRequestPolicy.Evaluate` returns stable blocking reason codes rather than dispatching work. It enforces the configured repository/workflow allowlists, required scope, issuer/audience, repository-specific grant, credential validity, request expiry, and exact target match.
 
-The caller must persist request/idempotency state and enforce the total task retry budget across requests. The per-request attempt cap is not a distributed rate limiter or a substitute for Foundry's task-level budget.
+The caller must persist request/idempotency state and enforce the total task retry budget across requests. The per-request attempt cap is not a distributed rate limiter or a substitute for FSM_Execution's task-level budget.
 
 ## Opt-in GitHub Actions workflow input contract
 
@@ -47,7 +47,7 @@ The five `ciai_*` values are all-or-none. Every `workflow_dispatch` run must use
 
 
 
-Because the trusted workflow run's GitHub `headRef`/`headSha` identify `development`, evidence packet v2 serializes these as `workflowRef`/`workflowSha` and carries `candidateRef`/`candidateSha` separately. `CiWorkflowCandidateCheckoutEvidence` identifies the exact job, branch-resolution step, and checkout-verification step; the packet derives `CandidateCheckoutVerified` from those raw job/step outcomes. Foundry must consume v2 and reconcile both SHA roles. `FromJson` rejects v1 rather than silently treating the workflow SHA as the candidate SHA.
+Because the trusted workflow run's GitHub `headRef`/`headSha` identify `development`, evidence packet v2 serializes these as `workflowRef`/`workflowSha` and carries `candidateRef`/`candidateSha` separately. `CiWorkflowCandidateCheckoutEvidence` identifies the exact job, branch-resolution step, and checkout-verification step; the packet derives `CandidateCheckoutVerified` from those raw job/step outcomes. FSM_Execution must consume v2 and reconcile both SHA roles. `FromJson` rejects v1 rather than silently treating the workflow SHA as the candidate SHA.
 
 This is the opt-in workflow-side contract only. The authenticated HTTP dispatcher that supplies these inputs, its durable dispatch-intent ledger, and run receipt/reconciliation client are not yet implemented. A caller must not treat a green run summary as accepted evidence until it reconciles the exact repository, workflow, run, attempt, and candidate SHA.
 
