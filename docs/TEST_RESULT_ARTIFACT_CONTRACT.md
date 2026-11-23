@@ -96,7 +96,7 @@ The host still owns provider authentication, exact artifact selection, download,
 - **CiAi:** exact-run evidence, required-check policy, test-result normalization, verdict, reason codes, and per-attempt report preservation.
 - **Trusted host:** provider authentication, artifact ZIP digest verification, safe extraction, workflow-definition trust policy, and mapping the artifact to the exact GitHub job.
 - **HeadlessAi:** delivers the bounded report as untrusted context to the assigned LLM; it does not decide CI success.
-- **Foundry:** correlates the report to the task, applies lifecycle and retry/time/cost budgets, and mediates authorized handoffs. It does not reinterpret test output or become a second CI verdict engine.
+- **FSM_Execution:** correlates the report to the task, applies lifecycle and retry/time/cost budgets, and mediates authorized handoffs. It does not reinterpret test output or become a second CI verdict engine.
 - **Repository host/owner:** retains approval of repository mutations and all privileged release actions.
 
 ## Canonical v1 report bytes and identity
@@ -115,7 +115,7 @@ Consumers must use `CiTestResultReport.ToCanonicalUtf8Bytes()` and must preserve
 
 The report identity is exactly `sha256:` followed by the lowercase hexadecimal SHA-256 digest of the complete canonical UTF-8 byte sequence. `ReportSha256` exposes the lowercase digest without the prefix; `ReportIdentity` exposes the prefixed identity. These are derived metadata and are not serialized into the report body, avoiding a self-referential digest. The schema value and contract version remain `ciai.test-results.v1` and `1`.
 
-`ToJson()` remains a human-readable diagnostic convenience and is **not** a wire-format or digest input. Do not hash its indented output. The accepted report bytes, identity, and digest are the exact values passed to Foundry and then opaquely to HeadlessAi.
+`ToJson()` remains a human-readable diagnostic convenience and is **not** a wire-format or digest input. Do not hash its indented output. The accepted report bytes, identity, and digest are the exact values passed to FSM_Execution and then opaquely to HeadlessAi.
 
 The v1 verdict vocabulary is `CompletePass`, `ActionableFailure`, `IncompleteOrUntrusted`, and `NonActionableFailure`. The current stable reason codes are:
 
