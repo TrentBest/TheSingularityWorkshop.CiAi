@@ -162,10 +162,14 @@ public sealed record CiWorkflowEvidencePacketV2
         long expectedRunId,
         int expectedRunAttempt,
         string expectedPayloadSha256,
+        IEnumerable<CiWorkflowRequiredCheckBinding> expectedRequiredChecks,
         bool workflowDefinitionTrusted)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(json);
         ArgumentException.ThrowIfNullOrWhiteSpace(expectedRepository);
+        ArgumentNullException.ThrowIfNull(expectedRequiredChecks);
+        var trustedRequiredChecks = expectedRequiredChecks.ToArray();
+        ValidateBindings(trustedRequiredChecks);
         if (expectedRunId <= 0 || expectedRunAttempt <= 0)
             throw new ArgumentOutOfRangeException(nameof(expectedRunId));
         if (expectedPayloadSha256 is not { Length: 64 } || !expectedPayloadSha256.All(Uri.IsHexDigit))
@@ -203,8 +207,24 @@ public sealed record CiWorkflowEvidencePacketV2
 
         if (checks.Length == 0)
             throw new InvalidDataException("Workflow evidence v2 must contain at least one required check.");
-        var expectedChecks = FromPacket(workflowEvidence, checks.Select(check =>
-            new CiWorkflowRequiredCheckBinding(check.Key, check.JobName))).RequiredChecks;
+        CiWorkflowRequiredCheckBinding[] packetBindings;
+        try
+        {
+            packetBindings = checks.Select(check =>
+                new CiWorkflowRequiredCheckBinding(check.Key, check.JobName)).ToArray();
+            ValidateBindings(packetBindings);
+        }
+        catch (ArgumentException exception)
+        {
+            throw new InvalidDataException("Workflow evidence v2 contains invalid required-check identities.", exception);
+        }
+
+        var expectedBindingSet = trustedRequiredChecks.OrderBy(binding => binding.Key, StringComparer.Ordinal).ToArray();
+        var packetBindingSet = packetBindings.OrderBy(binding => binding.Key, StringComparer.Ordinal).ToArray();
+        if (!expectedBindingSet.SequenceEqual(packetBindingSet))
+            throw new InvalidDataException("Workflow evidence v2 required-check set does not match the trusted host registration.");
+
+        var expectedChecks = FromPacket(workflowEvidence, trustedRequiredChecks).RequiredChecks;
         if (!expectedChecks.SequenceEqual(checks))
             throw new InvalidDataException("Workflow evidence v2 required-check observations do not match the nested provider-observed job list.");
 
