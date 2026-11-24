@@ -12,7 +12,7 @@ The first vertical slice is:
 - MicroBundle: ID `5203`, version `0.1.0-alpha.1`
 - Consumer: `TrentBest/raWWar`
 
-The provider declares the capability and emits a run-scoped evidence artifact. CiAi independently verifies the declaration against GitHub API metadata and the actual test artifacts.
+The provider declares the capability and emits a run-scoped evidence artifact. CiAi independently verifies the declaration against GitHub API metadata and the actual test artifacts. Parsing the envelope alone is not sufficient for admission: the parser returns an envelope-valid but test-unverified result until the existing TRX/provenance report pipeline verifies every declared test archive.
 
 ## Trust binding
 
@@ -37,7 +37,7 @@ Each declared test-result artifact is a ZIP containing exactly:
 - `results.trx`
 - `provenance.json`
 
-The separate archives allow the existing `CiTestResultArtifactArchive` verifier to validate each archive digest and provenance without weakening its strict two-entry limit. CiAi then parses the TRX with `TrxTestResultParser`; provider diagnostics remain untrusted data.
+The separate archives allow the existing `CiTestResultArtifactArchive` verifier to validate each archive digest and provenance without weakening its strict two-entry limit. CiAi then creates a `CiTestResultReport` for each archive using the exact workflow/run/attempt/job policy. `CiAiDevelopmentCapabilityEvidenceVerifier.VerifyTestResults` compares the actual archive digest, TRX digest/size, provenance digest, provider artifact identity, source checkout, workflow/event identity, job identity, expiry, and terminal test verdict against the envelope. Any failed, incomplete, mismatched, or expired report blocks admission; provider-authored step outcomes alone cannot override a failing TRX.
 
 The larger development-capability artifact also carries the MicroBundle, both TRX files, workflow provenance, source hashes, and the complete versioned evidence envelope.
 
