@@ -190,15 +190,19 @@ internal static class CiWorkflowEvidencePacketTests
             "v2 did not bind the exact successful required check");
         var v2Json = successfulV2.ToJson(indented: false);
         var v2Reloaded = CiWorkflowEvidencePacketV2.FromJson(
-            v2Json, "TrentBest/CiAi", 42, 2, successfulV2.PayloadSha256,
+            v2Json, "TrentBest/CiAi", 42, 2, successfulV2.PayloadSha256, requiredChecks,
             workflowDefinitionTrusted: true);
         Assert(v2Reloaded.IsSuccessful && v2Reloaded.RequiredChecks.Single().JobId == 100,
             "v2 exact-run packet did not round-trip its provider-observed required job");
         var v2Untrusted = CiWorkflowEvidencePacketV2.FromJson(
-            v2Json, "TrentBest/CiAi", 42, 2, successfulV2.PayloadSha256,
+            v2Json, "TrentBest/CiAi", 42, 2, successfulV2.PayloadSha256, requiredChecks,
             workflowDefinitionTrusted: false);
         Assert(v2Untrusted.EvidenceComplete && !v2Untrusted.IsSuccessful,
             "v2 durable reload restored workflow trust without a host policy decision");
+        Throws<InvalidDataException>(() => CiWorkflowEvidencePacketV2.FromJson(
+            v2Json, "TrentBest/CiAi", 42, 2, successfulV2.PayloadSha256,
+            new[] { new CiWorkflowRequiredCheckBinding("different", "different-job") },
+            workflowDefinitionTrusted: true));
         var missingV2 = CiWorkflowEvidencePacketV2.FromPacket(
             trusted, new[] { new CiWorkflowRequiredCheckBinding("missing-check", "not-a-provider-job") });
         Assert(!missingV2.EvidenceComplete && !missingV2.IsSuccessful &&
@@ -232,18 +236,18 @@ internal static class CiWorkflowEvidencePacketTests
             "v2 did not classify a complete exact required-check failure as actionable");
         var failedV2Untrusted = CiWorkflowEvidencePacketV2.FromJson(
             failedV2.ToJson(indented: false), "TrentBest/CiAi", 42, 2,
-            failedV2.PayloadSha256, workflowDefinitionTrusted: false);
+            failedV2.PayloadSha256, requiredChecks, workflowDefinitionTrusted: false);
         Assert(!failedV2Untrusted.HasActionableDiagnostics,
             "untrusted workflow definition was allowed to authorize actionable repair evidence");
         Throws<InvalidDataException>(() => CiWorkflowEvidencePacketV2.FromJson(
-            v2Json, "TrentBest/CiAi", 42, 2, new string('0', 64),
+            v2Json, "TrentBest/CiAi", 42, 2, new string('0', 64), requiredChecks,
             workflowDefinitionTrusted: true));
         var tamperedV2 = System.Text.Json.Nodes.JsonNode.Parse(v2Json)!;
         tamperedV2["requiredChecks"]![0]!["jobId"] = 999;
         var tamperedV2Json = tamperedV2.ToJsonString();
         var tamperedV2Digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(tamperedV2Json))).ToLowerInvariant();
         Throws<InvalidDataException>(() => CiWorkflowEvidencePacketV2.FromJson(
-            tamperedV2Json, "TrentBest/CiAi", 42, 2, tamperedV2Digest,
+            tamperedV2Json, "TrentBest/CiAi", 42, 2, tamperedV2Digest, requiredChecks,
             workflowDefinitionTrusted: true));
 
         Console.WriteLine("PASS: 25 CI workflow evidence packet v1/v2 contract checks.");
