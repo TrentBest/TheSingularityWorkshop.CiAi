@@ -210,7 +210,8 @@ internal static class CiWorkflowEvidencePacketTests
             candidateCheckoutEvidence: candidateEvidence);
     }
 
-    private static string CreatePullRequestCandidateProvenance(string candidateRef, string candidateSha) => $"""
+    private static string CreatePullRequestCandidateProvenance(
+        string candidateRef, string candidateSha, string? pullRequestHeadSha = null) => $"""
     {
       "schema": "{{CiWorkflowProvenanceRecord.CurrentSchema}}",
       "repository": "TrentBest/CiAi",
