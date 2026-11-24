@@ -124,6 +124,11 @@ public sealed record CiWorkflowEvidencePacket
             observedRun.RunAttempt != provenance.RunAttempt)
             throw new InvalidDataException("Workflow provenance does not identify the exact observed repository, run, and attempt.");
 
+        var workflowRefSeparator = provenance.WorkflowRef.LastIndexOf('@');
+        if (workflowRefSeparator <= 0 ||
+            !string.Equals(observedRun.WorkflowRef, provenance.WorkflowRef[(workflowRefSeparator + 1)..], StringComparison.Ordinal))
+            throw new InvalidDataException("Workflow provenance ref does not match the independently observed workflow ref.");
+
         // The internal observation's WorkflowSha slot is retained here only as the
         // run API's triggering/head SHA observation. Bind the workflow-side event SHA to
         // that independent provider observation before accepting the v1 envelope.
