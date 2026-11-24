@@ -59,8 +59,8 @@ public sealed record ExecutionArtifactIngressResult(
 /// </remarks>
 public sealed class ExecutionArtifactReadyNoticeClient
 {
-    public const string Contract = "foundry.ciai-artifact-ingress.v1";
-    public const string EndpointPath = "/api/foundry/ciai/artifacts/ready";
+    public const string Contract = "execution.ciai-artifact-ingress.v1";
+    public const string EndpointPath = "/api/v1/integrations/ciai/artifact-ready";
     public const int MaximumNoticeBytes = 64 * 1024;
 
     private static readonly JsonSerializerOptions JsonOptions = new()

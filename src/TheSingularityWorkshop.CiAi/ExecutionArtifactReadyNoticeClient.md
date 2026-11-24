@@ -9,7 +9,9 @@
 
 **ExecutionArtifactReadyNoticeClient** sends the metadata-only **ArtifactReadyNotice v1** contract to FSM_Execution's host-owned HTTPS ingress:
 
-POST /api/foundry/ciai/artifacts/ready
+**Wire contract:** `execution.ciai-artifact-ingress.v1`  
+
+POST /api/v1/integrations/ciai/artifact-ready
 
 It implements the sender side of [FSM_Execution's normative callback contract](https://github.com/TrentBest/TheSingularityWorkshop.FSM_Execution/blob/work/code-red-task-lifecycle/docs/CIAI_ARTIFACT_CALLBACK_CONTRACT.md). It does not send evidence bytes, retrieve artifacts, authorize repository operations, or decide whether CI passed.
 

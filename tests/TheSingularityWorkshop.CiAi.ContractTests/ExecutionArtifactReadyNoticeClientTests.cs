@@ -7,8 +7,10 @@ internal static class ExecutionArtifactReadyNoticeClientTests
 {
     public static async Task<int> RunAsync()
     {
-        Assert(ExecutionArtifactReadyNoticeClient.EndpointPath == "/api/foundry/ciai/artifacts/ready",
+        Assert(ExecutionArtifactReadyNoticeClient.EndpointPath == "/api/v1/integrations/ciai/artifact-ready",
             "sender route does not match the FSM_Execution v1 receiver contract");
+        Assert(ExecutionArtifactReadyNoticeClient.Contract == "execution.ciai-artifact-ingress.v1",
+            "sender contract identifier does not match the current FSM_Execution v1 contract");
         var notice = CreateNotice();
         string? capturedBody = null;
         string? capturedAuthorizationScheme = null;
@@ -250,8 +252,8 @@ internal static class ExecutionArtifactReadyNoticeClientTests
             new HttpClient(), new Uri("https://execution.example/api/v1/other"),
             new FixtureCredentials("token")));
 
-        Console.WriteLine("PASS: 20 FSM_Execution artifact-ready ingress client contract checks.");
-        return 20;
+        Console.WriteLine("PASS: 21 FSM_Execution artifact-ready ingress client contract checks.");
+        return 21;
     }
 
     private static HttpClient ResponseClient(HttpStatusCode status, string body) =>
