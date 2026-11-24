@@ -22,13 +22,15 @@ var expression = CiAiPipelineGateExpression.ForPipeline(
     }));
 ```
 
-Each leaf binds four identities:
+Each leaf binds:
 - stable gate ID;
 - canonical owner/repository;
-- candidate ID;
-- full 40-character source commit SHA.
+- candidate ID and full 40-character source commit SHA;
+- evidence family (`PublishedPackage` or `DevelopmentCapability`);
+- optional exact subject ID/version (package identity or capability identity);
+- optional `RequiresProtectedPush` trust requirement for development-capability leaves.
 
-The evaluator consumes existing `DependencyReleaseGateEvaluation` records keyed by gate ID. It never trusts a caller-supplied boolean or an LLM assertion.
+The evaluator consumes normalized `CiAiRepositoryGateEvaluation` records keyed by gate ID. Published-package results are adapted from `DependencyReleaseGateEvaluation`; development-capability results can be created only from parser-validated `CiAiDevelopmentCapabilityEvidenceValidation`. The evaluator never trusts a caller-supplied boolean or an LLM assertion.
 
 | State | Meaning |
 |---|---|
@@ -37,6 +39,8 @@ The evaluator consumes existing `DependencyReleaseGateEvaluation` records keyed 
 | `Blocked` | A required leaf is rejected/mismatched, or every OR alternative is blocked |
 
 For `AllOf(B,C)`, B alone is never sufficient. For `AnyOf(AllOf(B,C),D)`, D may independently satisfy the complete alternative. A stale candidate SHA, repository mismatch, candidate mismatch, or failed leaf cannot satisfy a gate.
+
+Published-package and development-capability evidence are distinct leaf kinds. A development-capability leaf additionally binds the capability ID/version. A verified PR candidate may satisfy a development-work gate, but a leaf with `RequiresProtectedPush` remains `Waiting` until the exact capability evidence is observed on the protected `development` push; PR evidence cannot satisfy that stronger trust requirement. A development capability never implies NuGet publication.
 
 ## LLM allocation
 
