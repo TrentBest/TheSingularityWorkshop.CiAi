@@ -250,8 +250,8 @@ internal static class CiWorkflowEvidencePacketTests
             tamperedV2Json, "TrentBest/CiAi", 42, 2, tamperedV2Digest, requiredChecks,
             workflowDefinitionTrusted: true));
 
-        Console.WriteLine("PASS: 25 CI workflow evidence packet v1/v2 contract checks.");
-        return 25;
+        Console.WriteLine("PASS: 26 CI workflow evidence packet v1/v2 contract checks.");
+        return 26;
     }
 
 
