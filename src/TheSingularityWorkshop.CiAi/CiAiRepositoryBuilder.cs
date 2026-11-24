@@ -14,6 +14,9 @@ public static class CiAi
     public static CiAiRepositoryBuilder ExtendWith(CiAiExtensionDefinition extension) =>
         new CiAiRepositoryBuilder().ExtendWith(extension);
 
+    public static CiAiDependencyReference Resolve(string repository, string? capability = null) =>
+        new(repository, capability);
+
     public static CiAiOrderedDependencyFallback Or(params string[] repositories) => new(repositories);
 
     public static class Logic
@@ -123,16 +126,37 @@ public abstract record CiAiDependencyExpression
     internal abstract void AddRepositories(ICollection<string> target);
 }
 
-public sealed record CiAiRepositoryDependency : CiAiDependencyExpression
+public sealed record CiAiDependencyReference
 {
-    public CiAiRepositoryDependency(string repository)
+    public CiAiDependencyReference(string repository, string? capability = null)
     {
-        if (!RepositoryIdentity.IsValid(repository))
-            throw new ArgumentException("Dependency must use canonical owner/repository identity.", nameof(repository));
+        if (!RepositoryIdentity.IsValid(repository) && !IsShortName(repository))
+            throw new ArgumentException("Dependency must be a repository name or canonical owner/repository identity.", nameof(repository));
+        if (capability is { Length: > 100 } || capability?.Any(char.IsControl) == true)
+            throw new ArgumentException("Dependency capability is invalid.", nameof(capability));
         Repository = repository;
+        Capability = string.IsNullOrWhiteSpace(capability) ? null : capability.Trim();
     }
     public string Repository { get; }
-    internal override string Key => "repo:" + Repository;
+    public string? Capability { get; }
+    internal CiAiDependencyReference ResolveForOwner(string owner) =>
+        RepositoryIdentity.IsValid(Repository) ? this : new CiAiDependencyReference($"{owner}/{Repository}", Capability);
+    private static bool IsShortName(string value) => !string.IsNullOrWhiteSpace(value) &&
+        value.Length <= 100 && value is not "." and not ".." &&
+        value.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.');
+}
+
+public sealed record CiAiRepositoryDependency : CiAiDependencyExpression
+{
+    public CiAiRepositoryDependency(string repository, string? capability = null)
+    {
+        var reference = new CiAiDependencyReference(repository, capability);
+        Repository = reference.Repository;
+        Capability = reference.Capability;
+    }
+    public string Repository { get; }
+    public string? Capability { get; }
+    internal override string Key => "repo:" + Repository.ToUpperInvariant() + ":" + Capability;
     internal override void AddRepositories(ICollection<string> target) => target.Add(Repository);
 }
 
@@ -226,6 +250,11 @@ public sealed class CiAiRepositoryBuilder
         return Copy(badges: _badges.Append(badge).ToArray());
     }
     public CiAiRepositoryBuilder WithDependency(string repository) => WithDependency(new CiAiRepositoryDependency(repository));
+    public CiAiRepositoryBuilder WithDependency(CiAiDependencyReference dependency)
+    {
+        ArgumentNullException.ThrowIfNull(dependency);
+        return WithDependency(new CiAiRepositoryDependency(dependency.Repository, dependency.Capability));
+    }
     public CiAiRepositoryBuilder WithDependency(CiAiDependencyExpression dependency)
     {
         ArgumentNullException.ThrowIfNull(dependency);
@@ -272,7 +301,7 @@ public sealed class CiAiRepositoryBuilder
         var resolved = _dependencies.Select(item => item switch
         {
             CiAiRepositoryDependency direct when !RepositoryIdentity.IsValid(direct.Repository) =>
-                (CiAiDependencyExpression)new CiAiRepositoryDependency($"{owner}/{direct.Repository}"),
+                (CiAiDependencyExpression)new CiAiRepositoryDependency($"{owner}/{direct.Repository}", direct.Capability),
             _ => item
         }).ToArray();
         var names = resolved.SelectMany(item => item switch
