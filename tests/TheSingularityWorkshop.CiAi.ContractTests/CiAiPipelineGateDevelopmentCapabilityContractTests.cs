@@ -18,6 +18,8 @@ public static class CiAiPipelineGateDevelopmentCapabilityContractTests
             passed++;
         }
 
+        var (candidateBinding, candidateValidation) =
+            CiAiDevelopmentCapabilityEvidenceContractTests.CreateFullyVerifiedForGateTests();
         var candidateLeaf = Leaf(candidateBinding, requiresProtectedPush: false);
         var candidateExpression = CiAiPipelineGateExpression.ForPipeline("raWWar", candidateLeaf);
         var packageExpression = CiAiPipelineGateExpression.ForPipeline(
@@ -28,8 +30,6 @@ public static class CiAiPipelineGateDevelopmentCapabilityContractTests
                 candidateBinding.SourceSha));
         Check(candidateExpression.DefinitionSha256 != packageExpression.DefinitionSha256,
             "evidence-family-is-bound-into-composite-expression-identity");
-        var (candidateBinding, candidateValidation) =
-            CiAiDevelopmentCapabilityEvidenceContractTests.CreateFullyVerifiedForGateTests();
         var candidateEvaluation = CiAiRepositoryGateEvaluation.FromDevelopmentCapability(candidateBinding, candidateValidation);
         var candidateState = CiAiPipelineGateEvaluator.Evaluate(
             candidateExpression,
