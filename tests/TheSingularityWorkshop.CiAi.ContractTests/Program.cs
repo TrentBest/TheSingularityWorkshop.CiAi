@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using TheSingularityWorkshop.CiAi;
+using TheSingularityWorkshop.CiAi.ContractTests;
 using TheSingularityWorkshop.CiAi.RepositoryCommands;
 
 var passed = 0;
