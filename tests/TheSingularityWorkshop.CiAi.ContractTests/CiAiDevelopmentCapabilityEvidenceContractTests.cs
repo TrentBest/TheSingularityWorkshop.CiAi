@@ -185,7 +185,7 @@ public static class CiAiDevelopmentCapabilityEvidenceContractTests
                 head = new { @ref = "adp/development-capability-evidence", sha = SourceSha },
                 @base = new { @ref = "development", sha = WorkflowSha }
             },
-            requiredJobs = new[] { new { name = "test", workflowPath = WorkflowPath } },
+            requiredJobs = new[] { new { jobKey = "physics-development-capability", name = "test", workflowPath = WorkflowPath } },
             requiredStepIds = requiredSteps,
             stepOutcomes = requiredSteps.ToDictionary(name => name, _ => "success"),
             requiredArtifacts,
@@ -276,6 +276,7 @@ public static class CiAiDevelopmentCapabilityEvidenceContractTests
             sourceRef,
             SourceSha,
             "test",
+            "physics-development-capability",
             77,
             providerJobConclusion,
             "physics-development-capability-" + RunId + "-" + Attempt,
