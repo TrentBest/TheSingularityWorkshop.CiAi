@@ -11,6 +11,9 @@ public static class CiAi
     public static CiAiRepositoryBuilder WithDependency(CiAiDependencyExpression dependency) =>
         new CiAiRepositoryBuilder().WithDependency(dependency);
 
+    public static CiAiRepositoryBuilder WithDependency(CiAiDependencyReference dependency) =>
+        new CiAiRepositoryBuilder().WithDependency(dependency);
+
     public static CiAiRepositoryBuilder ExtendWith(CiAiExtensionDefinition extension) =>
         new CiAiRepositoryBuilder().ExtendWith(extension);
 
