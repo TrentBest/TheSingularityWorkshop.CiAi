@@ -30,7 +30,7 @@ Each leaf binds:
 - optional exact subject ID/version (package identity or capability identity);
 - optional `RequiresProtectedPush` trust requirement for development-capability leaves.
 
-The evaluator consumes normalized `CiAiRepositoryGateEvaluation` records keyed by gate ID. Published-package results are adapted from `DependencyReleaseGateEvaluation`; development-capability results can be created only from parser-validated `CiAiDevelopmentCapabilityEvidenceValidation`. The evaluator never trusts a caller-supplied boolean or an LLM assertion.
+The evaluator consumes normalized `CiAiRepositoryGateEvaluation` records keyed by gate ID. Published-package results are adapted from `DependencyReleaseGateEvaluation`; development-capability results can be created only from a fully verified `CiAiDevelopmentCapabilityEvidenceValidation` produced by the envelope parser plus the TRX/provenance verifier. The evaluator never trusts a caller-supplied boolean or an LLM assertion.
 
 | State | Meaning |
 |---|---|
