@@ -12,6 +12,7 @@ RunSuite("CiWorkflowEvidencePacketTests", () => CiWorkflowEvidencePacketTests.Ru
 RunSuite("CiAiPipelineGateExpressionContractTests", () => CiAiPipelineGateExpressionContractTests.Run());
 RunSuite("CiAiPipelineGateMembershipPolicyContractTests", () => CiAiPipelineGateMembershipPolicyContractTests.Run());
 RunSuite("CiAiDevelopmentCapabilityEvidenceContractTests", () => CiAiDevelopmentCapabilityEvidenceContractTests.Run());
+RunSuite("CiAiPipelineGateDevelopmentCapabilityContractTests", () => CiAiPipelineGateDevelopmentCapabilityContractTests.Run());
 RunSuite("CiTestResultReportTests", () => CiTestResultReportTests.Run());
 RunSuite("CiTestResultArtifactArchiveTests", () => CiTestResultArtifactArchiveTests.Run());
 RunSuite("CiWorkflowEvidenceDeliveryTests", () => CiWorkflowEvidenceDeliveryTests.Run());
