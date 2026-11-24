@@ -100,9 +100,12 @@ public static class CiAiDevelopmentCapabilityEvidenceContractTests
         CreateFullyVerifiedForGateTests(
             bool protectedPush = false,
             string capabilityId = CapabilityId,
-            string capabilityVersion = CapabilityVersion)
+            string capabilityVersion = CapabilityVersion,
+            bool testResultsPass = true)
     {
-        var (report, archive) = CiTestResultReportTests.CreatePassingReportForDevelopmentCapability(protectedPush);
+        var (report, archive) = testResultsPass
+            ? CiTestResultReportTests.CreatePassingReportForDevelopmentCapability(protectedPush)
+            : CiTestResultReportTests.CreateFailingReportForDevelopmentCapability(protectedPush);
         var sourcePaths = new[] { "src/Capability.cs" };
         var requiredSteps = new[] { "build", "test" };
         var requiredKinds = new[] { "microbundle", "workflowProvenance" };
