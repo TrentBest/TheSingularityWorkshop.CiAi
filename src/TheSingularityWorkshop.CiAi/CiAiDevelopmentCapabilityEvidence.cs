@@ -134,6 +134,7 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
             });
             var root = document.RootElement;
             Ensure(root.ValueKind == JsonValueKind.Object, "devcap.root-invalid");
+            EnsureNoDuplicateProperties(root);
             Ensure(ReadString(root, "schema") == Schema, "devcap.schema-mismatch");
             Ensure(ReadString(root, "evidenceContract") == Schema, "devcap.contract-mismatch");
             Ensure(ReadString(root, "providerRepository") == binding.ProviderRepository, "devcap.provider-repository-mismatch");
@@ -338,6 +339,24 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
             pullRequest.ValueKind != JsonValueKind.Null)
         {
             throw new InvalidDataException("devcap.non-pull-request-event-has-pull-request");
+        }
+    }
+
+    private static void EnsureNoDuplicateProperties(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var property in element.EnumerateObject())
+            {
+                Ensure(names.Add(property.Name), "devcap.json-duplicate-property");
+                EnsureNoDuplicateProperties(property.Value);
+            }
+        }
+        else if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+                EnsureNoDuplicateProperties(item);
         }
     }
 
