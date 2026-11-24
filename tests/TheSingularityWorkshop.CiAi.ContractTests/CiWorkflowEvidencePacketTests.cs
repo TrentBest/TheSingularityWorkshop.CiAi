@@ -178,8 +178,69 @@ internal static class CiWorkflowEvidencePacketTests
             failClosed.BlockingReasons.Contains("candidate.checkout-unverified"),
             "checkout SHA differing from event SHA was not failed closed");
 
-        Console.WriteLine("PASS: 17 CI workflow evidence packet v1 contract checks.");
-        return 17;
+        var requiredChecks = new[]
+        {
+            new CiWorkflowRequiredCheckBinding("build-and-test", "build-and-test")
+        };
+        var successfulV2 = CiWorkflowEvidencePacketV2.FromPacket(trusted, requiredChecks);
+        Assert(successfulV2.Schema == CiWorkflowEvidencePacketV2.CurrentSchema &&
+            successfulV2.EvidenceComplete && successfulV2.IsSuccessful &&
+            !successfulV2.HasActionableDiagnostics &&
+            successfulV2.DiagnosticsFingerprint is null,
+            "v2 did not bind the exact successful required check");
+        var v2Json = successfulV2.ToJson(indented: false);
+        var v2Reloaded = CiWorkflowEvidencePacketV2.FromJson(
+            v2Json, "TrentBest/CiAi", 42, 2, successfulV2.PayloadSha256,
+            workflowDefinitionTrusted: true);
+        Assert(v2Reloaded.IsSuccessful && v2Reloaded.RequiredChecks.Single().JobId == 100,
+            "v2 exact-run packet did not round-trip its provider-observed required job");
+        var v2Untrusted = CiWorkflowEvidencePacketV2.FromJson(
+            v2Json, "TrentBest/CiAi", 42, 2, successfulV2.PayloadSha256,
+            workflowDefinitionTrusted: false);
+        Assert(v2Untrusted.EvidenceComplete && !v2Untrusted.IsSuccessful,
+            "v2 durable reload restored workflow trust without a host policy decision");
+        var missingV2 = CiWorkflowEvidencePacketV2.FromPacket(
+            trusted, new[] { new CiWorkflowRequiredCheckBinding("missing-check", "not-a-provider-job") });
+        Assert(!missingV2.EvidenceComplete && !missingV2.IsSuccessful &&
+            missingV2.RequiredChecks.Single().State == "missing",
+            "v2 missing required job did not fail closed");
+
+        var failedJob = new CiWorkflowJobObservation(
+            101, 42, 2, "build-and-test", "completed", "failure",
+            new Uri("https://github.com/TrentBest/CiAi/actions/runs/42/job/101"),
+            Array.AsReadOnly(new[]
+            {
+                new CiWorkflowStepObservation(1, "Build and test", "completed", "failure", "2026-10-31T01:00:30Z")
+            }))
+        {
+            StartedAt = DateTimeOffset.Parse("2026-10-31T00:59:00Z"),
+            CompletedAt = DateTimeOffset.Parse("2026-10-31T01:00:30Z")
+        };
+        var failedRun = new CiWorkflowRunEvidenceObservation(
+            "TrentBest/CiAi", ".github/workflows/ci.yml", 42, 2,
+            "refs/heads/development", EventSha, "pull_request", "CI",
+            CiRunStatus.Completed, CiRunConclusion.Failure,
+            new Uri("https://github.com/TrentBest/CiAi/actions/runs/42"),
+            DateTimeOffset.Parse("2026-10-31T01:01:00Z"),
+            Array.AsReadOnly(new[] { failedJob }), true, true);
+        var failedV1 = CiWorkflowEvidencePacket.FromValidatedProvenance(
+            failedRun, provenance, workflowDefinitionTrusted: true);
+        var failedV2 = CiWorkflowEvidencePacketV2.FromPacket(failedV1, requiredChecks);
+        Assert(failedV2.EvidenceComplete && !failedV2.IsSuccessful &&
+            failedV2.HasActionableDiagnostics &&
+            failedV2.DiagnosticsFingerprint is { Length: 64 },
+            "v2 did not classify a complete exact required-check failure as actionable");
+        var failedV2Untrusted = CiWorkflowEvidencePacketV2.FromJson(
+            failedV2.ToJson(indented: false), "TrentBest/CiAi", 42, 2,
+            failedV2.PayloadSha256, workflowDefinitionTrusted: false);
+        Assert(!failedV2Untrusted.HasActionableDiagnostics,
+            "untrusted workflow definition was allowed to authorize actionable repair evidence");
+        Throws<InvalidDataException>(() => CiWorkflowEvidencePacketV2.FromJson(
+            v2Json, "TrentBest/CiAi", 42, 2, new string('0', 64),
+            workflowDefinitionTrusted: true));
+
+        Console.WriteLine("PASS: 24 CI workflow evidence packet v1/v2 contract checks.");
+        return 24;
     }
 
 
