@@ -21,6 +21,11 @@ internal static class CiAiRepositoryBuilderContractTests
         {
             var fromBound = CiAi.ForRepository("TrentBest/A").WithDependency("TrentBest/B").Build();
             var fromUnbound = CiAi.WithDependency(new CiAiRepositoryDependency("TrentBest/B")).Build("TrentBest/A");
+            var ownerRelative = CiAi.ForRepository("TrentBest/A")
+                .WithDependency(CiAi.Resolve("OtherRepo", "runtime")).Build();
+            Assert(ownerRelative.Dependencies.Single() is CiAiRepositoryDependency resolved &&
+                resolved.Repository == "TrentBest/OtherRepo" && resolved.Capability == "runtime",
+                "short repository name or capability was not resolved against the configured owner");
             Assert(fromBound.DependencyRepositories.SequenceEqual(fromUnbound.DependencyRepositories),
                 "the two entry paths produced different dependency declarations");
         });
