@@ -18,11 +18,14 @@ public static class CiAiPipelineGateDevelopmentCapabilityContractTests
             passed++;
         }
 
-        var candidateLeaf = Leaf(requiresProtectedPush: false);
+        var candidateLeaf = Leaf(candidateBinding, requiresProtectedPush: false);
         var candidateExpression = CiAiPipelineGateExpression.ForPipeline("raWWar", candidateLeaf);
         var packageExpression = CiAiPipelineGateExpression.ForPipeline(
             "raWWar",
-            new CiAiRepositoryGateReference(GateId, Provider, CandidateId, SourceSha));
+            new CiAiRepositoryGateReference(
+                GateId, candidateBinding.ProviderRepository,
+                candidateBinding.ProviderRepository + "@" + candidateBinding.SourceSha,
+                candidateBinding.SourceSha));
         Check(candidateExpression.DefinitionSha256 != packageExpression.DefinitionSha256,
             "evidence-family-is-bound-into-composite-expression-identity");
         var (candidateBinding, candidateValidation) =
@@ -35,7 +38,7 @@ public static class CiAiPipelineGateDevelopmentCapabilityContractTests
         Check(CiAiPipelineGateAdmissionPolicy.Evaluate(candidateState).MayAllocateLlm,
             "satisfied-development-capability-admits-consumer-work");
 
-        var protectedLeaf = Leaf(requiresProtectedPush: true);
+        var protectedLeaf = Leaf(candidateBinding, requiresProtectedPush: true);
         var protectedExpression = CiAiPipelineGateExpression.ForPipeline("raWWar-protected", protectedLeaf);
         var candidateOnlyState = CiAiPipelineGateEvaluator.Evaluate(
             protectedExpression,
@@ -86,9 +89,9 @@ public static class CiAiPipelineGateDevelopmentCapabilityContractTests
             CiAiPipelineGateState.Blocked, "capability-id-mismatch-blocks");
 
         var publishedPackage = new DependencyReleaseGateEvaluation(
-            CandidateId,
-            Provider,
-            SourceSha,
+            candidateBinding.ProviderRepository + "@" + candidateBinding.SourceSha,
+            candidateBinding.ProviderRepository,
+            candidateBinding.SourceSha,
             "TheSingularityWorkshop.Physics",
             "0.1.0",
             DependencyReleaseGateState.ReadyForConsumerVerification,
@@ -106,7 +109,9 @@ public static class CiAiPipelineGateDevelopmentCapabilityContractTests
         var wrongVersionExpression = CiAiPipelineGateExpression.ForPipeline(
             "raWWar-wrong-version",
             new CiAiRepositoryGateReference(
-                GateId, Provider, CandidateId, SourceSha,
+                GateId, candidateBinding.ProviderRepository,
+                candidateBinding.ProviderRepository + "@" + candidateBinding.SourceSha,
+                candidateBinding.SourceSha,
                 CiAiRepositoryGateEvidenceKind.DevelopmentCapability,
                 CapabilityId, "1"));
         Check(CiAiPipelineGateEvaluator.Evaluate(
@@ -117,14 +122,16 @@ public static class CiAiPipelineGateDevelopmentCapabilityContractTests
         return passed;
     }
 
-    private static CiAiRepositoryGateReference Leaf(bool requiresProtectedPush) =>
+    private static CiAiRepositoryGateReference Leaf(
+        CiAiDevelopmentCapabilityArtifactBinding binding,
+        bool requiresProtectedPush) =>
         new(
             GateId,
-            Provider,
-            CandidateId,
-            SourceSha,
+            binding.ProviderRepository,
+            binding.ProviderRepository + "@" + binding.SourceSha,
+            binding.SourceSha,
             CiAiRepositoryGateEvidenceKind.DevelopmentCapability,
-            CapabilityId,
-            "1",
+            binding.CapabilityId,
+            binding.CapabilityVersion,
             requiresProtectedPush);
 }
