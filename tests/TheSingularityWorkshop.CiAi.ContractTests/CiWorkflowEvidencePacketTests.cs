@@ -380,7 +380,11 @@ internal static class CiWorkflowEvidencePacketTests
             Array.AsReadOnly(new[]
             {
                 new CiWorkflowStepObservation(1, "Build and test", "completed", "success", "2026-10-31T01:00:00Z")
-            }));
+            }))
+        {
+            StartedAt = DateTimeOffset.Parse("2026-10-31T00:59:00Z"),
+            CompletedAt = DateTimeOffset.Parse("2026-10-31T01:00:00Z")
+        };
         return new CiWorkflowRunEvidenceObservation(
             "TrentBest/CiAi", workflowPath, runId, 2,
             workflowRef, EventSha, "pull_request", "CI",
