@@ -14,7 +14,7 @@ The v1 packet remains independently versioned and is not silently reinterpreted 
 
 ## Required-check binding
 
-The trusted host supplies one or more `CiWorkflowRequiredCheckBinding` values:
+The trusted host supplies one or more `CiWorkflowRequiredCheckBinding` values before dispatch and supplies that same expected set again when calling `FromJson` on receipt or reload:
 
 - `Key`: stable machine-readable required-check identity registered in the dispatch mapping
 - `JobName`: exact provider job display name to match in the observed run attempt
@@ -43,6 +43,6 @@ A digest proves byte integrity, not sender identity, workflow trust, or authoriz
 
 ## Current implementation boundary
 
-The library contract, v2 JSON serializer/parser, schema, required-check matching, trust re-evaluation, and contract tests are implemented on the current integration branch. The workflow-run observer, v2 artifact publication/outbox, metadata notice delivery, and Execution-side v2 consumer still need to be wired and proven end to end.
+The library contract, v2 JSON serializer/parser, schema, host-bound required-check matching, trust re-evaluation, durable idempotent v2 outbox, shared transport receipt acknowledgement, and contract tests are implemented on the current integration branch. The live provider-observation adapter, v2 artifact publication, authenticated metadata notice delivery, and Execution-side v2 consumer still need to be wired and proven end to end.
 
 No v2 packet authorizes repository writes, merge, package publication, release, or deployment. Human approval and a fresh narrow host capability remain mandatory for repository side effects.
