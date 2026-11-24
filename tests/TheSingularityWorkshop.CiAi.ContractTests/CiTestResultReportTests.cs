@@ -12,6 +12,7 @@ internal static class CiTestResultReportTests
     private const string Repository = "TrentBest/Experiences";
     private const string CandidateSha = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
     private const string WorkflowSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    private const string MergeSha = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
     private const long RunId = 41234078182;
     private const int RunAttempt = 1;
     private const long JobId = 124634066027;
@@ -367,9 +368,10 @@ internal static class CiTestResultReportTests
         bool protectedPush = false)
     {
         var eventRef = protectedPush ? "refs/heads/development" : "refs/pull/17/merge";
-        var checkoutRef = eventRef;
+        var checkoutRef = protectedPush ? "refs/heads/development" : "refs/heads/feature/minesweeper-domain-pilot";
         var eventName = protectedPush ? "push" : "pull_request";
-        var workflowSha = protectedPush ? CandidateSha : WorkflowSha;
+        var eventSha = protectedPush ? CandidateSha : MergeSha;
+        var workflowSha = protectedPush ? CandidateSha : MergeSha;
         var pullRequestJson = protectedPush
             ? "null"
             : """
@@ -386,13 +388,13 @@ internal static class CiTestResultReportTests
           "runId": {{RunId}},
           "runAttempt": {{RunAttempt}},
           "workflow": {
-            "ref": "{{Repository}}/.github/workflows/ci.yml@refs/heads/development",
+            "ref": "{{Repository}}/.github/workflows/ci.yml@{{eventRef}}",
             "sha": "{{workflowSha}}"
           },
           "event": {
             "name": "{{eventName}}",
             "ref": "{{eventRef}}",
-            "sha": "{{CandidateSha}}",
+            "sha": "{{eventSha}}",
             "pullRequest": {{pullRequestJson}}
           },
           "checkout": {
@@ -405,27 +407,39 @@ internal static class CiTestResultReportTests
         var provenance = CiWorkflowProvenanceRecord.ParseAndValidate(
             provenanceBytes, Repository, RunId, RunAttempt,
             Convert.ToHexString(SHA256.HashData(provenanceBytes)));
+        var steps = new List<CiWorkflowStepObservation>();
+        if (!protectedPush)
+        {
+            steps.Add(new CiWorkflowStepObservation(1, "Checkout", "completed", "success",
+                "2026-10-31T01:00:10Z"));
+            steps.Add(new CiWorkflowStepObservation(2, "Create exact Physics workflow provenance", "completed", "success",
+                "2026-10-31T01:00:20Z"));
+        }
+        steps.Add(new CiWorkflowStepObservation(steps.Count + 1, "dotnet test", "completed", conclusion,
+            "2026-10-31T01:03:00Z"));
         var job = new CiWorkflowJobObservation(
             JobId, RunId, RunAttempt, JobName, "completed", conclusion,
             new Uri($"https://github.com/{Repository}/actions/runs/{RunId}/job/{JobId}"),
-            Array.AsReadOnly(new[]
-            {
-                new CiWorkflowStepObservation(1, "dotnet test", "completed", conclusion,
-                    "2026-10-31T01:03:00Z")
-            }))
+            Array.AsReadOnly(steps.ToArray()))
         {
             StartedAt = DateTimeOffset.Parse("2026-10-31T00:59:00Z"),
             CompletedAt = DateTimeOffset.Parse("2026-10-31T01:04:00Z")
         };
+        CiWorkflowCandidateCheckoutEvidence? candidateCheckoutEvidence =
+            !protectedPush && checkoutMatches
+                ? new CiWorkflowCandidateCheckoutEvidence(
+                    checkoutRef, CandidateSha, JobName, "Checkout", "Create exact Physics workflow provenance")
+                : null;
         var observed = new CiWorkflowRunEvidenceObservation(
             Repository, ".github/workflows/ci.yml", RunId, RunAttempt,
-            "refs/heads/development", CandidateSha, eventName, "Validation",
+            eventRef, eventSha, eventName, "Validation",
             CiRunStatus.Completed,
             conclusion == "success" ? CiRunConclusion.Success : CiRunConclusion.Failure,
             new Uri($"https://github.com/{Repository}/actions/runs/{RunId}"),
-            ObservedAt, Array.AsReadOnly(new[] { job }), true, true);
+            ObservedAt, Array.AsReadOnly(new[] { job }), true, true,
+            candidateCheckoutEvidence: candidateCheckoutEvidence);
         return CiWorkflowEvidencePacket.FromValidatedProvenance(
-            observed, provenance, workflowTrusted);
+            observed, provenance, workflowTrusted, candidateCheckoutEvidence);
     }
 
     private static CiTestResultArtifactSource CreateSource(
