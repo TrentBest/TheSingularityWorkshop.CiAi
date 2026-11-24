@@ -65,6 +65,6 @@ The host must still use its current branch-protection policy and revocation stat
 
 ## Existing gate integration
 
-`CiAiDevelopmentCapabilityEvidenceParser` validates the versioned envelope and independently observed metadata. It does not create a second scheduler or gate engine. Its verified result is intended to become a leaf evidence type in the existing composite AND/OR pipeline evaluator, alongside (but never conflated with) `PublishedDependencyEvidence`.
+`CiAiDevelopmentCapabilityEvidenceParser` validates the versioned envelope and independently observed metadata. It does not create a second scheduler or gate engine. Its verified result now feeds `CiAiRepositoryGateEvaluation` as a typed leaf in the existing composite AND/OR pipeline evaluator, alongside (but never conflated with) `PublishedDependencyEvidence`. The same evaluator handles both evidence families; there is no second gate engine.
 
 Published-package readiness and source-capability readiness are distinct evidence kinds. Never mark a source capability as a published package, and never let a successful development capability imply NuGet publication.
