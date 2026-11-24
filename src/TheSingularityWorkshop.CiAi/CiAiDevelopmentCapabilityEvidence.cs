@@ -74,6 +74,7 @@ public sealed record CiAiDevelopmentCapabilityEvidence(
     int PolicyVersion,
     long BundleId,
     string BundleVersion,
+    string BundleFile,
     IReadOnlyDictionary<string, string> DependencyCheckouts,
     IReadOnlyList<CiAiDevelopmentCapabilityTestArtifact> TestArtifacts,
     bool IsProtectedPushEvidence);
@@ -244,6 +245,7 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
                 binding.PolicyVersion,
                 binding.BundleId,
                 binding.BundleVersion,
+                binding.BundleFile,
                 dependencyCheckouts,
                 testArtifacts,
                 protectedPush);
