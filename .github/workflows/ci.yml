@@ -42,54 +42,81 @@ on:
   workflow_dispatch:
     inputs:
       target_branch:
-        description: "Optional existing branch to gate; blank uses the branch selected for this workflow run."
+        description: "Optional existing branch to gate; mutually exclusive with target_sha."
+        required: false
+        type: string
+        default: ""
+      target_sha:
+        description: "Optional exact 40-character candidate commit SHA; dispatch must use the trusted development workflow revision."
         required: false
         type: string
         default: ""
 
-permissions:
-  contents: read
-
-concurrency:
-  group: ciai-contract-${{ github.ref }}-${{ inputs.target_branch || 'default' }}
-  cancel-in-progress: true
-
-jobs:
-  contract:
-    runs-on: ubuntu-24.04
-    steps:
+permission      - name: Require the trusted development workflow revision for manual candidate verification
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          WORKFLOW_REF: ${{ github.ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$WORKFLOW_REF" != "refs/heads/development" ]]; then
+            echo "::error::Manual candidate verification must be dispatched from the trusted development branch."
+            exit 1
+          fi
       - name: Check out workflow revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.sha }}
           submodules: recursive
-      - name: Resolve optional branch target to an immutable commit
+      - name: Resolve optional branch or exact SHA target
         id: resolve-target
-        if: github.event_name == 'workflow_dispatch' && inputs.target_branch != ''
+        if: github.event_name == 'workflow_dispatch' && (inputs.target_branch != '' || inputs.target_sha != '')
         env:
           TARGET_BRANCH: ${{ inputs.target_branch }}
+          TARGET_SHA_INPUT: ${{ inputs.target_sha }}
         shell: bash
         run: |
           set -euo pipefail
-          if ! git check-ref-format --branch "$TARGET_BRANCH" >/dev/null; then
-            echo "::error::Invalid branch name."
+          if [[ -n "$TARGET_BRANCH" && -n "$TARGET_SHA_INPUT" ]]; then
+            echo "::error::Specify target_branch or target_sha, not both."
             exit 1
           fi
-          matches="$(git ls-remote --heads origin "refs/heads/$TARGET_BRANCH")"
-          if [ -z "$matches" ] || [ "$(printf '%s\n' "$matches" | wc -l)" -ne 1 ]; then
-            echo "::error::Target must resolve to exactly one existing branch."
-            exit 1
-          fi
-          sha="$(printf '%s\n' "$matches" | awk '{print $1}')"
-          if ! [[ "$sha" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "::error::Resolved target did not produce a full commit SHA."
-            exit 1
+          if [[ -n "$TARGET_SHA_INPUT" ]]; then
+            if ! [[ "$TARGET_SHA_INPUT" =~ ^[0-9a-fA-F]{40}$ ]]; then
+              echo "::error::target_sha must be an exact 40-character commit SHA."
+              exit 1
+            fi
+            git fetch --no-tags --depth=1 origin "$TARGET_SHA_INPUT"
+            git cat-file -e "$TARGET_SHA_INPUT^{commit}"
+            sha="$(git rev-parse "$TARGET_SHA_INPUT^{commit}")"
+            target_ref="sha:$sha"
+          else
+            if ! git check-ref-format --branch "$TARGET_BRANCH" >/dev/null; then
+              echo "::error::Invalid branch name."
+              exit 1
+            fi
+            matches="$(git ls-remote --heads origin "refs/heads/$TARGET_BRANCH")"
+            if [ -z "$matches" ] || [ "$(printf '%s\n' "$matches" | wc -l)" -ne 1 ]; then
+              echo "::error::Target must resolve to exactly one existing branch."
+              exit 1
+            fi
+            sha="$(printf '%s\n' "$matches" | awk '{print $1}')"
+            if ! [[ "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "::error::Resolved target did not produce a full commit SHA."
+              exit 1
+            fi
+            target_ref="refs/heads/$TARGET_BRANCH"
           fi
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
-          echo "target_branch=$TARGET_BRANCH" >> "$GITHUB_OUTPUT"
-          echo "Resolved branch '$TARGET_BRANCH' to $sha"
+          echo "target_ref=$target_ref" >> "$GITHUB_OUTPUT"
+          echo "Resolved immutable candidate $sha ($target_ref)"
       - name: Check out selected target commit
-        if: github.event_name == 'workflow_dispatch' && inputs.target_branch != ''
+        if: github.event_name == 'workflow_dispatch' && (inputs.target_branch != '' || inputs.target_sha != '')
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ steps.resolve-target.outputs.sha }}
+          submodules: recursive
+nputs.target_branch != ''
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ steps.resolve-target.outputs.sha }}
@@ -98,7 +125,7 @@ jobs:
         id: provenance
         env:
           EXPECTED_SHA: ${{ steps.resolve-target.outputs.sha || github.sha }}
-          TARGET_REF: ${{ inputs.target_branch || github.ref_name }}
+          TARGET_REF: ${{ steps.resolve-target.outputs.target_ref || github.ref_name }}
           REPOSITORY: ${{ github.repository }}
         shell: bash
         run: |
@@ -125,7 +152,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           EVENT_REF: ${{ github.ref }}
           EVENT_SHA: ${{ github.sha }}
-          CHECKOUT_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.target_branch != '' && format('refs/heads/{0}', inputs.target_branch) || github.ref }}
+          CHECKOUT_REF: ${{ steps.resolve-target.outputs.target_ref || github.ref }}
           CHECKOUT_SHA: ${{ steps.provenance.outputs.sha }}
         shell: bash
         run: |
