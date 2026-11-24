@@ -66,6 +66,7 @@ public sealed record CiAiDevelopmentCapabilityEvidence(
     string CheckoutRef,
     string CheckoutSha,
     string ProviderJobName,
+    string ProviderJobKey,
     long ProviderJobId,
     string ArtifactName,
     long ProviderArtifactId,
@@ -213,7 +214,7 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
 
             Ensure(ReadString(root, "status") == "satisfied", "devcap.status-not-satisfied");
             Ensure(RepositoryIdentity.IsValid(binding.ProviderRepository), "devcap.expected-provider-invalid");
-            Ensure(IsSha(binding.ArtifactDigest), "devcap.provider-artifact-digest-invalid");
+            Ensure(IsProviderArtifactDigest(binding.ArtifactDigest), "devcap.provider-artifact-digest-invalid");
             Ensure(binding.ArtifactSizeBytes > 0, "devcap.provider-artifact-size-invalid");
             Ensure(!binding.ArtifactExpired, "devcap.provider-artifact-expired");
 
