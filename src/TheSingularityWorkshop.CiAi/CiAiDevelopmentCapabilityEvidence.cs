@@ -84,16 +84,20 @@ public sealed record CiAiDevelopmentCapabilityEvidence(
 public sealed record CiAiDevelopmentCapabilityEvidenceValidation
 {
     internal CiAiDevelopmentCapabilityEvidenceValidation(
-        bool isValid,
+        bool isEnvelopeValid,
+        bool testResultsVerified,
         string? errorCode,
         CiAiDevelopmentCapabilityEvidence? evidence)
     {
-        IsValid = isValid;
+        IsEnvelopeValid = isEnvelopeValid;
+        TestResultsVerified = testResultsVerified;
         ErrorCode = errorCode;
         Evidence = evidence;
     }
 
-    public bool IsValid { get; }
+    public bool IsEnvelopeValid { get; }
+    public bool TestResultsVerified { get; }
+    public bool IsValid => IsEnvelopeValid && TestResultsVerified;
     public string? ErrorCode { get; }
     public CiAiDevelopmentCapabilityEvidence? Evidence { get; }
 }
@@ -254,7 +258,7 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
                 dependencyCheckouts,
                 testArtifacts,
                 protectedPush);
-            return new CiAiDevelopmentCapabilityEvidenceValidation(true, null, evidence);
+            return new CiAiDevelopmentCapabilityEvidenceValidation(true, false, null, evidence);
         }
         catch (InvalidDataException exception)
         {
@@ -472,5 +476,5 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
     }
 
     private static CiAiDevelopmentCapabilityEvidenceValidation Invalid(string errorCode) =>
-        new(false, errorCode, null);
+        new(false, false, errorCode, null);
 }
