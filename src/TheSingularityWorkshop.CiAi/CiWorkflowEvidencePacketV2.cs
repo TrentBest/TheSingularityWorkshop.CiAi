@@ -27,6 +27,8 @@ public sealed record CiWorkflowEvidencePacketV2
         _payloadSha256 = payloadSha256;
     }
 
+    public int ContractVersion => CurrentContractVersion;
+    public string Schema => CurrentSchema;
     public CiWorkflowEvidencePacket WorkflowEvidence { get; }
     public IReadOnlyList<CiWorkflowRequiredCheckObservation> RequiredChecks { get; }
     public string Repository => WorkflowEvidence.ObservedRun.Repository;
@@ -52,7 +54,7 @@ public sealed record CiWorkflowEvidencePacketV2
             check.Conclusion is not null &&
             check.StartedAt.HasValue &&
             check.CompletedAt.HasValue &&
-            check.CompletedAt >= check.StartedAt);
+            check.CompletedAt.Value >= check.StartedAt.Value);
 
     public bool IsSuccessful =>
         EvidenceComplete &&
@@ -194,6 +196,13 @@ public sealed record CiWorkflowEvidencePacketV2
             checksElement.GetRawText(), new JsonSerializerOptions(JsonSerializerDefaults.Web))
             ?? throw new InvalidDataException("Workflow evidence v2 required-check list is invalid.");
 
+        if (checks.Length == 0)
+            throw new InvalidDataException("Workflow evidence v2 must contain at least one required check.");
+        var expectedChecks = FromPacket(workflowEvidence, checks.Select(check =>
+            new CiWorkflowRequiredCheckBinding(check.Key, check.JobName))).RequiredChecks;
+        if (!expectedChecks.SequenceEqual(checks))
+            throw new InvalidDataException("Workflow evidence v2 required-check observations do not match the nested provider-observed job list.");
+
         var packet = new CiWorkflowEvidencePacketV2(workflowEvidence, checks, expectedPayloadSha256.ToLowerInvariant());
         if (!string.Equals(packet.Repository, expectedRepository, StringComparison.OrdinalIgnoreCase) ||
             packet.RunId != expectedRunId || packet.RunAttempt != expectedRunAttempt)
@@ -218,7 +227,7 @@ public sealed record CiWorkflowEvidencePacketV2
                     (check.Conclusion is not null && !IsKnownConclusion(check.Conclusion)) ||
                     check.EvidenceUrl is null || !IsSafeGitHubUrl(check.EvidenceUrl) ||
                     !check.StartedAt.HasValue || !check.CompletedAt.HasValue ||
-                    check.CompletedAt < check.StartedAt)
+                    check.CompletedAt.Value < check.StartedAt.Value)
                     throw new InvalidDataException("Workflow evidence v2 contains malformed provider job evidence.");
             }
             else if (check.JobId.HasValue || check.Status is not null || check.Conclusion is not null ||
