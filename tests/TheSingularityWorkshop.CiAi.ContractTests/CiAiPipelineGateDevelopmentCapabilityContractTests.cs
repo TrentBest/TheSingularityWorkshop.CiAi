@@ -20,6 +20,11 @@ public static class CiAiPipelineGateDevelopmentCapabilityContractTests
 
         var candidateLeaf = Leaf(requiresProtectedPush: false);
         var candidateExpression = CiAiPipelineGateExpression.ForPipeline("raWWar", candidateLeaf);
+        var packageExpression = CiAiPipelineGateExpression.ForPipeline(
+            "raWWar",
+            new CiAiRepositoryGateReference(GateId, Provider, CandidateId, SourceSha));
+        Check(candidateExpression.DefinitionSha256 != packageExpression.DefinitionSha256,
+            "evidence-family-is-bound-into-composite-expression-identity");
         var candidateBinding = CiAiDevelopmentCapabilityEvidenceContractTests.CreateBindingForGateTests();
         var candidateValidation = CiAiDevelopmentCapabilityEvidenceContractTests.ParseValidationForGateTests();
         var candidateEvaluation = CiAiRepositoryGateEvaluation.FromDevelopmentCapability(candidateBinding, candidateValidation);
