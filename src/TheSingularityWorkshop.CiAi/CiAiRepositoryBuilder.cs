@@ -33,8 +33,7 @@ public sealed record CiAiBadgeDefinition
             throw new ArgumentException("Badge ID must be a short stable identifier.", nameof(id));
         if (label.Length > 80 || label.Any(char.IsControl))
             throw new ArgumentException("Badge label is invalid.", nameof(label));
-        if (workflowFile.Contains('/') || workflowFile.Contains('\\\\') ||
-            !(workflowFile.EndsWith(".yml", StringComparison.Ordinal) || workflowFile.EndsWith(".yaml", StringComparison.Ordinal)))
+        if (workflowFile.Contains('/') || !(workflowFile.EndsWith(".yml", StringComparison.Ordinal) || workflowFile.EndsWith(".yaml", StringComparison.Ordinal)))
             throw new ArgumentException("Badge workflow must be a workflow filename.", nameof(workflowFile));
         Id = id;
         Label = label;
