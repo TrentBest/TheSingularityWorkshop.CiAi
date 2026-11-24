@@ -6,6 +6,7 @@
     "master"
   ],
   "actual_branches": [
+    "chore/replace-foundry-docs-with-execution",
     "development",
     "docs/ciai-code-red-primary-path",
     "experiment/http-projection-architecture",
@@ -17,9 +18,9 @@
     "feature/ciai-trx-diagnostic-verdict",
     "feature/ciai-versioned-ci-evidence-packet",
     "feature/ciai-workflow-checkout-provenance",
-    "feature/composite-cross-repository-gates",
     "fix/commandai-v1-deterministic-encoding-pin",
     "fix/live-provider-pr-head-sha",
+    "fix/live-provider-pr-head-sha-current-dev",
     "integration/ciai-v1-evidence-contracts",
     "master",
     "work/ciai-executor-result-contract",
@@ -28,9 +29,9 @@
     "work/ciai-semantic-stack-foundation",
     "work/ecosystem-graph-performance-contract"
   ],
-  "branch_count": 21,
+  "branch_count": 22,
   "status": "NON-COMPLIANT",
-  "evaluated_at": "2026-11-23T14:37:42Z",
-  "workflow_run": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/45196205649",
-  "triggering_commit": "e96706fd1fbfa2c301409e7a57af6cb56fb1295a"
+  "evaluated_at": "2026-11-24T06:52:45Z",
+  "workflow_run": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/45343694070",
+  "triggering_commit": "3617c964075d5c699c33037647becd6345eb6a23"
 }
