@@ -65,6 +65,7 @@ ServerSC2 is the next CODE RED evidence integration. ServerSC2 owns authoritativ
 - [Inter-repository model](docs/INTER_REPOSITORY_MODEL.md) — request/result workflow and integration gaps.
 - [Composite pipeline gates](docs/COMPOSITE_PIPELINE_GATES.md) — bounded, versioned AND/OR dependency expressions, exact candidate binding, and deterministic admission.
 - [Dependency readiness policy](docs/DEPENDENCY_READINESS_POLICY.md) — Waiting is dormant and token-neutral; Satisfied requires exact verified evidence; Blocked fails closed. The separate development-capability evidence contract is still an open implementation gate.
+- [Development capability evidence v1](docs/DEVELOPMENT_CAPABILITY_EVIDENCE_V1.md) — versioned source-capability evidence, exact workflow/job/artifact binding, and protected-push trust boundaries.
 - [AgentOnboarding admission v1](docs/AGENT_ONBOARDING_ADMISSION_V1.md) — exact-commit onboarding validation, deterministic outcomes, and the host-enforcement boundary.
 - [Release readiness](docs/RELEASE_READINESS.md) — package and authorization boundaries.
 - [FSM_COS coordination notes](FSM_COSLLM.md) — read-only evidence pilot and cross-repository contract.
