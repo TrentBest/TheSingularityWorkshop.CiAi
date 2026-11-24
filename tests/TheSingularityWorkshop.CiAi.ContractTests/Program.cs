@@ -8,6 +8,7 @@ passed += AgentOnboardingValidatorTests.Run();
 passed += AiCiBuilderContractTests.Run();
 passed += CiPipelineDefinitionContractTests.Run();
 passed += CiPublicationPolicyContractTests.Run();
+passed += CiPagesPublicationPlanContractTests.Run();
 passed += CiWorkflowDomainCatalogContractTests.Run();
 passed += CiWorkflowDomainEvaluatorContractTests.Run();
 passed += CiWorkflowPlanContractTests.Run();
