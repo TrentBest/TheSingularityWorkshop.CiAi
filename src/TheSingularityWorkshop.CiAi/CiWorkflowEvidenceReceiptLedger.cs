@@ -11,7 +11,7 @@ public enum CiWorkflowEvidenceReceiptOutcome
     Rejected
 }
 
-/// <summary>A remote acknowledgement bound to the exact serialized v1 delivery.</summary>
+/// <summary>A transport acknowledgement bound to the exact serialized workflow-evidence delivery.</summary>
 public sealed record CiWorkflowEvidenceRemoteReceipt
 {
     public const int CurrentContractVersion = 1;
@@ -64,7 +64,7 @@ public sealed record CiWorkflowEvidenceRemoteReceipt
     public DateTimeOffset ReceivedAt { get; }
     public string? RejectionCode { get; }
 
-    public IReadOnlyList<string> VerifyAgainst(CiWorkflowEvidenceDelivery? delivery)
+    public IReadOnlyList<string> VerifyAgainst(ICiWorkflowEvidenceDelivery? delivery)
     {
         if (delivery is null) return new[] { "delivery.required" };
         var errors = new List<string>();
@@ -96,7 +96,7 @@ public enum CiWorkflowEvidenceReceiptRecordOutcome
 }
 
 /// <summary>
-/// Separate durable v1 receipt ledger. Only exact Accepted or Duplicate receipts suppress replay;
+/// Durable transport receipt ledger shared by v1 and v2 evidence deliveries. Only exact Accepted or Duplicate receipts suppress replay;
 /// Rejected receipts remain durable but do not acknowledge the delivery.
 /// </summary>
 public sealed class FileCiWorkflowEvidenceReceiptLedger
@@ -112,7 +112,7 @@ public sealed class FileCiWorkflowEvidenceReceiptLedger
 
     public CiWorkflowEvidenceReceiptRecordOutcome Record(
         CiWorkflowEvidenceRemoteReceipt receipt,
-        CiWorkflowEvidenceDelivery delivery)
+        ICiWorkflowEvidenceDelivery delivery)
     {
         ArgumentNullException.ThrowIfNull(receipt);
         ArgumentNullException.ThrowIfNull(delivery);
