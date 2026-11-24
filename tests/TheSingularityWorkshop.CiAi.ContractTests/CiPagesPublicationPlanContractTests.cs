@@ -123,7 +123,7 @@ internal static class CiPagesPublicationPlanContractTests
                    workflow.Contains("id-token: write", StringComparison.Ordinal) &&
                    workflow.Contains("contents: read", StringComparison.Ordinal),
                 "Pages workflow permissions are incomplete");
-            Assert(workflow.Contains("test -f \\"site/index.html\\"", StringComparison.Ordinal),
+            Assert(workflow.Contains("test -f \"site/index.html\"", StringComparison.Ordinal),
                 "Pages workflow does not validate its entry point");
             Assert(workflow.Contains("workflow_dispatch:", StringComparison.Ordinal),
                 "manual diagnostic invocation is missing");
