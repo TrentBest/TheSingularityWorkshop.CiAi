@@ -25,8 +25,8 @@ public static class CiAiPipelineGateDevelopmentCapabilityContractTests
             new CiAiRepositoryGateReference(GateId, Provider, CandidateId, SourceSha));
         Check(candidateExpression.DefinitionSha256 != packageExpression.DefinitionSha256,
             "evidence-family-is-bound-into-composite-expression-identity");
-        var candidateBinding = CiAiDevelopmentCapabilityEvidenceContractTests.CreateBindingForGateTests();
-        var candidateValidation = CiAiDevelopmentCapabilityEvidenceContractTests.ParseValidationForGateTests();
+        var (candidateBinding, candidateValidation) =
+            CiAiDevelopmentCapabilityEvidenceContractTests.CreateFullyVerifiedForGateTests();
         var candidateEvaluation = CiAiRepositoryGateEvaluation.FromDevelopmentCapability(candidateBinding, candidateValidation);
         var candidateState = CiAiPipelineGateEvaluator.Evaluate(
             candidateExpression,
@@ -44,8 +44,8 @@ public static class CiAiPipelineGateDevelopmentCapabilityContractTests
         Check(!CiAiPipelineGateAdmissionPolicy.Evaluate(candidateOnlyState).MayAllocateLlm,
             "protected-push-wait-remains-token-neutral");
 
-        var protectedBinding = CiAiDevelopmentCapabilityEvidenceContractTests.CreateBindingForGateTests(protectedPush: true);
-        var protectedValidation = CiAiDevelopmentCapabilityEvidenceContractTests.ParseValidationForGateTests(protectedPush: true);
+        var (protectedBinding, protectedValidation) =
+            CiAiDevelopmentCapabilityEvidenceContractTests.CreateFullyVerifiedForGateTests(protectedPush: true);
         var protectedEvaluation = CiAiRepositoryGateEvaluation.FromDevelopmentCapability(protectedBinding, protectedValidation);
         var protectedState = CiAiPipelineGateEvaluator.Evaluate(
             protectedExpression,
@@ -65,10 +65,9 @@ public static class CiAiPipelineGateDevelopmentCapabilityContractTests
             new Dictionary<string, CiAiRepositoryGateEvaluation> { [GateId] = invalid });
         Check(invalidState == CiAiPipelineGateState.Blocked, "invalid-terminal-provider-evidence-blocks");
 
-        var wrongSubjectBinding = CiAiDevelopmentCapabilityEvidenceContractTests.CreateBindingForGateTests(
-            capabilityId: "physics.other-capability.v1");
-        var wrongSubjectValidation = CiAiDevelopmentCapabilityEvidenceContractTests.ParseValidationForGateTests(
-            capabilityId: "physics.other-capability.v1");
+        var (wrongSubjectBinding, wrongSubjectValidation) =
+            CiAiDevelopmentCapabilityEvidenceContractTests.CreateFullyVerifiedForGateTests(
+                capabilityId: "physics.other-capability.v1");
         var wrongSubject = CiAiRepositoryGateEvaluation.FromDevelopmentCapability(wrongSubjectBinding, wrongSubjectValidation);
         Check(CiAiPipelineGateEvaluator.Evaluate(
             candidateExpression,
@@ -90,8 +89,8 @@ public static class CiAiPipelineGateDevelopmentCapabilityContractTests
             new Dictionary<string, CiAiRepositoryGateEvaluation> { [GateId] = wrongKind }) ==
             CiAiPipelineGateState.Blocked, "published-package-evidence-cannot-satisfy-development-capability-leaf");
 
-        var wrongVersionBinding = CiAiDevelopmentCapabilityEvidenceContractTests.CreateBindingForGateTests(capabilityVersion: "2");
-        var wrongVersionValidation = CiAiDevelopmentCapabilityEvidenceContractTests.ParseValidationForGateTests(capabilityVersion: "2");
+        var (wrongVersionBinding, wrongVersionValidation) =
+            CiAiDevelopmentCapabilityEvidenceContractTests.CreateFullyVerifiedForGateTests(capabilityVersion: "2");
         var wrongVersion = CiAiRepositoryGateEvaluation.FromDevelopmentCapability(wrongVersionBinding, wrongVersionValidation);
         var wrongVersionExpression = CiAiPipelineGateExpression.ForPipeline(
             "raWWar-wrong-version",
