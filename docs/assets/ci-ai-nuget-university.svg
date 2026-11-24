@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="820" viewBox="0 0 1200 820" role="img" aria-labelledby="title desc">
+<title id="title">NuGet University — a living classroom in perspective</title>
+<desc id="desc">View from the back-left corner of a classroom. Rows of named NuGet package students sit at desks in the foreground. The windows fill the far wall with moving package traffic outside. CiAi teaches at a presentation area on the right-hand side wall.</desc>
+<defs>
+ <clipPath id="windowView"><path d="M49 163L701 188V429L49 462z"/></clipPath>
+ <linearGradient id="ceiling" x2="0" y2="1"><stop stop-color="#f9f4ff"/><stop offset="1" stop-color="#e2dcf4"/></linearGradient>
+ <linearGradient id="farwall" x2="0" y2="1"><stop stop-color="#dbe8fa"/><stop offset="1" stop-color="#b8c9e6"/></linearGradient>
+ <linearGradient id="sidewall" x2="1" y2="0"><stop stop-color="#d7dff2"/><stop offset="1" stop-color="#aebcda"/></linearGradient>
+ <linearGradient id="floor" x2="0" y2="1"><stop stop-color="#b9c7e3"/><stop offset="1" stop-color="#7183ad"/></linearGradient>
+ <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#69bce9"/><stop offset="1" stop-color="#d2f3ec"/></linearGradient>
+ <linearGradient id="wood" x2="0" y2="1"><stop stop-color="#eab47d"/><stop offset="1" stop-color="#995d3c"/></linearGradient>
+ <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%"><feDropShadow dx="0" dy="7" stdDeviation="6" flood-color="#1b2948" flood-opacity=".28"/></filter>
+ <style>
+ .h{font:900 30px 'Trebuchet MS',Arial;fill:#28375f;letter-spacing:1px}.sub{font:700 13px 'Trebuchet MS',Arial;fill:#415477}.chalk{font:900 19px 'Trebuchet MS',Arial;fill:#f0ffe9}.pkgname{font:900 12px 'Trebuchet MS',Arial;fill:#263554}
+ .student{animation:seatbob 2.8s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
+ .delay1{animation-delay:-.8s}.delay2{animation-delay:-1.5s}.delay3{animation-delay:-2.1s}
+ .blink{animation:blink 5s infinite;transform-box:fill-box;transform-origin:center}
+ .traffic{animation:drift 13s linear infinite}.traffic.rev{animation-direction:reverse;animation-duration:17s}.cloud{animation:cloud 34s ease-in-out infinite alternate}
+ .wave{animation:wave 1.4s ease-in-out infinite;transform-box:fill-box;transform-origin:15% 90%}
+ .glow{animation:glow 2.4s ease-in-out infinite alternate}.spark{animation:spark 2s ease-in-out infinite}
+ @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}\n @keyframes seatbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+ @keyframes blink{0%,44%,48%,100%{transform:scaleY(1)}46%{transform:scaleY(.08)}}
+ @keyframes drift{from{transform:translateX(-190px)}to{transform:translateX(1100px)}}
+ @keyframes cloud{from{transform:translateX(-115px)}to{transform:translateX(145px)}}
+ @keyframes wave{0%,100%{transform:rotate(0)}50%{transform:rotate(-23deg)}}
+ @keyframes glow{from{opacity:.55}to{opacity:1}}
+ @keyframes spark{0%,100%{opacity:.2;transform:scale(.7)}50%{opacity:1;transform:scale(1.2)}}
+ @media(prefers-reduced-motion:reduce){.student,.blink,.traffic,.cloud,.wave,.glow,.spark,.sun-rays{animation:none}}
+ </style>
+ <g id="package">
+  <path d="M7 27L-4 5 19 15M67 15L89 4 78 30" fill="currentColor" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
+  <rect x="4" y="22" width="78" height="70" rx="17" fill="currentColor" stroke="#fff" stroke-width="4"/>
+  <path d="M4 40l39-18 39 18-39 18z" fill="#fff" opacity=".34"/>
+  <g class="blink"><ellipse cx="29" cy="55" rx="8" ry="10" fill="#fff"/><ellipse cx="57" cy="55" rx="8" ry="10" fill="#fff"/><circle cx="31" cy="57" r="4.5" fill="#1b2948"/><circle cx="55" cy="57" r="4.5" fill="#1b2948"/></g>
+  <path d="M18 45q8-7 16-1M52 44q8-6 15 1" fill="none" stroke="#243554" stroke-width="2.5" stroke-linecap="round"/>
+  <ellipse cx="17" cy="67" rx="5" ry="3" fill="#ffb1ae" opacity=".8"/><ellipse cx="69" cy="67" rx="5" ry="3" fill="#ffb1ae" opacity=".8"/>
+  <path d="M31 73q12 10 24 0" fill="none" stroke="#243554" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M8 68l-13 10M78 68l13 10" stroke="#455579" stroke-width="5" stroke-linecap="round"/>
+  <path d="M8 30l35-15 35 15M8 86l35 5 35-5" fill="none" stroke="#fff" stroke-width="2" opacity=".65"/>
+  <rect x="25" y="79" width="36" height="9" rx="3" fill="#fff" opacity=".8"/>
+  <circle cx="43" cy="83.5" r="2.5" fill="#536bc0"/>
+ </g>
+ <g id="desk">
+  <path d="M0 0h170l-12 17H12z" fill="url(#wood)" stroke="#754a35" stroke-width="3"/>
+  <path d="M18 17v48M151 17v48" stroke="#754a35" stroke-width="7"/>
+ </g>
+</defs>
+<rect width="1200" height="820" rx="22" fill="#eef0fb"/>
+<text x="36" y="42" class="sub" letter-spacing="2">THE SINGULARITY WORKSHOP • LIVING CAMPUS</text>
+<text x="36" y="82" class="h">NUGET UNIVERSITY — CLASS IS IN SESSION</text>
+<!-- room shell: camera in rear-left corner looking toward window wall and right-hand teaching wall -->
+<path d="M0 120L760 150 1195 95V0H0z" fill="url(#ceiling)"/>
+<path d="M0 120L760 150 760 560 0 610z" fill="url(#farwall)"/>
+<path d="M760 150L1195 95V575L760 560z" fill="url(#sidewall)"/>
+<path d="M0 610L760 560 1195 575 1195 820H0z" fill="url(#floor)"/>
+<path d="M0 120L760 150 1195 95" fill="none" stroke="#fff" stroke-width="9"/>
+<path d="M760 150V560" stroke="#fff" stroke-width="8"/>
+<!-- giant windows on far wall, foreshortened perspective -->
+<g filter="url(#shadow)">
+ <path d="M38 153L713 178V440L38 474z" fill="#fff" stroke="#fff" stroke-width="12"/>
+ <path d="M49 163L701 188V429L49 462z" fill="url(#sky)"/>
+</g>
+<g clip-path="url(#windowView)">
+ <path d="M49 360q155-70 300-20t352-2v91L49 462z" fill="#73c58a"/>
+ <g class="cloud" fill="#fff" opacity=".86"><path d="M100 235q-9-26 21-34 14-37 48-17 28-6 36 26 29 0 25 25z"/></g>
+ <g class="cloud" fill="#fff" opacity=".75" style="animation-delay:-12s"><path d="M490 236q-8-24 19-31 13-33 43-15 26-6 33 23 27 0 23 23z"/></g>
+ <!-- animated sun centered high in the window -->
+ <g transform="translate(375 213)">
+  <g class="sun-rays" style="transform-origin:0 0;animation:spin 42s linear infinite">
+   <g stroke="#ffd56c" stroke-width="7" stroke-linecap="round">
+    <path d="M0 -49v-18M0 49v18M-49 0h-18M49 0h18M-35 -35l-13 -13M35 35l13 13M35 -35l13 -13M-35 35l-13 13"/>
+   </g>
+  </g>
+  <circle r="39" fill="#ffd45f" stroke="#fff3b2" stroke-width="5"/>
+  <path d="M-14 -3q5-7 10 0M7 -3q5-7 10 0" fill="none" stroke="#805b35" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M-13 13q13 12 26 0" fill="none" stroke="#805b35" stroke-width="4" stroke-linecap="round"/>
+  <g fill="#ff9e85"><circle cx="-23" cy="9" r="5"/><circle cx="23" cy="9" r="5"/></g>
+ </g>
+ <g fill="#8798bf" stroke="#fff" stroke-width="3"><path d="M105 365V284l66 2v72zM195 361V235l92 3v117zM315 357V285l72 2v66zM525 355V255l94 3v91z"/></g>
+ <g fill="#d8f5ff"><path d="M118 301h15v19h-15zM147 302h15v19h-15zM213 258h18v23h-18zM250 259h18v23h-18zM544 277h18v22h-18zM583 278h18v22h-18z"/></g>
+ <!-- distant package traffic crossing the outdoor campus -->
+ <g class="traffic" style="color:#f2a34e"><use href="#package" transform="translate(90 320) scale(.38)"/><text x="90" y="360" class="pkgname">FSM_API</text></g>
+ <g class="traffic rev" style="color:#8c80d9"><use href="#package" transform="translate(270 309) scale(.34)"/><text x="270" y="345" class="pkgname">GrammarAi</text></g>
+ <g class="traffic" style="animation-delay:-6s;color:#62b8a4"><use href="#package" transform="translate(490 305) scale(.36)"/><text x="490" y="343" class="pkgname">Physics</text></g>
+ <g class="traffic rev" style="animation-delay:-8s;color:#e77d9a"><use href="#package" transform="translate(620 310) scale(.32)"/><text x="620" y="344" class="pkgname">Renderer</text></g>
+</g>
+<!-- window frame perspective -->
+<path d="M49 163L701 188M49 462L701 429M49 163V462M701 188V429M250 171V452M475 180V440M49 310L701 309" fill="none" stroke="#fff" stroke-width="9"/>
+<!-- right side teaching wall: board, instructor, presentation display -->
+<path d="M795 185L1155 148V376L795 405z" fill="#244d4a" stroke="#fff" stroke-width="8" filter="url(#shadow)"/>
+<text x="972" y="222" text-anchor="middle" class="chalk">TODAY'S LESSON</text>
+<text x="972" y="260" text-anchor="middle" class="chalk" font-size="16">BUILD • TEST • VERIFY</text>
+<path d="M870 289L1070 269M870 315L1045 297" stroke="#c8f1c9" stroke-width="5" stroke-linecap="round"/>
+<text x="972" y="352" text-anchor="middle" class="chalk" font-size="14">EVIDENCE BEFORE RELEASE</text>
+<!-- instructor lectern and CiAi on the side wall -->
+<g transform="translate(1010 390)" filter="url(#shadow)">
+ <path d="M-10 115l-20 60M88 115l18 60" stroke="#455579" stroke-width="9" stroke-linecap="round"/>
+ <rect x="-22" y="18" width="132" height="138" rx="27" fill="#f8fbff" stroke="#536bc0" stroke-width="6"/>
+ <path d="M-22 48l66-30 66 30-66 32z" fill="#a9c2ff" stroke="#536bc0" stroke-width="4"/>
+ <path d="M9 18L-3-8l31 13M78 18l15-25-34 18" fill="#8870d2" stroke="#fff" stroke-width="4"/>
+ <g class="blink"><ellipse cx="19" cy="83" rx="10" ry="13" fill="#fff"/><ellipse cx="65" cy="83" rx="10" ry="13" fill="#fff"/><circle cx="21" cy="85" r="5" fill="#182641"/><circle cx="63" cy="85" r="5" fill="#182641"/></g>
+ <path d="M26 112q16 13 32 0" fill="none" stroke="#35446f" stroke-width="4" stroke-linecap="round"/>
+ <rect x="-4" y="132" width="96" height="22" rx="6" fill="#465db0"/><text x="44" y="148" text-anchor="middle" font-family="Trebuchet MS,Arial" font-size="15" font-weight="900" fill="#fff">CiAi</text>
+ <path d="M105 65q29-19 36-47" fill="none" stroke="#455579" stroke-width="8" stroke-linecap="round"/><circle cx="143" cy="17" r="9" fill="#fff" stroke="#455579" stroke-width="3" class="wave"/>
+ <path d="M144 16l19-14" stroke="#f2cf75" stroke-width="5" stroke-linecap="round"/>
+ <rect x="-26" y="165" width="142" height="25" rx="7" fill="#e8a63d"/><text x="45" y="183" text-anchor="middle" font-family="Trebuchet MS,Arial" font-size="14" font-weight="900" fill="#49300e">INSTRUCTOR</text>
+</g>
+<!-- desks occupy the foreground, receding toward the front of the room -->
+<g opacity=".97" filter="url(#shadow)">
+ <path d="M40 560L375 545 405 584 38 608z" fill="url(#wood)" stroke="#754a35" stroke-width="4"/>
+ <path d="M315 535L640 520 669 555 310 581z" fill="url(#wood)" stroke="#754a35" stroke-width="4"/>
+ <path d="M570 520L850 500 885 534 565 563z" fill="url(#wood)" stroke="#754a35" stroke-width="4"/>
+ <path d="M80 677L485 648 520 696 72 732z" fill="url(#wood)" stroke="#754a35" stroke-width="4"/>
+ <path d="M420 649L800 620 842 667 413 705z" fill="url(#wood)" stroke="#754a35" stroke-width="4"/>
+ <path d="M750 618L1085 587 1125 630 744 673z" fill="url(#wood)" stroke="#754a35" stroke-width="4"/>
+</g>
+<!-- seated package students: bodies rise from behind desk edges; arms rest on desktops -->
+<g class="student" style="color:#f0a35b" transform="translate(115 460) scale(.72)"><use href="#package"/><text x="43" y="109" text-anchor="middle" class="pkgname">FSM_API</text></g>
+<g class="student delay1" style="color:#8c80d9" transform="translate(300 448) scale(.66)"><use href="#package"/><text x="43" y="109" text-anchor="middle" class="pkgname">GrammarAi</text></g>
+<g class="student delay2" style="color:#65b9a1" transform="translate(500 427) scale(.62)"><use href="#package"/><text x="43" y="109" text-anchor="middle" class="pkgname">ProtocolAi</text></g>
+<g class="student delay3" style="color:#e77e9b" transform="translate(700 405) scale(.58)"><use href="#package"/><text x="43" y="109" text-anchor="middle" class="pkgname">HeadlessAi</text></g>
+<g class="student delay1" style="color:#669ed1" transform="translate(845 390) scale(.54)"><use href="#package"/><text x="43" y="109" text-anchor="middle" class="pkgname">CommandAi</text></g>
+<g class="student delay2" style="color:#d5a64d" transform="translate(145 583) scale(.95)"><use href="#package"/><text x="43" y="109" text-anchor="middle" class="pkgname">FSM_COS</text></g>
+<g class="student delay3" style="color:#65a8cb" transform="translate(390 560) scale(.86)"><use href="#package"/><text x="43" y="109" text-anchor="middle" class="pkgname">Foundry</text></g>
+<g class="student" style="color:#b67cc5" transform="translate(625 538) scale(.78)"><use href="#package"/><text x="43" y="109" text-anchor="middle" class="pkgname">Ontology</text></g>
+<g class="student delay1" style="color:#78b66d" transform="translate(830 515) scale(.72)"><use href="#package"/><text x="43" y="109" text-anchor="middle" class="pkgname">Physics</text></g>
+<g class="student delay2" style="color:#e18c59" transform="translate(180 700) scale(1.12)"><use href="#package"/><text x="43" y="109" text-anchor="middle" class="pkgname">Gestures</text></g>
+<g class="student delay3" style="color:#8d9bd6" transform="translate(460 672) scale(1.03)"><use href="#package"/><text x="43" y="109" text-anchor="middle" class="pkgname">Renderer</text></g>
+<g class="student delay1" style="color:#e27f83" transform="translate(730 644) scale(.94)"><use href="#package"/><text x="43" y="109" text-anchor="middle" class="pkgname">Visualize</text></g>
+<g class="student delay2" style="color:#69b8b1" transform="translate(940 620) scale(.84)"><use href="#package"/><text x="43" y="109" text-anchor="middle" class="pkgname">AnyApp</text></g>
+<!-- laptop screens and small activity lights on desks -->
+<g class="glow" fill="#263e70" stroke="#8ee8ff" stroke-width="3"><path d="M235 620l78-7 16 35-79 8zM555 604l72-7 14 31-72 8zM865 585l62-6 13 28-63 7z"/></g>
+<g fill="#9cf1ff"><circle cx="273" cy="637" r="4"/><circle cx="592" cy="620" r="4"/><circle cx="897" cy="601" r="4"/></g>
+<text x="600" y="800" text-anchor="middle" font-family="Trebuchet MS,Arial" font-size="14" font-weight="700" fill="#eef4ff">A living classroom: packages learn, collaborate, and move through the wider ecosystem.</text>
+</svg>

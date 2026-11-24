@@ -5,6 +5,7 @@ using TheSingularityWorkshop.CiAi.RepositoryCommands;
 var passed = 0;
 var trx = new CiTrxResultWriter();
 RunSuite("AgentOnboardingValidatorTests", () => AgentOnboardingValidatorTests.Run());
+RunSuite("GitHubWorkItemEventTests", () => GitHubWorkItemEventTests.Run());
 RunSuite("CiWorkflowProvenanceRecordTests", () => CiWorkflowProvenanceRecordTests.Run());
 await RunSuiteAsync("CiWorkflowProvenanceArtifactReaderTests", () => CiWorkflowProvenanceArtifactReaderTests.RunAsync());
 RunSuite("CiWorkflowEvidencePacketTests", () => CiWorkflowEvidencePacketTests.Run());

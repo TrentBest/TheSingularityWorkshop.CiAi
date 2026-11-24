@@ -1,7 +1,3 @@
-## Next design direction — recipe-style CI and governed publication
-
-This alpha remains read-only with respect to CI-provider operations. Typed handoff contracts, bounded caller-supplied stream reads, local byte-integrity verification, provider provenance reconciliation, and a durable local receipt deduplication ledger now exist. The client still does not fetch the manifest URI or authenticate the provider, and there is no end-to-end authoritative provider CI correlation. The in-process catalog-to-request-to-result vertical proof now exists, but it does not prove remote retrieval, authenticated notification/acknowledgement, or provider run verification. HeadlessAi invocation, ProtocolAi vocabulary integration, host authorization, cross-repository dispatch, persistent idempotency/history, and a complete request/result round trip are not implemented in CiAi. No publish or deploy action is exposed by this library.
-
 # CiAi Release Readiness
 
 **Status: alpha candidate; not approved for publication.** Readiness is tracked by explicit gates rather than percentage estimates without a defined scoring model.
@@ -10,24 +6,12 @@ This alpha remains read-only with respect to CI-provider operations. Typed hando
 
 - Package: `TheSingularityWorkshop.CiAi`
 - Version: `0.1.0-alpha.1`
-- Target: `.NET 10`
+- Target: `.NET 8`
 - License: MIT
 - External dependencies in the core library: none
 - Release branch: `development`; the release candidate must be reviewed before any merge or publication.
 
-## Current implementation state — 2026-11-15
-
-**Read this section before the historical implementation and validation notes below.** The older entries preserve dated development evidence; they are not all current-head validation.
-
-- **Package state:** `0.1.0-alpha.1` remains an alpha candidate. This document does not authorize publication. The CODE RED producer/handoff work is being reviewed in [CiAi PR #65](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/pull/65), which remains draft and unmerged.
-- **Evidence producer:** PR #65 adds the canonical `ciai.workflow-evidence.v1`, `ciai.workflow-provenance.v1`, and `ciai.test-results.v1` contracts; exact-run/attempt binding; independent provider artifact metadata observation; required-job binding; bounded archive/TRX verification; report normalization; durable outbox/receipt handling; and the FSM_Execution notice sender/delivery coordinator.
-- **Exact-source proof:** candidate `5dbdb8cae5ec3ff8375314ef2e56f6ff613c6a19` passed authoritative push run [43686607144](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/43686607144): 74 individual checks, 109 suite/check records, zero failed records; the dedicated TRX report suite passed 52 checks. Exact-source observer [43686607156](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/43686607156) validated that exact run/attempt and retained JSON, Markdown, and test-result evidence.
-- **Exact-head validation:** each candidate SHA must pass its own authoritative Contract Verification and exact-source evidence runs. Historical green runs do not validate a later commit.
-- **Still required for full CODE RED proof:** production host implementation of authenticated archive download/redirect/DNS-safe transport and report publication; authenticated FSM_Execution ingress and retrieval; independently verified acceptance receipt; lifecycle application; bounded HeadlessAi proposal; and an Experiences/Minesweeper exact-SHA end-to-end exercise. These are distinct gates and must not be inferred from producer contract tests.
-- **Publication gates:** confirm package identity/version and package contents against the final release candidate; review public API and embedded README; verify external NuGet credentials/permissions; obtain explicit owner approval. No CI pass, report verdict, artifact receipt, or model proposal substitutes for that approval.
-
-
-## Earlier design direction — recipe-style CI and governed publication
+## Next design direction — recipe-style CI and governed publication
 
 The [declarative CI builder design](CI_BUILDER_DESIGN.md) describes repository-owned, readable pipeline recipes; typed step outcomes; explicit trigger/condition semantics; mapping observed evidence to declared checks; and a separate, candidate-bound owner approval gate for privileged actions such as NuGet publication. The implementation has progressed beyond definition-only models: `CiPipelineExecutor` runs registered in-process delegates sequentially with bounded capability checks and recorded outcomes, while `CiRequiredEvidenceEvaluator` checks required facts against an exact repository and full source SHA. These are in-process building blocks, not yet a provider-hosted end-to-end CI policy system; there is no publishing adapter.
 
@@ -79,9 +63,7 @@ The next progression is deterministic reporting and host integration that connec
 
 ## Deliberately not claimed
 
-CiAi remains read-only with respect to CI-provider operations: it observes and verifies provider facts but does not mutate provider runs or grant write authority. The exact-SHA observer now correlates repository, commit, workflow run, attempt, jobs, and steps. PR #65 adds the versioned workflow-evidence/provenance/test-result producer contracts, independent artifact metadata and job binding, bounded ZIP/TRX verification, durable report outbox/receipt handling, and FSM_Execution notice delivery components. The producer contract and exact-source observer have passed on the code candidate recorded above.
-
-These producer-side proofs do **not** establish a complete remote handoff. The production host still owns authenticated archive retrieval and safe transport; authenticated FSM_Execution ingress/retrieval and a durable acceptance receipt remain to be proven. FSM_Execution owns accepted-evidence authentication, task/lease/replay lifecycle, and authorization. HeadlessAi is not invoked by CiAi and remains a proposal-only consumer behind FSM_Execution. The full Experiences/Minesweeper exact-SHA → report publication → FSM_Execution acceptance/lifecycle → bounded HeadlessAi proposal path is not yet proven. No publish or deploy action is exposed by this library.
+This alpha remains read-only with respect to CI-provider operations. Typed handoff contracts, bounded caller-supplied stream reads, local byte-integrity verification, provider provenance reconciliation, and a durable local receipt deduplication ledger now exist. The client still does not fetch the manifest URI or authenticate the provider, and there is no end-to-end authoritative provider CI correlation. The in-process catalog-to-request-to-result vertical proof now exists, but it does not prove remote retrieval, authenticated notification/acknowledgement, or provider run verification. HeadlessAi invocation, ProtocolAi vocabulary integration, host authorization, cross-repository dispatch, persistent idempotency/history, and a complete request/result round trip are not implemented in CiAi. No publish or deploy action is exposed by this library.
 
 ## Release gate
 

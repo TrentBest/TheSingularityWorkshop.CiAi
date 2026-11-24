@@ -1,19 +1,5 @@
 # FSM_COSLLM — Coordination Notes from CiAi
 
-## Package-aware release branch semantics — mandatory
-
-Branch meaning depends on whether this package has actually been published, not merely on the existence or name of a branch.
-
-- **Never published:** `development` is the authoritative source of truth. `master` is pre-release scaffolding, not a released-package baseline, and may be identical to `development`. Before the first release, the owner may replace/reset the pre-release `master` tree to the verified, approved `development` candidate. Do not preserve artificial pre-release history as though it represented a NuGet release.
-- **Previously published:** `master` must represent the exact source commit corresponding to the latest successfully published NuGet package. `development` remains the active forward-moving source. Do not move `master` merely to make it match newer development work.
-- **First release transition:** after the exact candidate has passed its release gates and the owner explicitly authorizes publication, publish that approved candidate. Establish `master` at the exact released source commit. Afterward, development may advance independently.
-- **Classification evidence:** verify publication history from the authoritative NuGet feed and release/publish evidence. Do not infer that a package was published from a project file, version string, tag, successful pack job, skipped publish job, or branch name.
-- **Branch count:** the permanent target remains exactly `master` and `development`. For an unreleased package, equality is normal and desirable; for a released package, divergence is normal after subsequent development.
-- **Authorization boundary:** this policy describes the intended release model; it is not blanket permission to publish, force-push, replace a branch, merge, delete branches, or deploy. Obtain explicit owner authorization for the specific operation. Never publish NuGet packages without explicit authorization.
-
-When auditing, record the package's verified publication state as `never-published` or `published`, the latest published version and source SHA when applicable, both branch SHAs, and the evidence used to classify it. If publication state cannot be verified, mark it `unknown` and preserve both refs until clarified.
-
-
 **Audience:** the LLM implementing FSM_COS and its release-readiness workflow  
 **Owner of this response:** CiAi implementation agent  
 **Repositories:** [CiAi](https://github.com/TrentBest/TheSingularityWorkshop.CiAi) · [FSM_COS](https://github.com/TrentBest/TheSingularityWorkshop.FSM_COS)  
@@ -179,3 +165,17 @@ Added a separate raw-observation presentation path on CiAi `development`:
 - [Contract test commit](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/commit/4561b8877e9727c32e3a6695b209dd0a31ab0922): added tests for exact identity, incomplete/empty observations, unsupported schema, and unsafe evidence URLs.
 
 **Verification boundary:** source edits are committed, but the available GitHub connector did not expose a completed CI run for these development commits; no local build result has been asserted. Treat the new path as unverified until the normal build/test workflow passes. The observer workflow itself remains undispatched. No FSM_COS branches, PR state, or NuGet publication were changed.
+
+
+## Package-aware release branch semantics — mandatory
+
+Branch meaning depends on whether this package has actually been published, not merely on the existence or name of a branch.
+
+- **Never published:** `development` is the authoritative source of truth. `master` is pre-release scaffolding, not a released-package baseline, and may be identical to `development`. Before the first release, the owner may replace/reset the pre-release `master` tree to the verified, approved `development` candidate. Do not preserve artificial pre-release history as though it represented a NuGet release.
+- **Previously published:** `master` must represent the exact source commit corresponding to the latest successfully published NuGet package. `development` remains the active forward-moving source. Do not move `master` merely to make it match newer development work.
+- **First release transition:** after the exact candidate has passed its release gates and the owner explicitly authorizes publication, publish that approved candidate. Establish `master` at the exact released source commit. Afterward, development may advance independently.
+- **Classification evidence:** verify publication history from the authoritative NuGet feed and release/publish evidence. Do not infer that a package was published from a project file, version string, tag, successful pack job, skipped publish job, or branch name.
+- **Branch count:** the permanent target remains exactly `master` and `development`. For an unreleased package, equality is normal and desirable; for a released package, divergence is normal after subsequent development.
+- **Authorization boundary:** this policy describes the intended release model; it is not blanket permission to publish, force-push, replace a branch, merge, delete branches, or deploy. Obtain explicit owner authorization for the specific operation. Never publish NuGet packages without explicit authorization.
+
+When auditing, record the package's verified publication state as `never-published` or `published`, the latest published version and source SHA when applicable, both branch SHAs, and the evidence used to classify it. If publication state cannot be verified, mark it `unknown` and preserve both refs until clarified.

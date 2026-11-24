@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 500" role="img" aria-labelledby="title desc">
+<title id="title">CiAi ecosystem responsibilities and authority boundaries</title>
+<desc id="desc">ProtocolAi and GrammarAi define typed communication. CiAi observes evidence and coordinates bounded contracts. HeadlessAi invokes models. Foundry orchestrates tasks and host authorization. The repository owner retains consequential approval.</desc>
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#101a30"/><stop offset="1" stop-color="#202d42"/></linearGradient>
+ <style>
+ text{font-family:Inter,Segoe UI,Arial,sans-serif;fill:#eef4ff}.muted{fill:#aab8d0}
+ .box{fill:#172941;stroke:#637895;stroke-width:1.5}.core{fill:#12313a;stroke:#54c9bd;stroke-width:2}
+ .host{fill:#30291e;stroke:#d9ae5d;stroke-width:2}.line{fill:none;stroke:#6ccfc5;stroke-width:3;stroke-dasharray:8 9;animation:dash 6s linear infinite}
+ .pulse{animation:pulse 2.5s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+ @keyframes dash{to{stroke-dashoffset:-102}}@keyframes pulse{50%{opacity:.45;transform:scale(.96)}}
+ </style>
+</defs>
+<rect width="1200" height="500" rx="28" fill="url(#bg)"/>
+<text x="55" y="58" font-size="17" letter-spacing="4" class="muted">SEPARATION OF RESPONSIBILITIES</text>
+<text x="55" y="105" font-size="36" font-weight="700">Coordination is not permission.</text>
+<g>
+ <rect class="box" x="55" y="165" width="245" height="105" rx="16"/>
+ <text x="82" y="204" font-size="23" font-weight="700">ProtocolAi</text><text x="82" y="237" font-size="16" class="muted">event / protocol contracts</text>
+ <rect class="box" x="55" y="300" width="245" height="105" rx="16"/>
+ <text x="82" y="339" font-size="23" font-weight="700">GrammarAi</text><text x="82" y="372" font-size="16" class="muted">typed structure / validation</text>
+ <rect class="core pulse" x="405" y="205" width="275" height="145" rx="20"/>
+ <text x="440" y="253" font-size="17" fill="#8be9fd">EVIDENCE + COORDINATION</text><text x="440" y="297" font-size="35" font-weight="700">CiAi</text><text x="440" y="326" font-size="15" class="muted">observe · verify · admit</text>
+ <rect class="box" x="790" y="165" width="350" height="105" rx="16"/>
+ <text x="820" y="204" font-size="23" font-weight="700">HeadlessAi</text><text x="820" y="237" font-size="16" class="muted">model invocation</text>
+ <rect class="box" x="790" y="300" width="350" height="105" rx="16"/>
+ <text x="820" y="339" font-size="23" font-weight="700">Foundry + host adapter</text><text x="820" y="372" font-size="16" class="muted">tasks · leases · authorization · dispatch</text>
+ <path class="line" d="M300 217 H405 M300 352 H405 M680 250 H790 M680 315 H790"/>
+</g>
+<rect class="host" x="405" y="420" width="735" height="52" rx="13"/>
+<text x="435" y="453" font-size="20" font-weight="700">Repository owner retains approval for consequential actions.</text>
+<text x="55" y="453" font-size="14" class="muted">A valid contract does not grant permissions.</text>
+</svg>

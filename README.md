@@ -40,7 +40,15 @@ AnyApp is CiAi's first source-based consumer pilot. It keeps GitHub Actions as t
 - [AnyApp consumer walkthrough and evidence-lane map](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/development/docs/Samples/AnyApp.md)
 - [AnyApp CiAi evidence workflow](https://github.com/TrentBest/AnyApp/blob/development/.github/workflows/ciai-evidence.yml)
 
-## 04 — Next consumer: ServerSC2
+## 04 — New consumer: SingularityUniversalRoleplayingSystem
+
+SURPS is the Workshop's shared roleplaying ontology. Its root AgentOnboarding contract now passes CiAi v1 at an exact commit, and a pinned read-only observer reports its Pages workflow with separate completeness, terminality, and success facts. The first Pages build passed but deployment failed; that failure remains visible and unresolved.
+
+- [SURPS CiAi integration and evidence](docs/Samples/SingularityUniversalRoleplayingSystem.md)
+- [SURPS onboarding issue](https://github.com/TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem/issues/1)
+- [CiAi onboarding issue](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/84)
+
+## 05 — Next consumer: ServerSC2
 
 ServerSC2 is the next CODE RED evidence integration. ServerSC2 owns authoritative SC2 match/replay evidence; CiAi owns exact GitHub workflow/artifact provenance, test-result normalization, and the CI verdict. This integration is coordinated but not yet implemented or verified.
 
@@ -49,33 +57,14 @@ ServerSC2 is the next CODE RED evidence integration. ServerSC2 owns authoritativ
 - [CiAi integration issue](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/67)
 - [Shared CODE RED / HeadlessAi handoff](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/34)
 
-## 05 — CODE RED evidence contracts
-
-The current producer path is documented by its canonical contracts:
-
-- [Test-result evidence v1 guide and trust-path diagram](docs/TEST_RESULT_EVIDENCE_V1.md) — producer sequence, independent host binding, verdict semantics, downstream ownership, and current candidate validation.
-
-- [Workflow provenance v1](src/TheSingularityWorkshop.CiAi/CiWorkflowProvenanceRecord.md) — workflow-definition, event, PR, and checkout identity.
-- [Workflow evidence v1](src/TheSingularityWorkshop.CiAi/CiWorkflowEvidencePacket.md) — exact run/attempt envelope and fail-closed trust.
-- [Test-result report v1](src/TheSingularityWorkshop.CiAi/CiTestResultReport.md) — bounded TRX normalization and canonical 1 MiB JSON handoff.
-- [Evidence outbox and receipt ledger](src/TheSingularityWorkshop.CiAi/CiWorkflowEvidenceOutbox.md) — exact-byte persistence, replay protection, and trust reset on reload.
-- [FSM_Execution report notice handoff](src/TheSingularityWorkshop.CiAi/CiTestResultExecutionNoticeEnqueuer.md) — host-published report bytes and manifest-bound notice delivery.
-- [FSM_Execution notice sender](src/TheSingularityWorkshop.CiAi/ExecutionArtifactReadyNoticeClient.md) — HTTPS sender, credential boundary, response classification, and retry semantics.
-- [FSM_Execution notice delivery coordinator](src/TheSingularityWorkshop.CiAi/ExecutionArtifactReadyNoticeDeliveryCoordinator.md) — bounded durable delivery passes and receipt-ledger behavior.
-
-The host artifact publisher and authenticated FSM_Execution ingress/retrieval deployment remain integration responsibilities; these contracts do not claim live remote acceptance.
-
 ## 06 — Architecture and proof
 
 - [Gallery](Gallery.md) — current demonstrations and evidence.
 - [Cross-Cog integration](integration/CogEcosystem.ContractTests/README.md) — pinned in-process contract proof.
 - GrammarAi is consumed from immutable source pin `028b1d1f707e3e0614c680d6fc4a556424e2e02a`; ProtocolAi is consumed from immutable source pin `13e86c23c8eab6a33f3f124342b54598748e8756`. CiAi owns CI vocabulary and workflow semantics, ProtocolAi owns stable category/member identity primitives, and GrammarAi validates the typed workflow/evidence graph. Structural validity remains separate from CI policy/evidence verdicts and host authorization.
 - [Inter-repository model](docs/INTER_REPOSITORY_MODEL.md) — request/result workflow and integration gaps.
+- [AgentOnboarding admission v1](docs/AGENT_ONBOARDING_ADMISSION_V1.md) — exact-commit onboarding validation, deterministic outcomes, and the host-enforcement boundary.
 - [Release readiness](docs/RELEASE_READINESS.md) — package and authorization boundaries.
 - [FSM_COS coordination notes](FSM_COSLLM.md) — read-only evidence pilot and cross-repository contract.
 
 The visitor experience is an introduction, not a substitute for source, tests, CI runs, or the implementation status recorded by each owning repository.
-
----
-
-<p align="center"><img src="https://raw.githubusercontent.com/TrentBest/FSM_API/master/Documentation/Branding/TheSingularityWorkshop.png" alt="The Singularity Workshop" width="240" /></p>

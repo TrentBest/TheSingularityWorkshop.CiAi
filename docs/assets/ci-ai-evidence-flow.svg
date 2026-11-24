@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 480" role="img" aria-labelledby="title desc">
+<title id="title">From CI execution to evidence an AI can understand</title>
+<desc id="desc">A commit enters CI. Workflow runs, jobs, and logs become evidence collected and verified by CiAi, then presented to an AI consumer. A separate human authority gate controls consequential actions.</desc>
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#101a30"/><stop offset="1" stop-color="#202d42"/></linearGradient>
+ <linearGradient id="line" x1="0" x2="1"><stop stop-color="#64d8cb"/><stop offset="1" stop-color="#9be7ff"/></linearGradient>
+ <filter id="glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+ <style>
+ text{font-family:Inter,Segoe UI,Arial,sans-serif;fill:#edf4ff}.muted{fill:#aab8d0}
+ .node{fill:#182a43;stroke:#61748e;stroke-width:1.5}.edge{fill:none;stroke:url(#line);stroke-width:4;stroke-linecap:round;stroke-dasharray:10 12;animation:dash 5s linear infinite}
+ .dot{fill:#8be9fd;filter:url(#glow);animation:travel 5s linear infinite}
+ .soft{fill:#122c36;stroke:#4fb7ac;stroke-width:1.5}.gate{fill:#302a21;stroke:#d8ad5b;stroke-width:1.5}
+ @keyframes dash{to{stroke-dashoffset:-88}}@keyframes travel{0%{transform:translateX(0);opacity:0}8%{opacity:1}92%{opacity:1}100%{transform:translateX(560px);opacity:0}}
+ </style>
+</defs>
+<rect width="1200" height="480" rx="28" fill="url(#bg)"/>
+<text x="55" y="58" font-size="17" letter-spacing="4" class="muted">EVIDENCE FLOW · NOT AN AUTHORITY ESCALATION</text>
+<text x="55" y="105" font-size="36" font-weight="700">Turn a CI run into evidence an AI can inspect.</text>
+<g>
+ <rect class="node" x="55" y="165" width="205" height="118" rx="17"/>
+ <text x="82" y="205" font-size="15" class="muted">SOURCE</text><text x="82" y="242" font-size="25" font-weight="700">Commit SHA</text><text x="82" y="267" font-size="14" class="muted">exact identity</text>
+ <rect class="node" x="345" y="165" width="205" height="118" rx="17"/>
+ <text x="372" y="205" font-size="15" class="muted">EXECUTION</text><text x="372" y="242" font-size="25" font-weight="700">GitHub CI</text><text x="372" y="267" font-size="14" class="muted">runs · jobs · steps</text>
+ <rect class="soft" x="635" y="145" width="235" height="158" rx="17"/>
+ <text x="663" y="188" font-size="15" fill="#8be9fd">OBSERVATION</text><text x="663" y="229" font-size="30" font-weight="700">CiAi</text><text x="663" y="258" font-size="15">collect · bind · verify</text><text x="663" y="281" font-size="14" class="muted">JSON + Markdown evidence</text>
+ <rect class="node" x="955" y="165" width="190" height="118" rx="17"/>
+ <text x="982" y="205" font-size="15" class="muted">CONSUMPTION</text><text x="982" y="242" font-size="25" font-weight="700">AI / tools</text><text x="982" y="267" font-size="14" class="muted">understand facts</text>
+ <path class="edge" d="M260 224 H345 M550 224 H635 M870 224 H955"/>
+ <circle class="dot" cx="260" cy="224" r="7"/>
+</g>
+<g>
+ <path d="M752 303 V347" stroke="#d8ad5b" stroke-width="2.5" stroke-dasharray="5 7"/>
+ <rect class="gate" x="560" y="350" width="385" height="83" rx="16"/>
+ <text x="590" y="383" font-size="15" fill="#f6c76b">SEPARATE AUTHORITY BOUNDARY</text>
+ <text x="590" y="412" font-size="22" font-weight="700">Human / host authorization</text>
+ <text x="970" y="381" font-size="15" class="muted">merge · publish</text><text x="970" y="405" font-size="15" class="muted">deploy · release</text>
+</g>
+<text x="55" y="450" font-size="14" class="muted">A successful observer run means evidence was collected—not that the observed application passed.</text>
+</svg>

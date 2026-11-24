@@ -2,7 +2,7 @@ name: CiAi Contract Verification
 
 on:
   push:
-    branches: [development, master, integration/ciai-v1-evidence-contracts]
+    branches: [development, master]
     paths:
       - "src/**"
       - "integration/**"
