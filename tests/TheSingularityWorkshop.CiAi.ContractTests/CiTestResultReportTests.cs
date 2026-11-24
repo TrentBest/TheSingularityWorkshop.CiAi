@@ -335,18 +335,18 @@ internal static class CiTestResultReportTests
             RequiredPolicy, ObservedAt);
     }
 
-    internal static (CiTestResultReport Report, CiTestResultArtifactArchive Archive) CreatePassingReportForDevelopmentCapability()
+    internal static (CiTestResultReport Report, CiTestResultArtifactArchive Archive) CreatePassingReportForDevelopmentCapability(bool protectedPush = false)
     {
         var trx = Encoding.UTF8.GetBytes(CreateTrx(
             ("test-1", "FirstPass", "Passed", null, null),
             ("test-2", "SecondPass", "Passed", null, null),
             ("test-3", "SkippedCase", "NotExecuted", null, null),
             total: 3, passed: 2, failed: 0, skipped: 1));
-        var evidence = CreatePacket("success");
+        var evidence = CreatePacket("success", protectedPush: protectedPush);
         var archiveBytes = CreateArtifactArchive(trx, CreateProvenanceJson(evidence));
         var digest = "sha256:" + Convert.ToHexString(SHA256.HashData(archiveBytes)).ToLowerInvariant();
         var archive = CiTestResultArtifactArchive.Read(archiveBytes, digest, "results.trx", "provenance.json");
-        var source = CreateSource(trx, archiveBytes: archiveBytes, conclusion: "success");
+        var source = CreateSource(trx, archiveBytes: archiveBytes, conclusion: "success", protectedPush: protectedPush);
         var report = CiTestResultReport.ParseAndValidate(archive, evidence, source, RequiredPolicy, ObservedAt);
         return (report, archive);
     }
@@ -354,11 +354,23 @@ internal static class CiTestResultReportTests
     private static CiWorkflowEvidencePacket CreatePacket(
         string conclusion,
         bool workflowTrusted = true,
-        bool checkoutMatches = true)
+        bool checkoutMatches = true,
+        bool protectedPush = false)
     {
-        var eventRef = "refs/pull/17/merge";
-        var checkoutRef = "refs/heads/feature/minesweeper-domain-pilot";
-        var provenanceJson = $"""
+        var eventRef = protectedPush ? "refs/heads/development" : "refs/pull/17/merge";
+        var checkoutRef = protectedPush ? "refs/heads/development" : "refs/heads/feature/minesweeper-domain-pilot";
+        var eventName = protectedPush ? "push" : "pull_request";
+        var workflowSha = protectedPush ? CandidateSha : WorkflowSha;
+        var pullRequestJson = protectedPush
+            ? "null"
+            : """
+              {
+                "number": 17,
+                "head": { "ref": "feature/minesweeper-domain-pilot", "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" },
+                "base": { "ref": "development", "sha": "dddddddddddddddddddddddddddddddddddddddd" }
+              }
+              """;
+        var provenanceJson = $$"""
         {
           "schema": "{{CiWorkflowProvenanceRecord.CurrentSchema}}",
           "repository": "{{Repository}}",
@@ -366,17 +378,13 @@ internal static class CiTestResultReportTests
           "runAttempt": {{RunAttempt}},
           "workflow": {
             "ref": "{{Repository}}/.github/workflows/ci.yml@refs/heads/development",
-            "sha": "{{WorkflowSha}}"
+            "sha": "{{workflowSha}}"
           },
           "event": {
-            "name": "pull_request",
+            "name": "{{eventName}}",
             "ref": "{{eventRef}}",
             "sha": "{{CandidateSha}}",
-            "pullRequest": {
-              "number": 17,
-              "head": { "ref": "feature/minesweeper-domain-pilot", "sha": "{{CandidateSha}}" },
-              "base": { "ref": "development", "sha": "dddddddddddddddddddddddddddddddddddddddd" }
-            }
+            "pullRequest": {{pullRequestJson}}
           },
           "checkout": {
             "ref": "{{checkoutRef}}",
@@ -402,7 +410,7 @@ internal static class CiTestResultReportTests
         };
         var observed = new CiWorkflowRunEvidenceObservation(
             Repository, ".github/workflows/ci.yml", RunId, RunAttempt,
-            checkoutRef, CandidateSha, "pull_request", "Validation",
+            checkoutRef, CandidateSha, eventName, "Validation",
             CiRunStatus.Completed,
             conclusion == "success" ? CiRunConclusion.Success : CiRunConclusion.Failure,
             new Uri($"https://github.com/{Repository}/actions/runs/{RunId}"),
@@ -423,9 +431,10 @@ internal static class CiTestResultReportTests
         byte[]? archiveBytes = null,
         bool isExpired = false,
         DateTimeOffset? createdAt = null,
-        string conclusion = "failure")
+        string conclusion = "failure",
+        bool protectedPush = false)
     {
-        var evidence = CreatePacket(conclusion);
+        var evidence = CreatePacket(conclusion, protectedPush: protectedPush);
         var exactArchiveBytes = archiveBytes ?? CreateArtifactArchive(payload, CreateProvenanceJson(evidence));
         var actualDigest = "sha256:" + Convert.ToHexString(SHA256.HashData(exactArchiveBytes)).ToLowerInvariant();
         var artifactRepository = repository ?? Repository;
