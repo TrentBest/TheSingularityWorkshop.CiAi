@@ -18,6 +18,7 @@ on:
       - ".github/workflows/ci.yml"
       - ".github/workflows/observe-release-candidate.yml"
       - ".github/workflows/serialization-benchmark-dispatch.yml"
+      - ".github/workflows/ciai-evidence.yml"
   pull_request:
     branches: [development, master]
     paths:
@@ -35,6 +36,7 @@ on:
       - ".github/workflows/ci.yml"
       - ".github/workflows/observe-release-candidate.yml"
       - ".github/workflows/serialization-benchmark-dispatch.yml"
+      - ".github/workflows/ciai-evidence.yml"
   workflow_dispatch:
     inputs:
       target_branch:
