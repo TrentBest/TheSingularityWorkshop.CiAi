@@ -63,6 +63,8 @@ ServerSC2 is the next CODE RED evidence integration. ServerSC2 owns authoritativ
 - [Cross-Cog integration](integration/CogEcosystem.ContractTests/README.md) — pinned in-process contract proof.
 - GrammarAi is consumed from immutable source pin `028b1d1f707e3e0614c680d6fc4a556424e2e02a`; ProtocolAi is consumed from immutable source pin `13e86c23c8eab6a33f3f124342b54598748e8756`. CiAi owns CI vocabulary and workflow semantics, ProtocolAi owns stable category/member identity primitives, and GrammarAi validates the typed workflow/evidence graph. Structural validity remains separate from CI policy/evidence verdicts and host authorization.
 - [Inter-repository model](docs/INTER_REPOSITORY_MODEL.md) — request/result workflow and integration gaps.
+- [Composite pipeline gates](docs/COMPOSITE_PIPELINE_GATES.md) — bounded, versioned AND/OR dependency expressions, exact candidate binding, and deterministic admission.
+- [Dependency readiness policy](docs/DEPENDENCY_READINESS_POLICY.md) — Waiting is dormant and token-neutral; Satisfied requires exact verified evidence; Blocked fails closed. The separate development-capability evidence contract is still an open implementation gate.
 - [AgentOnboarding admission v1](docs/AGENT_ONBOARDING_ADMISSION_V1.md) — exact-commit onboarding validation, deterministic outcomes, and the host-enforcement boundary.
 - [Release readiness](docs/RELEASE_READINESS.md) — package and authorization boundaries.
 - [FSM_COS coordination notes](FSM_COSLLM.md) — read-only evidence pilot and cross-repository contract.
