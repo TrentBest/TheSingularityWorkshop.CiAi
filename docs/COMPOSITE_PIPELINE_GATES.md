@@ -82,3 +82,14 @@ A grant for another SHA, candidate, or target pipeline cannot authorize the leaf
 - No gate result authorizes repository writes, merge, NuGet publication, release, or deployment.
 
 This implementation is the evaluator/policy foundation for issue #80. It intentionally does not add a second scheduler, evidence ledger, or authorization authority.
+
+## Trusted exact-commit candidate verification
+
+The contract workflow supports a manual candidate-verification run, but the workflow definition itself must come from the protected development line:
+
+1. Dispatch `.github/workflows/ci.yml` with the selected workflow ref set to `development`. The workflow fails closed if `workflow_dispatch` is started from another ref.
+2. Supply either `target_sha` (an exact 40-character commit SHA) or `target_branch`, never both. A branch is resolved once to an immutable SHA before checkout.
+3. The workflow checks out that exact candidate commit, verifies `git rev-parse HEAD`, and emits `ciai.workflow-provenance.v1` with separate workflow-source and candidate-checkout identities.
+4. Checkout credentials are not persisted in the candidate worktree. The job has read-only repository permissions; it does not merge, publish, release, or deploy.
+
+A successful candidate build is not, by itself, a trusted protected-push receipt. The evidence observer and host must independently bind the exact candidate SHA, workflow source revision, run ID/attempt, required job conclusions, and retained artifacts before a development-capability gate can be satisfied. PR-controlled workflow runs remain diagnostic evidence only for gates requiring trusted protected-branch execution.
