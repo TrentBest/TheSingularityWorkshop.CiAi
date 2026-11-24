@@ -489,24 +489,6 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
         return value.GetBoolean();
     }
 
-    private static void EnsureNoDuplicateProperties(JsonElement element)
-    {
-        if (element.ValueKind == JsonValueKind.Object)
-        {
-            var names = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var property in element.EnumerateObject())
-            {
-                Ensure(names.Add(property.Name), "devcap.json-duplicate-property");
-                EnsureNoDuplicateProperties(property.Value);
-            }
-        }
-        else if (element.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var item in element.EnumerateArray())
-                EnsureNoDuplicateProperties(item);
-        }
-    }
-
     private static bool DictionaryEquals(
         IReadOnlyDictionary<string, string> actual,
         IReadOnlyDictionary<string, string> expected)
