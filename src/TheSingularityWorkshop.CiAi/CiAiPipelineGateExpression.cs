@@ -11,6 +11,13 @@ public enum CiAiPipelineGateState
     Blocked = 2
 }
 
+/// <summary>Evidence family used to satisfy one repository prerequisite.</summary>
+public enum CiAiRepositoryGateEvidenceKind
+{
+    PublishedPackage = 0,
+    DevelopmentCapability = 1
+}
+
 /// <summary>A bounded, immutable Boolean prerequisite tree for one named development pipeline.</summary>
 public sealed record CiAiPipelineGateExpression
 {
@@ -61,7 +68,13 @@ public sealed record CiAiPipelineGateExpression
     private static string Canonicalize(CiAiGateExpression expression) => expression switch
     {
         CiAiRepositoryGateReference leaf =>
-            "L" + Encode(leaf.GateId) + Encode(leaf.Repository) + Encode(leaf.CandidateId) + Encode(leaf.CommitSha),
+            leaf.EvidenceKind == CiAiRepositoryGateEvidenceKind.PublishedPackage &&
+            leaf.SubjectId is null && leaf.SubjectVersion is null && !leaf.RequiresProtectedPush
+                ? "L" + Encode(leaf.GateId) + Encode(leaf.Repository) + Encode(leaf.CandidateId) + Encode(leaf.CommitSha)
+                : "D" + ((int)leaf.EvidenceKind).ToString(System.Globalization.CultureInfo.InvariantCulture) +
+                  Encode(leaf.GateId) + Encode(leaf.Repository) + Encode(leaf.CandidateId) + Encode(leaf.CommitSha) +
+                  Encode(leaf.SubjectId ?? string.Empty) + Encode(leaf.SubjectVersion ?? string.Empty) +
+                  (leaf.RequiresProtectedPush ? "P" : "C"),
         CiAiAllOf all =>
             "A" + all.Children.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + ":" +
             string.Concat(all.Children.Select(Canonicalize)),
@@ -94,10 +107,24 @@ public sealed record CiAiPipelineGateExpression
 /// <summary>Base type for immutable AND/OR prerequisite nodes.</summary>
 public abstract record CiAiGateExpression;
 
-/// <summary>A leaf tied to one repository, candidate ID, and exact source commit.</summary>
+/// <summary>A leaf tied to one repository, exact candidate, and one explicit evidence family.</summary>
 public sealed record CiAiRepositoryGateReference : CiAiGateExpression
 {
     public CiAiRepositoryGateReference(string gateId, string repository, string candidateId, string commitSha)
+        : this(gateId, repository, candidateId, commitSha,
+            CiAiRepositoryGateEvidenceKind.PublishedPackage, null, null, false)
+    {
+    }
+
+    public CiAiRepositoryGateReference(
+        string gateId,
+        string repository,
+        string candidateId,
+        string commitSha,
+        CiAiRepositoryGateEvidenceKind evidenceKind,
+        string? subjectId,
+        string? subjectVersion,
+        bool requiresProtectedPush = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(gateId);
         ArgumentException.ThrowIfNullOrWhiteSpace(repository);
@@ -106,6 +133,8 @@ public sealed record CiAiRepositoryGateReference : CiAiGateExpression
             throw new ArgumentException("Repository must use canonical owner/repository identity.", nameof(repository));
         if (commitSha is null || commitSha.Length != 40 || !commitSha.All(Uri.IsHexDigit))
             throw new ArgumentException("A full 40-character source commit SHA is required.", nameof(commitSha));
+        if (!Enum.IsDefined(evidenceKind))
+            throw new ArgumentOutOfRangeException(nameof(evidenceKind));
 
         var normalizedGateId = gateId.Trim();
         var normalizedCandidateId = candidateId.Trim();
@@ -114,16 +143,126 @@ public sealed record CiAiRepositoryGateReference : CiAiGateExpression
         if (normalizedCandidateId.Length > 256 || normalizedCandidateId.Any(char.IsControl))
             throw new ArgumentException("Candidate IDs must be at most 256 printable characters.", nameof(candidateId));
 
+        if (evidenceKind == CiAiRepositoryGateEvidenceKind.DevelopmentCapability)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(subjectId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(subjectVersion);
+        }
+        else if (requiresProtectedPush)
+        {
+            throw new ArgumentException("Protected-push capability trust applies only to development-capability leaves.", nameof(requiresProtectedPush));
+        }
+
+        if ((subjectId is null) != (subjectVersion is null))
+            throw new ArgumentException("Evidence subject ID and version must be supplied together.");
+
         GateId = normalizedGateId;
         Repository = repository;
         CandidateId = normalizedCandidateId;
         CommitSha = commitSha.ToLowerInvariant();
+        EvidenceKind = evidenceKind;
+        SubjectId = subjectId;
+        SubjectVersion = subjectVersion;
+        RequiresProtectedPush = requiresProtectedPush;
     }
 
     public string GateId { get; }
     public string Repository { get; }
     public string CandidateId { get; }
     public string CommitSha { get; }
+    public CiAiRepositoryGateEvidenceKind EvidenceKind { get; }
+    public string? SubjectId { get; }
+    public string? SubjectVersion { get; }
+    public bool RequiresProtectedPush { get; }
+}
+
+/// <summary>Normalized verified evidence for a composite repository-gate leaf.</summary>
+public sealed record CiAiRepositoryGateEvaluation
+{
+    public CiAiRepositoryGateEvaluation(
+        string repository,
+        string candidateId,
+        string commitSha,
+        CiAiRepositoryGateEvidenceKind evidenceKind,
+        string? subjectId,
+        string? subjectVersion,
+        CiAiPipelineGateState state,
+        bool isProtectedPushEvidence = false,
+        string? errorCode = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(repository);
+        if (!RepositoryIdentity.IsValid(repository))
+            throw new ArgumentException("Repository must use canonical owner/repository identity.", nameof(repository));
+        ArgumentException.ThrowIfNullOrWhiteSpace(candidateId);
+        if (commitSha is null || commitSha.Length != 40 || !commitSha.All(Uri.IsHexDigit))
+            throw new ArgumentException("A full 40-character source commit SHA is required.", nameof(commitSha));
+        if (!Enum.IsDefined(evidenceKind)) throw new ArgumentOutOfRangeException(nameof(evidenceKind));
+        if (!Enum.IsDefined(state)) throw new ArgumentOutOfRangeException(nameof(state));
+        if (evidenceKind == CiAiRepositoryGateEvidenceKind.DevelopmentCapability &&
+            (string.IsNullOrWhiteSpace(subjectId) || string.IsNullOrWhiteSpace(subjectVersion)))
+            throw new ArgumentException("Development capability evaluations require an exact capability ID and version.");
+        if ((subjectId is null) != (subjectVersion is null))
+            throw new ArgumentException("Evidence subject ID and version must be supplied together.");
+
+        Repository = repository;
+        CandidateId = candidateId;
+        CommitSha = commitSha.ToLowerInvariant();
+        EvidenceKind = evidenceKind;
+        SubjectId = subjectId;
+        SubjectVersion = subjectVersion;
+        State = state;
+        IsProtectedPushEvidence = isProtectedPushEvidence;
+        ErrorCode = errorCode;
+    }
+
+    public string Repository { get; }
+    public string CandidateId { get; }
+    public string CommitSha { get; }
+    public CiAiRepositoryGateEvidenceKind EvidenceKind { get; }
+    public string? SubjectId { get; }
+    public string? SubjectVersion { get; }
+    public CiAiPipelineGateState State { get; }
+    public bool IsProtectedPushEvidence { get; }
+    public string? ErrorCode { get; }
+
+    public static CiAiRepositoryGateEvaluation FromPublishedDependency(DependencyReleaseGateEvaluation evaluation)
+    {
+        ArgumentNullException.ThrowIfNull(evaluation);
+        var state = evaluation.CanVerifyConsumer
+            ? CiAiPipelineGateState.Satisfied
+            : evaluation.State == DependencyReleaseGateState.WaitingForPublishedDependencies
+                ? CiAiPipelineGateState.Waiting
+                : CiAiPipelineGateState.Blocked;
+        return new CiAiRepositoryGateEvaluation(
+            evaluation.Repository,
+            evaluation.CandidateId,
+            evaluation.CommitSha,
+            CiAiRepositoryGateEvidenceKind.PublishedPackage,
+            evaluation.PackageId,
+            evaluation.PackageVersion,
+            state,
+            false,
+            evaluation.Errors.FirstOrDefault());
+    }
+
+    public static CiAiRepositoryGateEvaluation FromDevelopmentCapability(
+        CiAiDevelopmentCapabilityArtifactBinding binding,
+        CiAiDevelopmentCapabilityEvidenceValidation validation)
+    {
+        ArgumentNullException.ThrowIfNull(binding);
+        ArgumentNullException.ThrowIfNull(validation);
+        var valid = validation.IsValid && validation.Evidence is not null;
+        return new CiAiRepositoryGateEvaluation(
+            binding.ProviderRepository,
+            binding.ProviderRepository + "@" + binding.SourceSha,
+            binding.SourceSha,
+            CiAiRepositoryGateEvidenceKind.DevelopmentCapability,
+            binding.CapabilityId,
+            binding.CapabilityVersion,
+            valid ? CiAiPipelineGateState.Satisfied : CiAiPipelineGateState.Blocked,
+            validation.Evidence?.IsProtectedPushEvidence ?? false,
+            validation.ErrorCode);
+    }
 }
 
 /// <summary>All child gates must be satisfied.</summary>
@@ -159,9 +298,23 @@ public sealed record CiAiAnyOf : CiAiGateExpression
 /// <summary>Evaluates composite gates using only previously verified leaf evaluations.</summary>
 public static class CiAiPipelineGateEvaluator
 {
+    /// <summary>Compatibility overload for published-package evidence.</summary>
     public static CiAiPipelineGateState Evaluate(
         CiAiPipelineGateExpression expression,
         IReadOnlyDictionary<string, DependencyReleaseGateEvaluation> leafEvaluations)
+    {
+        ArgumentNullException.ThrowIfNull(leafEvaluations);
+        var normalized = leafEvaluations.ToDictionary(
+            pair => pair.Key,
+            pair => CiAiRepositoryGateEvaluation.FromPublishedDependency(pair.Value),
+            StringComparer.Ordinal);
+        return Evaluate(expression, normalized);
+    }
+
+    /// <summary>Evaluates published-package and development-capability evidence through one composite gate engine.</summary>
+    public static CiAiPipelineGateState Evaluate(
+        CiAiPipelineGateExpression expression,
+        IReadOnlyDictionary<string, CiAiRepositoryGateEvaluation> leafEvaluations)
     {
         ArgumentNullException.ThrowIfNull(expression);
         ArgumentNullException.ThrowIfNull(leafEvaluations);
@@ -170,7 +323,7 @@ public static class CiAiPipelineGateEvaluator
 
     private static CiAiPipelineGateState EvaluateNode(
         CiAiGateExpression node,
-        IReadOnlyDictionary<string, DependencyReleaseGateEvaluation> evaluations)
+        IReadOnlyDictionary<string, CiAiRepositoryGateEvaluation> evaluations)
     {
         switch (node)
         {
@@ -179,13 +332,15 @@ public static class CiAiPipelineGateEvaluator
                     return CiAiPipelineGateState.Waiting;
                 if (!string.Equals(evaluation.Repository, leaf.Repository, StringComparison.Ordinal) ||
                     !string.Equals(evaluation.CandidateId, leaf.CandidateId, StringComparison.Ordinal) ||
-                    !string.Equals(evaluation.CommitSha, leaf.CommitSha, StringComparison.OrdinalIgnoreCase))
+                    !string.Equals(evaluation.CommitSha, leaf.CommitSha, StringComparison.OrdinalIgnoreCase) ||
+                    evaluation.EvidenceKind != leaf.EvidenceKind ||
+                    (leaf.SubjectId is not null && !string.Equals(evaluation.SubjectId, leaf.SubjectId, StringComparison.Ordinal)) ||
+                    (leaf.SubjectVersion is not null && !string.Equals(evaluation.SubjectVersion, leaf.SubjectVersion, StringComparison.Ordinal)))
                     return CiAiPipelineGateState.Blocked;
-                return evaluation.CanVerifyConsumer
-                    ? CiAiPipelineGateState.Satisfied
-                    : evaluation.State == DependencyReleaseGateState.WaitingForPublishedDependencies
-                        ? CiAiPipelineGateState.Waiting
-                        : CiAiPipelineGateState.Blocked;
+                if (evaluation.State == CiAiPipelineGateState.Satisfied &&
+                    leaf.RequiresProtectedPush && !evaluation.IsProtectedPushEvidence)
+                    return CiAiPipelineGateState.Waiting;
+                return evaluation.State;
 
             case CiAiAllOf all:
             {
