@@ -335,6 +335,22 @@ internal static class CiTestResultReportTests
             RequiredPolicy, ObservedAt);
     }
 
+    internal static (CiTestResultReport Report, CiTestResultArtifactArchive Archive) CreatePassingReportForDevelopmentCapability()
+    {
+        var trx = Encoding.UTF8.GetBytes(CreateTrx(
+            ("test-1", "FirstPass", "Passed", null, null),
+            ("test-2", "SecondPass", "Passed", null, null),
+            ("test-3", "SkippedCase", "NotExecuted", null, null),
+            total: 3, passed: 2, failed: 0, skipped: 1));
+        var evidence = CreatePacket("success");
+        var archiveBytes = CreateArtifactArchive(trx, CreateProvenanceJson(evidence));
+        var digest = "sha256:" + Convert.ToHexString(SHA256.HashData(archiveBytes)).ToLowerInvariant();
+        var archive = CiTestResultArtifactArchive.Read(archiveBytes, digest, "results.trx", "provenance.json");
+        var source = CreateSource(trx, archiveBytes: archiveBytes, conclusion: "success");
+        var report = CiTestResultReport.ParseAndValidate(archive, evidence, source, RequiredPolicy, ObservedAt);
+        return (report, archive);
+    }
+
     private static CiWorkflowEvidencePacket CreatePacket(
         string conclusion,
         bool workflowTrusted = true,
@@ -406,9 +422,10 @@ internal static class CiTestResultReportTests
         long? archiveSizeBytes = null,
         byte[]? archiveBytes = null,
         bool isExpired = false,
-        DateTimeOffset? createdAt = null)
+        DateTimeOffset? createdAt = null,
+        string conclusion = "failure")
     {
-        var evidence = CreatePacket("failure");
+        var evidence = CreatePacket(conclusion);
         var exactArchiveBytes = archiveBytes ?? CreateArtifactArchive(payload, CreateProvenanceJson(evidence));
         var actualDigest = "sha256:" + Convert.ToHexString(SHA256.HashData(exactArchiveBytes)).ToLowerInvariant();
         var artifactRepository = repository ?? Repository;
