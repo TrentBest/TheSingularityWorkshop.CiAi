@@ -234,8 +234,8 @@ internal static class CiWorkflowEvidenceDeliveryTests
                 delivery.PayloadSha256, CiWorkflowEvidenceReceiptOutcome.Accepted,
                 DateTimeOffset.Parse("2026-10-31T02:11:00Z"), "not.allowed"));
 
-            Console.WriteLine("PASS: 39 CI workflow evidence v1/v2 delivery and receipt checks.");
-            return 39;
+            Console.WriteLine("PASS: 40 CI workflow evidence v1/v2 delivery and receipt checks.");
+            return 40;
         }
         finally
         {
