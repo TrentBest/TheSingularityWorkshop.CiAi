@@ -269,6 +269,10 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
         Ensure(binding.ArtifactSizeBytes > 0 && IsProviderArtifactDigest(binding.ArtifactDigest), "devcap.expected-artifact-metadata-invalid");
         Ensure(!binding.ArtifactExpired, "devcap.provider-artifact-expired");
         Ensure(binding.ProviderJobConclusion == "success", "devcap.provider-job-not-successful");
+        Ensure(binding.SourceRef.StartsWith("refs/heads/", StringComparison.Ordinal), "devcap.expected-source-ref-invalid");
+        Ensure(binding.CheckoutRef == binding.SourceRef, "devcap.expected-checkout-ref-mismatch");
+        Ensure(binding.WorkflowRef.EndsWith("@" + binding.EventRef, StringComparison.Ordinal),
+            "devcap.expected-workflow-event-ref-mismatch");
         Ensure(binding.ExpectedDependencyCheckouts is not null && binding.ExpectedDependencyCheckouts.Count > 0,
             "devcap.expected-dependencies-missing");
         Ensure(binding.ExpectedSourcePaths is not null && binding.ExpectedSourcePaths.Count > 0,
