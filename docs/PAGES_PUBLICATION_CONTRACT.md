@@ -79,3 +79,16 @@ CiAi coordinates contracts and evidence across specialized builders, validators,
 | GUI shadow parity and consumer migration | Not started; existing consumer workflows remain untouched |
 
 See [issue #91](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/91) for the complete capability acceptance criteria.
+
+## Implemented Pages plan slice
+
+The first deterministic Pages declaration now exists in `CiPagesPublicationPlan`. It accepts a repository, safe relative source path, source branch, artifact name, and plan ID, then expands into the existing `CiWorkflowPlanDraft` contract:
+
+1. build the site;
+2. validate the generated site;
+3. package the exact validated site artifact;
+4. deploy that artifact to Pages.
+
+The expansion is deterministic, provider-neutral, and side-effect free. It rejects absolute/traversal/platform-dependent source paths, unsupported source branches, malformed identifiers, and invalid repository identities. The resulting destination policy is explicitly automatic with no human approval, while the existing evidence evaluator still blocks failed, incomplete, stale, or ambiguous attempts.
+
+This slice does **not** generate GitHub Actions YAML, invoke Actions, upload or retain artifacts, deploy Pages, or implement the Blazer shell. Those remain separate host-adapter and publication-lifecycle work. Contract tests are registered in the repository's executable contract-test runner; workflow evidence is pending until CI runs against the registration commit.
