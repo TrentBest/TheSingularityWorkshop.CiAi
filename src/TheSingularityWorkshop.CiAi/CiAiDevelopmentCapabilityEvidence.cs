@@ -159,6 +159,7 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
             Ensure(ReadString(workflow, "eventName") == binding.EventName, "devcap.event-name-mismatch");
             Ensure(ReadString(workflow, "eventRef") == binding.EventRef, "devcap.event-ref-mismatch");
             Ensure(ReadGitSha(workflow, "eventSha") == binding.EventSha, "devcap.event-sha-mismatch");
+            ValidatePullRequestIdentity(root, binding);
 
             var checkout = ReadObject(root, "checkout");
             Ensure(ReadString(checkout, "ref") == binding.CheckoutRef, "devcap.checkout-ref-mismatch");
@@ -286,7 +287,24 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
         Ensure(!binding.ArtifactExpired, "devcap.provider-artifact-expired");
         Ensure(binding.ProviderJobConclusion == "success", "devcap.provider-job-not-successful");
         Ensure(binding.SourceRef.StartsWith("refs/heads/", StringComparison.Ordinal), "devcap.expected-source-ref-invalid");
-        Ensure(binding.CheckoutRef == binding.SourceRef, "devcap.expected-checkout-ref-mismatch");
+        if (string.Equals(binding.EventName, "pull_request", StringComparison.Ordinal))
+        {
+            Ensure(binding.EventRef.StartsWith("refs/pull/", StringComparison.Ordinal),
+                "devcap.expected-pull-request-event-ref-invalid");
+            Ensure(binding.CheckoutRef == binding.SourceRef || binding.CheckoutRef == binding.EventRef,
+                "devcap.expected-checkout-ref-mismatch");
+            Ensure(binding.CheckoutSha == binding.SourceSha, "devcap.expected-checkout-sha-mismatch");
+        }
+        else if (string.Equals(binding.EventName, "push", StringComparison.Ordinal))
+        {
+            Ensure(binding.CheckoutRef == binding.SourceRef && binding.EventRef == binding.SourceRef &&
+                binding.EventSha == binding.SourceSha,
+                "devcap.expected-push-identity-mismatch");
+        }
+        else
+        {
+            throw new InvalidDataException("devcap.expected-event-kind-unsupported");
+        }
         Ensure(binding.ExpectedTestResultArtifacts is not null && binding.ExpectedTestResultArtifacts.Count > 0,
             "devcap.expected-test-artifacts-missing");
         Ensure(!string.IsNullOrWhiteSpace(binding.BundleFile), "devcap.expected-bundle-file-missing");
@@ -298,6 +316,29 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
             "devcap.required-step-policy-missing");
         Ensure(binding.RequiredArtifactKinds is not null && binding.RequiredArtifactKinds.Count > 0,
             "devcap.required-artifact-policy-missing");
+    }
+
+    private static void ValidatePullRequestIdentity(
+        JsonElement root,
+        CiAiDevelopmentCapabilityArtifactBinding binding)
+    {
+        if (string.Equals(binding.EventName, "pull_request", StringComparison.Ordinal))
+        {
+            var pullRequest = ReadObject(root, "pullRequest");
+            Ensure(ReadInt32(pullRequest, "number") > 0, "devcap.pull-request-number-invalid");
+            var head = ReadObject(pullRequest, "head");
+            var headRef = ReadString(head, "ref");
+            var normalizedHeadRef = headRef.StartsWith("refs/heads/", StringComparison.Ordinal)
+                ? headRef
+                : "refs/heads/" + headRef;
+            Ensure(normalizedHeadRef == binding.SourceRef, "devcap.pull-request-head-ref-mismatch");
+            Ensure(ReadGitSha(head, "sha") == binding.SourceSha, "devcap.pull-request-head-sha-mismatch");
+        }
+        else if (root.TryGetProperty("pullRequest", out var pullRequest) &&
+            pullRequest.ValueKind != JsonValueKind.Null)
+        {
+            throw new InvalidDataException("devcap.non-pull-request-event-has-pull-request");
+        }
     }
 
     private static Dictionary<string, string> ReadDependencies(JsonElement checkout)
