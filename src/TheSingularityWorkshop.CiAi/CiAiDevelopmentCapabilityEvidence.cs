@@ -212,7 +212,10 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
                 binding.SourceRef == "refs/heads/development" &&
                 binding.EventName == "push" &&
                 binding.EventRef == binding.SourceRef &&
-                binding.EventSha == binding.SourceSha;
+                binding.EventSha == binding.SourceSha &&
+                binding.WorkflowRef.EndsWith("@refs/heads/development", StringComparison.Ordinal) &&
+                binding.WorkflowSha == binding.SourceSha &&
+                binding.CheckoutRef == binding.SourceRef;
 
             var evidence = new CiAiDevelopmentCapabilityEvidence(
                 binding.ProviderRepository,
