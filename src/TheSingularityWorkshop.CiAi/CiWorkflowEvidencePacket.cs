@@ -137,24 +137,36 @@ public sealed record CiWorkflowEvidencePacket
             throw new InvalidDataException("Workflow provenance event name does not match the observed run event.");
 
         bool checkoutVerified;
-        if (string.Equals(provenance.EventName, "workflow_dispatch", StringComparison.Ordinal) &&
-            candidateCheckoutEvidence is not null)
+        if (candidateCheckoutEvidence is not null &&
+            (string.Equals(provenance.EventName, "workflow_dispatch", StringComparison.Ordinal) ||
+             string.Equals(provenance.EventName, "pull_request", StringComparison.Ordinal)))
         {
             if (!string.Equals(candidateCheckoutEvidence.CandidateRef, provenance.CheckoutRef, StringComparison.Ordinal) ||
                 !string.Equals(candidateCheckoutEvidence.CandidateSha, provenance.CheckoutSha, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("Candidate checkout evidence does not match the independently recorded checkout ref and SHA.");
 
-            // The internal job observation is used only to corroborate the named resolution and
-            // verification steps. The actual ref/SHA comes exclusively from the v1 provenance artifact.
+            if (string.Equals(provenance.EventName, "pull_request", StringComparison.Ordinal))
+            {
+                var pullRequest = provenance.PullRequest ??
+                    throw new InvalidDataException("Pull-request candidate checkout evidence requires exact PR head provenance.");
+                var headRef = pullRequest.HeadRef.StartsWith("refs/heads/", StringComparison.Ordinal)
+                    ? pullRequest.HeadRef
+                    : "refs/heads/" + pullRequest.HeadRef;
+                if (!string.Equals(candidateCheckoutEvidence.CandidateRef, headRef, StringComparison.Ordinal) ||
+                    !string.Equals(candidateCheckoutEvidence.CandidateSha, pullRequest.HeadSha, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("Candidate checkout evidence does not match the exact pull-request head ref and SHA.");
+            }
+
+            // The internal job observation corroborates the configured checkout and verification
+            // steps. The actual candidate identity comes from independently bound provenance.
             checkoutVerified = observedRun.CandidateCheckoutVerified;
         }
         else
         {
             if (candidateCheckoutEvidence is not null)
-                throw new InvalidDataException("Separate candidate checkout evidence is valid only for workflow_dispatch.");
+                throw new InvalidDataException("Separate candidate checkout evidence is supported only for workflow_dispatch and pull_request.");
 
-            // For ordinary push/PR runs the actual checkout must equal the event commit.
-            // PR event SHA is normally the merge commit, not the PR source head SHA.
+            // Without an explicit candidate-checkout proof, push/PR runs must check out the event commit.
             checkoutVerified =
                 string.Equals(provenance.CheckoutRef, provenance.EventRef, StringComparison.Ordinal) &&
                 string.Equals(provenance.CheckoutSha, provenance.EventSha, StringComparison.OrdinalIgnoreCase);
