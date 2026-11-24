@@ -30,6 +30,21 @@ A valid evidence packet is bound to all of the following:
 
 The provider-generated JSON is untrusted input. A self-reported `identityValid`, `satisfied`, or SHA value is never sufficient. The artifact archive digest and job/run identity must come from independent GitHub API observations.
 
+## Exact PR source-head checkout proof
+
+A pull-request run has two different identities: the event/workflow run may be associated with the PR merge ref and merge SHA, while the capability candidate is the PR head branch and head SHA. CiAi must preserve both identities rather than treating the merge SHA as the candidate source SHA.
+
+For a PR capability candidate, the host constructs `CiWorkflowCandidateCheckoutEvidence` from its trusted workflow policy and independently observed job steps. The evidence binds:
+
+- the exact candidate branch ref and source SHA;
+- the provider job that performs the checkout;
+- the named checkout-resolution step;
+- the named verification step that records and checks the actual checkout.
+
+`CiWorkflowEvidencePacket` accepts this PR candidate path only when the candidate ref/SHA matches the provenance checkout ref/SHA and the PR event's head ref/SHA, the observed run ref and event SHA match the provenance, and the configured checkout and verification steps completed successfully. A merge-ref checkout without this exact candidate proof remains insufficient for a development-capability gate.
+
+For the Physics pilot, the provider job is `test`, the checkout step is `Checkout`, and the verification step is `Create exact Physics workflow provenance`. Candidate refs may be isolated `feature/`, `adp/`, or `integration/` branches; protected `master`, `development`, and `main` refs are not valid candidate refs.
+
 ## Test-result artifacts
 
 Each declared test-result artifact is a ZIP containing exactly:
