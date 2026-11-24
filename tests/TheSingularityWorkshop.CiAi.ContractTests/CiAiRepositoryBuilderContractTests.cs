@@ -1,0 +1,105 @@
+using TheSingularityWorkshop.CiAi;
+
+internal static class CiAiRepositoryBuilderContractTests
+{
+    public static int Run()
+    {
+        var passed = 0;
+        Check("one builder composes badge, dependency, extension, and Gauntlet opt-in", () =>
+        {
+            var definition = CiAi.ForRepository("TrentBest/A")
+                .WithBadge(Badges.SithPolicy())
+                .WithDependency("TrentBest/B")
+                .WithGauntlet()
+                .Build();
+            Assert(definition.Badges.Single().ImageUrl(definition.Repository).EndsWith(
+                "/actions/workflows/sith-policy.yml/badge.svg", StringComparison.Ordinal), "live Sith badge URL changed");
+            Assert(definition.DependencyRepositories.SequenceEqual(new[] { "TrentBest/B" }), "dependency identity changed");
+            Assert(definition.Extensions.Single().Id == "Gauntlet.Registrar", "Gauntlet opt-in was not preserved");
+        });
+        Check("unbound and repository-bound fluent entry points compose the same model", () =>
+        {
+            var fromBound = CiAi.ForRepository("TrentBest/A").WithDependency("TrentBest/B").Build();
+            var fromUnbound = CiAi.WithDependency(new CiAiRepositoryDependency("TrentBest/B")).Build("TrentBest/A");
+            Assert(fromBound.DependencyRepositories.SequenceEqual(fromUnbound.DependencyRepositories),
+                "the two entry paths produced different dependency declarations");
+        });
+        Check("ordered fallback retains declaration order", () =>
+        {
+            var definition = CiAi.ForRepository("TrentBest/C")
+                .WithDependency(CiAi.Logic.Or("TrentBest/D", "TrentBest/E", "TrentBest/F")).Build();
+            Assert(definition.DependencyRepositories.SequenceEqual(
+                new[] { "TrentBest/D", "TrentBest/E", "TrentBest/F" }), "fallback order changed");
+        });
+        Check("unnamed and named development pipeline membership is deterministic", () =>
+        {
+            var baseline = CiAi.ForRepository("TrentBest/A").Build();
+            var named = CiAi.ForRepository("TrentBest/A").WithNamedDevelopmentPipeline("Core")
+                .WithNamedDevelopmentPipeline("Apps").WithNamedDevelopmentPipeline("Core").Build();
+            Assert(baseline.DevelopmentPipelines.SequenceEqual(new[] { "default" }), "default pipeline missing");
+            Assert(named.DevelopmentPipelines.SequenceEqual(new[] { "Core", "Apps" }), "named pipeline membership changed");
+        });
+        Check("ADP remains optional and separate from ordinary CI composition", () =>
+        {
+            var ordinary = CiAi.ForRepository("TrentBest/A").Build();
+            var autonomous = CiAi.ForRepository("TrentBest/A")
+                .WithADP(new CiAiAdpSettings(2)).Build();
+            Assert(!ordinary.AutonomousDevelopmentEnabled && ordinary.AdpSettings is null,
+                "ordinary CI unexpectedly enabled ADP");
+            Assert(autonomous.AutonomousDevelopmentEnabled &&
+                autonomous.AdpSettings!.MaximumRepairAttempts == 2 &&
+                autonomous.AdpSettings.RequireHumanApprovalForWrites, "ADP policy was not preserved");
+        });
+        Check("LLM allocation retains bounded provider/model budgets", () =>
+        {
+            var allocation = new CiAiLlmAllocation("OpenAI", "model-x", 2, 30, 50_000,
+                TimeSpan.FromMinutes(15), CiAiLlmPriority.High);
+            var result = CiAi.ForRepository("TrentBest/A").WithLLMAllocation(allocation).Build().LlmAllocation!;
+            Assert(result.Provider == "OpenAI" && result.Model == "model-x" &&
+                result.MaximumConcurrentCalls == 2 && result.MaximumCallsPerWindow == 30 &&
+                result.MaximumTokensPerWindow == 50_000 && result.Window == TimeSpan.FromMinutes(15) &&
+                result.Priority == CiAiLlmPriority.High, "allocation limits changed");
+        });
+        Check("self-dependencies and duplicate declarations fail closed", () =>
+        {
+            Throws<ArgumentException>(() => CiAi.ForRepository("TrentBest/A").WithDependency("TrentBest/A"));
+            Throws<InvalidOperationException>(() => CiAi.ForRepository("TrentBest/A")
+                .WithDependency("TrentBest/B").WithDependency("TrentBest/B"));
+            Throws<ArgumentException>(() => CiAi.Logic.Or("TrentBest/B", "TrentBest/B"));
+        });
+        Check("built definitions are immutable snapshots", () =>
+        {
+            var firstBuilder = CiAi.ForRepository("TrentBest/A").WithDependency("TrentBest/B");
+            var first = firstBuilder.Build();
+            var second = firstBuilder.WithDependency("TrentBest/C").Build();
+            Assert(first.DependencyRepositories.SequenceEqual(new[] { "TrentBest/B" }), "earlier snapshot mutated");
+            Assert(second.DependencyRepositories.SequenceEqual(new[] { "TrentBest/B", "TrentBest/C" }),
+                "new immutable builder snapshot lost a declaration");
+        });
+        Check("invalid allocation and ADP budgets are rejected", () =>
+        {
+            Throws<ArgumentOutOfRangeException>(() => new CiAiAdpSettings(11));
+            Throws<ArgumentOutOfRangeException>(() => new CiAiLlmAllocation("OpenAI", "x", maximumConcurrentCalls: 0));
+            Throws<ArgumentOutOfRangeException>(() => new CiAiLlmAllocation("OpenAI", "x", priority: (CiAiLlmPriority)99));
+        });
+        return passed;
+
+        void Check(string name, Action action)
+        {
+            try { action(); passed++; }
+            catch (Exception exception) { throw new InvalidOperationException($"CiAi repository composition contract failed: {name}", exception); }
+        }
+    }
+
+    private static void Assert(bool condition, string message)
+    {
+        if (!condition) throw new InvalidOperationException(message);
+    }
+
+    private static void Throws<TException>(Action action) where TException : Exception
+    {
+        try { action(); }
+        catch (TException) { return; }
+        throw new InvalidOperationException($"Expected {typeof(TException).Name}.");
+    }
+}
