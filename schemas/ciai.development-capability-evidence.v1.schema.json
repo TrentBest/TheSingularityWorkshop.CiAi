@@ -101,8 +101,9 @@
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["name", "workflowPath"],
+        "required": ["jobKey", "name", "workflowPath"],
         "properties": {
+          "jobKey": { "type": "string", "minLength": 1 },
           "name": { "type": "string", "minLength": 1 },
           "workflowPath": { "type": "string", "minLength": 1 }
         },
