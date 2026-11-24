@@ -45,6 +45,22 @@ internal static class ExecutionArtifactReadyNoticeClientTests
                 "metadata-only notice was not serialized using the v1 camelCase wire shape");
             Assert(!body.Contains("fixture-token-value", StringComparison.Ordinal),
                 "credential leaked into the request body");
+            using var noticeDocument = JsonDocument.Parse(body);
+            var noticeRoot = noticeDocument.RootElement;
+            var manifest = noticeRoot.GetProperty("manifest");
+            var requiredManifestFields = new[]
+            {
+                "requestId", "operationId", "idempotencyKey", "providerRepository", "sourceSha",
+                "createdAt", "expiresAt", "artifactId", "digestAlgorithm", "digest", "mediaType",
+                "sizeBytes", "retrievalUri", "clientIdentity"
+            };
+            var hasRequiredManifestFields = true;
+            foreach (var field in requiredManifestFields)
+                hasRequiredManifestFields &= manifest.TryGetProperty(field, out _);
+            Assert(noticeRoot.GetProperty("contractVersion").GetInt32() == 1 &&
+                hasRequiredManifestFields &&
+                noticeRoot.GetProperty("recipientIdentity").GetString() == manifest.GetProperty("clientIdentity").GetString(),
+                "notice is missing a required FSM_Execution v1 identity or manifest field");
         }
 
         using (var http = ResponseClient(HttpStatusCode.OK, Receipt(notice, "duplicate")))
@@ -234,8 +250,8 @@ internal static class ExecutionArtifactReadyNoticeClientTests
             new HttpClient(), new Uri("https://execution.example/api/v1/other"),
             new FixtureCredentials("token")));
 
-        Console.WriteLine("PASS: 19 FSM_Execution artifact-ready ingress client contract checks.");
-        return 19;
+        Console.WriteLine("PASS: 20 FSM_Execution artifact-ready ingress client contract checks.");
+        return 20;
     }
 
     private static HttpClient ResponseClient(HttpStatusCode status, string body) =>
