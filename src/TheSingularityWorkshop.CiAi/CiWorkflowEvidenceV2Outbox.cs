@@ -162,8 +162,8 @@ public sealed class FileCiWorkflowEvidenceV2Outbox
             records.Add(record);
         }
 
-        if (records.Select(record => record.DeliveryId).Distinct(StringComparer.Ordinal).Count() != records.Length ||
-            records.Select(record => record.IdempotencyKey).Distinct(StringComparer.Ordinal).Count() != records.Length)
+        if (records.Select(record => record.DeliveryId).Distinct(StringComparer.Ordinal).Count() != records.Count ||
+            records.Select(record => record.IdempotencyKey).Distinct(StringComparer.Ordinal).Count() != records.Count)
             throw new InvalidDataException("v2 evidence outbox contains duplicate delivery or attempt identities.");
         return records.ToArray();
     }
