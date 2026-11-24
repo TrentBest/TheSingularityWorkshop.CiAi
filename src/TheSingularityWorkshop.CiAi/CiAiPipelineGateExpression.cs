@@ -179,7 +179,7 @@ public sealed record CiAiRepositoryGateReference : CiAiGateExpression
 /// <summary>Normalized verified evidence for a composite repository-gate leaf.</summary>
 public sealed record CiAiRepositoryGateEvaluation
 {
-    public CiAiRepositoryGateEvaluation(
+    internal CiAiRepositoryGateEvaluation(
         string repository,
         string candidateId,
         string commitSha,
