@@ -116,11 +116,6 @@ permission      - name: Require the trusted development workflow revision for ma
         with:
           ref: ${{ steps.resolve-target.outputs.sha }}
           submodules: recursive
-nputs.target_branch != ''
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          ref: ${{ steps.resolve-target.outputs.sha }}
-          submodules: recursive
       - name: Verify checkout provenance
         id: provenance
         env:
@@ -323,7 +318,7 @@ nputs.target_branch != ''
         if: always()
         env:
           REPOSITORY: ${{ github.repository }}
-          TARGET_REF: ${{ inputs.target_branch || github.ref_name }}
+          TARGET_REF: ${{ steps.resolve-target.outputs.target_ref || github.ref_name }}
           TARGET_SHA: ${{ steps.provenance.outputs.sha || steps.resolve-target.outputs.sha || github.sha }}
           POLICY_PROFILE: ciai-contract-verification-v1
           JOB_STATUS: ${{ job.status }}
