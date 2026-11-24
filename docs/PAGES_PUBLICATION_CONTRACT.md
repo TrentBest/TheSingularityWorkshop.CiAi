@@ -71,7 +71,7 @@ CiAi coordinates contracts and evidence across specialized builders, validators,
 | Destination-specific automatic / manual / disabled policy | Implemented as a pure contract and evaluator |
 | Approval-required destination mode | Implemented as a pure contract and evaluator |
 | Fail-closed exact-attempt eligibility inputs | Implemented as a pure evaluator; provider binding remains future work |
-| Deterministic Pages plan and workflow generation | Not implemented |
+| Deterministic Pages plan expansion and pipeline composition | Implemented and contract-tested; latest verification pending |\n| Deterministic Actions workflow text generation with full-SHA action pins | Implemented; host-side validation and installation not yet implemented |
 | GitHub Actions Pages host adapter and deployment evidence | Not implemented |
 | Durable immutable last-good content retention | Not implemented |
 | Single serialized full-site publisher and rollback proof | Not implemented |
@@ -91,4 +91,4 @@ The first deterministic Pages declaration now exists in `CiPagesPublicationPlan`
 
 The expansion is deterministic, provider-neutral, and side-effect free. It rejects absolute/traversal/platform-dependent source paths, unsupported source branches, malformed identifiers, and invalid repository identities. The resulting destination policy is explicitly automatic with no human approval, while the existing evidence evaluator still blocks failed, incomplete, stale, or ambiguous attempts.
 
-This slice does **not** generate GitHub Actions YAML, invoke Actions, upload or retain artifacts, deploy Pages, or implement the Blazer shell. Those remain separate host-adapter and publication-lifecycle work. Contract tests are registered in the repository's executable contract-test runner; workflow evidence is pending until CI runs against the registration commit.
+This slice now includes `CiPagesWorkflowGenerator`, a pure deterministic generator for a GitHub Pages workflow. It requires full 40-character action commit SHAs for checkout, Pages configuration, artifact upload, and deployment; it emits read-only contents permissions, the Pages deployment permissions, an explicit `github-pages` environment, a site-entry-point check, and non-cancelling per-repository deployment concurrency. `CiPipelineBuilder.WithPages(...)` composes the validated Pages plan into the immutable pipeline definition. The generator emits workflow text only: it does not write into a repository, overwrite user-authored workflows, invoke Actions, upload or retain artifacts, or deploy Pages. The GitHub host adapter, workflow diff/validation and installation boundary, provider evidence collection, durable last-good retention, and Blazer shell remain outstanding. Generator and composition contract tests are registered in the executable test runner; verification of the latest commit is pending.
