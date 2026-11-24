@@ -348,6 +348,18 @@ internal static class CiTestResultReportTests
         return (report, archive);
     }
 
+    internal static (CiTestResultReport Report, CiTestResultArtifactArchive Archive) CreateFailingReportForDevelopmentCapability(bool protectedPush = false)
+    {
+        var trx = Encoding.UTF8.GetBytes(CreateTrx(
+            ("test-fail", "ProviderCapabilityMustRejectInvalidMotion", "Failed",
+                "Expected: accepted; Actual: rejected", "at Physics.Tests.CapabilityTests.ProviderCapabilityMustRejectInvalidMotion() in CapabilityTests.cs:line 42"),
+            total: 1, passed: 0, failed: 1, skipped: 0));
+        var evidence = CreatePacket("success", protectedPush: protectedPush);
+        var (source, archive) = CreateSourceAndArchive(trx, conclusion: "success", protectedPush: protectedPush);
+        var report = CiTestResultReport.ParseAndValidate(archive, evidence, source, RequiredPolicy, ObservedAt);
+        return (report, archive);
+    }
+
     private static CiWorkflowEvidencePacket CreatePacket(
         string conclusion,
         bool workflowTrusted = true,
