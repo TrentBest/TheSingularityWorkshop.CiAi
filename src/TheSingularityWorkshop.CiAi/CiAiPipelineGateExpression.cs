@@ -279,6 +279,7 @@ public sealed record CiAiRepositoryGateEvaluation
             string.Equals(evidence.CheckoutRef, binding.CheckoutRef, StringComparison.Ordinal) &&
             string.Equals(evidence.CheckoutSha, binding.CheckoutSha, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(evidence.ProviderJobName, binding.ProviderJobName, StringComparison.Ordinal) &&
+            string.Equals(evidence.ProviderJobKey, binding.ProviderJobKey, StringComparison.Ordinal) &&
             evidence.ProviderJobId == binding.ProviderJobId &&
             string.Equals(evidence.ArtifactName, binding.ArtifactName, StringComparison.Ordinal) &&
             evidence.ProviderArtifactId == binding.ProviderArtifactId &&
