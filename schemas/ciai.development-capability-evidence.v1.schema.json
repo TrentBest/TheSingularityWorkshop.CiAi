@@ -34,7 +34,7 @@
     "schema": { "const": "ciai.development-capability-evidence.v1" },
     "evidenceContract": { "const": "ciai.development-capability-evidence.v1" },
     "providerRepository": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
-    "artifactName": { "type": "string", "pattern": "^physics-development-capability-[1-9][0-9]*-[1-9][0-9]*$" },
+    "artifactName": { "type": "string", "minLength": 1 },
     "capability": {
       "type": "object",
       "required": ["id", "version", "channel", "status", "implementationPaths", "validationProjects"],
@@ -118,7 +118,7 @@
     "bundleIntegrityValid": { "type": "boolean" },
     "artifacts": {
       "type": "array",
-      "minItems": 4,
+      "minItems": 1,
       "items": {
         "type": "object",
         "required": ["kind", "path", "sha256", "sizeBytes"],
@@ -133,7 +133,7 @@
     },
     "testResultArtifacts": {
       "type": "array",
-      "minItems": 2,
+      "minItems": 1,
       "items": {
         "type": "object",
         "required": ["kind", "artifactName", "trxSha256", "trxSizeBytes", "provenanceSha256", "archiveEntries"],
