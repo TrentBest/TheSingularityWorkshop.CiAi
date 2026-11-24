@@ -41,8 +41,9 @@ public static class CiAiDevelopmentCapabilityEvidenceContractTests
         var protectedPush = CiAiDevelopmentCapabilityEvidenceParser.ParseAndValidate(
             Payload(protectedPush: true),
             Binding(protectedPush: true));
-        Check(protectedPush.IsValid && protectedPush.Evidence is { IsProtectedPushEvidence: true },
-            "exact-protected-development-push-is-distinguished");
+        Check(protectedPush.IsEnvelopeValid && !protectedPush.TestResultsVerified &&
+            protectedPush.Evidence is { IsProtectedPushEvidence: true },
+            "exact-protected-development-push-is-distinguished-before-test-archive-verification");
 
         var wrongSource = Mutate(Payload(), root => root["candidate"]!["sourceSha"] = new string('9', 40));
         Check(Error(wrongSource, Binding()) == "devcap.source-sha-mismatch", "source-sha-mismatch-fails-closed");
@@ -85,6 +86,159 @@ public static class CiAiDevelopmentCapabilityEvidenceContractTests
             "provider-job-conclusion-is-independently-bound");
 
         return passed;
+    }
+
+    internal static (CiAiDevelopmentCapabilityArtifactBinding Binding, CiAiDevelopmentCapabilityEvidenceValidation Validation)
+        CreateFullyVerifiedForGateTests(
+            bool protectedPush = false,
+            string capabilityId = CapabilityId,
+            string capabilityVersion = CapabilityVersion)
+    {
+        var (report, archive) = CiTestResultReportTests.CreatePassingReportForDevelopmentCapability(protectedPush);
+        var sourcePaths = new[] { "src/Capability.cs" };
+        var requiredSteps = new[] { "build", "test" };
+        var requiredKinds = new[] { "microbundle", "workflowProvenance" };
+        var testArtifactNames = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["microbundle"] = report.SourceArtifactName!
+        };
+        var dependencies = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["TrentBest/ExampleDependency"] = new string('d', 40)
+        };
+        var artifactName = "test-development-capability-" + report.RunId + "-" + report.RunAttempt;
+        var binding = new CiAiDevelopmentCapabilityArtifactBinding(
+            report.Repository,
+            capabilityId,
+            capabilityVersion,
+            report.CandidateRef,
+            report.CandidateSha,
+            report.WorkflowPath,
+            report.WorkflowDefinitionRef,
+            report.WorkflowDefinitionSha,
+            report.RunId,
+            report.RunAttempt,
+            report.EventName,
+            report.EventRef,
+            report.EventSha,
+            report.CandidateRef,
+            report.CandidateSha,
+            report.JobName,
+            report.SourceJobKey!,
+            report.JobId,
+            report.JobConclusion!,
+            artifactName,
+            9901,
+            "sha256:" + new string('c', 64),
+            4096,
+            false,
+            "test.development-capability",
+            1,
+            5203,
+            "0.1.0-alpha.1",
+            "test.mbundle",
+            testArtifactNames,
+            dependencies,
+            sourcePaths,
+            requiredSteps,
+            requiredKinds,
+            protectedPush);
+
+        var digest = new string('a', 64);
+        var payload = JsonSerializer.SerializeToUtf8Bytes(new
+        {
+            schema = CiAiDevelopmentCapabilityEvidenceParser.Schema,
+            evidenceContract = CiAiDevelopmentCapabilityEvidenceParser.Schema,
+            providerRepository = report.Repository,
+            artifactName,
+            capability = new
+            {
+                id = capabilityId,
+                version = capabilityVersion,
+                channel = "development",
+                status = "satisfied",
+                implementationPaths = sourcePaths,
+                validationProjects = new[] { "tests/Capability.Tests.csproj" }
+            },
+            candidate = new
+            {
+                id = report.Repository + "@" + report.CandidateSha,
+                sourceRef = report.CandidateRef,
+                sourceSha = report.CandidateSha
+            },
+            workflow = new
+            {
+                path = report.WorkflowPath,
+                @ref = report.WorkflowDefinitionRef,
+                sha = report.WorkflowDefinitionSha,
+                runId = report.RunId,
+                runAttempt = report.RunAttempt,
+                eventName = report.EventName,
+                eventRef = report.EventRef,
+                eventSha = report.EventSha
+            },
+            checkout = new
+            {
+                @ref = report.CandidateRef,
+                sha = report.CandidateSha,
+                dependencies = new[]
+                {
+                    new { repository = "TrentBest/ExampleDependency", checkoutSha = new string('d', 40) }
+                }
+            },
+            pullRequest = (object?)null,
+            requiredJobs = new[]
+            {
+                new { jobKey = report.SourceJobKey, name = report.JobName, workflowPath = report.WorkflowPath }
+            },
+            requiredStepIds = requiredSteps,
+            stepOutcomes = requiredSteps.ToDictionary(name => name, _ => "success"),
+            requiredArtifacts = requiredKinds,
+            artifactsComplete = true,
+            identityValid = true,
+            sourceFilesComplete = true,
+            bundleIntegrityValid = true,
+            artifacts = new[]
+            {
+                new { kind = "microbundle", path = "test.mbundle", sha256 = digest, sizeBytes = 512 },
+                new { kind = "workflowProvenance", path = "provenance.json", sha256 = archive.ProvenanceSha256, sizeBytes = 512 }
+            },
+            testResultArtifacts = new[]
+            {
+                new
+                {
+                    kind = "microbundle",
+                    artifactName = report.SourceArtifactName,
+                    trxSha256 = archive.TrxSha256,
+                    trxSizeBytes = archive.TrxBytes.Length,
+                    provenanceSha256 = archive.ProvenanceSha256,
+                    archiveEntries = new[] { "results.trx", "provenance.json" }
+                }
+            },
+            sourceFiles = new[] { new { path = sourcePaths[0], sha256 = digest, sizeBytes = 128 } },
+            microBundle = new
+            {
+                bundleId = 5203,
+                version = "0.1.0-alpha.1",
+                file = "test.mbundle",
+                isNuGetPackage = false,
+                isPublished = false
+            },
+            policy = new { id = "test.development-capability", version = 1 },
+            observedAtUtc = report.ObservedAt.ToString("O"),
+            status = "satisfied",
+            satisfied = true
+        });
+        var envelope = CiAiDevelopmentCapabilityEvidenceParser.ParseAndValidate(payload, binding);
+        var verifiedTest = CiAiDevelopmentCapabilityVerifiedTestArtifact.FromVerifiedReport("microbundle", archive, report);
+        var validation = CiAiDevelopmentCapabilityEvidenceVerifier.VerifyTestResults(
+            binding,
+            envelope,
+            new Dictionary<string, CiAiDevelopmentCapabilityVerifiedTestArtifact>(StringComparer.Ordinal)
+            {
+                ["microbundle"] = verifiedTest
+            });
+        return (binding, validation);
     }
 
     internal static CiAiDevelopmentCapabilityArtifactBinding CreateBindingForGateTests(
