@@ -6,6 +6,7 @@ var passed = 0;
 passed += GitHubWorkItemEventTests.Run();
 passed += AgentOnboardingValidatorTests.Run();
 passed += AiCiBuilderContractTests.Run();
+passed += CiAiRepositoryBuilderContractTests.Run();
 passed += CiPipelineDefinitionContractTests.Run();
 passed += CiPublicationPolicyContractTests.Run();
 passed += CiPagesPublicationPlanContractTests.Run();
