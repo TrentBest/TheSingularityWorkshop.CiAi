@@ -97,6 +97,45 @@ internal static class CiPagesPublicationPlanContractTests
             Throws<ArgumentException>(() => builder.WithPages(valid with { SourcePath = "../escape" }));
         });
 
+
+        Check("Pages workflow generation is deterministic and pins every external action", () =>
+        {
+            var pins = new CiPagesActionPins(new string('a', 40), new string('b', 40),
+                new string('c', 40), new string('d', 40));
+            var first = CiPagesWorkflowGenerator.Generate(valid, pins);
+            var second = CiPagesWorkflowGenerator.Generate(valid, pins);
+            Assert(first == second, "equivalent Pages inputs generated different workflow text");
+            Assert(first.Contains("actions/checkout@" + pins.Checkout, StringComparison.Ordinal) &&
+                   first.Contains("actions/configure-pages@" + pins.ConfigurePages, StringComparison.Ordinal) &&
+                   first.Contains("actions/upload-pages-artifact@" + pins.UploadPagesArtifact, StringComparison.Ordinal) &&
+                   first.Contains("actions/deploy-pages@" + pins.DeployPages, StringComparison.Ordinal),
+                "generated workflow omitted immutable action pins");
+        });
+
+        Check("Pages workflow serializes deployments and uses least-privilege permissions", () =>
+        {
+            var pins = new CiPagesActionPins(new string('a', 40), new string('b', 40),
+                new string('c', 40), new string('d', 40));
+            var workflow = CiPagesWorkflowGenerator.Generate(valid, pins);
+            Assert(workflow.Contains("cancel-in-progress: false", StringComparison.Ordinal),
+                "Pages deployment concurrency can cancel a publication in flight");
+            Assert(workflow.Contains("pages: write", StringComparison.Ordinal) &&
+                   workflow.Contains("id-token: write", StringComparison.Ordinal) &&
+                   workflow.Contains("contents: read", StringComparison.Ordinal),
+                "Pages workflow permissions are incomplete");
+            Assert(workflow.Contains("test -f \\"site/index.html\\"", StringComparison.Ordinal),
+                "Pages workflow does not validate its entry point");
+            Assert(workflow.Contains("workflow_dispatch:", StringComparison.Ordinal),
+                "manual diagnostic invocation is missing");
+        });
+
+        Check("Pages workflow generator rejects mutable or malformed action references", () =>
+        {
+            var pins = new CiPagesActionPins("v4", new string('b', 40),
+                new string('c', 40), new string('d', 40));
+            Throws<ArgumentException>(() => CiPagesWorkflowGenerator.Generate(valid, pins));
+        });
+
         return passed;
 
         void Check(string name, Action action)
