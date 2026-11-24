@@ -419,7 +419,7 @@ internal static class CiTestResultReportTests
         };
         var observed = new CiWorkflowRunEvidenceObservation(
             Repository, ".github/workflows/ci.yml", RunId, RunAttempt,
-            checkoutRef, CandidateSha, eventName, "Validation",
+            "refs/heads/development", CandidateSha, eventName, "Validation",
             CiRunStatus.Completed,
             conclusion == "success" ? CiRunConclusion.Success : CiRunConclusion.Failure,
             new Uri($"https://github.com/{Repository}/actions/runs/{RunId}"),
