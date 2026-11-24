@@ -14,16 +14,19 @@ public sealed record CiWorkflowEvidencePacketV2
     public const int CurrentContractVersion = 2;
     public const string CurrentSchema = "ciai.workflow-evidence.v2";
 
+    private readonly string? _payloadJson;
     private readonly string? _payloadSha256;
 
     private CiWorkflowEvidencePacketV2(
         CiWorkflowEvidencePacket workflowEvidence,
         IReadOnlyList<CiWorkflowRequiredCheckObservation> requiredChecks,
+        string? payloadJson = null,
         string? payloadSha256 = null)
     {
         WorkflowEvidence = workflowEvidence;
         RequiredChecks = Array.AsReadOnly(requiredChecks.ToArray());
         Validate();
+        _payloadJson = payloadJson;
         _payloadSha256 = payloadSha256;
     }
 
@@ -128,6 +131,8 @@ public sealed record CiWorkflowEvidencePacketV2
     public string ToJson(bool indented = true)
     {
         Validate();
+        if (!indented && _payloadJson is not null)
+            return _payloadJson;
         using var workflowDocument = JsonDocument.Parse(WorkflowEvidence.ToJson(indented: false));
         var envelope = new
         {
@@ -203,7 +208,7 @@ public sealed record CiWorkflowEvidencePacketV2
         if (!expectedChecks.SequenceEqual(checks))
             throw new InvalidDataException("Workflow evidence v2 required-check observations do not match the nested provider-observed job list.");
 
-        var packet = new CiWorkflowEvidencePacketV2(workflowEvidence, checks, expectedPayloadSha256.ToLowerInvariant());
+        var packet = new CiWorkflowEvidencePacketV2(workflowEvidence, checks, json, expectedPayloadSha256.ToLowerInvariant());
         if (!string.Equals(packet.Repository, expectedRepository, StringComparison.OrdinalIgnoreCase) ||
             packet.RunId != expectedRunId || packet.RunAttempt != expectedRunAttempt)
             throw new InvalidDataException("Workflow evidence v2 does not match the expected repository, run, attempt, or canonical payload digest.");
