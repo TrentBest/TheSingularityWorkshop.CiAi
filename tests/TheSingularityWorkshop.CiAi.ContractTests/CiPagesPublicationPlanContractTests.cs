@@ -68,6 +68,35 @@ internal static class CiPagesPublicationPlanContractTests
                 "malformed Pages repository/source was accepted");
         });
 
+
+        Check("pipeline builder composes Pages declaratively and exposes the expanded plan", () =>
+        {
+            var definition = new CiPipelineBuilder("TrentBest/TheSingularityWorkshop.CiAi")
+                .On(CiPipelineTrigger.Manual)
+                .WithPages(valid)
+                .Build();
+            Assert(definition.PagesPlans.Count == 1 && definition.PagesPlans[0].IsValid,
+                "pipeline definition did not retain its Pages plan");
+            Assert(definition.PagesPlans[0].PublicationPolicy.Mode == CiPublicationMode.Automatic,
+                "pipeline Pages plan lost its automatic destination policy");
+        });
+
+        Check("pipeline builder rejects Pages repository mismatch and duplicate Pages destinations", () =>
+        {
+            var builder = new CiPipelineBuilder("TrentBest/TheSingularityWorkshop.CiAi")
+                .On(CiPipelineTrigger.Manual);
+            Throws<ArgumentException>(() => builder.WithPages(valid with { Repository = "Other/Repository" }));
+            builder.WithPages(valid);
+            Throws<InvalidOperationException>(() => builder.WithPages(valid));
+        });
+
+        Check("pipeline builder refuses invalid Pages declarations", () =>
+        {
+            var builder = new CiPipelineBuilder("TrentBest/TheSingularityWorkshop.CiAi")
+                .On(CiPipelineTrigger.Manual);
+            Throws<ArgumentException>(() => builder.WithPages(valid with { SourcePath = "../escape" }));
+        });
+
         return passed;
 
         void Check(string name, Action action)
