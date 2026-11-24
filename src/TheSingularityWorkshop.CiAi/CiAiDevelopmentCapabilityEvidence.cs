@@ -1,0 +1,430 @@
+using System.Security.Cryptography;
+using System.Text.Json;
+
+namespace TheSingularityWorkshop.CiAi;
+
+/// <summary>Exact GitHub API metadata and policy inputs required to validate one development-capability artifact.</summary>
+public sealed record CiAiDevelopmentCapabilityArtifactBinding(
+    string ProviderRepository,
+    string CapabilityId,
+    string CapabilityVersion,
+    string SourceRef,
+    string SourceSha,
+    string WorkflowPath,
+    string WorkflowRef,
+    string WorkflowSha,
+    long WorkflowRunId,
+    int WorkflowAttempt,
+    string EventName,
+    string EventRef,
+    string EventSha,
+    string CheckoutRef,
+    string CheckoutSha,
+    string ProviderJobName,
+    long ProviderJobId,
+    string ProviderJobConclusion,
+    string ArtifactName,
+    long ProviderArtifactId,
+    string ArtifactDigest,
+    long ArtifactSizeBytes,
+    bool ArtifactExpired,
+    string PolicyId,
+    int PolicyVersion,
+    long BundleId,
+    string BundleVersion,
+    IReadOnlyDictionary<string, string> ExpectedDependencyCheckouts,
+    IReadOnlyList<string> ExpectedSourcePaths,
+    IReadOnlyList<string> RequiredStepIds,
+    IReadOnlyList<string> RequiredArtifactKinds,
+    bool IsProtectedDevelopmentBranch);
+
+/// <summary>One exact test-result archive declared by the capability envelope.</summary>
+public sealed record CiAiDevelopmentCapabilityTestArtifact(
+    string Kind,
+    string ArtifactName,
+    string TrxSha256,
+    long TrxSizeBytes,
+    string ProvenanceSha256);
+
+/// <summary>Verified development capability evidence. The artifact digest and job identity come from GitHub API metadata.</summary>
+public sealed record CiAiDevelopmentCapabilityEvidence(
+    string ProviderRepository,
+    string CapabilityId,
+    string CapabilityVersion,
+    string SourceRef,
+    string SourceSha,
+    string WorkflowPath,
+    string WorkflowRef,
+    string WorkflowSha,
+    long WorkflowRunId,
+    int WorkflowAttempt,
+    string EventName,
+    string EventRef,
+    string EventSha,
+    string CheckoutRef,
+    string CheckoutSha,
+    string ProviderJobName,
+    long ProviderJobId,
+    string ArtifactName,
+    long ProviderArtifactId,
+    string ArtifactDigest,
+    long ArtifactSizeBytes,
+    string PolicyId,
+    int PolicyVersion,
+    long BundleId,
+    string BundleVersion,
+    IReadOnlyDictionary<string, string> DependencyCheckouts,
+    IReadOnlyList<CiAiDevelopmentCapabilityTestArtifact> TestArtifacts,
+    bool IsProtectedPushEvidence);
+
+/// <summary>Fail-closed result for parsing and validating a versioned development-capability evidence envelope.</summary>
+public sealed record CiAiDevelopmentCapabilityEvidenceValidation(
+    bool IsValid,
+    string? ErrorCode,
+    CiAiDevelopmentCapabilityEvidence? Evidence);
+
+/// <summary>
+/// Validates the provider-generated development-capability envelope against independently observed GitHub
+/// workflow-run, job, artifact, source, dependency, and policy metadata. The JSON payload is untrusted.
+/// </summary>
+public static class CiAiDevelopmentCapabilityEvidenceParser
+{
+    public const string Schema = "ciai.development-capability-evidence.v1";
+    public const int DefaultMaximumPayloadBytes = 1024 * 1024;
+
+    public static CiAiDevelopmentCapabilityEvidenceValidation ParseAndValidate(
+        ReadOnlyMemory<byte> payload,
+        CiAiDevelopmentCapabilityArtifactBinding binding,
+        int maximumPayloadBytes = DefaultMaximumPayloadBytes)
+    {
+        ArgumentNullException.ThrowIfNull(binding);
+        if (maximumPayloadBytes <= 0 || maximumPayloadBytes > DefaultMaximumPayloadBytes)
+            throw new ArgumentOutOfRangeException(nameof(maximumPayloadBytes));
+        if (payload.IsEmpty || payload.Length > maximumPayloadBytes)
+            return Invalid("devcap.payload-size-invalid");
+
+        try
+        {
+            ValidateBinding(binding);
+            using var document = JsonDocument.Parse(payload, new JsonDocumentOptions
+            {
+                AllowTrailingCommas = false,
+                CommentHandling = JsonCommentHandling.Disallow,
+                MaxDepth = 32
+            });
+            var root = document.RootElement;
+            Ensure(root.ValueKind == JsonValueKind.Object, "devcap.root-invalid");
+            Ensure(ReadString(root, "schema") == Schema, "devcap.schema-mismatch");
+            Ensure(ReadString(root, "evidenceContract") == Schema, "devcap.contract-mismatch");
+            Ensure(ReadString(root, "providerRepository") == binding.ProviderRepository, "devcap.provider-repository-mismatch");
+            Ensure(ReadString(root, "artifactName") == binding.ArtifactName, "devcap.artifact-name-mismatch");
+
+            var capability = ReadObject(root, "capability");
+            Ensure(ReadString(capability, "id") == binding.CapabilityId, "devcap.capability-id-mismatch");
+            Ensure(ReadString(capability, "version") == binding.CapabilityVersion, "devcap.capability-version-mismatch");
+            Ensure(ReadString(capability, "channel") == "development", "devcap.channel-invalid");
+            Ensure(ReadString(capability, "status") == "satisfied", "devcap.capability-not-satisfied");
+
+            var candidate = ReadObject(root, "candidate");
+            Ensure(ReadString(candidate, "id") == binding.ProviderRepository + "@" + binding.SourceSha, "devcap.candidate-id-mismatch");
+            Ensure(ReadString(candidate, "sourceRef") == binding.SourceRef, "devcap.source-ref-mismatch");
+            Ensure(ReadSha(candidate, "sourceSha") == binding.SourceSha, "devcap.source-sha-mismatch");
+
+            var workflow = ReadObject(root, "workflow");
+            Ensure(ReadString(workflow, "path") == binding.WorkflowPath, "devcap.workflow-path-mismatch");
+            Ensure(ReadString(workflow, "ref") == binding.WorkflowRef, "devcap.workflow-ref-mismatch");
+            Ensure(ReadSha(workflow, "sha") == binding.WorkflowSha, "devcap.workflow-sha-mismatch");
+            Ensure(ReadInt64(workflow, "runId") == binding.WorkflowRunId, "devcap.run-id-mismatch");
+            Ensure(ReadInt32(workflow, "runAttempt") == binding.WorkflowAttempt, "devcap.run-attempt-mismatch");
+            Ensure(ReadString(workflow, "eventName") == binding.EventName, "devcap.event-name-mismatch");
+            Ensure(ReadString(workflow, "eventRef") == binding.EventRef, "devcap.event-ref-mismatch");
+            Ensure(ReadSha(workflow, "eventSha") == binding.EventSha, "devcap.event-sha-mismatch");
+
+            var checkout = ReadObject(root, "checkout");
+            Ensure(ReadString(checkout, "ref") == binding.CheckoutRef, "devcap.checkout-ref-mismatch");
+            Ensure(ReadSha(checkout, "sha") == binding.CheckoutSha, "devcap.checkout-sha-mismatch");
+            Ensure(binding.CheckoutSha == binding.SourceSha, "devcap.checkout-not-candidate-sha");
+
+            var dependencyCheckouts = ReadDependencies(checkout);
+            Ensure(DictionaryEquals(dependencyCheckouts, binding.ExpectedDependencyCheckouts), "devcap.dependency-checkout-mismatch");
+
+            var requiredJobs = ReadArray(root, "requiredJobs");
+            Ensure(requiredJobs.Length == 1, "devcap.required-jobs-invalid");
+            Ensure(ReadString(requiredJobs[0], "name") == binding.ProviderJobName, "devcap.job-name-mismatch");
+            Ensure(ReadString(requiredJobs[0], "workflowPath") == binding.WorkflowPath, "devcap.job-workflow-mismatch");
+            Ensure(binding.ProviderJobConclusion == "success", "devcap.provider-job-not-successful");
+            Ensure(binding.ProviderJobId > 0, "devcap.provider-job-id-invalid");
+
+            var requiredStepIds = ReadStringArray(root, "requiredStepIds");
+            Ensure(SetEquals(requiredStepIds, binding.RequiredStepIds), "devcap.required-step-set-mismatch");
+            var outcomes = ReadObject(root, "stepOutcomes");
+            foreach (var stepId in binding.RequiredStepIds)
+                Ensure(ReadString(outcomes, stepId) == "success", "devcap.required-step-not-successful:" + stepId);
+
+            var requiredArtifacts = ReadStringArray(root, "requiredArtifacts");
+            Ensure(SetEquals(requiredArtifacts, binding.RequiredArtifactKinds), "devcap.required-artifact-set-mismatch");
+            Ensure(ReadBoolean(root, "artifactsComplete"), "devcap.artifacts-incomplete");
+            Ensure(ReadBoolean(root, "identityValid"), "devcap.identity-invalid");
+            Ensure(ReadBoolean(root, "sourceFilesComplete"), "devcap.source-files-incomplete");
+            Ensure(ReadBoolean(root, "bundleIntegrityValid"), "devcap.bundle-integrity-invalid");
+            Ensure(ReadBoolean(root, "satisfied"), "devcap.satisfied-flag-false");
+
+            var artifacts = ReadArray(root, "artifacts");
+            ValidateArtifacts(artifacts, binding.RequiredArtifactKinds);
+            var sourceFiles = ReadArray(root, "sourceFiles");
+            ValidateSourceFiles(sourceFiles, binding.ExpectedSourcePaths);
+
+            var testArtifacts = ValidateTestArtifacts(
+                ReadArray(root, "testResultArtifacts"),
+                binding.WorkflowRunId,
+                binding.WorkflowAttempt);
+
+            var microBundle = ReadObject(root, "microBundle");
+            Ensure(ReadInt64(microBundle, "bundleId") == binding.BundleId, "devcap.bundle-id-mismatch");
+            Ensure(ReadString(microBundle, "version") == binding.BundleVersion, "devcap.bundle-version-mismatch");
+            Ensure(ReadString(microBundle, "file") == "physics-prescribed-kinematic-motion.mbundle", "devcap.bundle-file-mismatch");
+            Ensure(!ReadBoolean(microBundle, "isNuGetPackage"), "devcap.bundle-misclassified-as-nuget");
+            Ensure(!ReadBoolean(microBundle, "isPublished"), "devcap.development-capability-published");
+
+            var policy = ReadObject(root, "policy");
+            Ensure(ReadString(policy, "id") == binding.PolicyId, "devcap.policy-id-mismatch");
+            Ensure(ReadInt32(policy, "version") == binding.PolicyVersion, "devcap.policy-version-mismatch");
+
+            Ensure(ReadString(root, "status") == "satisfied", "devcap.status-not-satisfied");
+            Ensure(RepositoryIdentity.IsValid(binding.ProviderRepository), "devcap.expected-provider-invalid");
+            Ensure(IsSha(binding.ArtifactDigest), "devcap.provider-artifact-digest-invalid");
+            Ensure(binding.ArtifactSizeBytes > 0, "devcap.provider-artifact-size-invalid");
+            Ensure(!binding.ArtifactExpired, "devcap.provider-artifact-expired");
+
+            var protectedPush =
+                binding.IsProtectedDevelopmentBranch &&
+                binding.SourceRef == "refs/heads/development" &&
+                binding.EventName == "push" &&
+                binding.EventRef == binding.SourceRef &&
+                binding.EventSha == binding.SourceSha;
+
+            var evidence = new CiAiDevelopmentCapabilityEvidence(
+                binding.ProviderRepository,
+                binding.CapabilityId,
+                binding.CapabilityVersion,
+                binding.SourceRef,
+                binding.SourceSha,
+                binding.WorkflowPath,
+                binding.WorkflowRef,
+                binding.WorkflowSha,
+                binding.WorkflowRunId,
+                binding.WorkflowAttempt,
+                binding.EventName,
+                binding.EventRef,
+                binding.EventSha,
+                binding.CheckoutRef,
+                binding.CheckoutSha,
+                binding.ProviderJobName,
+                binding.ProviderJobId,
+                binding.ArtifactName,
+                binding.ProviderArtifactId,
+                binding.ArtifactDigest,
+                binding.ArtifactSizeBytes,
+                binding.PolicyId,
+                binding.PolicyVersion,
+                binding.BundleId,
+                binding.BundleVersion,
+                dependencyCheckouts,
+                testArtifacts,
+                protectedPush);
+            return new CiAiDevelopmentCapabilityEvidenceValidation(true, null, evidence);
+        }
+        catch (InvalidDataException exception)
+        {
+            return Invalid(exception.Message);
+        }
+        catch (JsonException)
+        {
+            return Invalid("devcap.json-invalid");
+        }
+        catch (InvalidOperationException)
+        {
+            return Invalid("devcap.json-shape-invalid");
+        }
+    }
+
+    private static void ValidateBinding(CiAiDevelopmentCapabilityArtifactBinding binding)
+    {
+        Ensure(RepositoryIdentity.IsValid(binding.ProviderRepository), "devcap.expected-provider-invalid");
+        Ensure(IsSha(binding.SourceSha) && IsSha(binding.WorkflowSha) && IsSha(binding.EventSha) && IsSha(binding.CheckoutSha),
+            "devcap.expected-sha-invalid");
+        Ensure(binding.WorkflowRunId > 0 && binding.WorkflowAttempt > 0, "devcap.expected-run-identity-invalid");
+        Ensure(binding.ProviderArtifactId > 0 && binding.ProviderJobId > 0, "devcap.expected-provider-object-id-invalid");
+        Ensure(binding.ArtifactSizeBytes > 0 && IsSha(binding.ArtifactDigest), "devcap.expected-artifact-metadata-invalid");
+        Ensure(!binding.ArtifactExpired, "devcap.provider-artifact-expired");
+        Ensure(binding.ProviderJobConclusion == "success", "devcap.provider-job-not-successful");
+        Ensure(binding.ExpectedDependencyCheckouts is not null && binding.ExpectedDependencyCheckouts.Count > 0,
+            "devcap.expected-dependencies-missing");
+        Ensure(binding.ExpectedSourcePaths is not null && binding.ExpectedSourcePaths.Count > 0,
+            "devcap.expected-source-paths-missing");
+        Ensure(binding.RequiredStepIds is not null && binding.RequiredStepIds.Count > 0,
+            "devcap.required-step-policy-missing");
+        Ensure(binding.RequiredArtifactKinds is not null && binding.RequiredArtifactKinds.Count > 0,
+            "devcap.required-artifact-policy-missing");
+    }
+
+    private static Dictionary<string, string> ReadDependencies(JsonElement checkout)
+    {
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var item in ReadArray(checkout, "dependencies"))
+        {
+            var repository = ReadString(item, "repository");
+            var sha = ReadSha(item, "checkoutSha");
+            Ensure(RepositoryIdentity.IsValid(repository), "devcap.dependency-repository-invalid");
+            Ensure(result.TryAdd(repository, sha), "devcap.dependency-duplicate");
+        }
+        return result;
+    }
+
+    private static void ValidateArtifacts(JsonElement[] artifacts, IReadOnlyList<string> requiredKinds)
+    {
+        var found = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var item in artifacts)
+        {
+            var kind = ReadString(item, "kind");
+            Ensure(found.Add(kind), "devcap.artifact-kind-duplicate");
+            _ = ReadString(item, "path");
+            Ensure(IsSha(ReadString(item, "sha256")), "devcap.artifact-digest-invalid:" + kind);
+            Ensure(ReadInt64(item, "sizeBytes") > 0, "devcap.artifact-size-invalid:" + kind);
+        }
+        Ensure(SetEquals(found, requiredKinds), "devcap.artifact-kind-set-mismatch");
+    }
+
+    private static void ValidateSourceFiles(JsonElement[] files, IReadOnlyList<string> expectedPaths)
+    {
+        var found = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var item in files)
+        {
+            var path = ReadString(item, "path");
+            Ensure(found.Add(path), "devcap.source-file-duplicate");
+            Ensure(IsSha(ReadString(item, "sha256")), "devcap.source-file-digest-invalid");
+            Ensure(ReadInt64(item, "sizeBytes") > 0, "devcap.source-file-size-invalid");
+        }
+        Ensure(SetEquals(found, expectedPaths), "devcap.source-file-set-mismatch");
+    }
+
+    private static IReadOnlyList<CiAiDevelopmentCapabilityTestArtifact> ValidateTestArtifacts(
+        JsonElement[] artifacts,
+        long runId,
+        int attempt)
+    {
+        Ensure(artifacts.Length == 2, "devcap.test-artifact-count-invalid");
+        var expected = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["microbundle"] = "physics-microbundle-test-results-" + runId + "-" + attempt,
+            ["physicsSolution"] = "physics-solution-test-results-" + runId + "-" + attempt
+        };
+        var results = new List<CiAiDevelopmentCapabilityTestArtifact>(2);
+        var found = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var item in artifacts)
+        {
+            var kind = ReadString(item, "kind");
+            Ensure(expected.TryGetValue(kind, out var artifactName), "devcap.test-artifact-kind-invalid");
+            Ensure(found.Add(kind), "devcap.test-artifact-kind-duplicate");
+            Ensure(ReadString(item, "artifactName") == artifactName, "devcap.test-artifact-name-mismatch");
+            var entries = ReadStringArray(item, "archiveEntries");
+            Ensure(SetEquals(entries, new[] { "results.trx", "provenance.json" }), "devcap.test-archive-entry-set-invalid");
+            var trxSha = ReadString(item, "trxSha256");
+            var provenanceSha = ReadString(item, "provenanceSha256");
+            Ensure(IsSha(trxSha) && IsSha(provenanceSha), "devcap.test-artifact-digest-invalid");
+            var trxSize = ReadInt64(item, "trxSizeBytes");
+            Ensure(trxSize > 0, "devcap.test-artifact-size-invalid");
+            results.Add(new CiAiDevelopmentCapabilityTestArtifact(kind, artifactName!, trxSha, trxSize, provenanceSha));
+        }
+        Ensure(found.Count == 2, "devcap.test-artifact-set-invalid");
+        return results.AsReadOnly();
+    }
+
+    private static JsonElement ReadObject(JsonElement parent, string name)
+    {
+        Ensure(parent.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Object,
+            "devcap.object-missing:" + name);
+        return value;
+    }
+
+    private static JsonElement[] ReadArray(JsonElement parent, string name)
+    {
+        Ensure(parent.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Array,
+            "devcap.array-missing:" + name);
+        return value.EnumerateArray().ToArray();
+    }
+
+    private static string[] ReadStringArray(JsonElement parent, string name)
+    {
+        var values = ReadArray(parent, name);
+        return values.Select(value =>
+        {
+            Ensure(value.ValueKind == JsonValueKind.String, "devcap.array-string-invalid:" + name);
+            return value.GetString()!;
+        }).ToArray();
+    }
+
+    private static string ReadString(JsonElement parent, string name)
+    {
+        Ensure(parent.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String,
+            "devcap.string-missing:" + name);
+        var result = value.GetString()!;
+        Ensure(result.Length is > 0 and <= 1024, "devcap.string-length-invalid:" + name);
+        return result;
+    }
+
+    private static string ReadSha(JsonElement parent, string name)
+    {
+        var value = ReadString(parent, name);
+        Ensure(IsSha(value), "devcap.sha-invalid:" + name);
+        return value.ToLowerInvariant();
+    }
+
+    private static long ReadInt64(JsonElement parent, string name)
+    {
+        Ensure(parent.TryGetProperty(name, out var value) && value.TryGetInt64(out var number),
+            "devcap.integer-missing:" + name);
+        return number;
+    }
+
+    private static int ReadInt32(JsonElement parent, string name)
+    {
+        Ensure(parent.TryGetProperty(name, out var value) && value.TryGetInt32(out var number),
+            "devcap.integer-missing:" + name);
+        return number;
+    }
+
+    private static bool ReadBoolean(JsonElement parent, string name)
+    {
+        Ensure(parent.TryGetProperty(name, out var value) &&
+            (value.ValueKind == JsonValueKind.True || value.ValueKind == JsonValueKind.False),
+            "devcap.boolean-missing:" + name);
+        return value.GetBoolean();
+    }
+
+    private static bool DictionaryEquals(
+        IReadOnlyDictionary<string, string> actual,
+        IReadOnlyDictionary<string, string> expected)
+    {
+        if (actual.Count != expected.Count) return false;
+        foreach (var pair in expected)
+            if (!actual.TryGetValue(pair.Key, out var value) ||
+                !string.Equals(value, pair.Value, StringComparison.OrdinalIgnoreCase))
+                return false;
+        return true;
+    }
+
+    private static bool SetEquals(IEnumerable<string> actual, IEnumerable<string> expected) =>
+        new HashSet<string>(actual, StringComparer.Ordinal).SetEquals(expected);
+
+    private static bool IsSha(string value) =>
+        value.Length == 64 && value.All(Uri.IsHexDigit);
+
+    private static void Ensure(bool condition, string errorCode)
+    {
+        if (!condition) throw new InvalidDataException(errorCode);
+    }
+
+    private static CiAiDevelopmentCapabilityEvidenceValidation Invalid(string errorCode) =>
+        new(false, errorCode, null);
+}
