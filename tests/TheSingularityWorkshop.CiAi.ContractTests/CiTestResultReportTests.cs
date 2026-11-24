@@ -341,7 +341,8 @@ internal static class CiTestResultReportTests
         bool checkoutMatches = true)
     {
         var eventRef = "refs/pull/17/merge";
-        var provenanceJson = $$"""
+        var checkoutRef = "refs/heads/feature/minesweeper-domain-pilot";
+        var provenanceJson = $"""
         {
           "schema": "{{CiWorkflowProvenanceRecord.CurrentSchema}}",
           "repository": "{{Repository}}",
@@ -357,12 +358,12 @@ internal static class CiTestResultReportTests
             "sha": "{{CandidateSha}}",
             "pullRequest": {
               "number": 17,
-              "head": { "ref": "feature/minesweeper-domain-pilot", "sha": "cccccccccccccccccccccccccccccccccccccccc" },
+              "head": { "ref": "feature/minesweeper-domain-pilot", "sha": "{{CandidateSha}}" },
               "base": { "ref": "development", "sha": "dddddddddddddddddddddddddddddddddddddddd" }
             }
           },
           "checkout": {
-            "ref": "{{eventRef}}",
+            "ref": "{{checkoutRef}}",
             "sha": "{{(checkoutMatches ? CandidateSha : new string('c', 40))}}"
           }
         }
@@ -385,7 +386,7 @@ internal static class CiTestResultReportTests
         };
         var observed = new CiWorkflowRunEvidenceObservation(
             Repository, ".github/workflows/ci.yml", RunId, RunAttempt,
-            "refs/heads/development", CandidateSha, "pull_request", "Validation",
+            checkoutRef, CandidateSha, "pull_request", "Validation",
             CiRunStatus.Completed,
             conclusion == "success" ? CiRunConclusion.Success : CiRunConclusion.Failure,
             new Uri($"https://github.com/{Repository}/actions/runs/{RunId}"),
