@@ -20,6 +20,7 @@ public sealed record CiAiDevelopmentCapabilityArtifactBinding(
     string CheckoutRef,
     string CheckoutSha,
     string ProviderJobName,
+    string ProviderJobKey,
     long ProviderJobId,
     string ProviderJobConclusion,
     string ArtifactName,
@@ -165,8 +166,11 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
             var requiredJobs = ReadArray(root, "requiredJobs");
             Ensure(requiredJobs.Length == 1, "devcap.required-jobs-invalid");
             Ensure(ReadString(requiredJobs[0], "name") == binding.ProviderJobName, "devcap.job-name-mismatch");
+            Ensure(ReadString(requiredJobs[0], "jobKey") == binding.ProviderJobKey, "devcap.job-key-mismatch");
             Ensure(ReadString(requiredJobs[0], "workflowPath") == binding.WorkflowPath, "devcap.job-workflow-mismatch");
-            Ensure(binding.ProviderJobConclusion == "success", "devcap.provider-job-not-successful");
+            Ensure(!string.IsNullOrWhiteSpace(binding.ProviderJobName) && !string.IsNullOrWhiteSpace(binding.ProviderJobKey),
+            "devcap.expected-provider-job-identity-missing");
+        Ensure(binding.ProviderJobConclusion == "success", "devcap.provider-job-not-successful");
             Ensure(binding.ProviderJobId > 0, "devcap.provider-job-id-invalid");
 
             var requiredStepIds = ReadStringArray(root, "requiredStepIds");
@@ -236,6 +240,7 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
                 binding.CheckoutRef,
                 binding.CheckoutSha,
                 binding.ProviderJobName,
+                binding.ProviderJobKey,
                 binding.ProviderJobId,
                 binding.ArtifactName,
                 binding.ProviderArtifactId,
