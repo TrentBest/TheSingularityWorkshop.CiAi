@@ -31,6 +31,8 @@ public sealed record CiAiDevelopmentCapabilityArtifactBinding(
     int PolicyVersion,
     long BundleId,
     string BundleVersion,
+    string BundleFile,
+    IReadOnlyDictionary<string, string> ExpectedTestResultArtifacts,
     IReadOnlyDictionary<string, string> ExpectedDependencyCheckouts,
     IReadOnlyList<string> ExpectedSourcePaths,
     IReadOnlyList<string> RequiredStepIds,
@@ -187,13 +189,12 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
 
             var testArtifacts = ValidateTestArtifacts(
                 ReadArray(root, "testResultArtifacts"),
-                binding.WorkflowRunId,
-                binding.WorkflowAttempt);
+                binding.ExpectedTestResultArtifacts);
 
             var microBundle = ReadObject(root, "microBundle");
             Ensure(ReadInt64(microBundle, "bundleId") == binding.BundleId, "devcap.bundle-id-mismatch");
             Ensure(ReadString(microBundle, "version") == binding.BundleVersion, "devcap.bundle-version-mismatch");
-            Ensure(ReadString(microBundle, "file") == "physics-prescribed-kinematic-motion.mbundle", "devcap.bundle-file-mismatch");
+            Ensure(ReadString(microBundle, "file") == binding.BundleFile, "devcap.bundle-file-mismatch");
             Ensure(!ReadBoolean(microBundle, "isNuGetPackage"), "devcap.bundle-misclassified-as-nuget");
             Ensure(!ReadBoolean(microBundle, "isPublished"), "devcap.development-capability-published");
 
@@ -276,6 +277,9 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
         Ensure(binding.CheckoutRef == binding.SourceRef, "devcap.expected-checkout-ref-mismatch");
         Ensure(binding.WorkflowRef.EndsWith("@" + binding.EventRef, StringComparison.Ordinal),
             "devcap.expected-workflow-event-ref-mismatch");
+        Ensure(binding.ExpectedTestResultArtifacts is not null && binding.ExpectedTestResultArtifacts.Count > 0,
+            "devcap.expected-test-artifacts-missing");
+        Ensure(!string.IsNullOrWhiteSpace(binding.BundleFile), "devcap.expected-bundle-file-missing");
         Ensure(binding.ExpectedDependencyCheckouts is not null && binding.ExpectedDependencyCheckouts.Count > 0,
             "devcap.expected-dependencies-missing");
         Ensure(binding.ExpectedSourcePaths is not null && binding.ExpectedSourcePaths.Count > 0,
@@ -328,21 +332,15 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
 
     private static IReadOnlyList<CiAiDevelopmentCapabilityTestArtifact> ValidateTestArtifacts(
         JsonElement[] artifacts,
-        long runId,
-        int attempt)
+        IReadOnlyDictionary<string, string> expectedArtifacts)
     {
-        Ensure(artifacts.Length == 2, "devcap.test-artifact-count-invalid");
-        var expected = new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["microbundle"] = "physics-microbundle-test-results-" + runId + "-" + attempt,
-            ["physicsSolution"] = "physics-solution-test-results-" + runId + "-" + attempt
-        };
-        var results = new List<CiAiDevelopmentCapabilityTestArtifact>(2);
+        Ensure(artifacts.Length == expectedArtifacts.Count, "devcap.test-artifact-count-invalid");
+        var results = new List<CiAiDevelopmentCapabilityTestArtifact>(artifacts.Length);
         var found = new HashSet<string>(StringComparer.Ordinal);
         foreach (var item in artifacts)
         {
             var kind = ReadString(item, "kind");
-            if (!expected.TryGetValue(kind, out var artifactName))
+            if (!expectedArtifacts.TryGetValue(kind, out var artifactName))
                 throw new InvalidDataException("devcap.test-artifact-kind-invalid");
             Ensure(found.Add(kind), "devcap.test-artifact-kind-duplicate");
             Ensure(ReadString(item, "artifactName") == artifactName, "devcap.test-artifact-name-mismatch");
@@ -353,9 +351,9 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
             Ensure(IsSha256(trxSha) && IsSha256(provenanceSha), "devcap.test-artifact-digest-invalid");
             var trxSize = ReadInt64(item, "trxSizeBytes");
             Ensure(trxSize > 0, "devcap.test-artifact-size-invalid");
-            results.Add(new CiAiDevelopmentCapabilityTestArtifact(kind, artifactName!, trxSha, trxSize, provenanceSha));
+            results.Add(new CiAiDevelopmentCapabilityTestArtifact(kind, artifactName, trxSha, trxSize, provenanceSha));
         }
-        Ensure(found.Count == 2, "devcap.test-artifact-set-invalid");
+        Ensure(found.Count == expectedArtifacts.Count, "devcap.test-artifact-set-invalid");
         return results.AsReadOnly();
     }
 
