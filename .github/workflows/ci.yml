@@ -79,6 +79,7 @@ jobs:
         with:
           ref: ${{ github.sha }}
           submodules: recursive
+          persist-credentials: false
       - name: Resolve optional branch or exact SHA target
         id: resolve-target
         if: github.event_name == 'workflow_dispatch' && (inputs.target_branch != '' || inputs.target_sha != '')
@@ -127,6 +128,7 @@ jobs:
         with:
           ref: ${{ steps.resolve-target.outputs.sha }}
           submodules: recursive
+          persist-credentials: false
       - name: Verify checkout provenance
         id: provenance
         env:
