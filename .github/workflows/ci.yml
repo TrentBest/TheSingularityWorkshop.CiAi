@@ -52,7 +52,18 @@ on:
         type: string
         default: ""
 
-permission      - name: Require the trusted development workflow revision for manual candidate verification
+permissions:
+  contents: read
+
+concurrency:
+  group: ciai-contract-${{ github.ref }}-${{ inputs.target_sha || inputs.target_branch || 'default' }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require the trusted development workflow revision for manual candidate verification
         if: github.event_name == 'workflow_dispatch'
         env:
           WORKFLOW_REF: ${{ github.ref }}
@@ -318,7 +329,7 @@ permission      - name: Require the trusted development workflow revision for ma
         if: always()
         env:
           REPOSITORY: ${{ github.repository }}
-          TARGET_REF: ${{ steps.resolve-target.outputs.target_ref || github.ref_name }}
+          TARGET_REF: ${{ inputs.target_branch || github.ref_name }}
           TARGET_SHA: ${{ steps.provenance.outputs.sha || steps.resolve-target.outputs.sha || github.sha }}
           POLICY_PROFILE: ciai-contract-verification-v1
           JOB_STATUS: ${{ job.status }}
