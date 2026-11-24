@@ -20,7 +20,7 @@ internal static class CiAiRepositoryBuilderContractTests
         Check("unbound and repository-bound fluent entry points compose the same model", () =>
         {
             var fromBound = CiAi.ForRepository("TrentBest/A").WithDependency("TrentBest/B").Build();
-            var fromUnbound = CiAi.WithDependency(new CiAiRepositoryDependency("TrentBest/B")).Build("TrentBest/A");
+            var fromUnbound = CiAi.WithDependency(CiAi.Resolve("B")).Build("TrentBest/A");
             var ownerRelative = CiAi.ForRepository("TrentBest/A")
                 .WithDependency(CiAi.Resolve("OtherRepo", "runtime")).Build();
             Assert(ownerRelative.Dependencies.Single() is CiAiRepositoryDependency resolved &&
