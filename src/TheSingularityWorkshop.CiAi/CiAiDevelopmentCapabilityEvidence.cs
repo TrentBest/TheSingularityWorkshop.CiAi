@@ -128,21 +128,21 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
             var candidate = ReadObject(root, "candidate");
             Ensure(ReadString(candidate, "id") == binding.ProviderRepository + "@" + binding.SourceSha, "devcap.candidate-id-mismatch");
             Ensure(ReadString(candidate, "sourceRef") == binding.SourceRef, "devcap.source-ref-mismatch");
-            Ensure(ReadSha(candidate, "sourceSha") == binding.SourceSha, "devcap.source-sha-mismatch");
+            Ensure(ReadGitSha(candidate, "sourceSha") == binding.SourceSha, "devcap.source-sha-mismatch");
 
             var workflow = ReadObject(root, "workflow");
             Ensure(ReadString(workflow, "path") == binding.WorkflowPath, "devcap.workflow-path-mismatch");
             Ensure(ReadString(workflow, "ref") == binding.WorkflowRef, "devcap.workflow-ref-mismatch");
-            Ensure(ReadSha(workflow, "sha") == binding.WorkflowSha, "devcap.workflow-sha-mismatch");
+            Ensure(ReadGitSha(workflow, "sha") == binding.WorkflowSha, "devcap.workflow-sha-mismatch");
             Ensure(ReadInt64(workflow, "runId") == binding.WorkflowRunId, "devcap.run-id-mismatch");
             Ensure(ReadInt32(workflow, "runAttempt") == binding.WorkflowAttempt, "devcap.run-attempt-mismatch");
             Ensure(ReadString(workflow, "eventName") == binding.EventName, "devcap.event-name-mismatch");
             Ensure(ReadString(workflow, "eventRef") == binding.EventRef, "devcap.event-ref-mismatch");
-            Ensure(ReadSha(workflow, "eventSha") == binding.EventSha, "devcap.event-sha-mismatch");
+            Ensure(ReadGitSha(workflow, "eventSha") == binding.EventSha, "devcap.event-sha-mismatch");
 
             var checkout = ReadObject(root, "checkout");
             Ensure(ReadString(checkout, "ref") == binding.CheckoutRef, "devcap.checkout-ref-mismatch");
-            Ensure(ReadSha(checkout, "sha") == binding.CheckoutSha, "devcap.checkout-sha-mismatch");
+            Ensure(ReadGitSha(checkout, "sha") == binding.CheckoutSha, "devcap.checkout-sha-mismatch");
             Ensure(binding.CheckoutSha == binding.SourceSha, "devcap.checkout-not-candidate-sha");
 
             var dependencyCheckouts = ReadDependencies(checkout);
@@ -251,11 +251,11 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
     private static void ValidateBinding(CiAiDevelopmentCapabilityArtifactBinding binding)
     {
         Ensure(RepositoryIdentity.IsValid(binding.ProviderRepository), "devcap.expected-provider-invalid");
-        Ensure(IsSha(binding.SourceSha) && IsSha(binding.WorkflowSha) && IsSha(binding.EventSha) && IsSha(binding.CheckoutSha),
+        Ensure(IsGitSha(binding.SourceSha) && IsGitSha(binding.WorkflowSha) && IsGitSha(binding.EventSha) && IsGitSha(binding.CheckoutSha),
             "devcap.expected-sha-invalid");
         Ensure(binding.WorkflowRunId > 0 && binding.WorkflowAttempt > 0, "devcap.expected-run-identity-invalid");
         Ensure(binding.ProviderArtifactId > 0 && binding.ProviderJobId > 0, "devcap.expected-provider-object-id-invalid");
-        Ensure(binding.ArtifactSizeBytes > 0 && IsSha(binding.ArtifactDigest), "devcap.expected-artifact-metadata-invalid");
+        Ensure(binding.ArtifactSizeBytes > 0 && IsProviderArtifactDigest(binding.ArtifactDigest), "devcap.expected-artifact-metadata-invalid");
         Ensure(!binding.ArtifactExpired, "devcap.provider-artifact-expired");
         Ensure(binding.ProviderJobConclusion == "success", "devcap.provider-job-not-successful");
         Ensure(binding.ExpectedDependencyCheckouts is not null && binding.ExpectedDependencyCheckouts.Count > 0,
@@ -274,7 +274,7 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
         foreach (var item in ReadArray(checkout, "dependencies"))
         {
             var repository = ReadString(item, "repository");
-            var sha = ReadSha(item, "checkoutSha");
+            var sha = ReadGitSha(item, "checkoutSha");
             Ensure(RepositoryIdentity.IsValid(repository), "devcap.dependency-repository-invalid");
             Ensure(result.TryAdd(repository, sha), "devcap.dependency-duplicate");
         }
@@ -289,7 +289,7 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
             var kind = ReadString(item, "kind");
             Ensure(found.Add(kind), "devcap.artifact-kind-duplicate");
             _ = ReadString(item, "path");
-            Ensure(IsSha(ReadString(item, "sha256")), "devcap.artifact-digest-invalid:" + kind);
+            Ensure(IsSha256(ReadString(item, "sha256")), "devcap.artifact-digest-invalid:" + kind);
             Ensure(ReadInt64(item, "sizeBytes") > 0, "devcap.artifact-size-invalid:" + kind);
         }
         Ensure(SetEquals(found, requiredKinds), "devcap.artifact-kind-set-mismatch");
@@ -302,7 +302,7 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
         {
             var path = ReadString(item, "path");
             Ensure(found.Add(path), "devcap.source-file-duplicate");
-            Ensure(IsSha(ReadString(item, "sha256")), "devcap.source-file-digest-invalid");
+            Ensure(IsSha256(ReadString(item, "sha256")), "devcap.source-file-digest-invalid");
             Ensure(ReadInt64(item, "sizeBytes") > 0, "devcap.source-file-size-invalid");
         }
         Ensure(SetEquals(found, expectedPaths), "devcap.source-file-set-mismatch");
@@ -324,14 +324,15 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
         foreach (var item in artifacts)
         {
             var kind = ReadString(item, "kind");
-            Ensure(expected.TryGetValue(kind, out var artifactName), "devcap.test-artifact-kind-invalid");
+            if (!expected.TryGetValue(kind, out var artifactName))
+                throw new InvalidDataException("devcap.test-artifact-kind-invalid");
             Ensure(found.Add(kind), "devcap.test-artifact-kind-duplicate");
             Ensure(ReadString(item, "artifactName") == artifactName, "devcap.test-artifact-name-mismatch");
             var entries = ReadStringArray(item, "archiveEntries");
             Ensure(SetEquals(entries, new[] { "results.trx", "provenance.json" }), "devcap.test-archive-entry-set-invalid");
             var trxSha = ReadString(item, "trxSha256");
             var provenanceSha = ReadString(item, "provenanceSha256");
-            Ensure(IsSha(trxSha) && IsSha(provenanceSha), "devcap.test-artifact-digest-invalid");
+            Ensure(IsSha256(trxSha) && IsSha256(provenanceSha), "devcap.test-artifact-digest-invalid");
             var trxSize = ReadInt64(item, "trxSizeBytes");
             Ensure(trxSize > 0, "devcap.test-artifact-size-invalid");
             results.Add(new CiAiDevelopmentCapabilityTestArtifact(kind, artifactName!, trxSha, trxSize, provenanceSha));
@@ -342,15 +343,15 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
 
     private static JsonElement ReadObject(JsonElement parent, string name)
     {
-        Ensure(parent.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Object,
-            "devcap.object-missing:" + name);
+        if (!parent.TryGetProperty(name, out var value) || value.ValueKind != JsonValueKind.Object)
+            throw new InvalidDataException("devcap.object-missing:" + name);
         return value;
     }
 
     private static JsonElement[] ReadArray(JsonElement parent, string name)
     {
-        Ensure(parent.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Array,
-            "devcap.array-missing:" + name);
+        if (!parent.TryGetProperty(name, out var value) || value.ValueKind != JsonValueKind.Array)
+            throw new InvalidDataException("devcap.array-missing:" + name);
         return value.EnumerateArray().ToArray();
     }
 
@@ -366,39 +367,39 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
 
     private static string ReadString(JsonElement parent, string name)
     {
-        Ensure(parent.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String,
-            "devcap.string-missing:" + name);
+        if (!parent.TryGetProperty(name, out var value) || value.ValueKind != JsonValueKind.String)
+            throw new InvalidDataException("devcap.string-missing:" + name);
         var result = value.GetString()!;
         Ensure(result.Length is > 0 and <= 1024, "devcap.string-length-invalid:" + name);
         return result;
     }
 
-    private static string ReadSha(JsonElement parent, string name)
+    private static string ReadGitSha(JsonElement parent, string name)
     {
         var value = ReadString(parent, name);
-        Ensure(IsSha(value), "devcap.sha-invalid:" + name);
+        Ensure(IsGitSha(value), "devcap.sha-invalid:" + name);
         return value.ToLowerInvariant();
     }
 
     private static long ReadInt64(JsonElement parent, string name)
     {
-        Ensure(parent.TryGetProperty(name, out var value) && value.TryGetInt64(out var number),
-            "devcap.integer-missing:" + name);
+        if (!parent.TryGetProperty(name, out var value) || !value.TryGetInt64(out var number))
+            throw new InvalidDataException("devcap.integer-missing:" + name);
         return number;
     }
 
     private static int ReadInt32(JsonElement parent, string name)
     {
-        Ensure(parent.TryGetProperty(name, out var value) && value.TryGetInt32(out var number),
-            "devcap.integer-missing:" + name);
+        if (!parent.TryGetProperty(name, out var value) || !value.TryGetInt32(out var number))
+            throw new InvalidDataException("devcap.integer-missing:" + name);
         return number;
     }
 
     private static bool ReadBoolean(JsonElement parent, string name)
     {
-        Ensure(parent.TryGetProperty(name, out var value) &&
-            (value.ValueKind == JsonValueKind.True || value.ValueKind == JsonValueKind.False),
-            "devcap.boolean-missing:" + name);
+        if (!parent.TryGetProperty(name, out var value) ||
+            (value.ValueKind != JsonValueKind.True && value.ValueKind != JsonValueKind.False))
+            throw new InvalidDataException("devcap.boolean-missing:" + name);
         return value.GetBoolean();
     }
 
@@ -417,8 +418,14 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
     private static bool SetEquals(IEnumerable<string> actual, IEnumerable<string> expected) =>
         new HashSet<string>(actual, StringComparer.Ordinal).SetEquals(expected);
 
-    private static bool IsSha(string value) =>
+    private static bool IsGitSha(string value) =>
+        value.Length == 40 && value.All(Uri.IsHexDigit);
+
+    private static bool IsSha256(string value) =>
         value.Length == 64 && value.All(Uri.IsHexDigit);
+
+    private static bool IsProviderArtifactDigest(string value) =>
+        value.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase) && IsSha256(value[7..]);
 
     private static void Ensure(bool condition, string errorCode)
     {
