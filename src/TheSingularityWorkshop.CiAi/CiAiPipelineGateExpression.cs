@@ -251,7 +251,43 @@ public sealed record CiAiRepositoryGateEvaluation
     {
         ArgumentNullException.ThrowIfNull(binding);
         ArgumentNullException.ThrowIfNull(validation);
-        var valid = validation.IsValid && validation.Evidence is not null;
+        var evidence = validation.Evidence;
+        var protectedPush =
+            binding.IsProtectedDevelopmentBranch &&
+            binding.SourceRef == "refs/heads/development" &&
+            binding.EventName == "push" &&
+            binding.EventRef == binding.SourceRef &&
+            binding.EventSha == binding.SourceSha;
+        var valid = validation.IsValid &&
+            evidence is not null &&
+            string.Equals(evidence.ProviderRepository, binding.ProviderRepository, StringComparison.Ordinal) &&
+            string.Equals(evidence.CapabilityId, binding.CapabilityId, StringComparison.Ordinal) &&
+            string.Equals(evidence.CapabilityVersion, binding.CapabilityVersion, StringComparison.Ordinal) &&
+            string.Equals(evidence.SourceRef, binding.SourceRef, StringComparison.Ordinal) &&
+            string.Equals(evidence.SourceSha, binding.SourceSha, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(evidence.WorkflowPath, binding.WorkflowPath, StringComparison.Ordinal) &&
+            string.Equals(evidence.WorkflowRef, binding.WorkflowRef, StringComparison.Ordinal) &&
+            string.Equals(evidence.WorkflowSha, binding.WorkflowSha, StringComparison.OrdinalIgnoreCase) &&
+            evidence.WorkflowRunId == binding.WorkflowRunId &&
+            evidence.WorkflowAttempt == binding.WorkflowAttempt &&
+            string.Equals(evidence.EventName, binding.EventName, StringComparison.Ordinal) &&
+            string.Equals(evidence.EventRef, binding.EventRef, StringComparison.Ordinal) &&
+            string.Equals(evidence.EventSha, binding.EventSha, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(evidence.CheckoutRef, binding.CheckoutRef, StringComparison.Ordinal) &&
+            string.Equals(evidence.CheckoutSha, binding.CheckoutSha, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(evidence.ProviderJobName, binding.ProviderJobName, StringComparison.Ordinal) &&
+            evidence.ProviderJobId == binding.ProviderJobId &&
+            string.Equals(evidence.ArtifactName, binding.ArtifactName, StringComparison.Ordinal) &&
+            evidence.ProviderArtifactId == binding.ProviderArtifactId &&
+            string.Equals(evidence.ArtifactDigest, binding.ArtifactDigest, StringComparison.OrdinalIgnoreCase) &&
+            evidence.ArtifactSizeBytes == binding.ArtifactSizeBytes &&
+            string.Equals(evidence.PolicyId, binding.PolicyId, StringComparison.Ordinal) &&
+            evidence.PolicyVersion == binding.PolicyVersion &&
+            evidence.BundleId == binding.BundleId &&
+            string.Equals(evidence.BundleVersion, binding.BundleVersion, StringComparison.Ordinal) &&
+            DictionaryEquals(evidence.DependencyCheckouts, binding.ExpectedDependencyCheckouts) &&
+            evidence.TestArtifacts.Count == 2 &&
+            evidence.IsProtectedPushEvidence == protectedPush;
         return new CiAiRepositoryGateEvaluation(
             binding.ProviderRepository,
             binding.ProviderRepository + "@" + binding.SourceSha,
@@ -260,8 +296,20 @@ public sealed record CiAiRepositoryGateEvaluation
             binding.CapabilityId,
             binding.CapabilityVersion,
             valid ? CiAiPipelineGateState.Satisfied : CiAiPipelineGateState.Blocked,
-            validation.Evidence?.IsProtectedPushEvidence ?? false,
-            validation.ErrorCode);
+            valid && evidence is not null && evidence.IsProtectedPushEvidence,
+            valid ? null : validation.ErrorCode ?? "devcap.validation-binding-mismatch");
+    }
+
+    private static bool DictionaryEquals(
+        IReadOnlyDictionary<string, string> actual,
+        IReadOnlyDictionary<string, string> expected)
+    {
+        if (actual.Count != expected.Count) return false;
+        foreach (var pair in expected)
+            if (!actual.TryGetValue(pair.Key, out var value) ||
+                !string.Equals(value, pair.Value, StringComparison.OrdinalIgnoreCase))
+                return false;
+        return true;
     }
 }
 
