@@ -89,6 +89,7 @@ public sealed class FileCiWorkflowEvidenceV2Outbox
 
         var record = new OutboxRecord(delivery.DeliveryId, delivery.IdempotencyKey,
             delivery.Packet.Repository, delivery.Packet.RunId, delivery.Packet.RunAttempt,
+            delivery.Packet.RequiredChecks.Select(check => new CiWorkflowRequiredCheckBinding(check.Key, check.JobName)).ToArray(),
             delivery.Payload, delivery.PayloadSha256);
         Append(JsonSerializer.Serialize(record));
         return CiWorkflowEvidenceV2EnqueueOutcome.Enqueued;
@@ -106,7 +107,7 @@ public sealed class FileCiWorkflowEvidenceV2Outbox
             {
                 var packet = CiWorkflowEvidencePacketV2.FromJson(
                     record.Payload, record.Repository, record.RunId, record.RunAttempt,
-                    record.PayloadSha256, workflowDefinitionTrusted: false);
+                    record.PayloadSha256, record.RequiredChecks, workflowDefinitionTrusted: false);
                 var delivery = new CiWorkflowEvidenceV2Delivery(record.DeliveryId, packet);
                 if (!string.Equals(delivery.IdempotencyKey, record.IdempotencyKey, StringComparison.Ordinal) ||
                     !string.Equals(delivery.PayloadSha256, record.PayloadSha256, StringComparison.Ordinal))
@@ -152,6 +153,7 @@ public sealed class FileCiWorkflowEvidenceV2Outbox
                 !IsValidIdempotencyKey(record.IdempotencyKey) ||
                 !RepositoryIdentity.IsValid(record.Repository) ||
                 record.RunId <= 0 || record.RunAttempt <= 0 ||
+                record.RequiredChecks is null || record.RequiredChecks.Length == 0 ||
                 string.IsNullOrWhiteSpace(record.Payload) ||
                 record.PayloadSha256 is not { Length: 64 } ||
                 !record.PayloadSha256.All(Uri.IsHexDigit))
@@ -182,6 +184,7 @@ public sealed class FileCiWorkflowEvidenceV2Outbox
         string Repository,
         long RunId,
         int RunAttempt,
+        CiWorkflowRequiredCheckBinding[] RequiredChecks,
         string Payload,
         string PayloadSha256);
 }
