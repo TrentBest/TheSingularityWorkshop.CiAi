@@ -7,6 +7,8 @@ internal static class ExecutionArtifactReadyNoticeClientTests
 {
     public static async Task<int> RunAsync()
     {
+        Assert(ExecutionArtifactReadyNoticeClient.EndpointPath == "/api/foundry/ciai/artifacts/ready",
+            "sender route does not match the FSM_Execution v1 receiver contract");
         var notice = CreateNotice();
         string? capturedBody = null;
         string? capturedAuthorizationScheme = null;
