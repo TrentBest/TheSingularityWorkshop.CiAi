@@ -106,6 +106,9 @@ public static class CiAiDevelopmentCapabilityEvidenceContractTests
         var (report, archive) = testResultsPass
             ? CiTestResultReportTests.CreatePassingReportForDevelopmentCapability(protectedPush)
             : CiTestResultReportTests.CreateFailingReportForDevelopmentCapability(protectedPush);
+        var sourceRef = protectedPush
+            ? "refs/heads/development"
+            : "refs/heads/feature/minesweeper-domain-pilot";
         var sourcePaths = new[] { "src/Capability.cs" };
         var requiredSteps = new[] { "build", "test" };
         var requiredKinds = new[] { "microbundle", "workflowProvenance" };
@@ -122,7 +125,7 @@ public static class CiAiDevelopmentCapabilityEvidenceContractTests
             report.Repository,
             capabilityId,
             capabilityVersion,
-            report.CandidateRef,
+            sourceRef,
             report.CandidateSha,
             report.WorkflowPath,
             report.WorkflowDefinitionRef,
@@ -174,7 +177,7 @@ public static class CiAiDevelopmentCapabilityEvidenceContractTests
             candidate = new
             {
                 id = report.Repository + "@" + report.CandidateSha,
-                sourceRef = report.CandidateRef,
+                sourceRef,
                 sourceSha = report.CandidateSha
             },
             workflow = new
@@ -197,7 +200,12 @@ public static class CiAiDevelopmentCapabilityEvidenceContractTests
                     new { repository = "TrentBest/ExampleDependency", checkoutSha = new string('d', 40) }
                 }
             },
-            pullRequest = (object?)null,
+            pullRequest = protectedPush ? null : new
+            {
+                number = 17,
+                head = new { @ref = "feature/minesweeper-domain-pilot", sha = report.CandidateSha },
+                @base = new { @ref = "development", sha = report.WorkflowDefinitionSha }
+            },
             requiredJobs = new[]
             {
                 new { jobKey = report.SourceJobKey, name = report.JobName, workflowPath = report.WorkflowPath }
