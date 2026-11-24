@@ -86,6 +86,29 @@ public static class CiAiDevelopmentCapabilityEvidenceContractTests
         return passed;
     }
 
+    internal static CiAiDevelopmentCapabilityArtifactBinding CreateBindingForGateTests(
+        bool protectedPush = false,
+        string capabilityId = CapabilityId,
+        string capabilityVersion = CapabilityVersion,
+        string providerJobConclusion = "success") =>
+        Binding(
+            protectedPush: protectedPush,
+            providerJobConclusion: providerJobConclusion,
+            capabilityId: capabilityId,
+            capabilityVersion: capabilityVersion);
+
+    internal static CiAiDevelopmentCapabilityEvidenceValidation ParseValidationForGateTests(
+        bool protectedPush = false,
+        string capabilityId = CapabilityId,
+        string capabilityVersion = CapabilityVersion,
+        string providerJobConclusion = "success")
+    {
+        var binding = CreateBindingForGateTests(protectedPush, capabilityId, capabilityVersion, providerJobConclusion);
+        return CiAiDevelopmentCapabilityEvidenceParser.ParseAndValidate(
+            Payload(protectedPush, capabilityId, capabilityVersion),
+            binding);
+    }
+
     private static string? Error(byte[] payload, CiAiDevelopmentCapabilityArtifactBinding binding) =>
         CiAiDevelopmentCapabilityEvidenceParser.ParseAndValidate(payload, binding).ErrorCode;
 
@@ -96,7 +119,7 @@ public static class CiAiDevelopmentCapabilityEvidenceContractTests
         return Encoding.UTF8.GetBytes(root.ToJsonString());
     }
 
-    private static byte[] Payload(bool protectedPush = false)
+    private static byte[] Payload(bool protectedPush = false, string capabilityId = CapabilityId, string capabilityVersion = CapabilityVersion)
     {
         var sourceRef = protectedPush ? "refs/heads/development" : SourceRef;
         var eventName = protectedPush ? "push" : "pull_request";
@@ -122,8 +145,8 @@ public static class CiAiDevelopmentCapabilityEvidenceContractTests
             artifactName = "physics-development-capability-" + RunId + "-" + Attempt,
             capability = new
             {
-                id = CapabilityId,
-                version = CapabilityVersion,
+                id = capabilityId,
+                version = capabilityVersion,
                 channel = "development",
                 status = "satisfied",
                 implementationPaths = SourcePaths(),
@@ -219,7 +242,9 @@ public static class CiAiDevelopmentCapabilityEvidenceContractTests
         bool protectedPush = false,
         bool artifactExpired = false,
         string? artifactDigest = null,
-        string providerJobConclusion = "success")
+        string providerJobConclusion = "success",
+        string capabilityId = CapabilityId,
+        string capabilityVersion = CapabilityVersion)
     {
         var sourceRef = protectedPush ? "refs/heads/development" : SourceRef;
         var eventName = protectedPush ? "push" : "pull_request";
@@ -236,8 +261,8 @@ public static class CiAiDevelopmentCapabilityEvidenceContractTests
         };
         return new CiAiDevelopmentCapabilityArtifactBinding(
             Provider,
-            CapabilityId,
-            CapabilityVersion,
+            capabilityId,
+            capabilityVersion,
             sourceRef,
             SourceSha,
             WorkflowPath,
