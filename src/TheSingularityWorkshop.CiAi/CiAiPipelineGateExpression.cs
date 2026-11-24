@@ -257,7 +257,10 @@ public sealed record CiAiRepositoryGateEvaluation
             binding.SourceRef == "refs/heads/development" &&
             binding.EventName == "push" &&
             binding.EventRef == binding.SourceRef &&
-            binding.EventSha == binding.SourceSha;
+            binding.EventSha == binding.SourceSha &&
+            binding.WorkflowRef.EndsWith("@refs/heads/development", StringComparison.Ordinal) &&
+            binding.WorkflowSha == binding.SourceSha &&
+            binding.CheckoutRef == binding.SourceRef;
         var valid = validation.IsValid &&
             evidence is not null &&
             string.Equals(evidence.ProviderRepository, binding.ProviderRepository, StringComparison.Ordinal) &&
