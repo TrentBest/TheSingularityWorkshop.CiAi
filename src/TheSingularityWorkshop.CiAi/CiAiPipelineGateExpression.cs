@@ -296,6 +296,15 @@ public sealed record CiAiRepositoryGateEvaluation
                 string.Equals(item.Kind, pair.Key, StringComparison.Ordinal) &&
                 string.Equals(item.ArtifactName, pair.Value, StringComparison.Ordinal))) &&
             evidence.IsProtectedPushEvidence == protectedPush;
+        var waitingForTestArtifacts =
+            validation.IsEnvelopeValid &&
+            !validation.TestResultsVerified &&
+            validation.ErrorCode is null;
+        var state = valid
+            ? CiAiPipelineGateState.Satisfied
+            : waitingForTestArtifacts
+                ? CiAiPipelineGateState.Waiting
+                : CiAiPipelineGateState.Blocked;
         return new CiAiRepositoryGateEvaluation(
             binding.ProviderRepository,
             binding.ProviderRepository + "@" + binding.SourceSha,
@@ -303,9 +312,9 @@ public sealed record CiAiRepositoryGateEvaluation
             CiAiRepositoryGateEvidenceKind.DevelopmentCapability,
             binding.CapabilityId,
             binding.CapabilityVersion,
-            valid ? CiAiPipelineGateState.Satisfied : CiAiPipelineGateState.Blocked,
+            state,
             valid && evidence is not null && evidence.IsProtectedPushEvidence,
-            valid ? null : validation.ErrorCode ?? "devcap.validation-binding-mismatch");
+            valid || waitingForTestArtifacts ? null : validation.ErrorCode ?? "devcap.validation-binding-mismatch");
     }
 
     private static bool DictionaryEquals(
