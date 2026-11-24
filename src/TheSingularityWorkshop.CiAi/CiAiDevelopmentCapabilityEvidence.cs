@@ -77,10 +77,22 @@ public sealed record CiAiDevelopmentCapabilityEvidence(
     bool IsProtectedPushEvidence);
 
 /// <summary>Fail-closed result for parsing and validating a versioned development-capability evidence envelope.</summary>
-public sealed record CiAiDevelopmentCapabilityEvidenceValidation(
-    bool IsValid,
-    string? ErrorCode,
-    CiAiDevelopmentCapabilityEvidence? Evidence);
+public sealed record CiAiDevelopmentCapabilityEvidenceValidation
+{
+    internal CiAiDevelopmentCapabilityEvidenceValidation(
+        bool isValid,
+        string? errorCode,
+        CiAiDevelopmentCapabilityEvidence? evidence)
+    {
+        IsValid = isValid;
+        ErrorCode = errorCode;
+        Evidence = evidence;
+    }
+
+    public bool IsValid { get; }
+    public string? ErrorCode { get; }
+    public CiAiDevelopmentCapabilityEvidence? Evidence { get; }
+}
 
 /// <summary>
 /// Validates the provider-generated development-capability envelope against independently observed GitHub
