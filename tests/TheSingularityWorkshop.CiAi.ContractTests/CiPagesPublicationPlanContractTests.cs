@@ -110,5 +110,12 @@ internal static class CiPagesPublicationPlanContractTests
         {
             if (!condition) throw new InvalidOperationException(message);
         }
+
+        static void Throws<TException>(Action action) where TException : Exception
+        {
+            try { action(); }
+            catch (TException) { return; }
+            throw new InvalidOperationException($"Expected {typeof(TException).Name}.");
+        }
     }
 }
