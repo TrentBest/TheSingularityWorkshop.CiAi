@@ -54,6 +54,43 @@ internal static class CiWorkflowEvidenceDeliveryTests
             Assert(outbox.Enqueue(conflict) == CiWorkflowEvidenceEnqueueOutcome.Conflict,
                 "changed payload for the same workflow/checkout attempt did not conflict");
 
+            var v2Packet = CiWorkflowEvidencePacketV2.FromPacket(packet,
+                new[] { new CiWorkflowRequiredCheckBinding("build", "build") });
+            var v2Delivery = new CiWorkflowEvidenceV2Delivery("v2-delivery-1", v2Packet);
+            Assert(v2Delivery.PayloadSha256.Length == 64 &&
+                v2Delivery.IdempotencyKey.Length == 71 &&
+                v2Delivery.Payload.Contains("\"schema\":\"ciai.workflow-evidence.v2\"", StringComparison.Ordinal),
+                "v2 delivery did not preserve the canonical payload and stable attempt identity");
+            var v2OutboxPath = Path.Combine(root, "v2-outbox.jsonl");
+            var v2Outbox = new FileCiWorkflowEvidenceV2Outbox(v2OutboxPath);
+            Assert(v2Outbox.Enqueue(v2Delivery) == CiWorkflowEvidenceV2EnqueueOutcome.Enqueued,
+                "first v2 enqueue was not persisted");
+            Assert(v2Outbox.Enqueue(v2Delivery) == CiWorkflowEvidenceV2EnqueueOutcome.Duplicate,
+                "identical v2 retry was not deduplicated");
+            Assert(v2Outbox.Enqueue(new CiWorkflowEvidenceV2Delivery("v2-delivery-alias", v2Packet)) ==
+                CiWorkflowEvidenceV2EnqueueOutcome.Duplicate,
+                "v2 run attempt was not deduplicated across delivery IDs");
+            var v2Replay = new FileCiWorkflowEvidenceV2Outbox(v2OutboxPath).ReadPending();
+            Assert(v2Replay.Count == 1 && v2Replay[0].PayloadSha256 == v2Delivery.PayloadSha256 &&
+                !v2Replay[0].Packet.WorkflowEvidence.WorkflowDefinitionTrusted &&
+                !v2Replay[0].Packet.IsSuccessful,
+                "v2 outbox did not replay exact bytes or improperly restored host trust");
+            Assert(v2Outbox.ReadPending(new HashSet<string>(StringComparer.Ordinal) { v2Delivery.DeliveryId }).Count == 0,
+                "acknowledged v2 delivery was not suppressed from replay");
+            var v2Conflict = new CiWorkflowEvidenceV2Delivery("v2-delivery-conflict",
+                CiWorkflowEvidencePacketV2.FromPacket(
+                    CreatePacket(workflowName: "Changed workflow label"),
+                    new[] { new CiWorkflowRequiredCheckBinding("build", "build") }));
+            Assert(v2Outbox.Enqueue(v2Conflict) == CiWorkflowEvidenceV2EnqueueOutcome.Conflict,
+                "changed v2 payload for the same run attempt did not conflict");
+            var damagedV2Path = Path.Combine(root, "v2-outbox-damaged.jsonl");
+            File.WriteAllText(damagedV2Path, File.ReadAllText(v2OutboxPath).Replace(
+                "\"PayloadSha256\":\"" + v2Delivery.PayloadSha256 + "\"",
+                "\"PayloadSha256\":\"" + new string('0', 64) + "\"",
+                StringComparison.Ordinal));
+            AssertThrows<InvalidDataException>(() =>
+                new FileCiWorkflowEvidenceV2Outbox(damagedV2Path).ReadPending());
+
             var ledgerPath = Path.Combine(root, "v1-receipts.jsonl");
             var ledger = new FileCiWorkflowEvidenceReceiptLedger(ledgerPath);
             var accepted = new CiWorkflowEvidenceRemoteReceipt(
@@ -187,8 +224,8 @@ internal static class CiWorkflowEvidenceDeliveryTests
                 delivery.PayloadSha256, CiWorkflowEvidenceReceiptOutcome.Accepted,
                 DateTimeOffset.Parse("2026-10-31T02:11:00Z"), "not.allowed"));
 
-            Console.WriteLine("PASS: 30 CI workflow evidence v1 delivery and receipt checks.");
-            return 30;
+            Console.WriteLine("PASS: 37 CI workflow evidence v1/v2 delivery and receipt checks.");
+            return 37;
         }
         finally
         {
@@ -235,7 +272,11 @@ internal static class CiWorkflowEvidenceDeliveryTests
             Array.AsReadOnly(new[]
             {
                 new CiWorkflowStepObservation(1, "Build and test", "completed", "success", "2026-10-31T01:00:00Z")
-            }));
+            }))
+        {
+            StartedAt = DateTimeOffset.Parse("2026-10-31T00:59:00Z"),
+            CompletedAt = DateTimeOffset.Parse("2026-10-31T01:00:00Z")
+        };
         var observed = new CiWorkflowRunEvidenceObservation(
             "TrentBest/SimpleDemos", ".github/workflows/ci.yml", runId, 1,
             "refs/heads/development", eventSha, "push", workflowName,
