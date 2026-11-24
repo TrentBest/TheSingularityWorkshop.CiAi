@@ -287,6 +287,12 @@ public static class CiAiDevelopmentCapabilityEvidenceContractTests
             1,
             5203,
             BundleVersion,
+            "physics-prescribed-kinematic-motion.mbundle",
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["microbundle"] = "physics-microbundle-test-results-" + RunId + "-" + Attempt,
+                ["physicsSolution"] = "physics-solution-test-results-" + RunId + "-" + Attempt
+            },
             dependencies,
             SourcePaths(),
             RequiredSteps(),
