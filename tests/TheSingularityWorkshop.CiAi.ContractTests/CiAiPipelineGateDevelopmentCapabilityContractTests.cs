@@ -65,6 +65,17 @@ public static class CiAiPipelineGateDevelopmentCapabilityContractTests
             new Dictionary<string, CiAiRepositoryGateEvaluation> { [GateId] = invalid });
         Check(invalidState == CiAiPipelineGateState.Blocked, "invalid-terminal-provider-evidence-blocks");
 
+        var (failedTrxBinding, failedTrxValidation) =
+            CiAiDevelopmentCapabilityEvidenceContractTests.CreateFullyVerifiedForGateTests(testResultsPass: false);
+        var failedTrxEvaluation = CiAiRepositoryGateEvaluation.FromDevelopmentCapability(failedTrxBinding, failedTrxValidation);
+        Check(!failedTrxValidation.IsValid &&
+            failedTrxValidation.ErrorCode?.StartsWith("devcap.required-test-results-not-pass:", StringComparison.Ordinal) == true &&
+            CiAiPipelineGateEvaluator.Evaluate(
+                candidateExpression,
+                new Dictionary<string, CiAiRepositoryGateEvaluation> { [GateId] = failedTrxEvaluation }) ==
+            CiAiPipelineGateState.Blocked,
+            "self-reported-green-envelope-cannot-override-failing-verified-trx");
+
         var (wrongSubjectBinding, wrongSubjectValidation) =
             CiAiDevelopmentCapabilityEvidenceContractTests.CreateFullyVerifiedForGateTests(
                 capabilityId: "physics.other-capability.v1");
