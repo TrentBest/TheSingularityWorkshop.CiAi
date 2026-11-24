@@ -367,7 +367,7 @@ internal static class CiTestResultReportTests
         bool protectedPush = false)
     {
         var eventRef = protectedPush ? "refs/heads/development" : "refs/pull/17/merge";
-        var checkoutRef = protectedPush ? "refs/heads/development" : "refs/heads/feature/minesweeper-domain-pilot";
+        var checkoutRef = eventRef;
         var eventName = protectedPush ? "push" : "pull_request";
         var workflowSha = protectedPush ? CandidateSha : WorkflowSha;
         var pullRequestJson = protectedPush
