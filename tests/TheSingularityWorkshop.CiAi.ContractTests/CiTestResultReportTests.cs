@@ -343,10 +343,7 @@ internal static class CiTestResultReportTests
             ("test-3", "SkippedCase", "NotExecuted", null, null),
             total: 3, passed: 2, failed: 0, skipped: 1));
         var evidence = CreatePacket("success", protectedPush: protectedPush);
-        var archiveBytes = CreateArtifactArchive(trx, CreateProvenanceJson(evidence));
-        var digest = "sha256:" + Convert.ToHexString(SHA256.HashData(archiveBytes)).ToLowerInvariant();
-        var archive = CiTestResultArtifactArchive.Read(archiveBytes, digest, "results.trx", "provenance.json");
-        var source = CreateSource(trx, archiveBytes: archiveBytes, conclusion: "success", protectedPush: protectedPush);
+        var (source, archive) = CreateSourceAndArchive(trx, conclusion: "success", protectedPush: protectedPush);
         var report = CiTestResultReport.ParseAndValidate(archive, evidence, source, RequiredPolicy, ObservedAt);
         return (report, archive);
     }
@@ -432,6 +429,24 @@ internal static class CiTestResultReportTests
         bool isExpired = false,
         DateTimeOffset? createdAt = null,
         string conclusion = "failure",
+        bool protectedPush = false) =>
+        CreateSourceAndArchive(
+            payload, repository, jobId, artifactName, jobKey, artifactId, archiveDigest,
+            archiveSizeBytes, archiveBytes, isExpired, createdAt, conclusion, protectedPush).Source;
+
+    private static (CiTestResultArtifactSource Source, CiTestResultArtifactArchive Archive) CreateSourceAndArchive(
+        byte[] payload,
+        string? repository = null,
+        long? jobId = null,
+        string? artifactName = null,
+        string? jobKey = null,
+        long? artifactId = null,
+        string? archiveDigest = null,
+        long? archiveSizeBytes = null,
+        byte[]? archiveBytes = null,
+        bool isExpired = false,
+        DateTimeOffset? createdAt = null,
+        string conclusion = "failure",
         bool protectedPush = false)
     {
         var evidence = CreatePacket(conclusion, protectedPush: protectedPush);
@@ -471,8 +486,9 @@ internal static class CiTestResultReportTests
             observedArtifact, evidence, RequiredPolicy, jobId ?? JobId, jobKey ?? JobKey);
         var archive = CiTestResultArtifactArchive.Read(
             exactArchiveBytes, binding, "results.trx", "provenance.json");
-        return CiTestResultArtifactSource.FromVerifiedProviderObservation(
+        var source = CiTestResultArtifactSource.FromVerifiedProviderObservation(
             evidence, RequiredPolicy, binding, archive, "xUnit");
+        return (source, archive);
     }
 
     private static void MutateExposedMemory(ReadOnlyMemory<byte> memory)
