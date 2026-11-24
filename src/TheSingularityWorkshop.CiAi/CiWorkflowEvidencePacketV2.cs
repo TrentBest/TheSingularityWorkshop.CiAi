@@ -67,6 +67,7 @@ public sealed record CiWorkflowEvidencePacketV2
         WorkflowEvidence.CheckoutVerified &&
         WorkflowEvidence.ObservedRun.Status == CiRunStatus.Completed &&
         WorkflowEvidence.ObservedRun.Conclusion == CiRunConclusion.Failure &&
+        RequiredChecks.All(check => check.Conclusion is "success" or "failure") &&
         RequiredChecks.Any(check => check.Status == "completed" && check.Conclusion == "failure");
 
     public string? DiagnosticsFingerprint
@@ -133,7 +134,11 @@ public sealed record CiWorkflowEvidencePacketV2
             workflowEvidence = workflowDocument.RootElement,
             requiredChecks = RequiredChecks
         };
-        return JsonSerializer.Serialize(envelope, new JsonSerializerOptions { WriteIndented = indented });
+        return JsonSerializer.Serialize(envelope, new JsonSerializerOptions
+        {
+            WriteIndented = indented,
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+        });
     }
 
     /// <summary>SHA-256 of the exact compact UTF-8 v2 payload bytes.</summary>
