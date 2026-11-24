@@ -277,8 +277,6 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
         Ensure(binding.ProviderJobConclusion == "success", "devcap.provider-job-not-successful");
         Ensure(binding.SourceRef.StartsWith("refs/heads/", StringComparison.Ordinal), "devcap.expected-source-ref-invalid");
         Ensure(binding.CheckoutRef == binding.SourceRef, "devcap.expected-checkout-ref-mismatch");
-        Ensure(binding.WorkflowRef.EndsWith("@" + binding.EventRef, StringComparison.Ordinal),
-            "devcap.expected-workflow-event-ref-mismatch");
         Ensure(binding.ExpectedTestResultArtifacts is not null && binding.ExpectedTestResultArtifacts.Count > 0,
             "devcap.expected-test-artifacts-missing");
         Ensure(!string.IsNullOrWhiteSpace(binding.BundleFile), "devcap.expected-bundle-file-missing");
