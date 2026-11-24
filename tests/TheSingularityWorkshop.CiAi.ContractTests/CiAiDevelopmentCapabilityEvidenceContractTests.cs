@@ -38,6 +38,10 @@ public static class CiAiDevelopmentCapabilityEvidenceContractTests
         Check(valid.Evidence is { IsProtectedPushEvidence: false }, "pull-request-evidence-is-candidate-only");
         Check(valid.Evidence?.ArtifactDigest == "sha256:" + new string('c', 64), "provider-api-artifact-digest-is-retained");
 
+        var fullyVerified = CreateFullyVerifiedForGateTests();
+        Check(fullyVerified.Validation.IsValid && fullyVerified.Validation.TestResultsVerified,
+            "capability-admission-requires-exact-trx-and-provenance-verification");
+
         var protectedPush = CiAiDevelopmentCapabilityEvidenceParser.ParseAndValidate(
             Payload(protectedPush: true),
             Binding(protectedPush: true));
