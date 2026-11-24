@@ -238,9 +238,16 @@ internal static class CiWorkflowEvidencePacketTests
         Throws<InvalidDataException>(() => CiWorkflowEvidencePacketV2.FromJson(
             v2Json, "TrentBest/CiAi", 42, 2, new string('0', 64),
             workflowDefinitionTrusted: true));
+        var tamperedV2 = System.Text.Json.Nodes.JsonNode.Parse(v2Json)!;
+        tamperedV2["requiredChecks"]![0]!["jobId"] = 999;
+        var tamperedV2Json = tamperedV2.ToJsonString();
+        var tamperedV2Digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(tamperedV2Json))).ToLowerInvariant();
+        Throws<InvalidDataException>(() => CiWorkflowEvidencePacketV2.FromJson(
+            tamperedV2Json, "TrentBest/CiAi", 42, 2, tamperedV2Digest,
+            workflowDefinitionTrusted: true));
 
-        Console.WriteLine("PASS: 24 CI workflow evidence packet v1/v2 contract checks.");
-        return 24;
+        Console.WriteLine("PASS: 25 CI workflow evidence packet v1/v2 contract checks.");
+        return 25;
     }
 
 
