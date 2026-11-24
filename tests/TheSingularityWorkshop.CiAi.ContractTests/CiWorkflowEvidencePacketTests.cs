@@ -108,7 +108,9 @@ internal static class CiWorkflowEvidencePacketTests
             pullRequestCandidatePacket.CandidateSha == pullRequestCandidateSha,
             "exact PR source-head checkout was not accepted with independent job-step proof");
         var mismatchedPullRequestProvenanceBytes = Encoding.UTF8.GetBytes(
-            CreatePullRequestCandidateProvenance(pullRequestCandidateRef, "8888888888888888888888888888888888888888"));
+            CreatePullRequestCandidateProvenance(
+                pullRequestCandidateRef, pullRequestCandidateSha,
+                "8888888888888888888888888888888888888888"));
         var mismatchedPullRequestProvenance = CiWorkflowProvenanceRecord.ParseAndValidate(
             mismatchedPullRequestProvenanceBytes, "TrentBest/CiAi", 42, 2,
             Convert.ToHexString(SHA256.HashData(mismatchedPullRequestProvenanceBytes)));
@@ -176,8 +178,8 @@ internal static class CiWorkflowEvidencePacketTests
             failClosed.BlockingReasons.Contains("candidate.checkout-unverified"),
             "checkout SHA differing from event SHA was not failed closed");
 
-        Console.WriteLine("PASS: 16 CI workflow evidence packet v1 contract checks.");
-        return 16;
+        Console.WriteLine("PASS: 17 CI workflow evidence packet v1 contract checks.");
+        return 17;
     }
 
 
@@ -224,7 +226,7 @@ internal static class CiWorkflowEvidencePacketTests
         "sha": "{{EventSha}}",
         "pullRequest": {
           "number": 17,
-          "head": { "ref": "adp/exact-candidate", "sha": "{{candidateSha}}" },
+          "head": { "ref": "adp/exact-candidate", "sha": "{{(pullRequestHeadSha ?? candidateSha)}}" },
           "base": { "ref": "development", "sha": "dddddddddddddddddddddddddddddddddddddddd" }
         }
       },
