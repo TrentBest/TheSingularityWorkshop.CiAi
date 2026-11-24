@@ -288,8 +288,12 @@ public sealed record CiAiRepositoryGateEvaluation
             evidence.PolicyVersion == binding.PolicyVersion &&
             evidence.BundleId == binding.BundleId &&
             string.Equals(evidence.BundleVersion, binding.BundleVersion, StringComparison.Ordinal) &&
+            string.Equals(evidence.BundleFile, binding.BundleFile, StringComparison.Ordinal) &&
             DictionaryEquals(evidence.DependencyCheckouts, binding.ExpectedDependencyCheckouts) &&
-            evidence.TestArtifacts.Count == 2 &&
+            evidence.TestArtifacts.Count == binding.ExpectedTestResultArtifacts.Count &&
+            binding.ExpectedTestResultArtifacts.All(pair => evidence.TestArtifacts.Any(item =>
+                string.Equals(item.Kind, pair.Key, StringComparison.Ordinal) &&
+                string.Equals(item.ArtifactName, pair.Value, StringComparison.Ordinal))) &&
             evidence.IsProtectedPushEvidence == protectedPush;
         return new CiAiRepositoryGateEvaluation(
             binding.ProviderRepository,
