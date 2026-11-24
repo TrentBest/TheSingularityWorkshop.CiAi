@@ -77,4 +77,4 @@ Tracking: [CiAi issue #83](https://github.com/TrentBest/TheSingularityWorkshop.C
 
 ## Implementation status
 
-This document defines the policy contract. It is not yet an executable provider/consumer integration. The typed policy, deterministic transition tests, trusted Physics evidence binding, durable dormancy, and event-driven host wake-up remain required before claiming end-to-end ADP readiness.
+CiAi now has executable composite AND/OR admission, deterministic Waiting/Satisfied/Blocked semantics, a versioned development-capability evidence parser, and typed development-capability leaves in that same evaluator. The raWWar consumer TRX/provenance artifact lane is green. The Physics provider artifact producer is under PR #64 and still requires fresh exact-head validation and independent artifact inspection. Durable host dormancy, authenticated/idempotent event ingress, relevant-event-only wake-up, and a live Physics → raWWar consumption proof remain outstanding. Do not claim end-to-end ADP readiness until those host and pilot gates pass.
