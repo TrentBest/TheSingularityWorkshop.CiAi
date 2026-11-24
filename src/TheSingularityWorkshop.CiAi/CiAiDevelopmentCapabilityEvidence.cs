@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using System.Text.Json;
 
 namespace TheSingularityWorkshop.CiAi;
@@ -370,7 +369,7 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
         if (!parent.TryGetProperty(name, out var value) || value.ValueKind != JsonValueKind.String)
             throw new InvalidDataException("devcap.string-missing:" + name);
         var result = value.GetString()!;
-        Ensure(result.Length is > 0 and <= 1024, "devcap.string-length-invalid:" + name);
+        Ensure(result.Length is > 0 and <= 1024 && !string.IsNullOrWhiteSpace(result), "devcap.string-length-invalid:" + name);
         return result;
     }
 
@@ -401,6 +400,24 @@ public static class CiAiDevelopmentCapabilityEvidenceParser
             (value.ValueKind != JsonValueKind.True && value.ValueKind != JsonValueKind.False))
             throw new InvalidDataException("devcap.boolean-missing:" + name);
         return value.GetBoolean();
+    }
+
+    private static void EnsureNoDuplicateProperties(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var property in element.EnumerateObject())
+            {
+                Ensure(names.Add(property.Name), "devcap.json-duplicate-property");
+                EnsureNoDuplicateProperties(property.Value);
+            }
+        }
+        else if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+                EnsureNoDuplicateProperties(item);
+        }
     }
 
     private static bool DictionaryEquals(
