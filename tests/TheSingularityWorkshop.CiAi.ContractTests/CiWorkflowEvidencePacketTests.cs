@@ -156,6 +156,10 @@ internal static class CiWorkflowEvidencePacketTests
             CreateObservedRun(workflowPath: ".github/workflows/other.yml"),
             provenance, workflowDefinitionTrusted: true));
 
+        Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromValidatedProvenance(
+            CreateObservedRun(workflowRef: "refs/heads/master"),
+            provenance, workflowDefinitionTrusted: true));
+
         var mismatchedCheckoutJson = CreateProvenance();
         var checkoutStart = mismatchedCheckoutJson.IndexOf("\"checkout\": {", StringComparison.Ordinal);
         var checkoutShaToken = "\"sha\": \"" + CheckoutSha + "\"";
@@ -303,7 +307,8 @@ internal static class CiWorkflowEvidencePacketTests
 
     private static CiWorkflowRunEvidenceObservation CreateObservedRun(
         long runId = 42,
-        string workflowPath = ".github/workflows/ci.yml")
+        string workflowPath = ".github/workflows/ci.yml",
+        string workflowRef = "refs/heads/development")
     {
         var job = new CiWorkflowJobObservation(
             100, runId, 2, "build-and-test", "completed", "success",
@@ -314,7 +319,7 @@ internal static class CiWorkflowEvidencePacketTests
             }));
         return new CiWorkflowRunEvidenceObservation(
             "TrentBest/CiAi", workflowPath, runId, 2,
-            "refs/heads/development", EventSha, "pull_request", "CI",
+            workflowRef, EventSha, "pull_request", "CI",
             CiRunStatus.Completed, CiRunConclusion.Success,
             new Uri($"https://github.com/TrentBest/CiAi/actions/runs/{runId}"),
             DateTimeOffset.Parse("2026-10-31T01:01:00Z"),
