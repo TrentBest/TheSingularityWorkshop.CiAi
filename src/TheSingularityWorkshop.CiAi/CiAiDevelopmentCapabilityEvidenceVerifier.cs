@@ -68,14 +68,15 @@ public static class CiAiDevelopmentCapabilityEvidenceVerifier
 
             foreach (var expected in binding.ExpectedTestResultArtifacts)
             {
-                Ensure(testArtifacts.TryGetValue(expected.Key, out var verified),
-                    "devcap.test-artifact-not-verified:" + expected.Key);
+                if (!testArtifacts.TryGetValue(expected.Key, out var verified))
+                    throw new InvalidDataException("devcap.test-artifact-not-verified:" + expected.Key);
                 Ensure(string.Equals(verified.Kind, expected.Key, StringComparison.Ordinal),
                     "devcap.test-artifact-kind-mismatch:" + expected.Key);
 
                 var declared = evidence.TestArtifacts.SingleOrDefault(item =>
                     string.Equals(item.Kind, expected.Key, StringComparison.Ordinal));
-                Ensure(declared is not null, "devcap.test-artifact-not-declared:" + expected.Key);
+                if (declared is null)
+                    throw new InvalidDataException("devcap.test-artifact-not-declared:" + expected.Key);
                 Ensure(string.Equals(declared.ArtifactName, expected.Value, StringComparison.Ordinal),
                     "devcap.test-artifact-name-mismatch:" + expected.Key);
 
@@ -119,9 +120,9 @@ public static class CiAiDevelopmentCapabilityEvidenceVerifier
                     "devcap.test-report-trx-binding-mismatch:" + expected.Key);
                 Ensure(string.Equals(archive.ProvenanceSha256, declared.ProvenanceSha256, StringComparison.OrdinalIgnoreCase),
                     "devcap.test-report-provenance-binding-mismatch:" + expected.Key);
-                Ensure(report.ArtifactCreatedAt is not null && report.ArtifactExpiresAt is not null &&
-                    report.ArtifactCreatedAt <= report.ObservedAt &&
-                    report.ArtifactExpiresAt > report.ObservedAt,
+                Ensure(report.ArtifactCreatedAt.HasValue && report.ArtifactExpiresAt.HasValue &&
+                    report.ArtifactCreatedAt.Value <= report.ObservedAt &&
+                    report.ArtifactExpiresAt.Value > report.ObservedAt,
                     "devcap.test-report-artifact-expired-or-invalid:" + expected.Key);
             }
 
