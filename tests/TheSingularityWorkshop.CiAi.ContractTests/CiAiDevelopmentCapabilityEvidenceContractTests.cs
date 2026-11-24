@@ -34,6 +34,7 @@ public static class CiAiDevelopmentCapabilityEvidenceContractTests
 
         var valid = CiAiDevelopmentCapabilityEvidenceParser.ParseAndValidate(Payload(), Binding());
         Check(valid.IsValid && valid.Evidence is not null, "exact-candidate-evidence-is-valid");
+        Check(valid.Evidence?.ProviderJobKey == "physics-development-capability", "provider-job-key-is-retained");
         Check(valid.Evidence is { IsProtectedPushEvidence: false }, "pull-request-evidence-is-candidate-only");
         Check(valid.Evidence?.ArtifactDigest == "sha256:" + new string('c', 64), "provider-api-artifact-digest-is-retained");
 
