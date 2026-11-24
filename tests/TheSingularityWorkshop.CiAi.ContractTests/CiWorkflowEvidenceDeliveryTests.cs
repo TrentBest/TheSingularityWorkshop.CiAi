@@ -93,6 +93,16 @@ internal static class CiWorkflowEvidenceDeliveryTests
 
             var ledgerPath = Path.Combine(root, "v1-receipts.jsonl");
             var ledger = new FileCiWorkflowEvidenceReceiptLedger(ledgerPath);
+            var v2Accepted = new CiWorkflowEvidenceRemoteReceipt(
+                1, "remote-receipt-v2", v2Delivery.DeliveryId, v2Delivery.IdempotencyKey,
+                v2Delivery.PayloadSha256, CiWorkflowEvidenceReceiptOutcome.Accepted,
+                DateTimeOffset.Parse("2026-10-31T01:59:00Z"));
+            Assert(ledger.Record(v2Accepted, v2Delivery) == CiWorkflowEvidenceReceiptRecordOutcome.Recorded,
+                "shared transport receipt ledger did not accept a v2 delivery");
+            Assert(ledger.ReadAcknowledgedDeliveryIds().Contains(v2Delivery.DeliveryId) &&
+                new FileCiWorkflowEvidenceV2Outbox(v2OutboxPath)
+                    .ReadPending(ledger.ReadAcknowledgedDeliveryIds()).Count == 0,
+                "accepted v2 receipt did not suppress exact v2 outbox replay");
             var accepted = new CiWorkflowEvidenceRemoteReceipt(
                 1, "remote-receipt-1", delivery.DeliveryId, delivery.IdempotencyKey,
                 delivery.PayloadSha256, CiWorkflowEvidenceReceiptOutcome.Accepted,
@@ -163,7 +173,7 @@ internal static class CiWorkflowEvidenceDeliveryTests
                 DateTimeOffset.Parse("2026-10-31T02:06:00Z"));
             Assert(ledger.Record(receiptIdentityConflict, delivery) == CiWorkflowEvidenceReceiptRecordOutcome.Conflict,
                 "reused remote receipt identity with changed receipt bytes was not rejected as a conflict");
-            Assert(ledger.ReadReceipts().Count == 2,
+            Assert(ledger.ReadReceipts().Count == 3,
                 "receipt ledger did not reload both accepted and rejected receipt records");
 
             var mismatch = new CiWorkflowEvidenceRemoteReceipt(
@@ -224,8 +234,8 @@ internal static class CiWorkflowEvidenceDeliveryTests
                 delivery.PayloadSha256, CiWorkflowEvidenceReceiptOutcome.Accepted,
                 DateTimeOffset.Parse("2026-10-31T02:11:00Z"), "not.allowed"));
 
-            Console.WriteLine("PASS: 37 CI workflow evidence v1/v2 delivery and receipt checks.");
-            return 37;
+            Console.WriteLine("PASS: 39 CI workflow evidence v1/v2 delivery and receipt checks.");
+            return 39;
         }
         finally
         {
