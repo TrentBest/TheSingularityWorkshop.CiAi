@@ -115,10 +115,10 @@ internal static class CiTestResultReportTests
         Assert(actionable.Repository == Repository && actionable.CandidateSha == CandidateSha &&
             actionable.RunId == RunId && actionable.RunAttempt == RunAttempt &&
             actionable.JobId == JobId && actionable.JobName == JobName &&
-            actionable.WorkflowPath == WorkflowPath && actionable.WorkflowDefinitionSha == WorkflowSha &&
+            actionable.WorkflowPath == WorkflowPath && actionable.WorkflowDefinitionSha == MergeSha &&
             actionable.PullRequestNumber == 17 &&
             actionable.PullRequestHeadRef == "feature/minesweeper-domain-pilot" &&
-            actionable.PullRequestHeadSha == new string('c', 40) &&
+            actionable.PullRequestHeadSha == CandidateSha &&
             actionable.PullRequestBaseRef == "development" &&
             actionable.PullRequestBaseSha == new string('d', 40) &&
             actionable.RunEvidenceUrl.AbsolutePath == $"/{Repository}/actions/runs/{RunId}" &&
