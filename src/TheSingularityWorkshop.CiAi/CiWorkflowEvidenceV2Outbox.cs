@@ -25,6 +25,8 @@ public sealed record CiWorkflowEvidenceV2Delivery
             runId = packet.RunId,
             runAttempt = packet.RunAttempt,
             workflowPath = packet.WorkflowPath,
+            workflowRef = packet.WorkflowEvidence.Provenance.WorkflowRef,
+            workflowSha = packet.WorkflowEvidence.Provenance.WorkflowSha,
             candidateRef = packet.CandidateRef,
             candidateSha = packet.CandidateSha
         });
