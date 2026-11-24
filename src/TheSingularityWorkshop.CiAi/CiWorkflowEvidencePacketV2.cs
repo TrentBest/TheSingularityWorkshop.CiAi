@@ -14,13 +14,17 @@ public sealed record CiWorkflowEvidencePacketV2
     public const int CurrentContractVersion = 2;
     public const string CurrentSchema = "ciai.workflow-evidence.v2";
 
+    private readonly string? _payloadSha256;
+
     private CiWorkflowEvidencePacketV2(
         CiWorkflowEvidencePacket workflowEvidence,
-        IReadOnlyList<CiWorkflowRequiredCheckObservation> requiredChecks)
+        IReadOnlyList<CiWorkflowRequiredCheckObservation> requiredChecks,
+        string? payloadSha256 = null)
     {
         WorkflowEvidence = workflowEvidence;
         RequiredChecks = Array.AsReadOnly(requiredChecks.ToArray());
         Validate();
+        _payloadSha256 = payloadSha256;
     }
 
     public CiWorkflowEvidencePacket WorkflowEvidence { get; }
@@ -133,7 +137,7 @@ public sealed record CiWorkflowEvidencePacketV2
     }
 
     /// <summary>SHA-256 of the exact compact UTF-8 v2 payload bytes.</summary>
-    public string PayloadSha256 =>
+    public string PayloadSha256 => _payloadSha256 ??
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(ToJson(indented: false)))).ToLowerInvariant();
 
     /// <summary>
@@ -185,10 +189,9 @@ public sealed record CiWorkflowEvidencePacketV2
             checksElement.GetRawText(), new JsonSerializerOptions(JsonSerializerDefaults.Web))
             ?? throw new InvalidDataException("Workflow evidence v2 required-check list is invalid.");
 
-        var packet = new CiWorkflowEvidencePacketV2(workflowEvidence, checks);
+        var packet = new CiWorkflowEvidencePacketV2(workflowEvidence, checks, expectedPayloadSha256.ToLowerInvariant());
         if (!string.Equals(packet.Repository, expectedRepository, StringComparison.OrdinalIgnoreCase) ||
-            packet.RunId != expectedRunId || packet.RunAttempt != expectedRunAttempt ||
-            !string.Equals(packet.PayloadSha256, expectedPayloadSha256, StringComparison.OrdinalIgnoreCase))
+            packet.RunId != expectedRunId || packet.RunAttempt != expectedRunAttempt)
             throw new InvalidDataException("Workflow evidence v2 does not match the expected repository, run, attempt, or canonical payload digest.");
         return packet;
     }
