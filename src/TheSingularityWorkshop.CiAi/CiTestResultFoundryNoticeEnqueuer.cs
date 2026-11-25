@@ -3,18 +3,6 @@ using System.Security.Cryptography;
 namespace TheSingularityWorkshop.CiAi;
 
 /// <summary>
-/// Host-owned publisher for the exact canonical ciai.test-results.v1 UTF-8 bytes.
-/// Implementations must persist these bytes unchanged and return the provider's immutable manifest.
-/// </summary>
-public interface ICiTestResultArtifactPublisher
-{
-    Task<ArtifactManifest> PublishAsync(
-        CiTestResultReport report,
-        ReadOnlyMemory<byte> canonicalReportBytes,
-        CancellationToken cancellationToken = default);
-}
-
-/// <summary>
 /// Publishes a canonical report, verifies the returned artifact manifest against that report,
 /// and durably enqueues the metadata-only Foundry notice before any network send.
 /// </summary>
