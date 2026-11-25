@@ -240,13 +240,13 @@ try
             job.RunId == sourceRunId && job.RunAttempt == sourceRunAttempt &&
             string.Equals(job.Name, observerProfile.RequiredJobName, StringComparison.Ordinal));
         var providerBinding = CiTestResultProviderArtifactBinding.FromObservedArtifact(
-            sourceProviderArtifact, evidencePacket, requiredJobPolicy, requiredJob.JobId, observerProfile.RequiredJobKey);
+            sourceProviderArtifact, workflowEvidence, requiredJobPolicy, requiredJob.JobId, observerProfile.RequiredJobKey);
         var sourceArchive = CiTestResultArtifactArchive.Read(
             sourceArchiveBytes, providerBinding, observerProfile.TrxEntryName, "provenance.json");
         var source = CiTestResultArtifactSource.FromVerifiedProviderObservation(
-            evidencePacket, requiredJobPolicy, providerBinding, sourceArchive, observerProfile.TestProviderLabel);
+            workflowEvidence, requiredJobPolicy, providerBinding, sourceArchive, observerProfile.TestProviderLabel);
         testResultReport = CiTestResultReport.ParseAndValidate(
-            sourceArchive, evidencePacket, source, requiredJobPolicy, DateTimeOffset.UtcNow);
+            sourceArchive, workflowEvidence, source, requiredJobPolicy, DateTimeOffset.UtcNow);
         Directory.CreateDirectory("artifacts");
         await File.WriteAllBytesAsync("artifacts/test-results-report.json", testResultReport.ToCanonicalUtf8Bytes());
     }
