@@ -66,11 +66,11 @@ An LLM may propose content or code and explain a failure. It cannot declare cont
 
 ## Initial implementation boundary
 
-CiAi now has typed declarations for directed repository relationships and immutable change notices. Contract tests cover the raWWar → SURPS contribution edge, the SURPS → raWWar canonical-consumption edge, raWWar Experience ownership, exact commit/artifact provenance, and retry deduplication versus changed-input revalidation.
+CiAi now has typed declarations for directed repository relationships and immutable change notices. The existing immutable repository builder accepts `.WithRelationship(...)` declarations and carries the ordered graph into `CiAiRepositoryDefinition`; relationship metadata does not implicitly enable ADP. Contract tests cover builder enrollment, the raWWar → SURPS contribution edge, the SURPS → raWWar canonical-consumption edge, raWWar Experience ownership, exact commit/artifact provenance, and retry deduplication versus changed-input revalidation.
 
 This is intentionally a contract foundation, not a claim that the entire ADP is running. The next slices are:
 
-1. Validate and enroll a versioned relationship graph as part of the existing CiAi repository composition/manifest—not a parallel manifest system.
+1. Extend the existing `.ciai/repository.json` manifest contract to serialize/parse the graph and ADP settings without creating a parallel manifest system.
 2. Persist change notices and delivery receipts using the existing outbox/receipt patterns.
 3. Map relationship events into bounded ADP work groups and existing Await/Gate declarations.
 4. Connect those work groups to FSM_Execution and the host authorization boundary.
