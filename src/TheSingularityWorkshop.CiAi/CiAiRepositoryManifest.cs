@@ -4,7 +4,7 @@ namespace TheSingularityWorkshop.CiAi;
 
 /// <summary>
 /// Parsed, immutable repository manifest. It contains declarations only; it grants no CI, network,
-/// LLM, deployment, or repository-write authority.
+/// LLM, deployment, or repository-write authority. Manifest v2 adds directed ADP relationships and optional bounded execution settings.
 /// </summary>
 public sealed record CiAiRepositoryManifest
 {
