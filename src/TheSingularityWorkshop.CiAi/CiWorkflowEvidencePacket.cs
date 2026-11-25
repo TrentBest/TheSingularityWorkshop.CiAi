@@ -380,7 +380,18 @@ public sealed record CiWorkflowEvidencePacket
             schema = CurrentSchema,
             observedRun,
             provenance,
-            requiredChecks = RequiredChecks
+            requiredChecks = RequiredChecks.Select(check => new
+            {
+                key = check.Key,
+                jobName = check.JobName,
+                state = check.State,
+                jobId = check.JobId,
+                status = check.Status,
+                conclusion = check.Conclusion,
+                evidenceUrl = check.EvidenceUrl,
+                startedAt = check.StartedAt,
+                completedAt = check.CompletedAt
+            }).ToArray()
         };
         return JsonSerializer.Serialize(envelope, new JsonSerializerOptions { WriteIndented = indented });
     }
