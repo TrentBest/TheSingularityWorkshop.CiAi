@@ -64,6 +64,22 @@ A branch name is a mutable locator, not provenance. A package version alone is n
 
 An LLM may propose content or code and explain a failure. It cannot declare content canonical, authenticate CI evidence, authorize a write, merge, publish, release, or deploy.
 
+## First read-only cross-repository proof
+
+The first raWWar/SURPS relationship graph is enrolled in CiAi's `.ciai/repository.json` using manifest v2. The graph declares content contribution, canonical content consumption, and Experience validation as separate directed edges. The manifest leaves `adp` null, so relationship enrollment does not enable autonomous execution.
+
+For raWWar commit `eef1974a87d78eefe2802d77d7f2451f4f2b47a7`:
+
+- Source build [run 45549019401](https://github.com/TrentBest/raWWar/actions/runs/45549019401) succeeded.
+- CiAi observer [run 45549019399](https://github.com/TrentBest/raWWar/actions/runs/45549019399) independently resolved source run 45549019401, attempt 1.
+- The exact required identity was `.github/workflows/build.yml#45549019401#1`.
+- The provider provenance and TRX artifacts were bound to that exact run; workflow bytes matched the pinned approved baseline.
+- TRX verdict: `CompletePass`, 406 passed / 406 total.
+
+CiAi's contract verification passed on `cc0c375879bf2ee81f69e4da67db202ac5d9a9e8`: 74 individual checks, 121 suite/check records, zero failed records ([run 45548853549](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/45548853549)).
+
+This proves the read-only provider evidence lane and cross-repository reconciliation for one exact raWWar revision. It does not yet prove content admission from raWWar into SURPS, canonical publication back to raWWar, or Experience compatibility after a SURPS content change. Those remain the next domain-level acceptance cases.
+
 ## Initial implementation boundary
 
 CiAi now has typed declarations for directed repository relationships and immutable change notices. The existing immutable repository builder accepts `.WithRelationship(...)` declarations and carries the ordered graph into `CiAiRepositoryDefinition`. Manifest v2 (`ciai.repository.v2`) now serializes and validates the graph and optional bounded ADP settings; CiAi's own `.ciai/repository.json` declares all three raWWar/SURPS edges while leaving `adp` null. Contract tests cover builder and manifest enrollment, the raWWar → SURPS contribution edge, the SURPS → raWWar canonical-consumption edge, raWWar Experience ownership, exact commit/artifact provenance, and retry deduplication versus changed-input revalidation.
