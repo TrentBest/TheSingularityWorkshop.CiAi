@@ -269,7 +269,8 @@ try
     var workflowProvenanceValid = !provenanceRequired || workflowProvenance is not null;
     var testResultReportValid = !provenanceRequired || testResultReport is not null;
     var complete = CiRequiredWorkflowEvidenceEvaluator.IsPassing(discoveryComplete, requiredWorkflowResults) &&
-        exactRunBindingValid && workflowProvenanceValid && testResultReportValid;
+        exactRunBindingValid && workflowProvenanceValid && testResultReportValid &&
+        (!provenanceRequired || workflowEvidenceV2?.EvidenceComplete == true);
     JsonElement? workflowEvidenceV2Json = null;
     if (workflowEvidenceV2 is not null)
     {
