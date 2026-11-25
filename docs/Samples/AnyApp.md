@@ -22,6 +22,17 @@ On a push to AnyApp development, the consumer workflow waits for the authoritati
 
 The observer uses the repository-scoped GitHub token with read-only Actions and contents permissions. It does not execute AnyApp's build and does not receive permission to merge, publish, create releases, or deploy.
 
+## Provenance and TRX producer slice
+
+AnyApp PR [#37 — Add provenance-bound test diagnostics for CiAi](https://github.com/TrentBest/AnyApp/pull/37) updates the existing .NET workflow to emit:
+
+- `ciai-workflow-provenance-{runId}-{runAttempt}`, containing schema `ciai.workflow-provenance.v1` with repository, run/attempt, workflow-definition ref/SHA, event identity, PR head/base when applicable, and actual checkout SHA.
+- `ciai-test-results-{runId}-{runAttempt}-build`, containing the AnyApp test project's TRX output.
+
+The TRX upload runs with `if: always()`; the original test command's nonzero exit code remains authoritative. Missing TRX is incomplete evidence, not a pass. The producer does not download artifacts, verify provider ZIP digests, extract archives, or assert workflow-definition trust.
+
+The first producer execution is [AnyApp PR run 41282827626](https://github.com/TrentBest/AnyApp/actions/runs/41282827626). It successfully uploaded provenance artifact ID `13073991348` with provider digest `sha256:d9f51a7bef119a3fdd9c30d35163693534475dfd7d24a19fc3201ec292def6d8`. The downloaded ZIP contained the expected JSON schema and exact run/attempt/checkout identities. Because this was a pull-request event, its workflow ref was `refs/pull/37/merge`; it proves artifact production, not trusted workflow authority. The host must validate workflow ref/SHA against protected control-plane policy.
+
 ## First verified observation
 
 The first completed consumer observation is [CiAi run 41281306728](https://github.com/TrentBest/AnyApp/actions/runs/41281306728), for AnyApp commit `4d40f584fa4011179a731962afdd755fa85e8063`. It produced the artifact `CiAi-AnyApp-evidence-4d40f584fa4011179a731962afdd755fa85e8063`.
@@ -73,7 +84,9 @@ The source SHA in the report must match the AnyApp commit. A report for another 
 2. Correlate all declared lanes (build/test, publish baseline, release candidate) without pretending untriggered lanes failed.
 3. Capture and report resolved SHAs for AnyApp's sibling source checkouts, not only the AnyApp source SHA.
 4. Make provider evidence and artifact links easy to consume in a stable JSON/Markdown report contract.
-5. Keep the observer read-only and the integration non-blocking until evidence semantics have been exercised against real consumer runs.
+5. Connect the trusted host artifact retriever to CiAi's provenance/TRX parser; verify provider ZIP digests, safe extraction, exact job ID/name binding, and workflow-definition trust.
+6. Deliver the normalized diagnostic report into the same FSM_Foundry task, then drive a bounded HeadlessAi proposal through independent host authorization and exact-SHA revalidation.
+7. Keep the observer read-only and the integration non-blocking until evidence semantics have been exercised against real consumer runs.
 
 This is a source-based pilot, not a completed reusable GitHub Actions host adapter. AnyApp's build/test workflow remains authoritative. No NuGet package publication, GitHub Release, deployment, or merge is part of this example.
 
