@@ -156,6 +156,9 @@ jobs:
       - name: Validate checked-in repository manifest
         id: repository-manifest
         run: dotnet run --project tools/CiAi.Repository --configuration Release --no-build -- --check-manifest
+      - name: Validate development progress declaration
+        id: development-progress
+        run: dotnet run --project tools/CiAi.Repository --configuration Release --no-build -- --check-progress
       - name: Upload coverage to Codecov
         id: codecov
         uses: codecov/codecov-action@v6
