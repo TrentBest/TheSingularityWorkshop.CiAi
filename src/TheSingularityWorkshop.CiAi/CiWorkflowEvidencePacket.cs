@@ -548,7 +548,7 @@ public sealed record CiWorkflowEvidencePacket
         CiWorkflowRunEvidenceObservation observedRun,
         IReadOnlyList<CiWorkflowRequiredCheckBinding> bindings)
     {
-        return Array.AsReadOnly(bindings.Select(binding =>
+        return Array.AsReadOnly(bindings.OrderBy(binding => binding.Key, StringComparer.Ordinal).Select(binding =>
         {
             var matches = observedRun.Jobs.Where(job =>
                 string.Equals(job.Name, binding.JobName, StringComparison.Ordinal)).ToArray();
