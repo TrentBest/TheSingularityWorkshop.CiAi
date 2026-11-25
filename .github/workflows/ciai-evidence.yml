@@ -5,20 +5,20 @@ on:
     branches: [development, master]
     paths:
       - "src/**"
+      - "integration/**"
+      - ".github/workflows/**"
       - "tests/**"
       - "samples/**"
       - "README.md"
+      - "AgentOnboarding.md"
+      - "docs/**"
       - "CiAi.slnx"
       - "Directory.Build.*"
       - "global.json"
       - "NuGet.config"
       - ".config/**"
-      - ".github/workflows/ci.yml"
-      - ".github/workflows/observe-release-candidate.yml"
-      - ".github/workflows/serialization-benchmark-dispatch.yml"
       - ".gitmodules"
       - "external/**"
-      - ".github/workflows/ciai-evidence.yml"
 
 permissions:
   contents: read
@@ -107,11 +107,48 @@ jobs:
           echo "::error::Timed out waiting for the exact ci.yml push run for $TARGET_SHA."
           exit 1
 
+      - name: Download the exact source workflow provenance archive
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_REPOSITORY: ${{ steps.source.outputs.repository }}
+          SOURCE_RUN_ID: ${{ steps.source-run.outputs.run_id }}
+          SOURCE_RUN_ATTEMPT: ${{ steps.source-run.outputs.run_attempt }}
+        run: |
+          set -euo pipefail
+          artifact_name="ciai-workflow-provenance-$SOURCE_RUN_ATTEMPT"
+          mapfile -t artifact_ids < <(
+            gh api --paginate \
+              "repos/$TARGET_REPOSITORY/actions/runs/$SOURCE_RUN_ID/artifacts" \
+              --jq ".artifacts[] | select(.name == \"$artifact_name\") | .id"
+          )
+          if [ "${#artifact_ids[@]}" -ne 1 ] || ! [[ "${artifact_ids[0]}" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::Expected exactly one provider workflow-provenance artifact for the exact run attempt."
+            exit 1
+          fi
+          mkdir -p artifacts
+          gh api "repos/$TARGET_REPOSITORY/actions/artifacts/${artifact_ids[0]}/zip" > artifacts/workflow-provenance.zip
+          test -s artifacts/workflow-provenance.zip
+          echo "Downloaded workflow provenance artifact ID ${artifact_ids[0]} for run $SOURCE_RUN_ID attempt $SOURCE_RUN_ATTEMPT."
+          test_artifact_name="ciai-test-results-$SOURCE_RUN_ATTEMPT"
+          mapfile -t test_artifact_ids < <(
+            gh api --paginate \
+              "repos/$TARGET_REPOSITORY/actions/runs/$SOURCE_RUN_ID/artifacts" \
+              --jq ".artifacts[] | select(.name == \"$test_artifact_name\") | .id"
+          )
+          if [ "${#test_artifact_ids[@]}" -ne 1 ] || ! [[ "${test_artifact_ids[0]}" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::Expected exactly one provider TRX source artifact for the exact run attempt."
+            exit 1
+          fi
+          gh api "repos/$TARGET_REPOSITORY/actions/artifacts/${test_artifact_ids[0]}/zip" > artifacts/test-results.zip
+          test -s artifacts/test-results.zip
+          echo "Downloaded TRX source artifact ID ${test_artifact_ids[0]} for run $SOURCE_RUN_ID attempt $SOURCE_RUN_ATTEMPT."
+      
       - name: Check out pinned CiAi observer source
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: TrentBest/TheSingularityWorkshop.CiAi
-          ref: 2c5d2282fd9608040d93d3589385a1df2488ff90
+          ref: b9d90d867bf83186810d43b2b901e41ba3796a60
           path: ciai
           submodules: recursive
           persist-credentials: false
@@ -135,6 +172,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           CIAI_GITHUB_TOKEN: ${{ github.token }}
           CIAI_REQUIRED_WORKFLOW_PATHS: .github/workflows/ci.yml#${{ steps.source-run.outputs.run_id }}#${{ steps.source-run.outputs.run_attempt }}
+          CIAI_EXPECTED_WORKFLOW_REF: refs/heads/${{ steps.source.outputs.branch }}
+          CIAI_EXPECTED_WORKFLOW_EVENT: push
+          CIAI_EXPECTED_WORKFLOW_SHA: ${{ steps.source.outputs.sha }}
+          CIAI_REQUIRE_WORKFLOW_PROVENANCE: "true"
+          CIAI_WORKFLOW_PROVENANCE_ARCHIVE_PATH: ../artifacts/workflow-provenance.zip
+          CIAI_TEST_RESULTS_ARCHIVE_PATH: ../artifacts/test-results.zip
           TARGET_REPOSITORY: ${{ steps.source.outputs.repository }}
           TARGET_SHA: ${{ steps.source.outputs.sha }}
           SOURCE_RUN_ID: ${{ steps.source-run.outputs.run_id }}
@@ -150,6 +193,14 @@ jobs:
             .repository == $repo and
             .headSha == $sha and
             .discoveryComplete == true and
+            .exactRunBindingConfigured == true and
+            .exactRunBindingValid == true and
+            .workflowProvenanceValid == true and
+            .workflowProvenance.valid == true and
+            .workflowProvenance.workflowSha == $sha and
+            .testResultReportValid == true and
+            .testResultReport.valid == true and
+            .testResultReport.verdict == "CompletePass" and
             .complete == true and
             (.requiredWorkflowResults | length) == 1 and
             .requiredWorkflowResults[0].WorkflowPath == $expected and
@@ -168,6 +219,7 @@ jobs:
           path: |
             ciai/artifacts/commit-observation.json
             ciai/artifacts/commit-observation.md
+            ciai/artifacts/test-results-report.json
           if-no-files-found: warn
           retention-days: 30
 
@@ -186,11 +238,11 @@ jobs:
           {
             echo "## CiAi exact commit evidence"
             echo
-            echo "- Repository: `$REPOSITORY`"
-            echo "- Branch: `$BRANCH`"
-            echo "- Source SHA: `$SHA`"
-            echo "- Authoritative workflow: `.github/workflows/ci.yml`"
-            echo "- Source run / attempt: `$RUN_ID` / `$RUN_ATTEMPT`"
+            echo "- Repository: \`$REPOSITORY\`"
+            echo "- Branch: \`$BRANCH\`"
+            echo "- Source SHA: \`$SHA\`"
+            echo "- Authoritative workflow: \`.github/workflows/ci.yml\`"
+            echo "- Source run / attempt: \`$RUN_ID\` / \`$RUN_ATTEMPT\`"
             echo "- Source conclusion: **$CONCLUSION**"
             echo "- CiAi evidence lane: **$OBSERVER_STATUS**"
             echo
