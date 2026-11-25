@@ -75,7 +75,7 @@ public static class CiPagesPublicationPlan
 
     public static bool IsSafeBuildCommand(string? command) =>
         string.IsNullOrEmpty(command) ||
-        (command.Length <= 1000 && !command.Any(char.IsControl));
+        (!string.IsNullOrWhiteSpace(command) && command.Length <= 1000 && !command.Any(char.IsControl));
 
     private static bool IsStableId(string? value) =>
         !string.IsNullOrWhiteSpace(value) &&
