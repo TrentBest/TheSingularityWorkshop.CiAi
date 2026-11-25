@@ -7,7 +7,6 @@
   ],
   "actual_branches": [
     "development",
-    "feature/await-gate-contracts-31",
     "feature/ciai-external-observer-and-composition",
     "feature/ciai-fluent-ecosystem-builder",
     "feature/ciai-trusted-trx-archive-reader",
@@ -25,9 +24,9 @@
     "work/ciai-semantic-stack-foundation",
     "work/ecosystem-graph-performance-contract"
   ],
-  "branch_count": 18,
+  "branch_count": 17,
   "status": "NON-COMPLIANT",
-  "evaluated_at": "2026-11-25T03:18:38Z",
-  "workflow_run": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/45539055546",
-  "triggering_commit": "af454cd85216de3cb76857ec960c9c605ed2e92d"
+  "evaluated_at": "2026-11-25T03:19:11Z",
+  "workflow_run": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/45539133502",
+  "triggering_commit": "56a5d16adc1e589d2d4ea7ff4d022bfc03ef432b"
 }
