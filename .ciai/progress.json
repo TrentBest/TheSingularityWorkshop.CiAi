@@ -1,0 +1,14 @@
+{
+  "schema": "ciai.progress.v1",
+  "repository": "TrentBest/TheSingularityWorkshop.CiAi",
+  "title": "CiAi development",
+  "updatedUtc": "2026-11-25T00:00:00Z",
+  "method": "weighted-workstreams-v1",
+  "workstreams": [
+    { "id": "contracts", "label": "Core contracts and composition", "weight": 25, "completionPercent": null, "assessmentStatus": "not-assessed", "evidence": [] },
+    { "id": "provider-evidence", "label": "Provider observation and evidence provenance", "weight": 25, "completionPercent": null, "assessmentStatus": "not-assessed", "evidence": [] },
+    { "id": "consumer-adoption", "label": "Consumer integration and adoption", "weight": 20, "completionPercent": null, "assessmentStatus": "not-assessed", "evidence": [] },
+    { "id": "developer-experience", "label": "Repository tooling and developer experience", "weight": 15, "completionPercent": null, "assessmentStatus": "not-assessed", "evidence": [] },
+    { "id": "documentation-governance", "label": "Documentation, verification, and governance", "weight": 15, "completionPercent": null, "assessmentStatus": "not-assessed", "evidence": [] }
+  ]
+}
