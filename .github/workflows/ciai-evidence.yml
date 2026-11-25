@@ -199,6 +199,11 @@ jobs:
             .exactRunBindingConfigured == true and
             .exactRunBindingValid == true and
             .workflowProvenanceValid == true and
+            .workflowEvidenceV2.schema == "ciai.workflow-evidence.v2" and
+            .workflowEvidenceV2Sha256 != null and
+            .workflowEvidenceV2Complete == true and
+            .workflowEvidenceV2Successful == true and
+            .workflowDefinitionTrust.trusted == true and
             .workflowProvenance.valid == true and
             .workflowProvenance.workflowSha == $sha and
             .testResultReportValid == true and
