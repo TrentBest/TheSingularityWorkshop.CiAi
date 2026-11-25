@@ -15,7 +15,7 @@ The responsibility chain is:
 2. **CommandAi** represents generic atomic commands as a versioned, bounded proposal and provides the shared codec.
 3. **AiCi (CiAi)** composes repository-development vocabulary using the actual CommandAi types. It does not define a competing generic command model.
 4. **GrammarAi / protocol validation** may validate structure and interoperable envelopes. Structural validity is not authorization.
-5. **Foundry / trusted host adapter** independently validates repository identity, task scope, registered capabilities, branch and base SHA, allowed paths, budgets, expiry, and authenticated human approval where required.
+5. **FSM_Execution / trusted host adapter** independently validates repository identity, task scope, registered capabilities, branch and base SHA, allowed paths, budgets, expiry, and authenticated human approval where required.
 6. **GitHub** remains authoritative for refs, commits, pull requests, workflow runs, and CI evidence. CiAi evaluates evidence against the exact candidate SHA.
 
 A proposal is a request for host consideration, not an executable script, capability grant, or approval receipt. Missing or ambiguous identity, precondition, policy, or authorization must cause host rejection.
@@ -78,7 +78,7 @@ The exact PR head must pass both **CiAi Contract Verification** and **Cog Ecosys
 This slice does **not** implement:
 
 - GrammarAi schema registration for repository-specific precondition expressions or ProtocolAi envelope integration.
-- Foundry's host-side capability registry, policy evaluation, authenticated approval enforcement, or repository mutation adapter.
+- FSM_Execution's host-side capability registry, policy evaluation, authenticated approval enforcement, or repository mutation adapter.
 - GitHub branch/file writes, workflow dispatch, build/test execution, or evidence callback delivery.
 - A complete failed-CI → model repair → guarded mutation → exact-SHA green-CI demonstration.
 
