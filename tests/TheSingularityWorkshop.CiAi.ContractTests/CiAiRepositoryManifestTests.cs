@@ -36,6 +36,107 @@ internal static class CiAiRepositoryManifestTests
             Assert(serialized == second.ToJson(), "manifest serialization is not deterministic");
             Assert(second.Definition.DependencyRepositories.Single() == "TrentBest/B", "round-trip lost dependency");
         });
+        Check("manifest v1 preserves its original wire shape", () =>
+        {
+            const string json = """{"schema":"ciai.repository.v1","repository":"TrentBest/A","observerProfile":null,"badges":[],"dependencies":[],"extensions":[]}""";
+            var serialized = CiAiRepositoryManifest.ParseJson(json).ToJson();
+            using var document = System.Text.Json.JsonDocument.Parse(serialized);
+            Assert(!document.RootElement.TryGetProperty("relationships", out _) &&
+                !document.RootElement.TryGetProperty("adp", out _),
+                "v1 serialization leaked v2-only fields");
+        });
+        Check("manifest v2 round-trips the bidirectional raWWar SURPS graph without enabling ADP", () =>
+        {
+            const string json = """
+            {
+              "schema": "ciai.repository.v2",
+              "repository": "TrentBest/TheSingularityWorkshop.CiAi",
+              "observerProfile": "ciai-default",
+              "badges": [],
+              "dependencies": [],
+              "extensions": [],
+              "relationships": [
+                {
+                  "relationshipId": "rawwar-content-contribution",
+                  "contractVersion": 1,
+                  "kind": "ContentContribution",
+                  "sourceRepository": "TrentBest/raWWar",
+                  "targetRepository": "TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem",
+                  "artifactKind": "surps-content-proposal",
+                  "authorityRepository": "TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem"
+                },
+                {
+                  "relationshipId": "surps-canonical-content-consumption",
+                  "contractVersion": 1,
+                  "kind": "CanonicalContentConsumption",
+                  "sourceRepository": "TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem",
+                  "targetRepository": "TrentBest/raWWar",
+                  "artifactKind": "surps-canonical-content",
+                  "authorityRepository": "TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem"
+                },
+                {
+                  "relationshipId": "rawwar-experience-validation",
+                  "contractVersion": 1,
+                  "kind": "ExperienceValidation",
+                  "sourceRepository": "TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem",
+                  "targetRepository": "TrentBest/raWWar",
+                  "artifactKind": "rawwar-experience-candidate",
+                  "authorityRepository": "TrentBest/raWWar"
+                }
+              ],
+              "adp": null
+            }
+            """;
+            var first = CiAiRepositoryManifest.ParseJson(json);
+            Assert(first.Schema == CiAiRepositoryManifest.CurrentSchemaV2 &&
+                first.Definition.Relationships.Count == 3 &&
+                !first.Definition.AutonomousDevelopmentEnabled,
+                "v2 relationship declarations implicitly enabled autonomous execution");
+            var serialized = first.ToJson();
+            var second = CiAiRepositoryManifest.ParseJson(serialized);
+            Assert(serialized == second.ToJson() &&
+                second.Definition.Relationships.Select(x => x.RelationshipId).SequenceEqual(new[]
+                {
+                    "rawwar-content-contribution",
+                    "rawwar-experience-validation",
+                    "surps-canonical-content-consumption"
+                }),
+                "v2 graph serialization was not deterministic or lost a relationship");
+        });
+        Check("manifest v2 requires explicit bounded ADP settings to enable autonomous development", () =>
+        {
+            const string json = """
+            {
+              "schema": "ciai.repository.v2",
+              "repository": "TrentBest/A",
+              "observerProfile": null,
+              "badges": [],
+              "dependencies": [],
+              "extensions": [],
+              "relationships": [],
+              "adp": {
+                "maximumRepairAttempts": 2,
+                "requireHumanApprovalForWrites": true
+              }
+            }
+            """;
+            var manifest = CiAiRepositoryManifest.ParseJson(json);
+            Assert(manifest.Definition.AutonomousDevelopmentEnabled &&
+                manifest.Definition.AdpSettings!.MaximumRepairAttempts == 2 &&
+                manifest.Definition.AdpSettings.RequireHumanApprovalForWrites,
+                "explicit ADP policy was not preserved");
+            Assert(CiAiRepositoryManifest.ParseJson(manifest.ToJson()).Definition.AutonomousDevelopmentEnabled,
+                "ADP policy did not survive deterministic serialization");
+        });
+        Check("manifest v2 rejects unknown relationship kinds and duplicate relationship IDs", () =>
+        {
+            const string prefix = """{"schema":"ciai.repository.v2","repository":"TrentBest/A","badges":[],"dependencies":[],"extensions":[],"relationships":[""";
+            const string edge = """{"relationshipId":"edge","contractVersion":1,"kind":"Unknown","sourceRepository":"TrentBest/B","targetRepository":"TrentBest/C","artifactKind":"content","authorityRepository":"TrentBest/C"}""";
+            const string suffix = """],"adp":null}""";
+            Throws<InvalidDataException>(() => CiAiRepositoryManifest.ParseJson(prefix + edge + suffix));
+            const string validEdge = """{"relationshipId":"edge","contractVersion":1,"kind":"BuildDependency","sourceRepository":"TrentBest/B","targetRepository":"TrentBest/C","artifactKind":"build","authorityRepository":"TrentBest/B"}""";
+            Throws<InvalidOperationException>(() => CiAiRepositoryManifest.ParseJson(prefix + validEdge + "," + validEdge + suffix));
+        });
         Check("manifest rejects duplicate and unknown properties", () =>
         {
             Throws<InvalidDataException>(() => CiAiRepositoryManifest.ParseJson(
