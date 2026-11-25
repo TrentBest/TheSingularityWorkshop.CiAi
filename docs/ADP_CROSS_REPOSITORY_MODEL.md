@@ -66,14 +66,13 @@ An LLM may propose content or code and explain a failure. It cannot declare cont
 
 ## Initial implementation boundary
 
-CiAi now has typed declarations for directed repository relationships and immutable change notices. The existing immutable repository builder accepts `.WithRelationship(...)` declarations and carries the ordered graph into `CiAiRepositoryDefinition`; relationship metadata does not implicitly enable ADP. Contract tests cover builder enrollment, the raWWar → SURPS contribution edge, the SURPS → raWWar canonical-consumption edge, raWWar Experience ownership, exact commit/artifact provenance, and retry deduplication versus changed-input revalidation.
+CiAi now has typed declarations for directed repository relationships and immutable change notices. The existing immutable repository builder accepts `.WithRelationship(...)` declarations and carries the ordered graph into `CiAiRepositoryDefinition`. Manifest v2 (`ciai.repository.v2`) now serializes and validates the graph and optional bounded ADP settings; CiAi's own `.ciai/repository.json` declares all three raWWar/SURPS edges while leaving `adp` null. Contract tests cover builder and manifest enrollment, the raWWar → SURPS contribution edge, the SURPS → raWWar canonical-consumption edge, raWWar Experience ownership, exact commit/artifact provenance, and retry deduplication versus changed-input revalidation.
 
 This is intentionally a contract foundation, not a claim that the entire ADP is running. The next slices are:
 
-1. Extend the existing `.ciai/repository.json` manifest contract to serialize/parse the graph and ADP settings without creating a parallel manifest system.
-2. Persist change notices and delivery receipts using the existing outbox/receipt patterns.
-3. Map relationship events into bounded ADP work groups and existing Await/Gate declarations.
-4. Connect those work groups to FSM_Execution and the host authorization boundary.
-5. Prove the complete raWWar ↔ SURPS ↔ raWWar loop using exact source revisions, artifact digests, CI evidence, duplicate delivery, changed content, and failed admission cases.
+1. Persist change notices and delivery receipts using the existing outbox/receipt patterns.
+2. Map relationship events into bounded ADP work groups and existing Await/Gate declarations.
+3. Connect those work groups to FSM_Execution and the host authorization boundary.
+4. Prove the complete raWWar ↔ SURPS ↔ raWWar loop using exact source revisions, artifact digests, CI evidence, duplicate delivery, changed content, and failed admission cases.
 
 No package publication, release, deployment, or merge authority is created by these contracts.
