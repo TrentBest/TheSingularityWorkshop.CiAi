@@ -175,6 +175,16 @@ internal static class CiWorkflowEvidencePacketTests
             serialized, "TrentBest/CiAi", 42, 2, new string('0', 64), requiredCheckBindings,
             workflowDefinitionTrusted: true));
 
+        var unexpectedPropertyJson = serialized.Replace(
+            "\"schema\":", "\"unexpected\":true,\"schema\":", StringComparison.Ordinal);
+        var unexpectedPropertyDigest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(unexpectedPropertyJson)));
+        Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromJson(
+            unexpectedPropertyJson, "TrentBest/CiAi", 42, 2, unexpectedPropertyDigest,
+            requiredCheckBindings, workflowDefinitionTrusted: false));
+        Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromJson(
+            serialized, "TrentBest/CiAi", 42, 2, packetDigest,
+            new[] { new CiWorkflowRequiredCheckBinding("wrong", "wrong") }, workflowDefinitionTrusted: false));
+
         var untrusted = CiWorkflowEvidencePacket.FromValidatedProvenance(
             CreateObservedRun(), provenance, workflowDefinitionTrusted: false, requiredCheckBindings);
         Assert(!untrusted.IsSuccessful &&
@@ -218,8 +228,8 @@ internal static class CiWorkflowEvidencePacketTests
         Assert(!mismatchedCheckoutPacket.CheckoutVerified && !mismatchedCheckoutPacket.IsSuccessful,
             "mismatched PR checkout SHA was not retained as non-actionable evidence");
 
-        Console.WriteLine("PASS: 21 CI workflow evidence packet v1 contract checks.");
-        return 21;
+        Console.WriteLine("PASS: 23 CI workflow evidence packet v1 contract checks.");
+        return 23;
     }
 
 
