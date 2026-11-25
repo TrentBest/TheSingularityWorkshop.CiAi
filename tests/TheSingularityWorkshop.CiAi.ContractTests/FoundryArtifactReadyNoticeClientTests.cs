@@ -7,6 +7,8 @@ internal static class FoundryArtifactReadyNoticeClientTests
 {
     public static async Task<int> RunAsync()
     {
+        Assert(FoundryArtifactReadyNoticeClient.Contract == "execution.ciai-artifact-ingress.v1",
+            "client receipt contract does not match the Execution v1 ingress contract");
         var notice = CreateNotice();
         string? capturedBody = null;
         string? capturedAuthorizationScheme = null;
@@ -232,8 +234,8 @@ internal static class FoundryArtifactReadyNoticeClientTests
             new HttpClient(), new Uri("https://foundry.example/api/v1/other"),
             new FixtureCredentials("token")));
 
-        Console.WriteLine("PASS: 19 Foundry artifact-ready ingress client contract checks.");
-        return 19;
+        Console.WriteLine("PASS: 20 Execution artifact-ready ingress client contract checks.");
+        return 20;
     }
 
     private static HttpClient ResponseClient(HttpStatusCode status, string body) =>
