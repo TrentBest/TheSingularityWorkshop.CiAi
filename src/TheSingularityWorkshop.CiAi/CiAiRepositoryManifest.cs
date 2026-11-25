@@ -80,7 +80,7 @@ public sealed record CiAiRepositoryManifest
             {
                 CiAiRepositoryDependency direct => new[]
                 {
-                    new { repository = direct.Repository, capability = direct.Capability }
+                    new DependencyJson(direct.Repository, direct.Capability)
                 },
                 _ => Array.Empty<DependencyJson>()
             }).OrderBy(x => x.repository, StringComparer.Ordinal).ThenBy(x => x.capability, StringComparer.Ordinal),
