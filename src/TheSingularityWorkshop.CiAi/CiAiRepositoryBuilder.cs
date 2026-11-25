@@ -235,11 +235,11 @@ public sealed class CiAiRepositoryBuilder
     private readonly CiAiAdpSettings? _adp;
     private readonly CiAiLlmAllocation? _allocation;
 
-    public CiAiRepositoryBuilder() : this(null, [], [], [], [], [], [], null, null) { }
+    public CiAiRepositoryBuilder() : this(null, [], [], [], [], [], null, null) { }
     internal CiAiRepositoryBuilder(string repository) : this(
         RepositoryIdentity.IsValid(repository) ? repository :
             throw new ArgumentException("Repository must use canonical owner/repository identity.", nameof(repository)),
-        [], [], [], [], null, null) { }
+        [], [], [], [], [], null, null) { }
 
     private CiAiRepositoryBuilder(string? repository, CiAiBadgeDefinition[] badges,
         CiAiDependencyExpression[] dependencies, CiAiExtensionDefinition[] extensions,
