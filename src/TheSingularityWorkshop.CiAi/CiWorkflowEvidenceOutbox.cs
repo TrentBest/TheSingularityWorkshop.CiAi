@@ -5,7 +5,7 @@ using System.Text.Json;
 namespace TheSingularityWorkshop.CiAi;
 
 /// <summary>Stable delivery identity for one exact v1 workflow run attempt and checkout.</summary>
-public sealed record CiWorkflowEvidenceDelivery
+public sealed record CiWorkflowEvidenceDelivery : ICiWorkflowEvidenceDelivery
 {
     public CiWorkflowEvidenceDelivery(string deliveryId, CiWorkflowEvidencePacket packet)
     {
