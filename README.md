@@ -87,6 +87,8 @@ ServerSC2 is the next CODE RED evidence integration. ServerSC2 owns authoritativ
 
 - [AiCi repository command proposal contract](docs/AI_CI_REPOSITORY_COMMANDS.md) — deterministic CommandAi/1 proposal identity and bounded repository-operation intent.
 
+- [CI semantic stack](docs/CI_SEMANTIC_STACK.md) — typed workflow vocabulary and protocol/grammar cross-reference validation.
+
 ## 06 — Architecture and proof
 
 - [Pages publication contract](docs/PAGES_PUBLICATION_CONTRACT.md) — destination-specific approval policy, failure-safe last-known-good experience, operational dashboard, and current implementation status.
