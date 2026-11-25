@@ -235,7 +235,11 @@ internal static class CiWorkflowEvidenceDeliveryTests
             Array.AsReadOnly(new[]
             {
                 new CiWorkflowStepObservation(1, "Build and test", "completed", "success", "2026-10-31T01:00:00Z")
-            }));
+            }))
+        {
+            StartedAt = DateTimeOffset.Parse("2026-10-31T00:59:00Z"),
+            CompletedAt = DateTimeOffset.Parse("2026-10-31T01:00:30Z")
+        };
         var observed = new CiWorkflowRunEvidenceObservation(
             "TrentBest/SimpleDemos", ".github/workflows/ci.yml", runId, 1,
             "refs/heads/development", eventSha, "push", workflowName,
@@ -244,7 +248,8 @@ internal static class CiWorkflowEvidenceDeliveryTests
             DateTimeOffset.Parse("2026-10-31T01:01:00Z"),
             Array.AsReadOnly(new[] { job }), true, true);
         return CiWorkflowEvidencePacket.FromValidatedProvenance(
-            observed, provenance, workflowDefinitionTrusted: true);
+            observed, provenance, workflowDefinitionTrusted: true,
+            new[] { new CiWorkflowRequiredCheckBinding("build", "build") });
     }
 
     private static void Assert(bool condition, string message)
