@@ -31,7 +31,7 @@ Observe every matching workflow run, its exact attempt, jobs, and steps for one 
 dotnet run --project samples/TheSingularityWorkshop.CiAi.ObserveRun -- TrentBest/TheSingularityWorkshop.CiAi <full-40-character-commit-sha> artifacts/commit-observation.json
 ```
 
-Use a real 40-character SHA in place of the placeholder. The observer uses bounded pagination and writes raw run/job evidence. To evaluate a policy, configure `CIAI_REQUIRED_WORKFLOW_PATHS` as a semicolon-separated list of exact workflow paths. Missing, duplicate, non-terminal, unsuccessful, or incomplete required evidence fails closed. The report separates API discovery completeness, required-evidence completeness, terminality, and success. Without a configured required-workflow policy, `complete` is false. The report is a raw, read-only observation—not a release verdict or publication approval.
+Use a real 40-character SHA in place of the placeholder. The observer uses bounded pagination and writes raw run/job evidence. To evaluate a policy, configure `CIAI_REQUIRED_WORKFLOW_PATHS` as a semicolon-separated list of exact workflow paths. Missing, duplicate, non-terminal, unsuccessful, or incomplete required evidence fails closed. The report separates API discovery completeness, required-evidence completeness, terminality, and success. Without a configured required-workflow policy, `complete` is false. The report is a raw, read-only observation—not a release verdict or publication approval. The observer emits one `ciai.workflow-evidence.v1` envelope containing provider observations, provenance, and host-registered required checks. Its companion `ciai.test-results.v1` report owns the stable test verdict (`CompletePass`, `ActionableFailure`, `IncompleteOrUntrusted`, or `NonActionableFailure`) and reason codes.
 
 ## 02 — Agentic development: CODE RED
 
@@ -48,7 +48,7 @@ The intended responsibility split is:
 
 The first proof target is the manifest-driven Minesweeper Experience: a failing exact-SHA test artifact must become a provenance-bound diagnostic report, drive a bounded repair proposal for the same task, pass independent host authorization before any isolated-branch change, and then produce a new exact-candidate green verdict. Only after that loop works should the local manifest be loaded and played as an Experience.
 
-**Implementation status:** the repository currently has draft provenance/evidence and TRX diagnostic slices; CommandAi has a separate generic proposal contract; FSM_Foundry has draft ingress, report-consumer, and secure-transport foundations. These are not yet a live connected pipeline. The AiCi proposal builder and clean-CI CommandAi source dependency are still being established. No end-to-end red → repair → green CODE RED run is claimed.
+**Implementation status:** the repository has the canonical `ciai.workflow-evidence.v1` envelope, provenance validation, required-check binding, and `ciai.test-results.v1` diagnostics/verdict slices; CommandAi has a separate generic proposal contract; the execution-host repository has draft ingress, report-consumer, and secure-transport foundations. These are not yet a live connected pipeline. The AiCi proposal builder and clean-CI CommandAi source dependency are still being established. No end-to-end red → repair → green CODE RED run is claimed.
 
 Track the coordinated acceptance path:
 - [CODE RED umbrella and acceptance criteria](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/27)
