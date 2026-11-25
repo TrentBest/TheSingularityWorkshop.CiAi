@@ -57,7 +57,7 @@ internal static class CiWorkflowEvidencePacketTests
         var (runCollection, jobCollection) = CreateCollections();
         var factoryPacket = CiWorkflowEvidencePacket.FromCollections(
             runCollection, jobCollection, 42, 2, DateTimeOffset.Parse("2026-10-31T01:02:00Z"),
-            provenance, workflowDefinitionTrusted: true,
+            provenance, trustDecision,
             pullRequestIdentity: new CiPullRequestProviderIdentity(
                 17, "feature/fix", ProviderHeadSha,
                 "development", "dddddddddddddddddddddddddddddddddddddddd",
