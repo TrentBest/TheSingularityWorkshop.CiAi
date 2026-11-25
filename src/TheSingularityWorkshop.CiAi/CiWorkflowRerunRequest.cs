@@ -17,6 +17,8 @@ public sealed record CiWorkflowDispatchInputContract
     public CiWorkflowDispatchInputContract(
         string repository,
         string workflowPath,
+        string workflowDefinitionRef,
+        string workflowDefinitionSha,
         string candidateRef,
         string candidateSha)
     {
@@ -30,6 +32,11 @@ public sealed record CiWorkflowDispatchInputContract
             !(workflowPath.EndsWith(".yml", StringComparison.OrdinalIgnoreCase) ||
               workflowPath.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase)))
             throw new ArgumentException("Workflow path must identify a YAML workflow under .github/workflows/.", nameof(workflowPath));
+        if (!string.Equals(workflowDefinitionRef, "refs/heads/development", StringComparison.Ordinal))
+            throw new ArgumentException("Workflow definition must use the trusted development ref.", nameof(workflowDefinitionRef));
+        ArgumentException.ThrowIfNullOrWhiteSpace(workflowDefinitionSha);
+        if (workflowDefinitionSha.Length != 40 || !workflowDefinitionSha.All(Uri.IsHexDigit))
+            throw new ArgumentException("Workflow definition SHA must be a full 40-character hexadecimal commit identifier.", nameof(workflowDefinitionSha));
         ArgumentException.ThrowIfNullOrWhiteSpace(candidateRef);
         if (!BranchNamePattern.IsMatch(candidateRef) ||
             !candidateRef.StartsWith("refs/heads/feature/", StringComparison.Ordinal) ||
@@ -38,7 +45,9 @@ public sealed record CiWorkflowDispatchInputContract
             candidateRef.EndsWith(".", StringComparison.Ordinal) ||
             candidateRef.EndsWith("/", StringComparison.Ordinal) ||
             candidateRef.Contains("@{", StringComparison.Ordinal) ||
-            candidateRef.Any(char.IsControl))
+            candidateRef.Any(char.IsControl) ||
+            candidateRef.Split('/').Any(segment => segment.StartsWith(".", StringComparison.Ordinal) ||
+                segment.EndsWith(".lock", StringComparison.OrdinalIgnoreCase)))
             throw new ArgumentException("Candidate ref must be a valid full refs/heads/... branch identity.", nameof(candidateRef));
         ArgumentException.ThrowIfNullOrWhiteSpace(candidateSha);
         if (candidateSha.Length != 40 || !candidateSha.All(Uri.IsHexDigit))
@@ -46,12 +55,16 @@ public sealed record CiWorkflowDispatchInputContract
 
         Repository = repository;
         WorkflowPath = workflowPath;
+        WorkflowDefinitionRef = workflowDefinitionRef;
+        WorkflowDefinitionSha = workflowDefinitionSha.ToLowerInvariant();
         CandidateRef = candidateRef;
         CandidateSha = candidateSha.ToLowerInvariant();
     }
 
     public string Repository { get; }
     public string WorkflowPath { get; }
+    public string WorkflowDefinitionRef { get; }
+    public string WorkflowDefinitionSha { get; }
     public string CandidateRef { get; }
     public string CandidateSha { get; }
 }
@@ -126,6 +139,8 @@ public sealed record CiWorkflowRerunRequest
             CorrelationId,
             Dispatch.Repository,
             Dispatch.WorkflowPath,
+            Dispatch.WorkflowDefinitionRef,
+            Dispatch.WorkflowDefinitionSha,
             Dispatch.CandidateRef,
             Dispatch.CandidateSha,
             SourceRunId.ToString(System.Globalization.CultureInfo.InvariantCulture),
