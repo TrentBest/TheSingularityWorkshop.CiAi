@@ -31,17 +31,17 @@ The CI workflow produced a package candidate artifact for inspection. **It did n
 - **Semantic stack:** typed GrammarAi/ProtocolAi workflow catalogs and cross-reference validation.
 - **CommandAi/1 proposals:** deterministic command identity, idempotency keys, and explicit outcomes.
 - **Repository foundation:** the existing `CiAiRepositoryBuilder` and repository manifest remain the canonical composition API.
-- **Branch policy:** Sith enforces the exact `master` + `development` inventory. CiAi's latest observed policy result is compliant with exactly those two branches.
+- **Branch policy:** Sith enforces the exact `master` + `development` inventory. The last compliant baseline was run `45539466277`, before this temporary work began. The active PR #92 branch and one superseded, incorrectly based branch currently add temporary refs; the latter is ready for owner deletion, while PR #92's branch must remain until its review disposition.
 
 The 22-family workflow catalog remains a vocabulary inventory. A family appearing in the catalog is not evidence that its runtime, provider adapter, or release gate is implemented.
 
-The current CiAi branch inventory was independently reported compliant by Sith Policy run `45539466277` at `2026-11-25T03:22:15Z`: exactly two branches, `master` and `development`. The earlier surplus-branch warning below is superseded by that result.
+The pre-work CiAi branch inventory was independently reported compliant by Sith Policy run `45539466277` at `2026-11-25T03:22:15Z`: exactly `master` and `development`. This feature work temporarily adds two refs; the superseded `feature/durable-ci-rerun-requests` branch was mistakenly based on the master snapshot and is ready for owner deletion. The active `feature/durable-ci-rerun-requests-development` branch carries draft [PR #92](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/pull/92) and remains until its review disposition.
 
 ## Deferred intent — rebuild from this plan, not from parallel branches
 
 ### 1. Durable rerun and dispatch requests
 
-**Implemented on the isolated candidate branch** `feature/durable-ci-rerun-requests-development`; not yet integrated into `development`. The v1 slice adds `CiWorkflowDispatchInputContract`, `CiWorkflowRerunRequest`, and `FileCiWorkflowRerunRequestLedger`, with contract tests and [the request-boundary specification](WORKFLOW_RERUN_REQUEST_V1.md). It binds the canonical repository, workflow YAML path, trusted `refs/heads/development` workflow-definition ref and exact workflow SHA, isolated candidate feature ref and exact candidate SHA, source run/attempt, correlation ID, idempotency key, expiry, and a maximum of three additional attempts. The ledger is append-only, digest-verified, bounded, and idempotent.
+**Implemented on the isolated candidate branch** `feature/durable-ci-rerun-requests-development` in draft [PR #92](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/pull/92); not yet integrated into `development`. The v1 slice adds `CiWorkflowDispatchInputContract`, `CiWorkflowRerunRequest`, and `FileCiWorkflowRerunRequestLedger`, with contract tests and [the request-boundary specification](WORKFLOW_RERUN_REQUEST_V1.md). It binds the canonical repository, workflow YAML path, trusted `refs/heads/development` workflow-definition ref and exact workflow SHA, isolated candidate feature ref and exact candidate SHA, source run/attempt, correlation ID, idempotency key, expiry, and a maximum of three additional attempts. The ledger is append-only, digest-verified, bounded, and idempotent.
 
 This is still request intent only. It does not dispatch, retry, authenticate the requester, or authorize a provider call. The host must independently verify that the trusted workflow revision is approved, that the workflow is registered for manual dispatch, and that the candidate feature ref still resolves to the candidate SHA before each dispatch. The next slice is the FSM_Foundry host adapter and durable correlation to actual provider run IDs/attempts.
 
