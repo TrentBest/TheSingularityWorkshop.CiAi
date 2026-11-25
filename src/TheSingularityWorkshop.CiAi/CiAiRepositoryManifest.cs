@@ -67,6 +67,8 @@ public sealed record CiAiRepositoryManifest
     public string ToJson()
     {
         var definition = Definition;
+        if (definition.Dependencies.Any(item => item is not CiAiRepositoryDependency))
+            throw new InvalidOperationException("Manifest v1 serializes direct repository dependencies only; fallback expressions require a later schema version.");
         var payload = new
         {
             schema = CurrentSchema,
