@@ -39,6 +39,7 @@ RunSuite("CiAiRepositoryBuilderContractTests", () => CiAiRepositoryBuilderContra
 RunSuite("CiAiRepositoryManifestTests", () => CiAiRepositoryManifestTests.Run());
 RunSuite("CiPublicationPolicyContractTests", () => CiPublicationPolicyContractTests.Run());
 RunSuite("CiPagesPublicationPlanContractTests", () => CiPagesPublicationPlanContractTests.Run());
+RunSuite("CiPagesWorkflowBuildContractTests", () => CiPagesWorkflowBuildContractTests.Run());
 RunSuite("CiMatrixContractTests", () => CiMatrixContractTests.Run());
 RunSuite("CiWorkflowSemanticStackContractTests", () => CiWorkflowSemanticStackContractTests.Run());
 RunSuite("FileAwaitGateContractStoreTests", () => FileAwaitGateContractStoreTests.Run());
