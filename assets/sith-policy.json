@@ -7,11 +7,13 @@
   ],
   "actual_branches": [
     "development",
+    "feature/durable-ci-rerun-requests",
+    "feature/durable-ci-rerun-requests-development",
     "master"
   ],
-  "branch_count": 2,
-  "status": "COMPLIANT",
-  "evaluated_at": "2026-11-25T03:22:15Z",
-  "workflow_run": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/45539466277",
-  "triggering_commit": "dc0592dc257c09649266beb3fbe3cabe0693dab0"
+  "branch_count": 4,
+  "status": "NON-COMPLIANT",
+  "evaluated_at": "2026-11-25T14:21:12Z",
+  "workflow_run": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/45633076670",
+  "triggering_commit": "fdfb87a924d73f3ed17f960897690733e6eb1edb"
 }
