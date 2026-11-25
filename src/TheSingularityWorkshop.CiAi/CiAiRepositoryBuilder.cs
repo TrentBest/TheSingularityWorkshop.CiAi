@@ -187,13 +187,14 @@ public sealed record CiAiRepositoryDefinition
 {
     internal CiAiRepositoryDefinition(string repository, IReadOnlyList<CiAiBadgeDefinition> badges,
         IReadOnlyList<CiAiDependencyExpression> dependencies, IReadOnlyList<CiAiExtensionDefinition> extensions,
-        IReadOnlyList<string> pipelines, CiAiAdpSettings? adp, CiAiLlmAllocation? allocation)
+        IReadOnlyList<string> pipelines, IReadOnlyList<CiRepositoryRelationship> relationships, CiAiAdpSettings? adp, CiAiLlmAllocation? allocation)
     {
         Repository = repository;
         Badges = Array.AsReadOnly(badges.ToArray());
         Dependencies = Array.AsReadOnly(dependencies.ToArray());
         Extensions = Array.AsReadOnly(extensions.ToArray());
         NamedDevelopmentPipelines = Array.AsReadOnly(pipelines.ToArray());
+        Relationships = Array.AsReadOnly(relationships.ToArray());
         AdpSettings = adp; LlmAllocation = allocation;
     }
     public const string DefaultDevelopmentPipeline = "default";
@@ -202,6 +203,7 @@ public sealed record CiAiRepositoryDefinition
     public IReadOnlyList<CiAiDependencyExpression> Dependencies { get; }
     public IReadOnlyList<CiAiExtensionDefinition> Extensions { get; }
     public IReadOnlyList<string> NamedDevelopmentPipelines { get; }
+    public IReadOnlyList<CiRepositoryRelationship> Relationships { get; }
     public IReadOnlyList<string> DevelopmentPipelines => NamedDevelopmentPipelines.Count == 0
         ? Array.AsReadOnly(new[] { DefaultDevelopmentPipeline }) : NamedDevelopmentPipelines;
     public CiAiAdpSettings? AdpSettings { get; }
@@ -229,10 +231,11 @@ public sealed class CiAiRepositoryBuilder
     private readonly CiAiDependencyExpression[] _dependencies;
     private readonly CiAiExtensionDefinition[] _extensions;
     private readonly string[] _pipelines;
+    private readonly CiRepositoryRelationship[] _relationships;
     private readonly CiAiAdpSettings? _adp;
     private readonly CiAiLlmAllocation? _allocation;
 
-    public CiAiRepositoryBuilder() : this(null, [], [], [], [], null, null) { }
+    public CiAiRepositoryBuilder() : this(null, [], [], [], [], [], [], null, null) { }
     internal CiAiRepositoryBuilder(string repository) : this(
         RepositoryIdentity.IsValid(repository) ? repository :
             throw new ArgumentException("Repository must use canonical owner/repository identity.", nameof(repository)),
@@ -240,10 +243,10 @@ public sealed class CiAiRepositoryBuilder
 
     private CiAiRepositoryBuilder(string? repository, CiAiBadgeDefinition[] badges,
         CiAiDependencyExpression[] dependencies, CiAiExtensionDefinition[] extensions,
-        string[] pipelines, CiAiAdpSettings? adp, CiAiLlmAllocation? allocation)
+        string[] pipelines, CiRepositoryRelationship[] relationships, CiAiAdpSettings? adp, CiAiLlmAllocation? allocation)
     {
         _repository = repository; _badges = badges; _dependencies = dependencies;
-        _extensions = extensions; _pipelines = pipelines; _adp = adp; _allocation = allocation;
+        _extensions = extensions; _pipelines = pipelines; _relationships = relationships; _adp = adp; _allocation = allocation;
     }
 
     public CiAiRepositoryBuilder WithBadge(CiAiBadgeDefinition badge)
@@ -284,6 +287,13 @@ public sealed class CiAiRepositoryBuilder
         if (value.Length > 100 || value.Any(char.IsControl)) throw new ArgumentException("Pipeline name is invalid.", nameof(name));
         return _pipelines.Contains(value, StringComparer.Ordinal) ? this : Copy(pipelines: _pipelines.Append(value).ToArray());
     }
+    public CiAiRepositoryBuilder WithRelationship(CiRepositoryRelationship relationship)
+    {
+        ArgumentNullException.ThrowIfNull(relationship);
+        if (_relationships.Any(x => string.Equals(x.RelationshipId, relationship.RelationshipId, StringComparison.Ordinal)))
+            throw new InvalidOperationException($"Relationship '{relationship.RelationshipId}' is already declared.");
+        return Copy(relationships: _relationships.Append(relationship).ToArray());
+    }
     public CiAiRepositoryBuilder WithADP(CiAiAdpSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
@@ -315,11 +325,12 @@ public sealed class CiAiRepositoryBuilder
         }).ToArray();
         if (names.Any(x => string.Equals(x, repository, StringComparison.OrdinalIgnoreCase)))
             throw new InvalidOperationException("A repository cannot depend on itself.");
-        return new(repository, _badges, resolved, _extensions, _pipelines, _adp, _allocation);
+        return new(repository, _badges, resolved, _extensions, _pipelines, _relationships, _adp, _allocation);
     }
     private CiAiRepositoryBuilder Copy(CiAiBadgeDefinition[]? badges = null,
         CiAiDependencyExpression[]? dependencies = null, CiAiExtensionDefinition[]? extensions = null,
-        string[]? pipelines = null, CiAiAdpSettings? adp = null, CiAiLlmAllocation? allocation = null) =>
+        string[]? pipelines = null, CiRepositoryRelationship[]? relationships = null,
+        CiAiAdpSettings? adp = null, CiAiLlmAllocation? allocation = null) =>
         new(_repository, badges ?? _badges, dependencies ?? _dependencies, extensions ?? _extensions,
-            pipelines ?? _pipelines, adp ?? _adp, allocation ?? _allocation);
+            pipelines ?? _pipelines, relationships ?? _relationships, adp ?? _adp, allocation ?? _allocation);
 }
