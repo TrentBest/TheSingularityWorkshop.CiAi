@@ -88,6 +88,26 @@ try
             expectedWorkflowRef, expectedWorkflowSha, expectedWorkflowEvent, expectedWorkflowRef);
     }
 
+    CiWorkflowDefinitionTrustDecision? workflowTrustDecision = null;
+    if (provenanceRequired)
+    {
+        if (workflowProvenance is null)
+            throw new InvalidDataException("Workflow provenance is required before workflow-definition trust can be evaluated.");
+        var approvedWorkflowRef = Environment.GetEnvironmentVariable("CIAI_APPROVED_WORKFLOW_REF");
+        var approvedWorkflowSha = Environment.GetEnvironmentVariable("CIAI_APPROVED_WORKFLOW_SHA");
+        if (string.IsNullOrWhiteSpace(approvedWorkflowRef) || string.IsNullOrWhiteSpace(approvedWorkflowSha))
+            throw new InvalidDataException("Protected workflow trust policy is missing. Supply approved ref and immutable revision from trusted host configuration.");
+        var trustPolicy = new CiWorkflowDefinitionTrustPolicy(
+            repository, observerProfile.WorkflowPath, approvedWorkflowRef, approvedWorkflowSha);
+        var runWorkflowBytes = await FetchWorkflowDefinitionAsync(
+            httpClient, repository, observerProfile.WorkflowPath,
+            workflowProvenance.Provenance.WorkflowSha, token);
+        var approvedWorkflowBytes = await FetchWorkflowDefinitionAsync(
+            httpClient, repository, observerProfile.WorkflowPath, approvedWorkflowSha, token);
+        workflowTrustDecision = trustPolicy.Evaluate(
+            workflowProvenance.Provenance, runWorkflowBytes, approvedWorkflowBytes);
+    }
+
     var observedRuns = new List<object>();
     var policyEvidence = new List<CiRequiredWorkflowRunEvidence>();
     CiWorkflowJobCollection? requiredJobCollection = null;
@@ -201,7 +221,7 @@ try
         var observedAt = DateTimeOffset.UtcNow;
         var evidencePacket = CiWorkflowEvidencePacket.FromCollections(
             runCollection, requiredJobCollection, sourceRunId, sourceRunAttempt,
-            observedAt, workflowProvenance.Provenance, workflowDefinitionTrusted: true,
+            observedAt, workflowProvenance.Provenance, workflowTrustDecision!,
             artifactReferences: new[]
             {
                 new Uri($"https://github.com/{repository}/actions/runs/{sourceRunId}/artifacts/{workflowProvenance.ProviderArtifact.ArtifactId}"),
@@ -279,6 +299,17 @@ try
             checkoutSha = workflowProvenance?.Provenance.CheckoutSha
         },
         workflowProvenanceValid,
+        workflowDefinitionTrust = new
+        {
+            evaluated = workflowTrustDecision is not null,
+            trusted = workflowTrustDecision?.IsTrusted ?? false,
+            reasonCode = workflowTrustDecision?.ReasonCode,
+            approvedProtectedRef = workflowTrustDecision?.ApprovedProtectedRef,
+            approvedProtectedRevisionSha = workflowTrustDecision?.ApprovedProtectedRevisionSha,
+            observedWorkflowSha = workflowTrustDecision?.ObservedWorkflowSha,
+            observedContentSha256 = workflowTrustDecision?.ObservedContentSha256,
+            approvedContentSha256 = workflowTrustDecision?.ApprovedContentSha256
+        },
         testResultReport = new
         {
             required = provenanceRequired,
@@ -327,6 +358,30 @@ catch (Exception exception) when (exception is HttpRequestException or InvalidDa
 {
     Console.Error.WriteLine($"CiAi could not complete the requested observation: {exception.Message}");
     return 1;
+}
+
+static async Task<byte[]> FetchWorkflowDefinitionAsync(
+    HttpClient httpClient, string repository, string workflowPath, string revision, string? token)
+{
+    var encodedPath = string.Join("/", workflowPath.Split('/').Select(Uri.EscapeDataString));
+    using var request = new HttpRequestMessage(
+        HttpMethod.Get,
+        $"https://api.github.com/repos/{repository}/contents/{encodedPath}?ref={Uri.EscapeDataString(revision)}");
+    request.Headers.Accept.ParseAdd("application/vnd.github+json");
+    request.Headers.UserAgent.ParseAdd("TheSingularityWorkshop-CiAi-Observer");
+    if (!string.IsNullOrWhiteSpace(token))
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+    using var response = await httpClient.SendAsync(request, CancellationToken.None);
+    response.EnsureSuccessStatusCode();
+    using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+    var root = document.RootElement;
+    if (!root.TryGetProperty("encoding", out var encoding) ||
+        !string.Equals(encoding.GetString(), "base64", StringComparison.Ordinal) ||
+        !root.TryGetProperty("content", out var contentElement) ||
+        string.IsNullOrWhiteSpace(contentElement.GetString()))
+        throw new InvalidDataException($"GitHub did not return base64 workflow content for {repository}/{workflowPath}@{revision}.");
+    var compactBase64 = string.Concat(contentElement.GetString()!.Where(character => !char.IsWhiteSpace(character)));
+    return Convert.FromBase64String(compactBase64);
 }
 
 static void PrintUsage()
