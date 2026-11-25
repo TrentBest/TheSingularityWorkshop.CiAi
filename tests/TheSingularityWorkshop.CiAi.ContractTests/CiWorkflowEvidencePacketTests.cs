@@ -112,10 +112,10 @@ internal static class CiWorkflowEvidencePacketTests
             Assert(outbox.Enqueue(delivery) == CiWorkflowEvidenceEnqueueOutcome.Enqueued &&
                 outbox.Enqueue(delivery) == CiWorkflowEvidenceEnqueueOutcome.Duplicate,
                 "v1 outbox did not durably deduplicate the exact delivery");
-            var pending = outbox.ReadPending();
+            var pending = outbox.ReadPending(requiredCheckBindings);
             Assert(pending.Count == 1 && !pending[0].Packet.WorkflowDefinitionTrusted &&
                 pending[0].Packet.RequiredChecks.SequenceEqual(factoryPacket.RequiredChecks) &&
-                outbox.ReadPending(new HashSet<string>(StringComparer.Ordinal) { delivery.DeliveryId }).Count == 0,
+                outbox.ReadPending(requiredCheckBindings, new HashSet<string>(StringComparer.Ordinal) { delivery.DeliveryId }).Count == 0,
                 "v1 outbox reload restored trust, lost required checks, or ignored acknowledgement filtering");
         }
         finally
