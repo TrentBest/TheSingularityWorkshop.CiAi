@@ -89,7 +89,7 @@ public sealed record CiAiRepositoryAdmissionReport
 {
     internal CiAiRepositoryAdmissionReport(CiAiRepositoryAdmissionOutcome outcome, string resultCode,
         string message, string? licenseeId, string? candidateRepository, int configuredRepositoryCount,
-        int maximumAuthorizedRepositories, string? tier, string? entitlementStatus,
+        int projectedConfiguredRepositoryCount, int maximumAuthorizedRepositories, string? tier, string? entitlementStatus,
         DateTimeOffset evaluatedAtUtc, string correlationId, Uri? upgradeUrl)
     {
         Outcome = outcome;
@@ -98,6 +98,7 @@ public sealed record CiAiRepositoryAdmissionReport
         LicenseeId = licenseeId;
         CandidateRepository = candidateRepository;
         ConfiguredRepositoryCount = configuredRepositoryCount;
+        ProjectedConfiguredRepositoryCount = projectedConfiguredRepositoryCount;
         MaximumAuthorizedRepositories = maximumAuthorizedRepositories;
         Tier = tier;
         EntitlementStatus = entitlementStatus;
@@ -113,6 +114,7 @@ public sealed record CiAiRepositoryAdmissionReport
     public string? LicenseeId { get; }
     public string? CandidateRepository { get; }
     public int ConfiguredRepositoryCount { get; }
+    public int ProjectedConfiguredRepositoryCount { get; }
     public int MaximumAuthorizedRepositories { get; }
     public string? Tier { get; }
     public string? EntitlementStatus { get; }
@@ -154,7 +156,7 @@ public static class CiAiRepositoryAdmissionEvaluator
         if (distinct.Contains(candidate!))
             return Create(CiAiRepositoryAdmissionOutcome.Admitted, "CIAI_REPOSITORY_ALREADY_ADMITTED",
                 "The repository is already configured; admission is idempotent and consumes no additional repository slot.",
-                entitlement, candidate, count, request, correlationId, null);
+                entitlement, candidate, count, count, request, correlationId, null);
 
         var now = request.RequestedAtUtc;
         var verified = entitlement.VerificationStatus == CiAiEntitlementVerificationStatus.Verified &&
@@ -163,22 +165,22 @@ public static class CiAiRepositoryAdmissionEvaluator
         if (!verified)
             return Create(CiAiRepositoryAdmissionOutcome.EntitlementUnavailable, EntitlementUnavailableCode,
                 "CiAi could not verify a currently valid entitlement. The new repository was not admitted; existing repositories are unaffected.",
-                entitlement, candidate, count, request, correlationId, request.UpgradeUrl);
+                entitlement, candidate, count, count, request, correlationId, request.UpgradeUrl);
 
         if (count >= entitlement.MaximumConfiguredRepositories)
             return Create(CiAiRepositoryAdmissionOutcome.UpgradeRequired, RepositoryLimitExceededCode,
                 $"CiAi did not enroll this repository. This account has {count} configured repositories and is authorized for {entitlement.MaximumConfiguredRepositories}. A paid license is required to add another repository. No CiAi work was started for this repository.",
-                entitlement, candidate, count, request, correlationId, request.UpgradeUrl);
+                entitlement, candidate, count, count, request, correlationId, request.UpgradeUrl);
 
         return Create(CiAiRepositoryAdmissionOutcome.Admitted, "CIAI_REPOSITORY_ADMITTED",
             "The repository fits within the verified CiAi repository allowance.",
-            entitlement, candidate, count + 1, request, correlationId, null);
+            entitlement, candidate, count, count + 1, request, correlationId, null);
     }
 
     private static CiAiRepositoryAdmissionReport Create(CiAiRepositoryAdmissionOutcome outcome, string code,
         string message, CiAiRepositoryEntitlement entitlement, string? candidate, int count,
-        CiAiRepositoryAdmissionRequest request, string correlationId, Uri? upgradeUrl) =>
-        new(outcome, code, message, entitlement.LicenseeId, candidate, count,
+        int projectedCount, CiAiRepositoryAdmissionRequest request, string correlationId, Uri? upgradeUrl) =>
+        new(outcome, code, message, entitlement.LicenseeId, candidate, count, projectedCount,
             entitlement.MaximumConfiguredRepositories, entitlement.Tier,
             entitlement.VerificationStatus.ToString(), request.RequestedAtUtc,
             correlationId, upgradeUrl);
