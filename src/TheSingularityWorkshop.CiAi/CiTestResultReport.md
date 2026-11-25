@@ -11,7 +11,7 @@
 
 ## Input validation
 
-The producer requires a trusted workflow definition, verified candidate checkout, complete exact-run evidence, and exactly one matching job. The artifact source is bound to repository, run ID, attempt, numeric provider job ID, configured job key, and provider artifact metadata.
+The producer requires a trusted workflow definition, verified candidate checkout, complete exact-run evidence, and exactly one matching job. That job must also match exactly one host-registered `RequiredChecks` binding in the canonical `ciai.workflow-evidence.v1` envelope; the registered job ID, name, status, and conclusion must match the provider observation. The artifact source is bound to repository, run ID, attempt, numeric provider job ID, configured job key, and provider artifact metadata.
 
 Provider artifact names are labels supplied by the provider. They are not required to follow a CiAi-generated naming convention. The trusted host must map the provider artifact ID/name to the numeric job ID and configured job key before constructing the source descriptor. A sidecar value is never accepted as a substitute for provider-authenticated job identity.
 
