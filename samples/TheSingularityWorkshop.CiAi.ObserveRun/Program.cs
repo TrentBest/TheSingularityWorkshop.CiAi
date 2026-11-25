@@ -231,7 +231,7 @@ try
             job.RunId == sourceRunId && job.RunAttempt == sourceRunAttempt &&
             string.Equals(job.Name, observerProfile.RequiredJobName, StringComparison.Ordinal));
         var providerBinding = CiTestResultProviderArtifactBinding.FromObservedArtifact(
-            sourceProviderArtifact, evidencePacket, requiredJobPolicy, requiredJob.JobId, "contract");
+            sourceProviderArtifact, evidencePacket, requiredJobPolicy, requiredJob.JobId, observerProfile.RequiredJobKey);
         var sourceArchive = CiTestResultArtifactArchive.Read(
             sourceArchiveBytes, providerBinding, observerProfile.TrxEntryName, "provenance.json");
         var source = CiTestResultArtifactSource.FromVerifiedProviderObservation(
