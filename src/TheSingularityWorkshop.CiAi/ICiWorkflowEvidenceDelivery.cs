@@ -1,8 +1,8 @@
 namespace TheSingularityWorkshop.CiAi;
 
 /// <summary>
-/// Transport-neutral identity for a durable workflow-evidence payload. The same receipt ledger
-/// can acknowledge v1 and v2 deliveries without treating either payload schema as authority.
+/// Transport-neutral identity for the one canonical v1 workflow-evidence payload. Receipts acknowledge
+/// exact delivery bytes but never treat the payload as authorization.
 /// </summary>
 public interface ICiWorkflowEvidenceDelivery
 {
