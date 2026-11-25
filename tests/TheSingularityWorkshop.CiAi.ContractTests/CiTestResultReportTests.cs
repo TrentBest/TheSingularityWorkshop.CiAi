@@ -368,7 +368,7 @@ internal static class CiTestResultReportTests
         bool protectedPush = false)
     {
         var eventRef = protectedPush ? "refs/heads/development" : "refs/pull/17/merge";
-        var checkoutRef = protectedPush ? "refs/heads/development" : "refs/heads/feature/minesweeper-domain-pilot";
+        var checkoutRef = eventRef;
         var eventName = protectedPush ? "push" : "pull_request";
         var eventSha = CandidateSha;
         var workflowSha = protectedPush ? CandidateSha : WorkflowSha;
@@ -428,7 +428,7 @@ internal static class CiTestResultReportTests
             CandidateSha, new[] { ProviderHeadSha, "dddddddddddddddddddddddddddddddddddddddd" });
         var observed = new CiWorkflowRunEvidenceObservation(
             Repository, WorkflowPath, RunId, RunAttempt,
-            eventRef, eventSha, eventName, "Validation",
+            "refs/heads/development", protectedPush ? CandidateSha : ProviderHeadSha, eventName, "Validation",
             CiRunStatus.Completed,
             conclusion == "success" ? CiRunConclusion.Success : CiRunConclusion.Failure,
             new Uri($"https://github.com/{Repository}/actions/runs/{RunId}"),
