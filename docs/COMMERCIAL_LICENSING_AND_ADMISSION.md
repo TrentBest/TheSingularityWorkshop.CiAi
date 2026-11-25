@@ -146,6 +146,34 @@ of repositories per organization, then distinguish organizations that are
 individual projects, small teams, growing product companies, and very large
 enterprises.
 
+### Preliminary evidence found (not yet a full distribution analysis)
+
+A 2025 study of public GitHub profiles for 275 Forbes Global 2000 firms
+reported a median of 22 repositories and a mean of 125. Thirty-one firms had
+no public repositories. The ten largest repository holders accounted for
+50.7% of the repositories in that sample. This is a useful enterprise
+stress-test sample, not a representative sample of all companies: only 14%
+of the Forbes Global 2000 had public GitHub profiles, and the counts do not
+include their private repositories. See
+[Measuring Enterprise Software Supply Chain Security using Public Repositories
+(SCORED '25)](https://tylermoore.utulsa.edu/scored25.pdf).
+
+The [GONets dataset](https://zenodo.org/records/18472549) provides a much
+larger research base: more than 230,000 GitHub organizations and 4.37 million
+repositories, with organization metadata including company, public repository
+count, and organization-network information. Its published organization
+field description includes `public_repos`; public counts must not be
+mistaken for all private-plus-public repositories. The released database is
+539.2 MB, so its actual distribution still needs to be queried and summarized
+before using it to set commercial thresholds.
+
+These early observations already warn against assuming a normal bell curve.
+Repository counts are non-negative, discrete, and have a substantial
+upper tail. Pricing analysis should use empirical percentiles and logarithmic
+or quantile buckets rather than mean ± standard deviation. The Forbes sample's
+mean (125) being far above its median (22), together with the concentration
+among its ten largest firms, is consistent with that caution.
+
 A defensible research sample should:
 
 1. use a large, reproducible organization dataset with organization size
