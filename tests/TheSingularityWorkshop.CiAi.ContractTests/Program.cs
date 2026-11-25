@@ -14,6 +14,7 @@ passed += CiPagesPublicationPlanContractTests.Run();
 passed += CiWorkflowDomainCatalogContractTests.Run();
 passed += CiWorkflowDomainEvaluatorContractTests.Run();
 passed += CiWorkflowPlanContractTests.Run();
+passed += CiMatrixContractTests.Run();
 passed += CiWorkflowGrammarContractTests.Run();
 passed += BenchmarkBuildDispatchTests.Run();
 passed += SuccessfulBuildBenchmarkCoordinatorTests.Run();
