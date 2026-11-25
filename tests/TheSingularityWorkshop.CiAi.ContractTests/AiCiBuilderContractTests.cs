@@ -8,7 +8,7 @@ internal static class AiCiBuilderContractTests
     public static int Run()
     {
         _passed = 0;
-        Check("builder emits all six repository operation identities using CommandAi/1", () =>
+        Check("builder emits all six repository operation identities as enriched CommandAi/1 commands", () =>
         {
             var proposal = NewBuilder()
                 .CreateProject("Minesweeper")
@@ -18,6 +18,7 @@ internal static class AiCiBuilderContractTests
                 .RequestBuild()
                 .RequestTests()
                 .Build();
+
             Assert(proposal.ProtocolVersion == CommandProposal.CurrentProtocolVersion, "wrong CommandAi protocol");
             Assert(proposal.ProtocolVersion == "CommandAi/1", "proposal did not use CommandAi/1");
             Assert(proposal.Commands.Select(c => c.ActionId).SequenceEqual(new ulong[] {
@@ -25,27 +26,76 @@ internal static class AiCiBuilderContractTests
                 AiCiCommandCatalog.ModifyProjectFile, AiCiCommandCatalog.AddDependency,
                 AiCiCommandCatalog.RequestBuild, AiCiCommandCatalog.RequestTests }),
                 "command order or identities changed");
-            Assert(proposal.Commands.All(c => c.Arguments.Count >= 3), "repository context arguments missing");
+            Assert(proposal.Commands.All(c => c.HasAtomicContract), "a command omitted enriched atomic metadata");
+            Assert(proposal.Commands.Select(c => c.CommandId).Distinct().Count() == proposal.Commands.Count,
+                "command identities are not unique");
+            Assert(proposal.Commands.Select(c => c.IdempotencyKey).Distinct(StringComparer.Ordinal).Count() == proposal.Commands.Count,
+                "idempotency identities are not unique");
         });
 
-        Check("equivalent builder calls encode deterministically and round-trip through CommandAi", () =>
+        Check("equivalent builder calls derive deterministic command and idempotency identities", () =>
         {
             var first = NewBuilder().CreateProject("Game").AddScript("Game/Main.cs", "class Main {}").Build();
             var second = NewBuilder().CreateProject("Game").AddScript("Game/Main.cs", "class Main {}").Build();
             var encoded = CommandAiTextCodec.Encode(first);
             Assert(encoded == CommandAiTextCodec.Encode(second), "equivalent proposals were not deterministic");
+            Assert(first.Commands.Select(c => c.CommandId).SequenceEqual(second.Commands.Select(c => c.CommandId)),
+                "command identities changed for equivalent proposals");
+            Assert(first.Commands.Select(c => c.IdempotencyKey).SequenceEqual(second.Commands.Select(c => c.IdempotencyKey)),
+                "idempotency identities changed for equivalent proposals");
             var decoded = CommandAiTextCodec.Decode(encoded);
             Assert(CommandAiTextCodec.Encode(decoded) == encoded, "CommandAi round-trip changed the proposal");
+            Assert(encoded.Contains("AtomicCommand=", StringComparison.Ordinal), "builder did not emit enriched atomic entries");
         });
 
-        Check("every command carries repository feature branch and exact base SHA as typed arguments", () =>
+        Check("repository identity and isolated branch/base SHA are represented in target and scope", () =>
         {
             var proposal = NewBuilder().CreateProject("Game").RequestBuild().Build();
             foreach (var command in proposal.Commands)
             {
-                Assert(Text(command, AiCiCommandCatalog.Repository) == "TrentBest/Minesweeper", "repository argument missing");
-                Assert(Text(command, AiCiCommandCatalog.FeatureBranch) == "feature/repair-board", "feature branch argument missing");
-                Assert(Text(command, AiCiCommandCatalog.BaseSha) == new string('a', 40), "base SHA argument missing");
+                Assert(command.Target?.Text == "TrentBest/Minesweeper", "repository target missing");
+                Assert(command.Scope?.Text == "branch:feature/repair-board;base:" + new string('a', 40),
+                    "feature branch or exact base SHA missing from scope");
+                Assert(!command.Arguments.Any(argument => argument.ParameterId is
+                    AiCiCommandCatalog.Repository or AiCiCommandCatalog.FeatureBranch or AiCiCommandCatalog.BaseSha),
+                    "repository context was duplicated as generic arguments");
+            }
+        });
+
+        Check("operation-specific path, payload, digest, and version remain typed arguments", () =>
+        {
+            var proposal = NewBuilder()
+                .AddScript("Game/Main.cs", "class Main {}")
+                .ModifyScript("Game/Board.cs", new string('b', 64), "patch")
+                .AddDependency("FSM_API", "1.0.13")
+                .Build();
+
+            Assert(Text(proposal.Commands[0], AiCiCommandCatalog.NameOrPath) == "Game/Main.cs", "add-file path missing");
+            Assert(Text(proposal.Commands[0], AiCiCommandCatalog.ContentOrExpectedSha) == "class Main {}", "add-file payload missing");
+            Assert(Text(proposal.Commands[1], AiCiCommandCatalog.NameOrPath) == "Game/Board.cs", "modify-file path missing");
+            Assert(Text(proposal.Commands[1], AiCiCommandCatalog.ContentOrExpectedSha) == new string('b', 64), "expected digest missing");
+            Assert(Text(proposal.Commands[1], AiCiCommandCatalog.PatchOrVersion) == "patch", "patch missing");
+            Assert(Text(proposal.Commands[2], AiCiCommandCatalog.NameOrPath) == "FSM_API", "package identity missing");
+            Assert(Text(proposal.Commands[2], AiCiCommandCatalog.ContentOrExpectedSha) == "1.0.13", "package version missing");
+        });
+
+        Check("every command declares the same bounded expected repository-operation outcome shape", () =>
+        {
+            var proposal = NewBuilder().CreateProject("Game").RequestBuild().Build();
+            foreach (var command in proposal.Commands)
+            {
+                Assert(command.OutcomeContract?.OutcomeId == AiCiCommandCatalog.RepositoryOperationOutcome,
+                    "expected outcome identity missing");
+                Assert(command.OutcomeContract!.Fields.Select(field => field.FieldId).SequenceEqual(new ulong[] {
+                    AiCiCommandCatalog.OutcomeStatus,
+                    AiCiCommandCatalog.OutcomeDetail,
+                    AiCiCommandCatalog.ResultCommitSha }),
+                    "expected outcome fields changed");
+                Assert(command.OutcomeContract.Fields[0].Required, "outcome status must be required");
+                Assert(command.OutcomeContract.Fields.Skip(1).All(field => !field.Required),
+                    "outcome detail and result SHA must remain optional");
+                Assert(command.Preconditions.Count == 0,
+                    "builder must not invent a grammar-versioned precondition without a registered grammar");
             }
         });
 
