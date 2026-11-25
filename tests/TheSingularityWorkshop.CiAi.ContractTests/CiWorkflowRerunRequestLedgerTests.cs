@@ -127,7 +127,7 @@ internal static class CiWorkflowRerunRequestLedgerTests
 
             Check("tampered ledger bytes are rejected by request digest verification", () =>
             {
-                var file = Directory.EnumerateFiles(root, "*.json").Single();
+                var file = Directory.EnumerateFiles(root, "*.json").First();
                 var json = File.ReadAllText(file);
                 File.WriteAllText(file, json.Replace(CandidateSha, OtherCandidateSha, StringComparison.Ordinal));
                 Throws<InvalidDataException>(() => new FileCiWorkflowRerunRequestLedger(root).ReadAll());
