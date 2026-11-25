@@ -70,10 +70,13 @@ internal static class CiPagesWorkflowBuildContractTests
         {
             var multiline = built with { BuildCommand = "npm run build\nother-command" };
             var traversal = built with { OutputPath = "../escape" };
+            var blankCommand = built with { BuildCommand = "   " };
             Assert(!CiPagesPublicationPlan.Expand(multiline).IsValid,
                 "multiline build command was accepted");
             Assert(!CiPagesPublicationPlan.Expand(traversal).IsValid,
                 "output traversal was accepted");
+            Assert(!CiPagesPublicationPlan.Expand(blankCommand).IsValid,
+                "whitespace-only build command was accepted");
         });
 
         return passed;
