@@ -87,6 +87,32 @@ internal static class CiAiRepositoryBuilderContractTests
             Throws<ArgumentOutOfRangeException>(() => new CiAiLlmAllocation("OpenAI", "x", maximumConcurrentCalls: 0));
             Throws<ArgumentOutOfRangeException>(() => new CiAiLlmAllocation("OpenAI", "x", priority: (CiAiLlmPriority)99));
         });
+        Check("repository composition retains explicit cross-repository ADP relationships without enabling autonomy", () =>
+        {
+            var contribution = new CiRepositoryRelationship(
+                "rawwar-content-contribution", 1, CiRepositoryRelationshipKind.ContentContribution,
+                "TrentBest/raWWar", "TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem",
+                "surps-content-proposal", "TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem");
+            var consumption = new CiRepositoryRelationship(
+                "surps-canonical-content-consumption", 1, CiRepositoryRelationshipKind.CanonicalContentConsumption,
+                "TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem", "TrentBest/raWWar",
+                "surps-canonical-content", "TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem");
+            var experience = new CiRepositoryRelationship(
+                "rawwar-experience-validation", 1, CiRepositoryRelationshipKind.ExperienceValidation,
+                "TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem", "TrentBest/raWWar",
+                "rawwar-experience-candidate", "TrentBest/raWWar");
+            var definition = CiAi.ForRepository("TrentBest/TheSingularityWorkshop.CiAi")
+                .WithRelationship(contribution).WithRelationship(consumption).WithRelationship(experience).Build();
+            Assert(definition.Relationships.Count == 3 &&
+                definition.Relationships[0] == contribution &&
+                definition.Relationships[1] == consumption &&
+                definition.Relationships[2] == experience,
+                "relationship graph declarations were not preserved in order");
+            Assert(!definition.AutonomousDevelopmentEnabled,
+                "declaring relationship metadata implicitly enabled autonomous execution");
+            Throws<InvalidOperationException>(() => CiAi.ForRepository("TrentBest/A")
+                .WithRelationship(contribution).WithRelationship(contribution));
+        });
         return passed;
 
         void Check(string name, Action action)
