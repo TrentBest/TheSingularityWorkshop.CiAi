@@ -559,11 +559,21 @@ public sealed record CiTestResultReport
             evidence.Provenance.RunId != source.RunId ||
             evidence.Provenance.RunAttempt != source.RunAttempt)
             throw new InvalidDataException("Test artifact belongs to a different repository, workflow run, or attempt.");
+        var requiredChecks = evidence.RequiredChecks.Where(item =>
+            string.Equals(item.Key, source.JobKey, StringComparison.Ordinal)).ToArray();
+        if (requiredChecks.Length != 1 ||
+            requiredChecks[0].State != "observed" ||
+            requiredChecks[0].JobId != source.JobId ||
+            !string.Equals(requiredChecks[0].JobName, source.JobName, StringComparison.Ordinal))
+            throw new InvalidDataException("Test artifact job is not the exact host-registered required check in the v1 evidence envelope.");
+
         var jobs = evidence.ObservedRun.Jobs.Where(item =>
             item.JobId == source.JobId &&
             string.Equals(item.Name, source.JobName, StringComparison.Ordinal)).ToArray();
-        if (jobs.Length != 1 || jobs[0].RunId != source.RunId || jobs[0].RunAttempt != source.RunAttempt)
-            throw new InvalidDataException("Test artifact does not bind to exactly one observed job in this run attempt.");
+        if (jobs.Length != 1 || jobs[0].RunId != source.RunId || jobs[0].RunAttempt != source.RunAttempt ||
+            !string.Equals(requiredChecks[0].Status, jobs[0].Status, StringComparison.Ordinal) ||
+            !string.Equals(requiredChecks[0].Conclusion, jobs[0].Conclusion, StringComparison.Ordinal))
+            throw new InvalidDataException("Test artifact does not bind to exactly one provider-observed required job in this run attempt.");
     }
 
     private static CiTestResultVerdict EvaluateVerdict(
