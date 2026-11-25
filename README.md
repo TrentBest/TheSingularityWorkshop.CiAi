@@ -114,7 +114,7 @@ ServerSC2 is the next CODE RED evidence integration. ServerSC2 owns authoritativ
 
 ## 07 — Licensing and repository allowance
 
-CiAi is source-available under the [The Singularity Workshop CiAi Community & Commercial Source License](LICENSE). The free grant permits internal use on up to **five configured repositories** for individuals, non-profits, educational projects, and commercial organizations alike. A paid entitlement is required before adding a sixth repository. The allowance is aggregated across the licensee's accounts and organizations. See [commercial licensing and repository admission](docs/COMMERCIAL_LICENSING_AND_ADMISSION.md) for the counting rule, fail-closed admission contract, and pricing research methodology.
+CiAi is source-available under [The Singularity Workshop CiAi Community & Commercial Source License](LICENSE). This license applies only to CiAi; other Workshop repositories remain under their own licenses and are not subject to this gate. The free grant permits internal use on up to **five configured repositories** for individuals, non-profits, educational projects, and commercial organizations alike. A paid entitlement is required before adding a sixth repository. The allowance is aggregated across the licensee's accounts and organizations. See [commercial licensing and repository admission](docs/COMMERCIAL_LICENSING_AND_ADMISSION.md) for the counting rule, fail-closed admission contract, and pricing research methodology.
 
 Previously distributed MIT-licensed copies retain their original MIT permissions; see [LICENSE-MIT](LICENSE-MIT). The current source license does not retroactively revoke those grants.
 
