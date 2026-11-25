@@ -81,7 +81,7 @@ public sealed record CiWorkflowObserverProfile
     public static CiWorkflowObserverProfile RaWWar { get; } = new(
         "rawwar-contracts-v1",
         ".github/workflows/build.yml",
-        "rawwar-workflow-provenance-{attempt}",
+        "rawwar-workflow-provenance-{runId}-{attempt}",
         "rawwar-contract-results-{runId}-{attempt}",
         "workflow-provenance.json",
         "results.trx",
