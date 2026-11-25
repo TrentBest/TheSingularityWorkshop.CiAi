@@ -6,7 +6,6 @@
     "master"
   ],
   "actual_branches": [
-    "chore/replace-foundry-docs-with-execution",
     "development",
     "docs/ciai-code-red-primary-path",
     "experiment/http-projection-architecture",
@@ -29,9 +28,9 @@
     "work/ciai-semantic-stack-foundation",
     "work/ecosystem-graph-performance-contract"
   ],
-  "branch_count": 22,
+  "branch_count": 21,
   "status": "NON-COMPLIANT",
-  "evaluated_at": "2026-11-24T14:51:38Z",
-  "workflow_run": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/45418784682",
-  "triggering_commit": "ea2a7277d818e6c286d12380db782b6e34e62db6"
+  "evaluated_at": "2026-11-25T03:17:30Z",
+  "workflow_run": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/45538927059",
+  "triggering_commit": "6140a174ecd72d29036c01f3a014a940dbe3a4ae"
 }
