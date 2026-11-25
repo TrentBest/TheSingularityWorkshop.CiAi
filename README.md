@@ -93,6 +93,8 @@ ServerSC2 is the next CODE RED evidence integration. ServerSC2 owns authoritativ
 - [Development capability evidence v1](docs/DEVELOPMENT_CAPABILITY_EVIDENCE_V1.md) — source-bound capability claims and verification.
 - [Composite pipeline gates](docs/COMPOSITE_PIPELINE_GATES.md) and [dependency readiness policy](docs/DEPENDENCY_READINESS_POLICY.md) — fail-closed dependency and gate composition.
 
+- [CODE RED implementation status and next steps](docs/CODE_RED_NEXT_STEPS.md) — verified evidence path, implemented capabilities, and deliberately deferred work.
+
 ## 06 — Architecture and proof
 
 - [Pages publication contract](docs/PAGES_PUBLICATION_CONTRACT.md) — destination-specific approval policy, failure-safe last-known-good experience, operational dashboard, and current implementation status.
