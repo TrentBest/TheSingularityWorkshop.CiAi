@@ -74,7 +74,8 @@ explainable at a glance.
 ## Renderer boundary
 
 The stable projection should be passed to GUI.SVG (or its agreed SVG contract)
-for rendering. The renderer owns visual composition, accessible SVG title and
+for rendering. The current renderer home is [TheSingularityWorkshop.GUI.SVG](https://github.com/TrentBest/TheSingularityWorkshop.GUI/tree/development/src/SVG).
+The renderer owns visual composition, accessible SVG title and
 description, theme, dimensions, bars, and typography. CiAi owns the schema,
 validation, weighted arithmetic, and evidence-reference semantics. A renderer
 must not recalculate or reinterpret the score.
