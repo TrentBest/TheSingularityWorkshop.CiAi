@@ -34,7 +34,7 @@ Verified runs for commit `7eb9727e8854255064f2bfb674ff40cedc0db24b`:
 | Pages publication plan | Implemented as a plan | No Pages deployment or publication action |
 | Workflow provenance and PR identity | Implemented | Protected workflow bytes and provider head/base/merge identities are independently checked |
 | TRX diagnostics and artifact archive | Implemented | Exact-run binding and bounded digest verification |
-| Foundry artifact-ready notices | Implemented as contracts | Live `FSM_Foundry` host adapter remains |
+| FSM_Execution artifact-ready notices | Implemented as contracts | Live `FSM_Execution` host adapter remains |
 | Repository builder and manifest | Implemented | Existing builder is canonical; repository-wide enrollment and README stamping remain |
 | External observer profiles | Partial | Profile contract exists; broad manifest-driven enrollment is deferred |
 | Durable rerun/dispatch ledger | Not implemented | See `CODE_RED_NEXT_STEPS.md` |
