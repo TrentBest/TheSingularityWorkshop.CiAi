@@ -22,8 +22,10 @@ SOFTWARE.
 
 HISTORICAL SCOPE
 
-This file preserves the MIT license notice for versions and copies of CiAi
-that were previously distributed with the MIT license. It does not grant
-MIT rights to later versions that are expressly distributed under the
-The Singularity Workshop CiAi Community & Commercial Source License.
+This file preserves the MIT license notice for all CiAi source and copies
+whose governing repository revision is the development base commit
+c59e3284b95e5ef4d3fc6be55bc97ca84fb7ee3e or an earlier commit, and for
+copies previously distributed under the MIT license. It does not grant MIT
+rights to later versions expressly distributed under the The Singularity
+Workshop CiAi Community & Commercial Source License.
 The MIT permissions already granted for prior copies remain in effect.
