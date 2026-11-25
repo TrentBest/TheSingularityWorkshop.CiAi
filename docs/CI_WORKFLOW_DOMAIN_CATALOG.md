@@ -1,3 +1,6 @@
+<!-- The Singularity Workshop moniker -->
+<p align="center"><a href="https://github.com/TrentBest"><img src="https://raw.githubusercontent.com/TrentBest/TheSingularityWorkshop.Visualize/development/docs/assets/moniker.svg" alt="The Singularity Workshop animated moniker" width="720" /></a></p>
+
 # CI Workflow Domain Catalog
 
 **Status:** Product-discovery inventory; intentionally broader than the currently implemented API.  
@@ -162,6 +165,8 @@ Each family should eventually be expressible through the same conceptual layers:
 - Aggregation that distinguishes failed, missing, skipped, cancelled, and unknown.
 
 **Candidate vocabulary:** `Matrix`, `OnFrameworks`, `OnOperatingSystems`, `OnArchitectures`, `ExcludeCombination`, `RequireEveryLeg`, `AggregateResults`.
+
+**Initial implementation:** bounded provider-neutral expansion, explicit exclusions, stable cell identities, and fail-closed required-cell aggregation are documented in [CiAi Matrix Workflow Domain](CI_MATRIX_DOMAIN.md). Provider execution and matrix-job ingestion remain future work.
 
 ### 7. Generated code, schemas, documentation, and reproducibility
 
@@ -385,6 +390,8 @@ For each example, record source URL/revision, workflow family, intended outcome,
 
 ## Implementation honesty
 
-The names and examples in this document are **proposed vocabulary**, not a statement that the corresponding methods exist. CiAi currently has read-only GitHub Actions observation and evidence/reporting components, a definition-only pipeline-builder slice, and an initial local NuGet artifact-inventory verifier. It does not yet provide a complete fluent CI DSL, general workflow executor, full automated archive/provenance inspection, or a publishing/deployment engine.
+The names and examples in this document are **proposed vocabulary**, not a statement that the corresponding methods exist. CiAi currently has read-only GitHub Actions observation and evidence/reporting components, a definition-only pipeline-builder slice, an initial local NuGet artifact-inventory verifier, and (in this matrix implementation branch) bounded provider-neutral matrix expansion and fail-closed required-cell aggregation. It does not yet provide a complete fluent CI DSL, provider-hosted general workflow execution, full automated archive/provenance ingestion, or a publishing/deployment engine.
 
 The release readiness tracker remains the authority for verified implementation status. No publication or deployment is implied by this catalog.
+
+<p align="center"><img src="https://raw.githubusercontent.com/TrentBest/FSM_API/master/Documentation/Branding/TheSingularityWorkshop.png" alt="The Singularity Workshop" width="480" /></p>
