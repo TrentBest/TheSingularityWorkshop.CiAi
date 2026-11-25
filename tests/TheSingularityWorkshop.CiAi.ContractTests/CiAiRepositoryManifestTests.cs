@@ -47,7 +47,7 @@ internal static class CiAiRepositoryManifestTests
         {
             Throws<InvalidDataException>(() => CiAiRepositoryManifest.ParseJson(
                 """{"schema":"ciai.repository.v1","repository":"TrentBest/A","observerProfile":"unknown","badges":[],"dependencies":[],"extensions":[]}"""));
-            Throws<InvalidOperationException>(() => CiAiRepositoryManifest.ParseJson(
+            Throws<ArgumentException>(() => CiAiRepositoryManifest.ParseJson(
                 """{"schema":"ciai.repository.v1","repository":"TrentBest/A","badges":[],"dependencies":[{"repository":"TrentBest/A"}],"extensions":[]}"""));
         });
         Check("observer profiles expand exact run and attempt identity", () =>
