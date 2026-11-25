@@ -16,15 +16,20 @@ internal static class CiWorkflowEvidencePacketTests
             provenanceBytes, "TrentBest/CiAi", 42, 2,
             Convert.ToHexString(SHA256.HashData(provenanceBytes)));
 
+        var requiredCheckBindings = new[]
+        {
+            new CiWorkflowRequiredCheckBinding("build-and-test", "build-and-test")
+        };
         var trusted = CiWorkflowEvidencePacket.FromValidatedProvenance(
-            CreateObservedRun(), provenance, workflowDefinitionTrusted: true);
+            CreateObservedRun(), provenance, workflowDefinitionTrusted: true, requiredCheckBindings);
         Assert(trusted.ContractVersion == 1 && trusted.Schema == CiWorkflowEvidencePacket.CurrentSchema,
             "v1 contract identity was not emitted");
         Assert(trusted.Provenance.WorkflowSha == WorkflowSha &&
             trusted.Provenance.EventSha == EventSha &&
             trusted.Provenance.CheckoutSha == CheckoutSha &&
-            trusted.CandidateSha == CheckoutSha && trusted.CheckoutVerified && trusted.IsSuccessful,
-            "v1 did not preserve independent workflow, event, and checkout identities");
+            trusted.CandidateSha == CheckoutSha && trusted.CheckoutVerified && trusted.IsSuccessful &&
+            trusted.RequiredChecks.Single().State == "observed",
+            "v1 did not preserve independent workflow, event, checkout, and required-check identities");
 
         var serialized = trusted.ToJson();
         using (var document = System.Text.Json.JsonDocument.Parse(serialized))
@@ -34,8 +39,9 @@ internal static class CiWorkflowEvidencePacketTests
                 !observedRun.TryGetProperty("contractVersion", out _),
                 "raw run/job observations exposed a second independently versioned contract");
             Assert(observedRun.TryGetProperty("jobs", out _) &&
-                observedRun.TryGetProperty("runId", out _),
-                "canonical v1 envelope omitted raw run/job observation facts");
+                observedRun.TryGetProperty("runId", out _) &&
+                document.RootElement.TryGetProperty("requiredChecks", out _),
+                "canonical v1 envelope omitted raw observations or registered required checks");
         }
         var serializedBytes = Encoding.UTF8.GetBytes(serialized);
         var packetDigest = Convert.ToHexString(SHA256.HashData(serializedBytes));
@@ -45,62 +51,57 @@ internal static class CiWorkflowEvidencePacketTests
         var approvedWorkflow = Encoding.UTF8.GetBytes("name: CI\\non: [push]\\n");
         var trustDecision = trustPolicy.Evaluate(provenance, approvedWorkflow, approvedWorkflow);
         var roundTrip = CiWorkflowEvidencePacket.FromJson(
-            serialized, "TrentBest/CiAi", 42, 2, packetDigest, trustDecision,
+            serialized, "TrentBest/CiAi", 42, 2, packetDigest, requiredCheckBindings, trustDecision,
             new CiPullRequestProviderIdentity(
                 17, "feature/fix", ProviderHeadSha,
                 "development", "dddddddddddddddddddddddddddddddddddddddd",
                 EventSha, new[] { ProviderHeadSha, "dddddddddddddddddddddddddddddddddddddddd" }));
         Assert(roundTrip.IsSuccessful && roundTrip.Provenance.WorkflowSha == WorkflowSha &&
-            roundTrip.CandidateSha == CheckoutSha && roundTrip.PullRequestIdentityVerified,
-            "v1 durable round-trip lost host-issued trust or independently verified PR identity");
+            roundTrip.CandidateSha == CheckoutSha && roundTrip.PullRequestIdentityVerified &&
+            roundTrip.RequiredChecks.SequenceEqual(trusted.RequiredChecks),
+            "v1 durable round-trip lost host-issued trust, PR identity, or required-check observations");
 
         var (runCollection, jobCollection) = CreateCollections();
         var factoryPacket = CiWorkflowEvidencePacket.FromCollections(
             runCollection, jobCollection, 42, 2, DateTimeOffset.Parse("2026-10-31T01:02:00Z"),
-            provenance, trustDecision,
+            provenance, trustDecision, requiredCheckBindings,
             pullRequestIdentity: new CiPullRequestProviderIdentity(
                 17, "feature/fix", ProviderHeadSha,
                 "development", "dddddddddddddddddddddddddddddddddddddddd",
                 EventSha, new[] { ProviderHeadSha, "dddddddddddddddddddddddddddddddddddddddd" }));
-        Assert(factoryPacket.IsSuccessful && factoryPacket.Provenance.WorkflowSha == WorkflowSha,
-            "v1 collection factory did not preserve the independently observed workflow ref");
-        var requiredCheckBindings = new[]
-        {
-            new CiWorkflowRequiredCheckBinding("build-and-test", "build-and-test")
-        };
-        var v2Packet = CiWorkflowEvidencePacketV2.FromPacket(factoryPacket, requiredCheckBindings);
-        Assert(v2Packet.Schema == CiWorkflowEvidencePacketV2.CurrentSchema &&
-            v2Packet.EvidenceComplete && v2Packet.IsSuccessful &&
-            v2Packet.RequiredChecks.Single().State == "observed",
-            "v2 did not bind the registered required check to exact provider-observed job evidence");
+        Assert(factoryPacket.IsSuccessful && factoryPacket.Provenance.WorkflowSha == WorkflowSha &&
+            factoryPacket.RequiredChecks.Single().State == "observed",
+            "v1 collection factory did not preserve workflow provenance and registered required checks");
 
-        var v2Json = v2Packet.ToJson(indented: false);
-        var v2Reloaded = CiWorkflowEvidencePacketV2.FromJson(
-            v2Json, "TrentBest/CiAi", 42, 2, v2Packet.PayloadSha256,
-            requiredCheckBindings, workflowDefinitionTrusted: false);
-        Assert(v2Reloaded.RequiredChecks.SequenceEqual(v2Packet.RequiredChecks) &&
-            !v2Reloaded.WorkflowEvidence.WorkflowDefinitionTrusted && !v2Reloaded.IsSuccessful,
-            "v2 durable round-trip restored workflow trust or changed required-check observations");
+        var reloadedWithoutTrust = CiWorkflowEvidencePacket.FromJson(
+            factoryPacket.ToJson(indented: false), "TrentBest/CiAi", 42, 2,
+            factoryPacket.PayloadSha256, requiredCheckBindings, workflowDefinitionTrusted: false);
+        Assert(!reloadedWithoutTrust.IsSuccessful &&
+            !reloadedWithoutTrust.WorkflowDefinitionTrusted &&
+            reloadedWithoutTrust.RequiredChecks.SequenceEqual(factoryPacket.RequiredChecks),
+            "durable v1 reload restored workflow trust or changed required-check observations");
 
-        var missingRequiredCheck = CiWorkflowEvidencePacketV2.FromPacket(
-            factoryPacket,
+        var missingRequiredCheck = CiWorkflowEvidencePacket.FromValidatedProvenance(
+            CreateObservedRun(), provenance, workflowDefinitionTrusted: false,
             new[] { new CiWorkflowRequiredCheckBinding("required-build", "required-build") });
         Assert(!missingRequiredCheck.EvidenceComplete && !missingRequiredCheck.IsSuccessful &&
-            missingRequiredCheck.RequiredChecks.Single().State == "missing",
-            "v2 missing required-check evidence did not fail closed");
+            missingRequiredCheck.RequiredChecks.Single().State == "missing" &&
+            missingRequiredCheck.BlockingReasons.Contains("required-check.missing"),
+            "v1 missing required-check evidence did not fail closed");
 
-        var outboxDirectory = Path.Combine(Path.GetTempPath(), "ciai-v2-outbox-" + Guid.NewGuid().ToString("N"));
+        var outboxDirectory = Path.Combine(Path.GetTempPath(), "ciai-v1-outbox-" + Guid.NewGuid().ToString("N"));
         try
         {
-            var outbox = new FileCiWorkflowEvidenceV2Outbox(Path.Combine(outboxDirectory, "evidence.jsonl"));
-            var delivery = new CiWorkflowEvidenceV2Delivery("run-42-attempt-2", v2Packet);
-            Assert(outbox.Enqueue(delivery) == CiWorkflowEvidenceV2EnqueueOutcome.Enqueued &&
-                outbox.Enqueue(delivery) == CiWorkflowEvidenceV2EnqueueOutcome.Duplicate,
-                "v2 outbox did not durably deduplicate the exact delivery");
+            var outbox = new FileCiWorkflowEvidenceOutbox(Path.Combine(outboxDirectory, "evidence.jsonl"));
+            var delivery = new CiWorkflowEvidenceDelivery("run-42-attempt-2", factoryPacket);
+            Assert(outbox.Enqueue(delivery) == CiWorkflowEvidenceEnqueueOutcome.Enqueued &&
+                outbox.Enqueue(delivery) == CiWorkflowEvidenceEnqueueOutcome.Duplicate,
+                "v1 outbox did not durably deduplicate the exact delivery");
             var pending = outbox.ReadPending();
-            Assert(pending.Count == 1 && !pending[0].Packet.WorkflowEvidence.WorkflowDefinitionTrusted &&
+            Assert(pending.Count == 1 && !pending[0].Packet.WorkflowDefinitionTrusted &&
+                pending[0].Packet.RequiredChecks.SequenceEqual(factoryPacket.RequiredChecks) &&
                 outbox.ReadPending(new HashSet<string>(StringComparer.Ordinal) { delivery.DeliveryId }).Count == 0,
-                "v2 outbox reload restored trust or ignored the acknowledged-delivery filter");
+                "v1 outbox reload restored trust, lost required checks, or ignored acknowledgement filtering");
         }
         finally
         {
