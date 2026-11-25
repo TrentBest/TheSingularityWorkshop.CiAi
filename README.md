@@ -69,6 +69,7 @@ AnyApp is CiAi's first source-based consumer pilot. It keeps GitHub Actions as t
 SURPS is the Workshop's shared roleplaying ontology. Its root AgentOnboarding contract now passes CiAi v1 at an exact commit, and a pinned read-only observer reports its Pages workflow with separate completeness, terminality, and success facts. The first Pages build passed but deployment failed; that failure remains visible and unresolved.
 
 - [SURPS CiAi integration and evidence](docs/Samples/SingularityUniversalRoleplayingSystem.md)
+- [raWWar bidirectional producer/consumer proof](docs/Samples/raWWar.md)
 - [SURPS onboarding issue](https://github.com/TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem/issues/1)
 - [CiAi onboarding issue](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/84)
 
@@ -99,7 +100,7 @@ ServerSC2 is the next CODE RED evidence integration. ServerSC2 owns authoritativ
 
 - [Pages publication contract](docs/PAGES_PUBLICATION_CONTRACT.md) — destination-specific approval policy, failure-safe last-known-good experience, operational dashboard, and current implementation status.
 - [Repository composition](docs/REPOSITORY_COMPOSITION.md) — the single immutable fluent builder for badges, dependency/fallback declarations, development pipelines, optional ADP, and LLM allocation budgets.
-- [Repository manifest v1](docs/REPOSITORY_MANIFEST.md) — strict JSON declarations, built-in observer profiles, deterministic validation, and the pinned reusable workflow.
+- [Repository manifest v1/v2](docs/REPOSITORY_MANIFEST.md) — strict JSON declarations, directed ADP relationship graphs, built-in observer profiles, and deterministic validation.
 - [Development progress v1](docs/DEVELOPMENT_PROGRESS.md) — weighted, evidence-referenced readiness declarations with explicit unassessed states and a GUI.SVG rendering boundary.
 
 - [Gallery](Gallery.md) — current demonstrations and evidence.
