@@ -15,7 +15,7 @@ No third permanent branch is permitted. The repository owner performs branch del
 
 The latest verified inventory still contains **22 branches**: `master`, `development`, and the 20 excess refs below. All 20 associated PRs are now closed after their useful implementation was reconciled into `development` or their remaining intent was recorded in [CODE RED implementation status and next steps](CODE_RED_NEXT_STEPS.md).
 
-<badge color="warning">20 branches ready for owner deletion</badge>
+**READY FOR OWNER DELETION — 20 branches**
 
 | Branch | PR | Disposition |
 |---|---:|---|
