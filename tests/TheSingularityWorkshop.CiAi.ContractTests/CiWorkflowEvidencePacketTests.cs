@@ -89,6 +89,21 @@ internal static class CiWorkflowEvidencePacketTests
             missingRequiredCheck.BlockingReasons.Contains("required-check.missing"),
             "v1 missing required-check evidence did not fail closed");
 
+        var actionableFailure = CiWorkflowEvidencePacket.FromValidatedProvenance(
+            CreateObservedRun(runConclusion: CiRunConclusion.Failure, jobConclusion: "failure"),
+            provenance, workflowDefinitionTrusted: true, requiredCheckBindings);
+        Assert(actionableFailure.EvidenceComplete && !actionableFailure.IsSuccessful &&
+            actionableFailure.HasActionableDiagnostics &&
+            actionableFailure.DiagnosticsFingerprint is { Length: 64 },
+            "complete trusted failed required check did not produce a stable actionable diagnostic fingerprint");
+        var nonActionableFailure = CiWorkflowEvidencePacket.FromValidatedProvenance(
+            CreateObservedRun(runConclusion: CiRunConclusion.Failure, jobConclusion: "timed_out"),
+            provenance, workflowDefinitionTrusted: true, requiredCheckBindings);
+        Assert(nonActionableFailure.EvidenceComplete && !nonActionableFailure.IsSuccessful &&
+            !nonActionableFailure.HasActionableDiagnostics &&
+            nonActionableFailure.BlockingReasons.Contains("required-check.non-success"),
+            "non-test infrastructure failure was incorrectly classified as actionable diagnostics");
+
         var outboxDirectory = Path.Combine(Path.GetTempPath(), "ciai-v1-outbox-" + Guid.NewGuid().ToString("N"));
         try
         {
@@ -203,8 +218,8 @@ internal static class CiWorkflowEvidencePacketTests
         Assert(!mismatchedCheckoutPacket.CheckoutVerified && !mismatchedCheckoutPacket.IsSuccessful,
             "mismatched PR checkout SHA was not retained as non-actionable evidence");
 
-        Console.WriteLine("PASS: 19 CI workflow evidence packet v1 contract checks.");
-        return 19;
+        Console.WriteLine("PASS: 21 CI workflow evidence packet v1 contract checks.");
+        return 21;
     }
 
 
@@ -297,14 +312,16 @@ internal static class CiWorkflowEvidencePacketTests
 
     private static CiWorkflowRunEvidenceObservation CreateObservedRun(
         long runId = 42,
-        string workflowPath = ".github/workflows/ci.yml")
+        string workflowPath = ".github/workflows/ci.yml",
+        CiRunConclusion runConclusion = CiRunConclusion.Success,
+        string jobConclusion = "success")
     {
         var job = new CiWorkflowJobObservation(
-            100, runId, 2, "build-and-test", "completed", "success",
+            100, runId, 2, "build-and-test", "completed", jobConclusion,
             new Uri($"https://github.com/TrentBest/CiAi/actions/runs/{runId}/job/100"),
             Array.AsReadOnly(new[]
             {
-                new CiWorkflowStepObservation(1, "Build and test", "completed", "success", "2026-10-31T01:00:00Z")
+                new CiWorkflowStepObservation(1, "Build and test", "completed", jobConclusion, "2026-10-31T01:00:00Z")
             }))
         {
             StartedAt = DateTimeOffset.Parse("2026-10-31T01:00:00Z"),
@@ -313,7 +330,7 @@ internal static class CiWorkflowEvidencePacketTests
         return new CiWorkflowRunEvidenceObservation(
             "TrentBest/CiAi", workflowPath, runId, 2,
             "refs/heads/development", ProviderHeadSha, "pull_request", "CI",
-            CiRunStatus.Completed, CiRunConclusion.Success,
+            CiRunStatus.Completed, runConclusion,
             new Uri($"https://github.com/TrentBest/CiAi/actions/runs/{runId}"),
             DateTimeOffset.Parse("2026-10-31T01:01:00Z"),
             Array.AsReadOnly(new[] { job }), true, true)
