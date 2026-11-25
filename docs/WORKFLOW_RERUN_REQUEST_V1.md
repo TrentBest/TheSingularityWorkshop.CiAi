@@ -16,12 +16,13 @@ Each request binds:
 - A stable request ID, idempotency key, and host-owned task/correlation ID.
 - Canonical owner/repository identity.
 - Exact workflow YAML path under `.github/workflows/`.
+- Trusted workflow-definition ref fixed to `refs/heads/development` and its full 40-character workflow-definition SHA.
 - Isolated candidate ref under `refs/heads/feature/`.
 - Full 40-character candidate commit SHA.
 - Exact source workflow run ID and run attempt that prompted the rerun.
 - Requested time, expiry, and a bounded maximum of three additional attempts.
 
-The candidate branch name and candidate SHA are both retained. The host must independently verify that the branch resolves to the requested SHA immediately before dispatch; a ref string is not proof of its current target.
+The trusted workflow definition and candidate checkout are distinct identities. The request pins the workflow definition to `refs/heads/development` plus its exact SHA, while the candidate is a separate `refs/heads/feature/...` ref plus its exact SHA. The host must independently verify both identities immediately before dispatch; neither ref string is proof of its current target. The host must also verify that GitHub has the workflow registered for `workflow_dispatch` on the repository default branch, without silently promoting or rewriting `master`.
 
 The request lifetime is limited to seven days. A request with an expired or malformed identity is rejected at construction time.
 
@@ -45,7 +46,7 @@ The host, not CiAi, must:
 
 1. Authenticate the requesting agent and resolve the task/correlation record.
 2. Confirm that the task is active, leased, and within its own retry, time, concurrency, cost, and changed-file budgets.
-3. Independently verify the repository, registered workflow path, isolated feature ref, and exact candidate SHA.
+3. Independently verify the repository, that the workflow path is registered for manual dispatch, the trusted `development` workflow-definition SHA, the isolated feature ref, and the exact candidate SHA.
 4. Confirm the source run ID/attempt belongs to that exact candidate and workflow.
 5. Apply host authorization before dispatch and supply only a narrowly scoped short-lived provider credential.
 6. Dispatch the registered workflow using the exact candidate ref/SHA, then persist the resulting run ID and attempt in the host's lifecycle record.
