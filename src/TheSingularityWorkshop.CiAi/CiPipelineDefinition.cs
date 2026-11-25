@@ -52,16 +52,19 @@ public sealed record CiStepDefinition
 public sealed record CiPipelineDefinition
 {
     internal CiPipelineDefinition(string repository, IReadOnlyList<CiPipelineTrigger> triggers,
-        IReadOnlyList<CiStepDefinition> steps)
+        IReadOnlyList<CiStepDefinition> steps,
+        IReadOnlyList<CiPagesPublicationPlanExpansion>? pagesPlans = null)
     {
         Repository = repository;
         Triggers = Array.AsReadOnly(triggers.ToArray());
         Steps = Array.AsReadOnly(steps.ToArray());
+        PagesPlans = Array.AsReadOnly((pagesPlans ?? Array.Empty<CiPagesPublicationPlanExpansion>()).ToArray());
     }
 
     public string Repository { get; }
     public IReadOnlyList<CiPipelineTrigger> Triggers { get; }
     public IReadOnlyList<CiStepDefinition> Steps { get; }
+    public IReadOnlyList<CiPagesPublicationPlanExpansion> PagesPlans { get; }
 
     /// <summary>Returns deterministic, human-readable recipe text without invoking step delegates.</summary>
     public string ToRecipe()
@@ -100,6 +103,7 @@ public sealed class CiPipelineBuilder
     private readonly string _repository;
     private readonly List<CiPipelineTrigger> _triggers = [];
     private readonly List<CiStepDefinition> _steps = [];
+    private readonly List<CiPagesPublicationPlanExpansion> _pagesPlans = [];
     private bool _built;
 
     public CiPipelineBuilder(string repository)
@@ -164,13 +168,31 @@ public sealed class CiPipelineBuilder
         return this;
     }
 
+    /// <summary>Composes a validated GitHub Pages publication plan into this repository pipeline.</summary>
+    public CiPipelineBuilder WithPages(CiPagesPublicationPlanDraft draft)
+    {
+        EnsureMutable();
+        ArgumentNullException.ThrowIfNull(draft);
+        if (!string.Equals(draft.Repository, _repository, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Pages repository must match the pipeline repository.", nameof(draft));
+
+        var expansion = CiPagesPublicationPlan.Expand(draft);
+        if (!expansion.IsValid || expansion.Workflow is null)
+            throw new ArgumentException("Pages declaration is invalid: " + string.Join(", ", expansion.Errors), nameof(draft));
+        if (_pagesPlans.Any(existing => string.Equals(existing.Workflow?.PlanId, expansion.Workflow.PlanId, StringComparison.Ordinal)))
+            throw new InvalidOperationException($"Pages destination '{expansion.Workflow.PlanId}' is already declared.");
+
+        _pagesPlans.Add(expansion);
+        return this;
+    }
+
     public CiPipelineDefinition Build()
     {
         EnsureMutable();
         if (_triggers.Count == 0)
             throw new InvalidOperationException("At least one pipeline trigger must be declared.");
         _built = true;
-        return new CiPipelineDefinition(_repository, _triggers, _steps);
+        return new CiPipelineDefinition(_repository, _triggers, _steps, _pagesPlans);
     }
 
     private void EnsureMutable()
