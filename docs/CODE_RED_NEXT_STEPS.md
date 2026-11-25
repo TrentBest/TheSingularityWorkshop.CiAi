@@ -1,6 +1,6 @@
 # CODE RED — implementation status and next steps
 
-> Status snapshot: 2026-11-25. Verified implementation commit: `7eb9727e8854255064f2bfb674ff40cedc0db24b`. This document distinguishes implemented contracts from the next capabilities to build.
+> Status snapshot: 2026-11-25. Verified development baseline: `7eb9727e8854255064f2bfb674ff40cedc0db24b`. Current draft candidate: [PR #92](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/pull/92), head `d6145fbfee7fb812fe72909fa1a8d2910ffb426c`; Contract Verification run `45570415845` and Cog Ecosystem Integration run `45570415737` both passed. This document distinguishes implemented contracts from the next capabilities to build.
 
 ## Implemented path
 
