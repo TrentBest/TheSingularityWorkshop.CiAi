@@ -118,3 +118,18 @@ Keep the first proof deliberately small and non-destructive:
 8. Do not add live webhooks, repository dispatch, broad credentials, or publishing/deployment permissions in this first slice.
 
 **Current implementation status:** `ArtifactManifest`, `ArtifactReadyNotice`, and `ArtifactReceiptAcknowledgement` are implemented as dependency-free typed contracts. `ArtifactPayloadVerifier` verifies supplied bytes against manifest size and SHA-256. `ArtifactPayloadReader` now reads a caller-supplied readable stream incrementally with a configured memory bound, returns bytes only after successful verification, and leaves stream ownership with the caller. Offline checks cover exact bytes, digest/size failures, maximum limits, short streams, and stream ownership. This is still not a network retrieval client. A destination preflight policy exists, but it is not a standalone SSRF defense; transport must additionally enforce DNS/IP restrictions, redirect policy, provider-scoped authentication, timeouts, and byte bounds. Provider-authenticated retrieval, durable staging, authoritative provider-run verification, authenticated notice/ack transport, end-to-end orchestration, and storage reclamation remain unimplemented. Receipt deduplication is durable locally, but request-level idempotency/history is not. The existing CiAi alpha remains read-only with respect to GitHub Actions.
+
+## Current Execution ingress mapping
+
+The current metadata-only CiAi ready-notice client targets the Execution-owned v1 route:
+
+- `POST /api/v1/integrations/ciai/artifact-ready`
+- Receipt contract: `execution.ciai-artifact-ingress.v1`
+- Request body: the existing `ArtifactReadyNotice` v1 envelope and its `ArtifactManifest`; the notice is not the artifact payload.
+
+The manifest capability identity/version selects the bounded consumer. Keep these payload contracts distinct:
+
+- `ciai.test-results.v1` is diagnostic context for a bounded HeadlessAi turn. Its verdict is not authoritative workflow evidence and grants no operation authority.
+- `ciai.workflow-evidence.v2` is the authoritative exact-run/candidate evidence packet used by Execution's evidence and gate policy.
+
+A receiver must validate the outer notice first, then dispatch by the registered capability identity/version to the matching bounded payload consumer. It must never parse one payload as the other or infer authorization from a report verdict. The normative host route, authentication, request mapping, receipt, and retrieval rules remain in [Execution's callback contract](https://github.com/TrentBest/TheSingularityWorkshop.FSM_Execution/blob/development/docs/CIAI_ARTIFACT_CALLBACK_CONTRACT.md). The receiver is not yet implemented on current Execution development; this mapping is a producer-side contract alignment, not proof of a live callback.
