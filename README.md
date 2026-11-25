@@ -81,6 +81,8 @@ ServerSC2 is the next CODE RED evidence integration. ServerSC2 owns authoritativ
 - [CiAi integration issue](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/67)
 - [Shared CODE RED / HeadlessAi handoff](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/34)
 
+- [Await and Gate contracts: durable dependency declarations, exact-source evidence, adjudication, and event receipts](docs/AWAIT_GATE_CONTRACTS.md)
+
 ## 06 — Architecture and proof
 
 - [Pages publication contract](docs/PAGES_PUBLICATION_CONTRACT.md) — destination-specific approval policy, failure-safe last-known-good experience, operational dashboard, and current implementation status.
