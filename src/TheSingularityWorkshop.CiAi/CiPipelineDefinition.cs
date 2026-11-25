@@ -19,7 +19,7 @@ public enum CiStepCapability
     CancelWorkflow = 3
 }
 
-/// <summary>An immutable, inspectable step description. This alpha model never executes its operation.</summary>
+/// <summary>An immutable, inspectable step description with an explicitly registered operation.</summary>
 public sealed record CiStepDefinition
 {
     internal CiStepDefinition(
@@ -44,7 +44,7 @@ public sealed record CiStepDefinition
     public CiStepCapability Capability { get; }
     public bool RequiresApproval { get; }
 
-    // Retained for a future executor; deliberately not public or invoked by the definition model.
+    // The definition model never invokes this delegate; only an executor may do so.
     internal Delegate Operation { get; }
 }
 
@@ -52,18 +52,16 @@ public sealed record CiStepDefinition
 public sealed record CiPipelineDefinition
 {
     internal CiPipelineDefinition(string repository, IReadOnlyList<CiPipelineTrigger> triggers,
-        IReadOnlyList<CiStepDefinition> steps, IReadOnlyList<CiPagesPublicationPlanExpansion> pagesPlans)
+        IReadOnlyList<CiStepDefinition> steps)
     {
         Repository = repository;
         Triggers = Array.AsReadOnly(triggers.ToArray());
         Steps = Array.AsReadOnly(steps.ToArray());
-        PagesPlans = Array.AsReadOnly(pagesPlans.ToArray());
     }
 
     public string Repository { get; }
     public IReadOnlyList<CiPipelineTrigger> Triggers { get; }
     public IReadOnlyList<CiStepDefinition> Steps { get; }
-    public IReadOnlyList<CiPagesPublicationPlanExpansion> PagesPlans { get; }
 
     /// <summary>Returns deterministic, human-readable recipe text without invoking step delegates.</summary>
     public string ToRecipe()
@@ -102,7 +100,6 @@ public sealed class CiPipelineBuilder
     private readonly string _repository;
     private readonly List<CiPipelineTrigger> _triggers = [];
     private readonly List<CiStepDefinition> _steps = [];
-    private readonly List<CiPagesPublicationPlanExpansion> _pagesPlans = [];
     private bool _built;
 
     public CiPipelineBuilder(string repository)
@@ -123,13 +120,31 @@ public sealed class CiPipelineBuilder
         return this;
     }
 
-    /// <summary>Registers a named operation for a future executor; the delegate is not called here.</summary>
+    /// <summary>Registers an operation that does not require execution context.</summary>
     public CiPipelineBuilder Add<T>(
         string name,
         Func<T> operation,
         string? id = null,
         CiStepCapability capability = CiStepCapability.None,
-        bool requiresApproval = false)
+        bool requiresApproval = false) =>
+        AddCore(name, operation, typeof(T), id, capability, requiresApproval);
+
+    /// <summary>Registers an operation that receives the exact candidate and prior step outputs.</summary>
+    public CiPipelineBuilder Add<T>(
+        string name,
+        Func<CiExecutionContext, T> operation,
+        string? id = null,
+        CiStepCapability capability = CiStepCapability.None,
+        bool requiresApproval = false) =>
+        AddCore(name, operation, typeof(T), id, capability, requiresApproval);
+
+    private CiPipelineBuilder AddCore(
+        string name,
+        Delegate operation,
+        Type resultType,
+        string? id,
+        CiStepCapability capability,
+        bool requiresApproval)
     {
         EnsureMutable();
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -145,23 +160,7 @@ public sealed class CiPipelineBuilder
         if (_steps.Any(step => string.Equals(step.Id, stepId, StringComparison.OrdinalIgnoreCase)))
             throw new ArgumentException($"Step ID '{stepId}' is already registered.", nameof(id));
 
-        _steps.Add(new CiStepDefinition(stepId, name.Trim(), typeof(T), capability, requiresApproval, operation));
-        return this;
-    }
-
-    /// <summary>Composes a validated, provider-neutral GitHub Pages plan into this pipeline definition.</summary>
-    public CiPipelineBuilder WithPages(CiPagesPublicationPlanDraft pages)
-    {
-        EnsureMutable();
-        ArgumentNullException.ThrowIfNull(pages);
-        if (!string.Equals(pages.Repository, _repository, StringComparison.Ordinal))
-            throw new ArgumentException("Pages repository must match the pipeline repository.", nameof(pages));
-        if (_pagesPlans.Count > 0)
-            throw new InvalidOperationException("A pipeline definition may declare only one Pages destination.");
-        var expansion = CiPagesPublicationPlan.Expand(pages);
-        if (!expansion.IsValid)
-            throw new ArgumentException("Pages declaration is invalid: " + string.Join(", ", expansion.Errors), nameof(pages));
-        _pagesPlans.Add(expansion);
+        _steps.Add(new CiStepDefinition(stepId, name.Trim(), resultType, capability, requiresApproval, operation));
         return this;
     }
 
@@ -171,7 +170,7 @@ public sealed class CiPipelineBuilder
         if (_triggers.Count == 0)
             throw new InvalidOperationException("At least one pipeline trigger must be declared.");
         _built = true;
-        return new CiPipelineDefinition(_repository, _triggers, _steps, _pagesPlans);
+        return new CiPipelineDefinition(_repository, _triggers, _steps);
     }
 
     private void EnsureMutable()
