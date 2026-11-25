@@ -111,7 +111,7 @@ These are **integration plans**, not assertions that every repository already ha
 - [TheSingularityWorkshop.Gestures](./TheSingularityWorkshop-Gestures.md) — Gesture/behavior capability; validate ontology/seed inputs, deterministic behavior, crowd batching, and scale tests.
 - [TheSingularityWorkshop.Physics](./TheSingularityWorkshop-Physics.md) — Physics/math capability; validate numerical tests, dependency/source SHAs, and reproducible parameterized runs.
 - [StoryBuilder](./StoryBuilder.md) — Story-building application; validate story contracts, examples, and end-to-end scenario outputs.
-- [TheSingularityWorkshop.Foundry](./TheSingularityWorkshop-Foundry.md) — Foundry/build tooling; validate generated outputs, package provenance, and reproducible build steps.
+- [FSM_Execution](./TheSingularityWorkshop-Execution.md) — execution host and workflow lifecycle integration sample.
 - [TheSingularityWorkshop.CiAi](./TheSingularityWorkshop-CiAi.md) — CiAi itself; validate evidence normalization, correlation, idempotency, read-only policy, and end-to-end request/result flow.
 - [TheSingularityWorkshop.CiAi.CogA](./TheSingularityWorkshop-CiAi-CogA.md) — CogA repository catalog; validate repository identities, declarations, capabilities, and relationship integrity.
 - [TheSingularityWorkshop.CiAi.CogB](./TheSingularityWorkshop-CiAi-CogB.md) — CogB request proposal; validate typed bounded requests and ensure proposals are not treated as authorization.
