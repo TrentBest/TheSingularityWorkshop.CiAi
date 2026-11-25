@@ -1,0 +1,46 @@
+name: CiAi Repository Contract
+
+on:
+  workflow_call:
+    inputs:
+      ciai-ref:
+        description: "Full immutable 40-character CiAi commit SHA containing the repository validator."
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  repository:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Validate immutable CiAi source pin
+        env:
+          CIAI_REF: ${{ inputs.ciai-ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! [[ "$CIAI_REF" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "::error::ciai-ref must be a full immutable 40-character commit SHA."
+            exit 1
+          fi
+      - name: Check out the exact event commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+      - name: Check out pinned CiAi repository tooling
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: TrentBest/TheSingularityWorkshop.CiAi
+          ref: ${{ inputs.ciai-ref }}
+          path: .ciai-tool
+          submodules: recursive
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          dotnet-version: 10.0.x
+      - name: Validate the repository manifest
+        run: dotnet run --project .ciai-tool/tools/CiAi.Repository -- --check-manifest
