@@ -33,19 +33,17 @@ The CI workflow produced a package candidate artifact for inspection. **It did n
 - **Repository foundation:** the existing `CiAiRepositoryBuilder` and repository manifest remain the canonical composition API.
 - **Branch policy:** Sith enforces the exact `master` + `development` inventory. CiAi's latest observed policy result is compliant with exactly those two branches.
 
-The 22-family workflow catalog remains a vocabulary inventory. A family appearing in the catalog is not evidence that its runtime, provider adapter, or release gate is implemented.\n\nThe current CiAi branch inventory was independently reported compliant by Sith Policy run `45539466277` at `2026-11-25T03:22:15Z`: exactly two branches, `master` and `development`. The earlier surplus-branch warning below is superseded by that result.
+The 22-family workflow catalog remains a vocabulary inventory. A family appearing in the catalog is not evidence that its runtime, provider adapter, or release gate is implemented.
+
+The current CiAi branch inventory was independently reported compliant by Sith Policy run `45539466277` at `2026-11-25T03:22:15Z`: exactly two branches, `master` and `development`. The earlier surplus-branch warning below is superseded by that result.
 
 ## Deferred intent — rebuild from this plan, not from parallel branches
 
 ### 1. Durable rerun and dispatch requests
 
-The versioned evidence work introduced a distinct intent for `CiWorkflowDispatchInputContract`, `CiWorkflowRerunRequest`, and an append-only `FileCiWorkflowRerunRequestLedger`. These are not in the current implementation. When built, they must:
+**Implemented on the isolated candidate branch** `feature/durable-ci-rerun-requests-development`; not yet integrated into `development`. The v1 slice adds `CiWorkflowDispatchInputContract`, `CiWorkflowRerunRequest`, and `FileCiWorkflowRerunRequestLedger`, with contract tests and [the request-boundary specification](WORKFLOW_RERUN_REQUEST_V1.md). It binds the canonical repository, workflow YAML path, trusted `refs/heads/development` workflow-definition ref and exact workflow SHA, isolated candidate feature ref and exact candidate SHA, source run/attempt, correlation ID, idempotency key, expiry, and a maximum of three additional attempts. The ledger is append-only, digest-verified, bounded, and idempotent.
 
-- bind one repository, workflow path, exact source SHA, source run and attempt;
-- make branch and SHA targeting mutually exclusive and explicit;
-- carry an idempotency key and bounded attempt policy;
-- require host authorization before dispatch or rerun;
-- preserve an immutable audit record and never silently retry or dispatch.
+This is still request intent only. It does not dispatch, retry, authenticate the requester, or authorize a provider call. The host must independently verify that the trusted workflow revision is approved, that the workflow is registered for manual dispatch, and that the candidate feature ref still resolves to the candidate SHA before each dispatch. The next slice is the FSM_Foundry host adapter and durable correlation to actual provider run IDs/attempts.
 
 ### 2. Repository enrollment and README badges
 
