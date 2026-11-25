@@ -100,8 +100,13 @@ public sealed class FileCiWorkflowEvidenceOutbox
 
     /// <summary>Reloads pending packets with host trust deliberately unset; callers must re-evaluate it.</summary>
     public IReadOnlyList<CiWorkflowEvidenceDelivery> ReadPending(
+        IEnumerable<CiWorkflowRequiredCheckBinding> expectedRequiredChecks,
         IReadOnlySet<string>? acknowledgedDeliveryIds = null)
     {
+        ArgumentNullException.ThrowIfNull(expectedRequiredChecks);
+        var trustedRequiredChecks = expectedRequiredChecks.ToArray();
+        if (trustedRequiredChecks.Length == 0)
+            throw new ArgumentException("The host must supply its registered required-check set when reloading evidence.", nameof(expectedRequiredChecks));
         Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
         using var fileLock = AcquireFileLock();
         var pending = ReadRecords()
@@ -109,9 +114,12 @@ public sealed class FileCiWorkflowEvidenceOutbox
                 !acknowledgedDeliveryIds.Contains(record.DeliveryId))
             .Select(record =>
             {
+                if (!record.RequiredChecks.OrderBy(check => check.Key, StringComparer.Ordinal)
+                    .SequenceEqual(trustedRequiredChecks.OrderBy(check => check.Key, StringComparer.Ordinal)))
+                    throw new InvalidDataException("Evidence outbox required-check set does not match current host registration.");
                 var packet = CiWorkflowEvidencePacket.FromJson(
                     record.Payload, record.Repository, record.RunId, record.RunAttempt,
-                    record.PayloadSha256, record.RequiredChecks, workflowDefinitionTrusted: false);
+                    record.PayloadSha256, trustedRequiredChecks, workflowDefinitionTrusted: false);
                 var delivery = new CiWorkflowEvidenceDelivery(record.DeliveryId, packet);
                 if (!string.Equals(delivery.IdempotencyKey, record.IdempotencyKey, StringComparison.Ordinal) ||
                     !string.Equals(delivery.PayloadSha256, record.PayloadSha256, StringComparison.Ordinal))
