@@ -8,13 +8,11 @@
   "actual_branches": [
     "development",
     "master",
-    "work/ciai-self-observation-lane",
-    "work/ciai-semantic-stack-foundation",
     "work/ecosystem-graph-performance-contract"
   ],
-  "branch_count": 5,
+  "branch_count": 3,
   "status": "NON-COMPLIANT",
-  "evaluated_at": "2026-11-25T03:21:34Z",
-  "workflow_run": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/45539390096",
-  "triggering_commit": "31e8cdb95b23d0d5873682f2012b6d9222a4f341"
+  "evaluated_at": "2026-11-25T03:21:45Z",
+  "workflow_run": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/45539427106",
+  "triggering_commit": "e2f0902145028c5c7ad1d01f7ad5484eb1772363"
 }
