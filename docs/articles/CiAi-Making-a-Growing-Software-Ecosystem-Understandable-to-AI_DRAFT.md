@@ -176,7 +176,7 @@ Different parts of the larger system have different jobs:
 | **ProtocolAi** | Provides shared protocol vocabulary and identity primitives |
 | **GrammarAi** | Checks structure and grammar |
 | **HeadlessAi** | Handles model invocation |
-| **FSM_Foundry** | Orchestrates task acceptance, leases, model turns, authorization, and handoff |
+| **FSM_Execution** | Orchestrates task acceptance, leases, model turns, authorization, and handoff |
 | **Host adapter** | Connects to providers and performs authorized dispatch |
 | **Repository owner** | Retains approval over consequential changes and releases |
 
@@ -188,7 +188,7 @@ In plain language, it checks that the onboarding instructions are the expected d
 
 But passing that check does not make the document an authority. The document can explain how to approach a repository; it cannot grant permissions, override host policy, or approve a merge.
 
-The host must retrieve the document from the exact commit and report which commit it actually read. Foundry must enforce the admission result before accepting work and before later autonomous turns or mutations. The validator exists, but that complete runtime enforcement is still being integrated. CiAi does not currently own a live autonomous-dispatch path.
+The host must retrieve the document from the exact commit and report which commit it actually read. FSM_Execution must enforce the admission result before accepting work and before later autonomous turns or mutations. The validator exists, but that complete runtime enforcement is still being integrated. CiAi does not currently own a live autonomous-dispatch path.
 
 This is how the system can become more capable without quietly becoming less safe.
 
@@ -264,7 +264,7 @@ CiAi is a growing set of evidence and coordination building blocks. It is not ye
 - A complete authenticated remote request/result lifecycle.
 - Provider-side artifact retrieval and end-to-end authoritative correlation for remote handoffs.
 - Durable cross-repository notification, acknowledgement, replay, and idempotency.
-- Foundry runtime enforcement of onboarding admission and task authorization.
+- FSM_Execution runtime enforcement of onboarding admission and task authorization.
 - Live HeadlessAi-driven autonomous dispatch through a host adapter.
 - A complete end-to-end CI policy system connecting repository-defined checks to provider-hosted execution.
 - Any CiAi-controlled authority to publish or deploy.
