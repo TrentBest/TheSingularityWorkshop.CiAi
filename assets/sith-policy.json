@@ -7,12 +7,11 @@
   ],
   "actual_branches": [
     "development",
-    "master",
-    "work/ecosystem-graph-performance-contract"
+    "master"
   ],
-  "branch_count": 3,
-  "status": "NON-COMPLIANT",
-  "evaluated_at": "2026-11-25T03:21:45Z",
-  "workflow_run": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/45539427106",
-  "triggering_commit": "e2f0902145028c5c7ad1d01f7ad5484eb1772363"
+  "branch_count": 2,
+  "status": "COMPLIANT",
+  "evaluated_at": "2026-11-25T03:21:56Z",
+  "workflow_run": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/45539445228",
+  "triggering_commit": "76274755d3d8cc317e47225caa5c452bdb81bfb8"
 }
