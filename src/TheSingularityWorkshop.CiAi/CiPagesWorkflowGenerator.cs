@@ -38,7 +38,7 @@ public static class CiPagesWorkflowGenerator
         if (pinErrors.Count > 0)
             throw new ArgumentException("Pages action pins are invalid: " + string.Join(", ", pinErrors), nameof(pins));
 
-        var outputPath = draft.OutputPath == "." ? "index.html" : $"{draft.OutputPath}/index.html";
+        var outputPath = draft.OutputPath == "." ? $"{draft.SourcePath}/index.html" : $"{draft.SourcePath}/{draft.OutputPath}/index.html";
         var artifactPath = draft.OutputPath == "." ? draft.SourcePath : $"{draft.SourcePath}/{draft.OutputPath}";
         var lines = new List<string>
         {
@@ -77,7 +77,6 @@ public static class CiPagesWorkflowGenerator
             lines.AddRange(new[]
             {
                 "      - name: Build site",
-                $"        working-directory: \"{draft.SourcePath}\"",
                 "        shell: bash",
                 "        run: |",
                 "          set -euo pipefail",
@@ -88,7 +87,6 @@ public static class CiPagesWorkflowGenerator
         lines.AddRange(new[]
         {
             "      - name: Validate generated site entry point",
-            $"        working-directory: \"{draft.SourcePath}\"",
             "        shell: bash",
             "        run: |",
             "          set -euo pipefail",
