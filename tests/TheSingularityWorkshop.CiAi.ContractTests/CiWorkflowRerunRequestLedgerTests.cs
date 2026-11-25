@@ -36,6 +36,19 @@ internal static class CiWorkflowRerunRequestLedgerTests
                 Throws<ArgumentException>(() => new CiWorkflowDispatchInputContract(
                     "TrentBest/Experiences", ".github/workflows/ci.yml", "refs/heads/development", WorkflowDefinitionSha,
                     "refs/heads/work/agent", CandidateSha));
+                Throws<ArgumentException>(() => new CiWorkflowDispatchInputContract(
+                    "TrentBest/Experiences", ".github/workflows/ci.yml", "refs/heads/development", WorkflowDefinitionSha,
+                    "refs/heads/feature/build.lock", CandidateSha));
+            });
+
+            Check("workflow definition must use the pinned development ref and full SHA", () =>
+            {
+                Throws<ArgumentException>(() => new CiWorkflowDispatchInputContract(
+                    "TrentBest/Experiences", ".github/workflows/ci.yml", "refs/heads/feature/agent",
+                    WorkflowDefinitionSha, "refs/heads/feature/minesweeper-domain-pilot", CandidateSha));
+                Throws<ArgumentException>(() => new CiWorkflowDispatchInputContract(
+                    "TrentBest/Experiences", ".github/workflows/ci.yml", "refs/heads/development",
+                    "not-a-sha", "refs/heads/feature/minesweeper-domain-pilot", CandidateSha));
             });
 
             Check("workflow path rejects traversal and non-workflow locations", () =>
