@@ -1,25 +1,20 @@
 namespace TheSingularityWorkshop.CiAi;
 
-/// <summary>Declarative input for a standardized GitHub Pages publication plan.</summary>
 public sealed record CiPagesPublicationPlanDraft(
     string Repository,
     string SourcePath,
     string SourceBranch,
     string ArtifactName = "pages-site",
-    string PlanId = "pages-publication");
+    string PlanId = "pages-publication",
+    string BuildCommand = "",
+    string OutputPath = "");
 
-/// <summary>Expanded Pages plan plus destination policy. Expansion is pure and performs no provider operations.</summary>
 public sealed record CiPagesPublicationPlanExpansion(
     bool IsValid,
     IReadOnlyList<string> Errors,
     CiWorkflowPlanDraft? Workflow,
     CiPublicationPolicy PublicationPolicy);
 
-/// <summary>
-/// Validates and expands a Pages declaration into the existing provider-neutral workflow-plan contract.
-/// The Pages destination is automatic and approval-free by policy; the executor/host adapter must still
-/// require complete, current, unambiguous successful evidence before deployment.
-/// </summary>
 public static class CiPagesPublicationPlan
 {
     public static CiPagesPublicationPlanExpansion Expand(CiPagesPublicationPlanDraft draft)
@@ -36,6 +31,10 @@ public static class CiPagesPublicationPlan
             errors.Add("pages.artifact-name-invalid");
         if (!IsStableId(draft.PlanId))
             errors.Add("pages.plan-id-invalid");
+        if (!IsSafeBuildCommand(draft.BuildCommand))
+            errors.Add("pages.build-command-invalid");
+        if (!IsSafeRelativePath(draft.OutputPath))
+            errors.Add("pages.output-path-invalid");
 
         var policy = new CiPublicationPolicy("github-pages", CiPublicationMode.Automatic, CiPublicationApproval.None);
         if (errors.Count > 0)
@@ -46,8 +45,8 @@ public static class CiPagesPublicationPlan
             draft.PlanId,
             Array.AsReadOnly(new[]
             {
-                Step("build-site", "Build Pages source", "build-test"),
-                Step("validate-site", "Validate generated Pages site", "documentation", "build-site"),
+                Step("build-site", "Build Pages source using the declared repository command", "build-test"),
+                Step("validate-site", "Validate generated Pages site entry point", "documentation", "build-site"),
                 Step("package-site", "Package exact validated Pages artifact", "artifact-handoff", "validate-site"),
                 Step("deploy-pages", "Deploy validated artifact to GitHub Pages", "deployment", "package-site")
             }),
@@ -60,7 +59,6 @@ public static class CiPagesPublicationPlan
         return new CiPagesPublicationPlanExpansion(true, Array.Empty<string>(), workflow, policy);
     }
 
-    /// <summary>Rejects absolute paths, traversal, backslashes, empty segments, and control characters.</summary>
     public static bool IsSafeRelativePath(string? path)
     {
         if (string.IsNullOrWhiteSpace(path) || path.Length > 240 || path.StartsWith('/') ||
@@ -74,6 +72,11 @@ public static class CiPagesPublicationPlan
             segment != ".." &&
             segment.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_' or '.'));
     }
+
+    public static bool IsSafeBuildCommand(string? command) =>
+        !string.IsNullOrWhiteSpace(command) &&
+        command.Length <= 1000 &&
+        !command.Any(char.IsControl);
 
     private static bool IsStableId(string? value) =>
         !string.IsNullOrWhiteSpace(value) &&
