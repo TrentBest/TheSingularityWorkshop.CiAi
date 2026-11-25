@@ -74,4 +74,4 @@ The contract suite covers:
 - `FileCiWorkflowRerunRequestLedger`
 - `CiWorkflowRerunRequestLedgerTests`
 
-This slice is not the live red → repair → green pipeline. That still requires an authenticated FSM_Foundry host adapter, a real provider dispatch/observer path, the HeadlessAi provider invocation, and a full exact-SHA integration proof.
+This slice is not the live red → repair → green pipeline. That still requires an authenticated FSM_Execution host adapter, a real provider dispatch/observer path, the HeadlessAi provider invocation, and a full exact-SHA integration proof.
