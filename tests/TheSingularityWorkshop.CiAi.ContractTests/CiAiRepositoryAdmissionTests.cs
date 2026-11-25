@@ -82,10 +82,14 @@ internal static class CiAiRepositoryAdmissionTests
                 now.AddDays(-10), now, CiAiEntitlementVerificationStatus.Verified);
             var future = new CiAiRepositoryEntitlement("licensee-opaque-1", "Paid", 100,
                 now.AddDays(1), now.AddDays(30), CiAiEntitlementVerificationStatus.Verified);
-            Assert(Evaluate("Owner/New", four, expired, now).Outcome == CiAiRepositoryAdmissionOutcome.EntitlementUnavailable,
-                "expired entitlement was accepted");
-            Assert(Evaluate("Owner/New", four, future, now).Outcome == CiAiRepositoryAdmissionOutcome.EntitlementUnavailable,
-                "future entitlement was accepted");
+            var expiredReport = Evaluate("Owner/New", four, expired, now);
+            Assert(expiredReport.Outcome == CiAiRepositoryAdmissionOutcome.EntitlementUnavailable &&
+                expiredReport.EntitlementStatus == "Expired",
+                "expired entitlement was accepted or misreported");
+            var futureReport = Evaluate("Owner/New", four, future, now);
+            Assert(futureReport.Outcome == CiAiRepositoryAdmissionOutcome.EntitlementUnavailable &&
+                futureReport.EntitlementStatus == "NotYetValid",
+                "future entitlement was accepted or misreported");
         });
         Check("paid entitlement allows a repository count above the free limit", () =>
         {
