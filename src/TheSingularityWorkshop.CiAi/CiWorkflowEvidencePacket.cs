@@ -27,11 +27,11 @@ public sealed record CiWorkflowEvidencePacket
         Provenance = provenance;
         WorkflowDefinitionTrusted = workflowDefinitionTrusted;
         CheckoutVerified = checkoutVerified;
-        RequiredChecks = Array.AsReadOnly(requiredChecks.ToArray());
+        RequiredChecks = Array.AsReadOnly(requiredChecks.OrderBy(check => check.Key, StringComparer.Ordinal).ToArray());
         ValidateRequiredCheckObservations(RequiredChecks);
         CandidateRef = provenance.CheckoutRef;
         CandidateSha = provenance.CheckoutSha;
-        BlockingReasons = Array.AsReadOnly(BuildBlockingReasons().ToArray());
+        BlockingReasons = Array.AsReadOnly(BuildBlockingReasons().Distinct(StringComparer.Ordinal).ToArray());
     }
 
     /// <summary>
@@ -478,14 +478,16 @@ public sealed record CiWorkflowEvidencePacket
         CiPullRequestProviderIdentity? pullRequestIdentity = null)
     {
         ArgumentNullException.ThrowIfNull(trustDecision);
+        ArgumentNullException.ThrowIfNull(expectedRequiredChecks);
+        var requiredCheckBindings = expectedRequiredChecks.ToArray();
         var observed = FromJson(
             json, expectedRepository, expectedRunId, expectedRunAttempt,
-            expectedPacketSha256, expectedRequiredChecks, workflowDefinitionTrusted: false);
+            expectedPacketSha256, requiredCheckBindings, workflowDefinitionTrusted: false);
         return FromValidatedProvenance(
             observed.ObservedRun,
             observed.Provenance,
             trustDecision,
-            expectedRequiredChecks,
+            requiredCheckBindings,
             pullRequestIdentity,
             observed.ObservedRun.CandidateCheckoutEvidence);
     }
@@ -578,6 +580,8 @@ public sealed record CiWorkflowEvidencePacket
 
     private static void ValidateRequiredCheckObservations(IReadOnlyList<CiWorkflowRequiredCheckObservation> checks)
     {
+        if (checks.Any(check => check is null))
+            throw new InvalidDataException("Evidence packet v1 contains a null required-check observation.");
         ValidateRequiredCheckBindings(checks.Select(check =>
             new CiWorkflowRequiredCheckBinding(check.Key, check.JobName)).ToArray());
         foreach (var check in checks)
