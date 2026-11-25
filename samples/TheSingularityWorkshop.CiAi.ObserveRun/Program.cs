@@ -196,7 +196,7 @@ try
     }
 
     CiTestResultReport? testResultReport = null;
-    if (provenanceRequired)
+    if (provenanceRequired && workflowTrustDecision?.IsTrusted == true)
     {
         if (workflowProvenance is null || requiredJobCollection is null)
             throw new InvalidDataException("Exact source test-result evidence requires the trusted provenance packet and required job collection.");
