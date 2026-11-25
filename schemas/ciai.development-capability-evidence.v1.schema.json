@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/blob/master/schemas/ciai.development-capability-evidence.v1.schema.json",
+  "title": "CiAi Development Capability Evidence v1",
+  "description": "A provider-generated, run-scoped declaration of a source capability and its exact build/test evidence. GitHub API metadata and artifact digests must be independently verified by CiAi.",
+  "type": "object",
+  "required": [
+    "schema",
+    "evidenceContract",
+    "providerRepository",
+    "artifactName",
+    "capability",
+    "candidate",
+    "workflow",
+    "checkout",
+    "requiredJobs",
+    "requiredStepIds",
+    "stepOutcomes",
+    "requiredArtifacts",
+    "artifactsComplete",
+    "identityValid",
+    "sourceFilesComplete",
+    "bundleIntegrityValid",
+    "artifacts",
+    "testResultArtifacts",
+    "sourceFiles",
+    "microBundle",
+    "policy",
+    "observedAtUtc",
+    "status",
+    "satisfied"
+  ],
+  "properties": {
+    "schema": { "const": "ciai.development-capability-evidence.v1" },
+    "evidenceContract": { "const": "ciai.development-capability-evidence.v1" },
+    "providerRepository": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+    "artifactName": { "type": "string", "minLength": 1 },
+    "capability": {
+      "type": "object",
+      "required": ["id", "version", "channel", "status", "implementationPaths", "validationProjects"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "channel": { "const": "development" },
+        "status": { "enum": ["satisfied", "blocked", "incomplete"] },
+        "implementationPaths": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "validationProjects": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+    },
+    "candidate": {
+      "type": "object",
+      "required": ["id", "sourceRef", "sourceSha"],
+      "properties": {
+        "id": { "type": "string" },
+        "sourceRef": { "type": "string", "minLength": 1 },
+        "sourceSha": { "type": "string", "pattern": "^[0-9a-fA-F]{40}$" }
+      },
+      "additionalProperties": true
+    },
+    "workflow": {
+      "type": "object",
+      "required": ["path", "ref", "sha", "runId", "runAttempt", "eventName", "eventRef", "eventSha"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "ref": { "type": "string", "minLength": 1 },
+        "sha": { "type": "string", "pattern": "^[0-9a-fA-F]{40}$" },
+        "runId": { "type": "integer", "minimum": 1 },
+        "runAttempt": { "type": "integer", "minimum": 1 },
+        "eventName": { "type": "string", "minLength": 1 },
+        "eventRef": { "type": "string", "minLength": 1 },
+        "eventSha": { "type": "string", "pattern": "^[0-9a-fA-F]{40}$" }
+      },
+      "additionalProperties": true
+    },
+    "checkout": {
+      "type": "object",
+      "required": ["ref", "sha", "dependencies"],
+      "properties": {
+        "ref": { "type": "string", "minLength": 1 },
+        "sha": { "type": "string", "pattern": "^[0-9a-fA-F]{40}$" },
+        "dependencies": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["repository", "checkoutSha"],
+            "properties": {
+              "repository": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+              "checkoutSha": { "type": "string", "pattern": "^[0-9a-fA-F]{40}$" }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "pullRequest": { "type": ["object", "null"] },
+    "requiredJobs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["jobKey", "name", "workflowPath"],
+        "properties": {
+          "jobKey": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "workflowPath": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": true
+      }
+    },
+    "requiredStepIds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string" } },
+    "stepOutcomes": { "type": "object", "additionalProperties": { "enum": ["success", "failure", "skipped"] } },
+    "requiredArtifacts": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string" } },
+    "artifactsComplete": { "type": "boolean" },
+    "identityValid": { "type": "boolean" },
+    "sourceFilesComplete": { "type": "boolean" },
+    "bundleIntegrityValid": { "type": "boolean" },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["kind", "path", "sha256", "sizeBytes"],
+        "properties": {
+          "kind": { "type": "string" },
+          "path": { "type": "string" },
+          "sha256": { "type": "string", "pattern": "^[0-9a-fA-F]{64}$" },
+          "sizeBytes": { "type": "integer", "minimum": 1 }
+        },
+        "additionalProperties": true
+      }
+    },
+    "testResultArtifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["kind", "artifactName", "trxSha256", "trxSizeBytes", "provenanceSha256", "archiveEntries"],
+        "properties": {
+          "kind": { "type": "string" },
+          "artifactName": { "type": "string" },
+          "trxSha256": { "type": "string", "pattern": "^[0-9a-fA-F]{64}$" },
+          "trxSizeBytes": { "type": "integer", "minimum": 1 },
+          "provenanceSha256": { "type": "string", "pattern": "^[0-9a-fA-F]{64}$" },
+          "archiveEntries": { "type": "array", "minItems": 2, "maxItems": 2, "uniqueItems": true, "items": { "type": "string" } }
+        },
+        "additionalProperties": true
+      }
+    },
+    "sourceFiles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["path", "sha256", "sizeBytes"],
+        "properties": {
+          "path": { "type": "string" },
+          "sha256": { "type": "string", "pattern": "^[0-9a-fA-F]{64}$" },
+          "sizeBytes": { "type": "integer", "minimum": 1 }
+        },
+        "additionalProperties": true
+      }
+    },
+    "microBundle": {
+      "type": "object",
+      "required": ["bundleId", "version", "file", "isNuGetPackage", "isPublished"],
+      "properties": {
+        "bundleId": { "type": "integer", "minimum": 1 },
+        "version": { "type": "string" },
+        "file": { "type": "string" },
+        "isNuGetPackage": { "const": false },
+        "isPublished": { "const": false }
+      },
+      "additionalProperties": true
+    },
+    "policy": {
+      "type": "object",
+      "required": ["id", "version"],
+      "properties": {
+        "id": { "type": "string" },
+        "version": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": true
+    },
+    "observedAtUtc": { "type": "string", "format": "date-time" },
+    "status": { "enum": ["satisfied", "blocked", "incomplete"] },
+    "satisfied": { "type": "boolean" }
+  },
+  "additionalProperties": true
+}

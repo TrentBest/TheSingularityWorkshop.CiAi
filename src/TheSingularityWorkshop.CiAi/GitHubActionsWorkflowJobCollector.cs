@@ -20,7 +20,11 @@ public sealed record CiWorkflowJobObservation(
     string Status,
     string? Conclusion,
     Uri EvidenceUrl,
-    IReadOnlyList<CiWorkflowStepObservation> Steps);
+    IReadOnlyList<CiWorkflowStepObservation> Steps)
+{
+    public DateTimeOffset? StartedAt { get; init; }
+    public DateTimeOffset? CompletedAt { get; init; }
+}
 
 /// <summary>A bounded job collection for one explicit workflow run attempt.</summary>
 public sealed record CiWorkflowJobCollection(
@@ -116,11 +120,15 @@ public sealed class GitHubActionsWorkflowJobCollector
         var id = RequiredInt64(root, "id");
         if (id <= 0) throw new InvalidDataException("GitHub job ID must be positive.");
 
-        if (root.TryGetProperty("run_id", out var returnedRun) &&
-            returnedRun.ValueKind == JsonValueKind.Number && returnedRun.TryGetInt64(out var actualRun) && actualRun != runId)
+        // The attempt-specific endpoint is not a substitute for validating the provider's
+        // own identity fields. Missing or malformed fields must not inherit the requested
+        // values, because that would turn an unverified response into apparently bound evidence.
+        var returnedRun = RequiredInt64(root, "run_id");
+        if (returnedRun != runId)
             throw new InvalidDataException("GitHub returned a job belonging to a different workflow run.");
-        if (root.TryGetProperty("run_attempt", out var returnedAttempt) &&
-            returnedAttempt.ValueKind == JsonValueKind.Number && returnedAttempt.TryGetInt32(out var actualAttempt) && actualAttempt != attempt)
+
+        var returnedAttempt = RequiredInt32(root, "run_attempt");
+        if (returnedAttempt <= 0 || returnedAttempt != attempt)
             throw new InvalidDataException("GitHub returned a job belonging to a different run attempt.");
 
         var name = RequiredString(root, "name");
@@ -148,8 +156,17 @@ public sealed class GitHubActionsWorkflowJobCollector
             }
         }
 
+        var startedAt = OptionalTimestamp(root, "started_at");
+        var completedAt = OptionalTimestamp(root, "completed_at");
+        if (startedAt.HasValue && completedAt.HasValue && completedAt.Value < startedAt.Value)
+            throw new InvalidDataException("GitHub job completion timestamp predates its start timestamp.");
+
         return new CiWorkflowJobObservation(id, runId, attempt, name, status, conclusion, url,
-            Array.AsReadOnly(steps.OrderBy(x => x.Number).ToArray()));
+            Array.AsReadOnly(steps.OrderBy(x => x.Number).ToArray()))
+        {
+            StartedAt = startedAt,
+            CompletedAt = completedAt
+        };
     }
 
     private static string RequiredString(JsonElement root, string property)
@@ -164,16 +181,34 @@ public sealed class GitHubActionsWorkflowJobCollector
         root.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String
             ? value.GetString() : null;
 
+    private static DateTimeOffset? OptionalTimestamp(JsonElement root, string property)
+    {
+        if (!root.TryGetProperty(property, out var value) || value.ValueKind == JsonValueKind.Null)
+            return null;
+        if (value.ValueKind != JsonValueKind.String)
+            throw new InvalidDataException($"GitHub job timestamp '{property}' must be a string or null.");
+        var text = value.GetString();
+        if (string.IsNullOrWhiteSpace(text))
+            throw new InvalidDataException($"GitHub job timestamp '{property}' cannot be empty.");
+        var hasZone = text.EndsWith("Z", StringComparison.OrdinalIgnoreCase) ||
+            (text.Contains('T') && (text.LastIndexOf('+') > text.IndexOf('T') || text.LastIndexOf('-') > text.IndexOf('T')));
+        if (!hasZone || !DateTimeOffset.TryParse(text, System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out var timestamp))
+            throw new InvalidDataException($"GitHub job timestamp '{property}' must include an explicit UTC offset.");
+        return timestamp;
+    }
+
+
     private static long RequiredInt64(JsonElement root, string property)
     {
-        if (!root.TryGetProperty(property, out var value) || !value.TryGetInt64(out var result))
+        if (!root.TryGetProperty(property, out var value) || value.ValueKind != JsonValueKind.Number || !value.TryGetInt64(out var result))
             throw new InvalidDataException($"GitHub response is missing valid field '{property}'.");
         return result;
     }
 
     private static int RequiredInt32(JsonElement root, string property)
     {
-        if (!root.TryGetProperty(property, out var value) || !value.TryGetInt32(out var result) || result < 0)
+        if (!root.TryGetProperty(property, out var value) || value.ValueKind != JsonValueKind.Number || !value.TryGetInt32(out var result) || result < 0)
             throw new InvalidDataException($"GitHub response is missing valid field '{property}'.");
         return result;
     }
