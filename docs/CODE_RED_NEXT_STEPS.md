@@ -24,7 +24,7 @@ The CI workflow produced a package candidate artifact for inspection. **It did n
 
 - **Workflow provenance and trust:** exact workflow/run/attempt identity, protected workflow-definition comparison, distinct PR head/base/merge identities, and one canonical `ciai.workflow-evidence.v1` envelope. The envelope combines unversioned provider facts, validated provenance, and host-registered required-check observations; host trust is re-evaluated on reload.
 - **Test-result evidence:** `ciai.test-results.v1` owns the stable `CompletePass` / `ActionableFailure` / `IncompleteOrUntrusted` / `NonActionableFailure` verdict and reason codes. Provider artifact binding, digest-verified bounded TRX reading, and normalized diagnostics are bound to the exact required check in the canonical v1 envelope.
-- **Foundry handoff contracts:** Foundry artifact-ready notice, delivery coordination, and outbox contracts. These are contracts for the `FSM_Foundry` host boundary; a live host adapter is still future work.
+- **FSM_Execution handoff contracts:** FSM_Execution artifact-ready notice, delivery coordination, and outbox contracts. These are contracts for the `FSM_Execution` host boundary; a live host adapter is still future work.
 - **Execution planning:** typed workflow plans, deterministic scheduling, fail-closed in-process execution-result contracts, and Pages publication-plan composition.
 - **Await/Gate:** durable file-backed registrations and gate contracts plus an event outbox.
 - **CI Matrix:** deterministic bounded expansion, stable cell identity, and explicit exclusions.
@@ -43,7 +43,7 @@ The pre-work CiAi branch inventory was independently reported compliant by Sith 
 
 **Implemented on the isolated candidate branch** `feature/durable-ci-rerun-requests-development` in draft [PR #92](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/pull/92); not yet integrated into `development`. The candidate now also removes the parallel `workflow-evidence.v2` packet/outbox/schema and folds host-registered required checks into the single `ciai.workflow-evidence.v1` envelope. The v1 rerun slice adds `CiWorkflowDispatchInputContract`, `CiWorkflowRerunRequest`, and `FileCiWorkflowRerunRequestLedger`, with contract tests and [the request-boundary specification](WORKFLOW_RERUN_REQUEST_V1.md). It binds the canonical repository, workflow YAML path, trusted `refs/heads/development` workflow-definition ref and exact workflow SHA, isolated candidate feature ref and exact candidate SHA, source run/attempt, correlation ID, idempotency key, expiry, and a maximum of three additional attempts. The ledger is append-only, digest-verified, bounded, and idempotent.
 
-This is still request intent only. It does not dispatch, retry, authenticate the requester, or authorize a provider call. The host must independently verify that the trusted workflow revision is approved, that the workflow is registered for manual dispatch, and that the candidate feature ref still resolves to the candidate SHA before each dispatch. The next slice is the FSM_Foundry host adapter and durable correlation to actual provider run IDs/attempts.
+This is still request intent only. It does not dispatch, retry, authenticate the requester, or authorize a provider call. The host must independently verify that the trusted workflow revision is approved, that the workflow is registered for manual dispatch, and that the candidate feature ref still resolves to the candidate SHA before each dispatch. The next slice is the FSM_Execution host adapter and durable correlation to actual provider run IDs/attempts.
 
 ### 2. Repository enrollment and README badges
 
@@ -55,9 +55,9 @@ The intended feature is a deterministic, idempotent managed README region with c
 
 The `CiWorkflowObserverProfile` contract is present, but repository-manifest enrollment and rollout are not complete. Start with CiAi, then the proven raWWar workflow, then AnyApp. Each profile must bind the exact workflow path, required job, artifact templates, provider metadata, and protected workflow revision. A green repository-contract badge is not trusted test evidence and does not authorize autonomous repair.
 
-### 4. FSM_Foundry integration
+### 4. FSM_Execution integration
 
-Connect the Foundry notice contracts to an explicit `FSM_Foundry` adapter. The host owns execution, resource isolation, credentials, cleanup, and authorization. CiAi owns evidence validation and gate policy. HeadlessAi may assess validated evidence, but model output cannot change the verdict. Human approval remains authoritative for merge, NuGet publication, release, and deployment.
+Connect the FSM_Execution notice contracts to an explicit `FSM_Execution` adapter. The host owns execution, resource isolation, credentials, cleanup, and authorization. CiAi owns evidence validation and gate policy. HeadlessAi may assess validated evidence, but model output cannot change the verdict. Human approval remains authoritative for merge, NuGet publication, release, and deployment.
 
 ### 5. Gauntlet and adversarial execution
 
