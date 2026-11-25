@@ -11,7 +11,7 @@ CiAi is the application-owned boundary between continuous-integration systems an
 
 ## 01 — See CiAi
 
-**[Preview the interactive CiAi experience source](index.html)** — explore the evidence-observation flow, test an illustrative fail-closed gate, and follow the links to the Workshop capabilities that support it. The page and Pages deployment workflow are staged on `development`; the hosted experience will be available after the reviewed promotion to `master`. The browser walkthrough uses clearly labeled synthetic data; it does not claim to connect to GitHub.
+**[Preview the interactive CiAi experience](https://trentbest.github.io/TheSingularityWorkshop.CiAi/) (source: [index.html](index.html))** — explore the evidence-observation flow, test an illustrative fail-closed gate, and follow the links to the Workshop capabilities that support it. The development-branch Pages deployment is live; `master` remains the release-aligned branch. The browser walkthrough uses clearly labeled synthetic data; it does not claim to connect to GitHub.
 
 ## 02 — See the implementation in a minute
 
@@ -66,7 +66,7 @@ AnyApp is CiAi's first source-based consumer pilot. It keeps GitHub Actions as t
 
 ## 04 — New consumer: SingularityUniversalRoleplayingSystem
 
-SURPS is the Workshop's shared roleplaying ontology. Its root AgentOnboarding contract now passes CiAi v1 at an exact commit, and a pinned read-only observer reports its Pages workflow with separate completeness, terminality, and success facts. The first Pages build passed but deployment failed; that failure remains visible and unresolved.
+SURPS is the Workshop's shared roleplaying ontology. Its root AgentOnboarding contract passes CiAi v1 at an exact commit, and a pinned read-only observer reports its Pages workflow with separate completeness, terminality, and success facts. The Pages build and deployment now both succeed. SURPS consumes CiAi's pinned reusable `deploy-pages.yml`; its site-specific build remains owned by SURPS.
 
 - [SURPS CiAi integration and evidence](docs/Samples/SingularityUniversalRoleplayingSystem.md)
 - [raWWar bidirectional producer/consumer proof](docs/Samples/raWWar.md)
