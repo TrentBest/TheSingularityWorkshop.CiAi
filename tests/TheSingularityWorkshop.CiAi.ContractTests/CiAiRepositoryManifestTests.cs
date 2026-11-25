@@ -58,6 +58,20 @@ internal static class CiAiRepositoryManifestTests
             Throws<ArgumentException>(() => new CiWorkflowObserverProfile("bad", "../workflow.yml",
                 "a-{attempt}", "b-{attempt}", "proof.json", "test.trx", "provider", "job", "Job"));
         });
+        Check("raWWar observer profile matches its workflow and artifact contract", () =>
+        {
+            var profile = CiWorkflowObserverProfile.RaWWar;
+            Assert(profile.WorkflowPath == ".github/workflows/build.yml", "raWWar workflow path changed");
+            Assert(profile.ProvenanceArtifactName(45546590828, 1) == "rawwar-workflow-provenance-45546590828-1",
+                "raWWar provenance artifact identity changed");
+            Assert(profile.TestArtifactName(45546590828, 1) == "rawwar-contract-results-45546590828-1",
+                "raWWar contract artifact identity changed");
+            Assert(profile.ProvenanceEntryName == "workflow-provenance.json" &&
+                profile.TrxEntryName == "results.trx" &&
+                profile.RequiredJobKey == "build-and-contracts" &&
+                profile.RequiredJobName == "build-and-contracts",
+                "raWWar evidence entry or required-job identity changed");
+        });
         return passed;
 
         void Check(string name, Action action)
