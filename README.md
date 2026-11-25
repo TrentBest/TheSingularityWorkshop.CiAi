@@ -91,6 +91,7 @@ ServerSC2 is the next CODE RED evidence integration. ServerSC2 owns authoritativ
 - [CI semantic stack](docs/CI_SEMANTIC_STACK.md) — typed workflow vocabulary and protocol/grammar cross-reference validation.
 
 - [Test-result evidence v1](docs/TEST_RESULT_EVIDENCE_V1.md) — exact-run TRX provenance, required-job policy, bounded archive verification, and diagnostics.
+- [Workflow rerun request v1](docs/WORKFLOW_RERUN_REQUEST_V1.md) — exact-source, bounded, idempotent rerun intent and the host authorization boundary.
 - [Development capability evidence v1](docs/DEVELOPMENT_CAPABILITY_EVIDENCE_V1.md) — source-bound capability claims and verification.
 - [Composite pipeline gates](docs/COMPOSITE_PIPELINE_GATES.md) and [dependency readiness policy](docs/DEPENDENCY_READINESS_POLICY.md) — fail-closed dependency and gate composition.
 
