@@ -9,6 +9,7 @@ RunSuite("CiWorkflowProvenanceRecordTests", () => CiWorkflowProvenanceRecordTest
 await RunSuiteAsync("CiWorkflowProvenanceArtifactReaderTests", () => CiWorkflowProvenanceArtifactReaderTests.RunAsync());
 RunSuite("CiWorkflowEvidencePacketTests", () => CiWorkflowEvidencePacketTests.Run());
 RunSuite("CiTestResultReportTests", () => CiTestResultReportTests.Run());
+RunSuite("CiWorkflowRerunRequestLedgerTests", () => CiWorkflowRerunRequestLedgerTests.Run());
 RunSuite("CiTestResultArtifactArchiveTests", () => CiTestResultArtifactArchiveTests.Run());
 RunSuite("CiWorkflowEvidenceDeliveryTests", () => CiWorkflowEvidenceDeliveryTests.Run());
 await RunSuiteAsync("FoundryArtifactReadyNoticeClientTests", () => FoundryArtifactReadyNoticeClientTests.RunAsync());
