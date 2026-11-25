@@ -192,17 +192,17 @@ jobs:
             "$TARGET_REPOSITORY" "$TARGET_SHA" artifacts/commit-observation.json
           expected=".github/workflows/ci.yml#$SOURCE_RUN_ID#$SOURCE_RUN_ATTEMPT"
           jq -e --arg repo "$TARGET_REPOSITORY" --arg sha "$TARGET_SHA" --arg expected "$expected" '
-            .schema == "ciai.commit-observation.v2" and
+            .schema == "ciai.commit-observation.v1" and
             .repository == $repo and
             .headSha == $sha and
             .discoveryComplete == true and
             .exactRunBindingConfigured == true and
             .exactRunBindingValid == true and
             .workflowProvenanceValid == true and
-            .workflowEvidenceV2.schema == "ciai.workflow-evidence.v2" and
-            .workflowEvidenceV2Sha256 != null and
-            .workflowEvidenceV2Complete == true and
-            .workflowEvidenceV2Successful == true and
+            .workflowEvidence.schema == "ciai.workflow-evidence.v1" and
+            .workflowEvidenceSha256 != null and
+            .workflowEvidenceComplete == true and
+            .workflowEvidenceSuccessful == true and
             .workflowDefinitionTrust.trusted == true and
             .workflowProvenance.valid == true and
             .workflowProvenance.workflowSha == $sha and
