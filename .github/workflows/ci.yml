@@ -5,6 +5,8 @@ on:
     branches: [development, master]
     paths:
       - "src/**"
+      - ".ciai/**"
+      - "tools/**"
       - "external/**"
       - ".gitmodules"
       - "tests/**"
@@ -16,6 +18,7 @@ on:
       - "NuGet.config"
       - ".config/**"
       - ".github/workflows/ci.yml"
+      - ".github/workflows/ciai-repository.yml"
       - ".github/workflows/observe-release-candidate.yml"
       - ".github/workflows/serialization-benchmark-dispatch.yml"
   pull_request:
@@ -147,6 +150,9 @@ jobs:
         run: |
           mkdir -p TestResults
           dotnet-coverage collect "dotnet run --project tests/TheSingularityWorkshop.CiAi.ContractTests --configuration Release --no-build" --output-format cobertura --output TestResults/coverage.cobertura.xml
+      - name: Validate checked-in repository manifest
+        id: repository-manifest
+        run: dotnet run --project tools/CiAi.Repository --configuration Release --no-build -- --check-manifest
       - name: Upload coverage to Codecov
         id: codecov
         uses: codecov/codecov-action@v6
