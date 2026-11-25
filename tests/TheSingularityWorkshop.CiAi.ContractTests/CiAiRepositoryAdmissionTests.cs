@@ -8,7 +8,7 @@ internal static class CiAiRepositoryAdmissionTests
         var now = DateTimeOffset.Parse("2026-11-25T20:00:00Z");
         var entitlement = new CiAiRepositoryEntitlement("licensee-opaque-1", "Community", 5,
             now.AddDays(-1), now.AddDays(30), CiAiEntitlementVerificationStatus.Verified);
-        var upgrade = new Uri("https://trentbest.github.io/TheSingularityWorkshop.CiAi/#licensing");
+        var upgrade = new Uri("https://trentbest.github.io/TheSingularityWorkshop.CiAi/licensing");
         var four = Enumerable.Range(1, 4).Select(i => $"Owner/Repo{i}").ToArray();
         var five = Enumerable.Range(1, 5).Select(i => $"Owner/Repo{i}").ToArray();
 
