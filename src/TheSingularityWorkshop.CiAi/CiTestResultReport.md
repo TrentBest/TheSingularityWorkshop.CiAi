@@ -50,7 +50,8 @@ The public schema is `ciai.test-results.v1`. `ToCanonicalUtf8Bytes()` returns co
 
 - Raw TRX payload limit: 16 MiB.
 - Canonical report handoff limit: 1 MiB.
-- `ReportSha256`: lowercase SHA-256 of the exact canonical bytes.
+- `WorkflowEvidenceSha256`: lowercase SHA-256 of the exact canonical `ciai.workflow-evidence.v1` envelope used to assess the TRX. The host compares this digest with the independently validated workflow-evidence artifact before accepting the verdict.
+- `ReportSha256`: lowercase SHA-256 of the exact canonical report bytes.
 - `ReportIdentity`: `sha256:` followed by that lowercase digest; it is metadata and is not embedded in the report JSON.
 
 The 1 MiB handoff limit matches the FSM_Execution and HeadlessAi consumer contracts.
