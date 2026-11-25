@@ -39,3 +39,24 @@ verdict.
 
 The manifest is therefore a composition declaration—not a release gate, CI
 dispatch permission, LLM budget grant, or publication authorization.
+
+## Automated validation
+
+The repository solution includes the read-only validator:
+
+```bash
+dotnet run --project tools/CiAi.Repository -- --check-manifest
+```
+
+The command verifies the manifest schema, repository identity (when
+`GITHUB_REPOSITORY` is available), and canonical deterministic JSON. It does
+not write files or contact GitHub. The main contract workflow runs it after
+the solution build.
+
+Consumers can call
+`.github/workflows/ciai-repository.yml` as a reusable workflow. Pin the
+workflow reference itself and its required `ciai-ref` input to the same
+reviewed, immutable 40-character CiAi commit SHA. The reusable workflow checks
+out the consumer's exact event commit, validates the pin, and runs the
+read-only manifest check. No consumer workflow has been migrated by adding
+this reusable capability.
