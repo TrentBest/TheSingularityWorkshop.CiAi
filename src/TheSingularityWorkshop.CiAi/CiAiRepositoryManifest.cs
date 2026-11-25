@@ -110,46 +110,66 @@ public sealed record CiAiRepositoryManifest
             throw new InvalidOperationException("LLM allocation is not yet part of the repository manifest contract.");
         if (Schema == CurrentSchema && (definition.Relationships.Count > 0 || definition.AdpSettings is not null))
             throw new InvalidOperationException("Repository manifest v1 cannot serialize ADP relationships or settings; use schema v2.");
-        var payload = new
+        if (Schema is not (CurrentSchema or CurrentSchemaV2))
+            throw new InvalidOperationException($"Unsupported repository manifest schema '{Schema}'.");
+
+        var badges = definition.Badges.OrderBy(x => x.Id, StringComparer.Ordinal).Select(x => new
         {
-            schema = Schema,
+            id = x.Id, label = x.Label, workflowFile = x.WorkflowFile
+        }).ToArray();
+        var dependencies = definition.Dependencies.SelectMany(item => item switch
+        {
+            CiAiRepositoryDependency direct => new[]
+            {
+                new DependencyJson(direct.Repository, direct.Capability)
+            },
+            _ => Array.Empty<DependencyJson>()
+        }).OrderBy(x => x.repository, StringComparer.Ordinal).ThenBy(x => x.capability, StringComparer.Ordinal).ToArray();
+        var extensions = definition.Extensions.OrderBy(x => x.Id, StringComparer.Ordinal)
+            .Select(x => new { id = x.Id, version = x.Version }).ToArray();
+
+        if (Schema == CurrentSchema)
+        {
+            var payloadV1 = new
+            {
+                schema = CurrentSchema,
+                repository = definition.Repository,
+                observerProfile = ObserverProfile,
+                badges,
+                dependencies,
+                extensions
+            };
+            return JsonSerializer.Serialize(payloadV1, new JsonSerializerOptions { WriteIndented = true }) + "\n";
+        }
+
+        var relationships = definition.Relationships.OrderBy(x => x.RelationshipId, StringComparer.Ordinal)
+            .Select(x => new
+            {
+                relationshipId = x.RelationshipId,
+                contractVersion = x.ContractVersion,
+                kind = x.Kind.ToString(),
+                sourceRepository = x.SourceRepository,
+                targetRepository = x.TargetRepository,
+                artifactKind = x.ArtifactKind,
+                authorityRepository = x.AuthorityRepository
+            }).ToArray();
+        var adp = definition.AdpSettings is null ? null : new
+        {
+            maximumRepairAttempts = definition.AdpSettings.MaximumRepairAttempts,
+            requireHumanApprovalForWrites = definition.AdpSettings.RequireHumanApprovalForWrites
+        };
+        var payloadV2 = new
+        {
+            schema = CurrentSchemaV2,
             repository = definition.Repository,
             observerProfile = ObserverProfile,
-            badges = definition.Badges.OrderBy(x => x.Id, StringComparer.Ordinal).Select(x => new
-            {
-                id = x.Id, label = x.Label, workflowFile = x.WorkflowFile
-            }),
-            dependencies = definition.Dependencies.SelectMany(item => item switch
-            {
-                CiAiRepositoryDependency direct => new[]
-                {
-                    new DependencyJson(direct.Repository, direct.Capability)
-                },
-                _ => Array.Empty<DependencyJson>()
-            }).OrderBy(x => x.repository, StringComparer.Ordinal).ThenBy(x => x.capability, StringComparer.Ordinal),
-            extensions = definition.Extensions.OrderBy(x => x.Id, StringComparer.Ordinal)
-                .Select(x => new { id = x.Id, version = x.Version }),
-            relationships = Schema == CurrentSchemaV2
-                ? definition.Relationships.OrderBy(x => x.RelationshipId, StringComparer.Ordinal).Select(x => new
-                {
-                    relationshipId = x.RelationshipId,
-                    contractVersion = x.ContractVersion,
-                    kind = x.Kind.ToString(),
-                    sourceRepository = x.SourceRepository,
-                    targetRepository = x.TargetRepository,
-                    artifactKind = x.ArtifactKind,
-                    authorityRepository = x.AuthorityRepository
-                })
-                : null,
-            adp = Schema == CurrentSchemaV2 && definition.AdpSettings is not null
-                ? new
-                {
-                    maximumRepairAttempts = definition.AdpSettings.MaximumRepairAttempts,
-                    requireHumanApprovalForWrites = definition.AdpSettings.RequireHumanApprovalForWrites
-                }
-                : null
+            badges,
+            dependencies,
+            extensions,
+            relationships,
+            adp
         };
-        return JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }) + "\n";
+        return JsonSerializer.Serialize(payloadV2, new JsonSerializerOptions { WriteIndented = true }) + "\n";
     }
 
     private sealed record DependencyJson(string repository, string? capability);
