@@ -4,6 +4,7 @@ internal static class CiWorkflowRerunRequestLedgerTests
 {
     private const string CandidateSha = "abcdef0123456789abcdef0123456789abcdef01";
     private const string OtherCandidateSha = "123456789abcdef0123456789abcdef012345678";
+    private const string WorkflowDefinitionSha = "fedcba9876543210fedcba9876543210fedcba98";
     private static readonly DateTimeOffset RequestedAt = DateTimeOffset.Parse("2026-11-24T20:00:00Z");
 
     public static int Run()
@@ -17,6 +18,8 @@ internal static class CiWorkflowRerunRequestLedgerTests
             {
                 Assert(request.Dispatch.Repository == "TrentBest/Experiences" &&
                     request.Dispatch.WorkflowPath == ".github/workflows/ci.yml" &&
+                    request.Dispatch.WorkflowDefinitionRef == "refs/heads/development" &&
+                    request.Dispatch.WorkflowDefinitionSha == WorkflowDefinitionSha &&
                     request.Dispatch.CandidateRef == "refs/heads/feature/minesweeper-domain-pilot" &&
                     request.Dispatch.CandidateSha == CandidateSha,
                     "dispatch identity was not preserved");
@@ -25,27 +28,30 @@ internal static class CiWorkflowRerunRequestLedgerTests
             Check("canonical and non-feature refs cannot be rerun", () =>
             {
                 Throws<ArgumentException>(() => new CiWorkflowDispatchInputContract(
-                    "TrentBest/Experiences", ".github/workflows/ci.yml", "refs/heads/development", CandidateSha));
+                    "TrentBest/Experiences", ".github/workflows/ci.yml", "refs/heads/development", WorkflowDefinitionSha,
+                    "refs/heads/development", CandidateSha));
                 Throws<ArgumentException>(() => new CiWorkflowDispatchInputContract(
-                    "TrentBest/Experiences", ".github/workflows/ci.yml", "refs/heads/master", CandidateSha));
+                    "TrentBest/Experiences", ".github/workflows/ci.yml", "refs/heads/development", WorkflowDefinitionSha,
+                    "refs/heads/master", CandidateSha));
                 Throws<ArgumentException>(() => new CiWorkflowDispatchInputContract(
-                    "TrentBest/Experiences", ".github/workflows/ci.yml", "refs/heads/work/agent", CandidateSha));
+                    "TrentBest/Experiences", ".github/workflows/ci.yml", "refs/heads/development", WorkflowDefinitionSha,
+                    "refs/heads/work/agent", CandidateSha));
             });
 
             Check("workflow path rejects traversal and non-workflow locations", () =>
             {
                 Throws<ArgumentException>(() => new CiWorkflowDispatchInputContract(
-                    "TrentBest/Experiences", ".github/workflows/../ci.yml",
+                    "TrentBest/Experiences", ".github/workflows/../ci.yml", "refs/heads/development", WorkflowDefinitionSha,
                     "refs/heads/feature/minesweeper-domain-pilot", CandidateSha));
                 Throws<ArgumentException>(() => new CiWorkflowDispatchInputContract(
-                    "TrentBest/Experiences", "src/ci.yml",
+                    "TrentBest/Experiences", "src/ci.yml", "refs/heads/development", WorkflowDefinitionSha,
                     "refs/heads/feature/minesweeper-domain-pilot", CandidateSha));
             });
 
             Check("candidate SHA must be a full commit identity", () =>
             {
                 Throws<ArgumentException>(() => new CiWorkflowDispatchInputContract(
-                    "TrentBest/Experiences", ".github/workflows/ci.yml",
+                    "TrentBest/Experiences", ".github/workflows/ci.yml", "refs/heads/development", WorkflowDefinitionSha,
                     "refs/heads/feature/minesweeper-domain-pilot", "deadbeef"));
             });
 
@@ -160,6 +166,8 @@ internal static class CiWorkflowRerunRequestLedgerTests
         new(requestId, idempotencyKey, "task-minesweeper-001",
             new CiWorkflowDispatchInputContract("TrentBest/Experiences",
                 ".github/workflows/ci.yml",
+                "refs/heads/development",
+                WorkflowDefinitionSha,
                 "refs/heads/feature/minesweeper-domain-pilot",
                 candidateSha),
             sourceRunId, sourceRunAttempt, maximumAdditionalAttempts,
