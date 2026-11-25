@@ -25,6 +25,8 @@ on:
     branches: [development, master]
     paths:
       - "src/**"
+      - ".ciai/**"
+      - "tools/**"
       - "external/**"
       - ".gitmodules"
       - "tests/**"
@@ -36,6 +38,7 @@ on:
       - "NuGet.config"
       - ".config/**"
       - ".github/workflows/ci.yml"
+      - ".github/workflows/ciai-repository.yml"
       - ".github/workflows/observe-release-candidate.yml"
       - ".github/workflows/serialization-benchmark-dispatch.yml"
   workflow_dispatch:
