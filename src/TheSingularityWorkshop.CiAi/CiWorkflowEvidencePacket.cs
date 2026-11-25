@@ -415,6 +415,12 @@ public sealed record CiWorkflowEvidencePacket
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
         ValidateNoDuplicateProperties(root);
+        ValidateKnownProperties(root,
+            new HashSet<string>(StringComparer.Ordinal)
+            {
+                "contractVersion", "schema", "observedRun", "provenance", "requiredChecks"
+            },
+            "Evidence packet v1 envelope");
         if (root.ValueKind != JsonValueKind.Object ||
             !root.TryGetProperty("contractVersion", out var version) ||
             !version.TryGetInt32(out var parsedVersion) ||
@@ -446,6 +452,14 @@ public sealed record CiWorkflowEvidencePacket
             ?? throw new InvalidDataException("Evidence packet v1 required-check observations are invalid.");
         if (serializedRequiredChecks.Any(check => check is null))
             throw new InvalidDataException("Evidence packet v1 contains a null required-check observation.");
+        foreach (var checkElement in requiredChecksElement.EnumerateArray())
+            ValidateKnownProperties(checkElement,
+                new HashSet<string>(StringComparer.Ordinal)
+                {
+                    "key", "jobName", "state", "jobId", "status", "conclusion",
+                    "evidenceUrl", "startedAt", "completedAt"
+                },
+                "Evidence packet v1 required-check observation");
         var serializedBindings = serializedRequiredChecks.Select(check =>
             new CiWorkflowRequiredCheckBinding(check.Key, check.JobName)).ToArray();
         try { ValidateRequiredCheckBindings(serializedBindings); }
@@ -543,6 +557,20 @@ public sealed record CiWorkflowEvidencePacket
                 !check.StartedAt.HasValue || !check.CompletedAt.HasValue)
                 yield return "required-check.incomplete";
             else if (check.Conclusion != "success") yield return "required-check.non-success";
+        }
+    }
+
+    private static void ValidateKnownProperties(
+        JsonElement element,
+        IReadOnlySet<string> allowedProperties,
+        string scope)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+            throw new InvalidDataException($"{scope} must be a JSON object.");
+        foreach (var property in element.EnumerateObject())
+        {
+            if (!allowedProperties.Contains(property.Name))
+                throw new InvalidDataException($"{scope} contains unsupported property '{property.Name}'.");
         }
     }
 
