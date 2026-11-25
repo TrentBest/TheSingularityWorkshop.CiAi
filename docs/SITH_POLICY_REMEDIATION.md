@@ -1,6 +1,6 @@
 # Sith Policy Remediation — CiAi
 
-> Snapshot recorded 2026-11-25 against development commit `7eb9727e8854255064f2bfb674ff40cedc0db24b`. This is an owner-action checklist, not a live inventory.
+> Snapshot recorded 2026-11-25 against development commit `8077e4971817c8b83e5948ef87f8cd914a31e24e`. This is an owner-action checklist, not a live inventory.
 
 ## Required steady state
 
@@ -61,4 +61,4 @@ The latest verified inventory still contains **22 branches**: `master`, `develop
 - `NON-COMPLIANT`: inventory succeeded and found any other branch set.
 - `UNVERIFIED`: inventory could not be obtained.
 
-The latest policy run still reports `NON-COMPLIANT` because the 20 refs remain. This is the correct fail-closed result. No NuGet package was published and `master` was not changed.
+The Sith Policy workflow run `45537205198` completed with `NON-COMPLIANT` because inventory succeeded and found 20 excess refs. There are zero open PRs; the 20 branches remain only for the owner-controlled deletion batch. This is the correct fail-closed result, not an API failure. No NuGet package was published and `master` was not changed.
