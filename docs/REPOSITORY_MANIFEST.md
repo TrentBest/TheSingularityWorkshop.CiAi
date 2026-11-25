@@ -20,6 +20,21 @@ Unknown properties, duplicate JSON properties, unknown observer profiles,
 invalid identities, and self-dependencies are rejected. The parser does not
 execute extension content or infer package adoption.
 
+## Version 2: ADP relationship graph
+
+Manifest v2 uses `ciai.repository.v2` and adds a required `relationships` array plus optional `adp` settings. Each relationship is a directed, versioned edge with explicit source, target, artifact kind, and authority repository. Supported kinds are:
+
+- `ContentContribution`
+- `CanonicalContentConsumption`
+- `ExperienceValidation`
+- `BuildDependency`
+
+The v2 parser validates each edge and rejects duplicate relationship IDs, malformed endpoints, unsupported kinds, unknown properties, and invalid ADP bounds. The optional `adp` object contains `maximumRepairAttempts` and `requireHumanApprovalForWrites`. Omitting it or setting it to null enrolls relationship metadata without enabling autonomous execution.
+
+CiAi's own `.ciai/repository.json` now declares the three raWWar/SURPS feedback edges. Its `adp` value is intentionally null: the graph is enrolled, but durable event delivery and authorized execution are not yet operational.
+
+Schema: [ciai.repository.v2.schema.json](../schemas/ciai.repository.v2.schema.json).
+
 ## Version boundary
 
 Manifest v1 intentionally serializes direct repository dependencies only.
