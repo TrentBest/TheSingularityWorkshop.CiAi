@@ -28,6 +28,10 @@ passed += DependencyReleaseGateCoordinatorContractTests.Run();
 passed += CiRequiredEvidenceEvaluatorTests.Run();
 passed += TrxTestResultParserContractTests.Run();
 passed += CiBenchmarkEvidencePolicyEvaluatorTests.Run();
+passed += FileAwaitGateContractStoreTests.Run();
+passed += FileAwaitRegistrationStoreTests.Run();
+passed += AwaitGateEventOutboxTests.Run();
+passed += AwaitGateContractsTests.Run();
 
 Check("dependency monitor-only policy reports without authorizing adoption", () =>
 {
