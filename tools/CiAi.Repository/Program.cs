@@ -87,8 +87,9 @@ int CheckProgress()
         var id = RequiredString(item, "id");
         Require(ids.Add(id), $"duplicate workstream id '{id}'");
         _ = RequiredString(item, "label");
+        var weight = 0;
         Require(item.TryGetProperty("weight", out var weightElement) &&
-            weightElement.TryGetInt32(out var weight) && weight > 0, $"workstream '{id}' weight must be a positive integer");
+            weightElement.TryGetInt32(out weight) && weight > 0, $"workstream '{id}' weight must be a positive integer");
         totalWeight = checked(totalWeight + weight);
 
         Require(item.TryGetProperty("completionPercent", out var completion), $"workstream '{id}' requires completionPercent");
