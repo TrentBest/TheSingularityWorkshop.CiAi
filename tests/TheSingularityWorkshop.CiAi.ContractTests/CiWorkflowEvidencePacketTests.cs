@@ -280,7 +280,11 @@ internal static class CiWorkflowEvidencePacketTests
             Array.AsReadOnly(new[]
             {
                 new CiWorkflowStepObservation(1, "Build and test", "completed", "success", "2026-10-31T01:00:30Z")
-            }));
+            }))
+        {
+            StartedAt = DateTimeOffset.Parse("2026-10-31T01:00:15Z"),
+            CompletedAt = DateTimeOffset.Parse("2026-10-31T01:00:45Z")
+        };
         var jobs = new CiWorkflowJobCollection("TrentBest/CiAi", 42, 2, new[] { job }, 1, 1, false);
         return (runs, jobs);
     }
@@ -295,7 +299,11 @@ internal static class CiWorkflowEvidencePacketTests
             Array.AsReadOnly(new[]
             {
                 new CiWorkflowStepObservation(1, "Build and test", "completed", "success", "2026-10-31T01:00:00Z")
-            }));
+            }))
+        {
+            StartedAt = DateTimeOffset.Parse("2026-10-31T01:00:00Z"),
+            CompletedAt = DateTimeOffset.Parse("2026-10-31T01:00:30Z")
+        };
         return new CiWorkflowRunEvidenceObservation(
             "TrentBest/CiAi", workflowPath, runId, 2,
             "refs/heads/development", ProviderHeadSha, "pull_request", "CI",
