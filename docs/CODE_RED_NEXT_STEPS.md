@@ -31,9 +31,9 @@ The CI workflow produced a package candidate artifact for inspection. **It did n
 - **Semantic stack:** typed GrammarAi/ProtocolAi workflow catalogs and cross-reference validation.
 - **CommandAi/1 proposals:** deterministic command identity, idempotency keys, and explicit outcomes.
 - **Repository foundation:** the existing `CiAiRepositoryBuilder` and repository manifest remain the canonical composition API.
-- **Branch policy:** Sith continues to enforce the exact `master` + `development` inventory. It is intentionally non-compliant until the owner removes the 20 extra refs.
+- **Branch policy:** Sith enforces the exact `master` + `development` inventory. CiAi's latest observed policy result is compliant with exactly those two branches.
 
-The 22-family workflow catalog remains a vocabulary inventory. A family appearing in the catalog is not evidence that its runtime, provider adapter, or release gate is implemented.
+The 22-family workflow catalog remains a vocabulary inventory. A family appearing in the catalog is not evidence that its runtime, provider adapter, or release gate is implemented.\n\nThe current CiAi branch inventory was independently reported compliant by Sith Policy run `45539466277` at `2026-11-25T03:22:15Z`: exactly two branches, `master` and `development`. The earlier surplus-branch warning below is superseded by that result.
 
 ## Deferred intent — rebuild from this plan, not from parallel branches
 
@@ -75,4 +75,4 @@ The dependency-readiness and ecosystem-performance documents describe intended g
 - No release or deployment was created.
 - No canonical branch was deleted or rewritten.
 - No branch was deleted by the assistant.
-- No automatic merge, rerun, or candidate-code execution was authorized by a passing evidence report.
+- No automatic merge, provider rerun/dispatch, or candidate-code execution was authorized by a passing evidence report.
