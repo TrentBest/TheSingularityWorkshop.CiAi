@@ -148,7 +148,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: TrentBest/TheSingularityWorkshop.CiAi
-          ref: df6d89aac76bb75d4d06586f33fe7eff3ab95b03
+          ref: 7139f1fccfa5d4d3c544b8c2ddd2a0151980847f
           path: ciai
           submodules: recursive
           persist-credentials: false
@@ -171,10 +171,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           CIAI_GITHUB_TOKEN: ${{ github.token }}
+          CIAI_OBSERVER_PROFILE: ciai-default
           CIAI_REQUIRED_WORKFLOW_PATHS: .github/workflows/ci.yml#${{ steps.source-run.outputs.run_id }}#${{ steps.source-run.outputs.run_attempt }}
           CIAI_EXPECTED_WORKFLOW_REF: refs/heads/${{ steps.source.outputs.branch }}
           CIAI_EXPECTED_WORKFLOW_EVENT: push
           CIAI_EXPECTED_WORKFLOW_SHA: ${{ steps.source.outputs.sha }}
+          CIAI_APPROVED_WORKFLOW_REF: refs/heads/development
+          CIAI_APPROVED_WORKFLOW_SHA: 1ca3e5a6290d31b7744d0c2682d33ddcf3c81cc1
           CIAI_REQUIRE_WORKFLOW_PROVENANCE: "true"
           CIAI_WORKFLOW_PROVENANCE_ARCHIVE_PATH: ../artifacts/workflow-provenance.zip
           CIAI_TEST_RESULTS_ARCHIVE_PATH: ../artifacts/test-results.zip
