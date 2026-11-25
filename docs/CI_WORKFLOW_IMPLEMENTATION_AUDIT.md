@@ -1,80 +1,55 @@
-<!-- The Singularity Workshop moniker -->
-<p align="center"><a href="https://github.com/TrentBest"><img src="https://raw.githubusercontent.com/TrentBest/TheSingularityWorkshop.Visualize/development/docs/assets/moniker.svg" alt="The Singularity Workshop animated moniker" width="720" /></a></p>
-
 # CI Workflow Implementation Audit
 
-**Trent Best · The Singularity Workshop**
+> Snapshot: 2026-11-25. Verified implementation commit: `7eb9727e8854255064f2bfb674ff40cedc0db24b`. The workflow-family catalog is an inventory of vocabulary and intended coverage; this audit records only capabilities exercised by code and workflow evidence.
 
-This audit measures the implementation of the 22 workflow families in the CiAi domain catalog. It distinguishes a catalog entry from a family-specific, end-to-end capability.
+## Verified self-hosting path
 
-**Audit basis:** source tree on `development` at `54915fcfcf951c63bb2824a5ab97dadeaa1e9068`. This is a source-level audit, not a claim that every behavior was executed in a fresh test run.
+| Gate | Status | Evidence |
+|---|---|---|
+| SDK and source restore | Implemented | .NET 10 SDK pin; dependency source pins verified |
+| Build and contract tests | Implemented | CiAi contract harness runs all registered suites and writes TRX |
+| Workflow provenance | Implemented | Exact repository, workflow, run, attempt, ref, SHA and checkout provenance artifact |
+| Test-result artifact | Implemented | Provider-bound artifact, required-job policy, bounded archive parsing and SHA-256 verification |
+| Package candidate | Implemented | CiAi package and symbols packed to workflow artifacts; isolated local feed |
+| External package consumer | Implemented | Consumer restores the freshly packed local-feed package in an isolated package cache |
+| Exact-source observer | Implemented | Resolves exact CI run/attempt, downloads provenance/TRX artifacts, validates and retains JSON/Markdown report |
+| Provider integration checks | Implemented | Live-provider head identity checks pass for the verified development commit |
+| Sith inventory | Enforced, currently non-compliant | Workflow correctly reports extra branch refs; no fail-open fallback |
 
-## Result
+Verified runs for commit `7eb9727e8854255064f2bfb674ff40cedc0db24b`:
+- Contract verification: `45536719071` — success.
+- Exact-source evidence observer: `45536719066` — success.
+- Cog ecosystem integration: `45536719218` — success.
 
-| Measure | Count |
-|---|---:|
-| Workflow families defined in the catalog | 22 |
-| Fully implemented end-to-end families | 0 |
-| Partially implemented families with relevant building blocks | 11 |
-| Catalog-only families without a meaningful family-specific implementation in CiAi core | 11 |
+## Capability status
 
-**Interpretation:** 22 is the size of the domain vocabulary, not the number of implemented CI types. The shared foundations are real and useful, but no family currently meets the strict end-to-end completion bar. “Catalog-only” does not mean a user's GitHub Actions workflow cannot perform that work; it means CiAi does not yet provide the corresponding family-specific capability as a complete product feature.
+| Capability | Status | Boundary / remaining work |
+|---|---|---|
+| Typed workflow domain catalog | Implemented as vocabulary | Catalog presence alone does not imply runtime support |
+| GrammarAi/ProtocolAi semantic catalogs | Implemented | Vocabulary and reference validation; no protocol runtime |
+| Await/Gate contracts | Implemented | Durable local stores/outbox; distributed coordination is not claimed |
+| Bounded CI matrix | Implemented | Deterministic expansion; provider fan-out and aggregation remain |
+| Workflow plan and scheduler | Implemented | In-process typed planning; no shell/process execution |
+| Pipeline execution results | Implemented | Fail-closed result contracts; host execution remains separate |
+| Pages publication plan | Implemented as a plan | No Pages deployment or publication action |
+| Workflow provenance and PR identity | Implemented | Protected workflow bytes and provider head/base/merge identities are independently checked |
+| TRX diagnostics and artifact archive | Implemented | Exact-run binding and bounded digest verification |
+| Foundry artifact-ready notices | Implemented as contracts | Live `FSM_Foundry` host adapter remains |
+| Repository builder and manifest | Implemented | Existing builder is canonical; repository-wide enrollment and README stamping remain |
+| External observer profiles | Partial | Profile contract exists; broad manifest-driven enrollment is deferred |
+| Durable rerun/dispatch ledger | Not implemented | See `CODE_RED_NEXT_STEPS.md` |
+| Repository README badge stamper | Not implemented | Do not introduce a competing composition API |
+| Gauntlet candidate execution | Not enabled | Explicit opt-in and independently qualified host isolation required |
+| Dependency graph execution gates | Partial/design | Runtime graph evaluation and bounded orchestration remain |
+| Ecosystem performance aggregation | Design only | No runtime aggregate gate is claimed |
+| NuGet publication/release/deployment | Not performed | Requires separate explicit authorization |
 
-## Family-by-family assessment
+## Fail-closed rules
 
-| Stable ID | Status | Source-grounded assessment | Main gap to completion |
-|---|---|---|---|
-| `build-test` | Partial | Sequential in-process recipe executor; GitHub Actions run/job observation; repository CI workflows | Complete family profile, authoritative evidence ingestion, and end-to-end workflow orchestration |
-| `code-quality` | Catalog only | Domain ID and evidence vocabulary exist | Quality-tool adapters, normalized results, policy profile, tested end-to-end evidence path |
-| `security` | Catalog only | Domain ID and evidence vocabulary exist | Security-result collection, severity/freshness policy, provenance, and tested evidence path |
-| `compatibility` | Catalog only | Domain ID and evidence vocabulary exist | Matrix/framework discovery, required-cell policy, and completeness evaluation |
-| `documentation` | Catalog only | Domain ID and evidence vocabulary exist | Link/example/branding checks and a normalized documentation report |
-| `package` | Partial | NuGet artifact inventory verifier checks expected `.nupkg` and `.snupkg` names | Package-content/metadata validation and a complete candidate artifact pipeline |
-| `release-candidate` | Partial | Release evidence models/reporting and exact-revision GitHub Actions observation | A complete immutable candidate record binding package, version, digest, source, and build evidence |
-| `publication` | Partial | Candidate/action-bound authorization data contract and fail-closed checks | Trusted authorization issuance/verification integration and publication adapter; publishing remains unavailable/gated |
-| `deployment` | Catalog only | Domain ID and evidence vocabulary exist; privileged capability is represented by the recipe model | Environment-specific adapter, candidate-bound approval enforcement, audit trail, rollback behavior |
-| `deployment-validation` | Catalog only | Domain ID and evidence vocabulary exist | Deployment identity, health probes, smoke-test collection, and pass/fail evidence |
-| `performance` | Partial | Benchmark notice, successful-build verification, and dispatch coordinator | General named benchmark execution, baseline storage/comparison, regression policy, and report integration |
-| `integration` | Partial | Cross-Cog contract workflow/tests and explicit repository/revision correlation patterns | Reusable integration-family profiles and provider-neutral evidence normalization |
-| `artifact-handoff` | Partial | Typed manifest/notice/receipt contracts, bounded payload reading, digest verification, and file receipt ledger | Authenticated remote retrieval, durable lifecycle/history, retention, and a complete cross-repository round trip |
-| `provenance` | Partial | Repository/full-SHA evidence binding and artifact identity/digest primitives | Attestation/SBOM/toolchain collection and verification; trusted builder identity |
-| `scheduled-maintenance` | Catalog only | Schedule trigger vocabulary and external workflow scheduling are not a family implementation | Cadence/freshness policy, missed-run detection, and maintenance result contracts |
-| `concurrency` | Partial | Sequential execution and cancellation-aware step boundaries | Concurrency keys, duplicate suppression, bounded parallelism, supersession, and tested race behavior |
-| `recovery` | Catalog only | Basic failure/skip/cancel outcomes and receipt deduplication primitives exist, but no general recovery family | Retry classification, replay policy, durable idempotency, compensation, and rollback |
-| `multi-repository` | Partial | Exact repository/revision evidence patterns and Cog ecosystem contract coverage | General dependency graph, cross-repository orchestration engine, and aggregate failure/evidence semantics |
-| `matrix` | Catalog only | Domain ID and evidence vocabulary exist | Bounded expansion, per-cell lifecycle/evidence, required-cell policy, and matrix completeness |
-| `observability` | Partial | Run/job/step observations, typed outcomes, and Markdown report renderers | Unified lifecycle timeline, timeout/unknown normalization, evidence links, and end-to-end diagnostics |
-| `repository-hygiene` | Catalog only | Domain ID and evidence vocabulary exist | Configurable repository-policy checks and a normalized policy report |
-| `smoke` | Catalog only | Domain ID and evidence vocabulary exist; external CI may run build checks | Dedicated minimal-output verifier and a tested source-to-output smoke evidence path |
+- An unavailable inventory is `UNVERIFIED`, never compliant.
+- An extra or missing branch is `NON-COMPLIANT`, even when all builds pass.
+- A missing, stale, mismatched, incomplete, or untrusted artifact cannot produce a passing test verdict.
+- A candidate-controlled workflow cannot establish its own trust.
+- A passing CI or evidence report does not authorize merge, rerun, package publication, release, deployment, or branch deletion.
 
-## Shared implementation that does exist
-
-- **Domain catalog:** 22 stable IDs, descriptions, and evidence-kind vocabularies.
-- **Evidence evaluation:** fail-closed evaluation of supplied facts, bound to canonical repository identity and a full commit SHA; missing, duplicate, mismatched, or non-passing required facts do not pass.
-- **Plan validation and scheduling:** stable IDs, domain references, dependencies, cycles, and deterministic topological order; `CiWorkflowPlanScheduler` separately evaluates the four declared dependency conditions into pending/eligible/completed/skipped/indeterminate decisions. This is pure scheduling evaluation, not operation execution.
-- **Recipe execution:** an in-process sequential executor exists for ordinary registered steps, with candidate context, typed prior-step outputs, fail-closed result classification, cancellation, and deterministic timestamp-free JSON reporting. Privileged steps remain blocked.
-- **Plan scheduling:** a pure evaluator applies dependency conditions to exact step outcomes in deterministic topological order. It does not invoke operations; a trusted host still needs to consume its eligibility decisions.
-- **GitHub Actions observation:** bounded, read-only run and job/step collection with exact-revision/attempt identity checks and explicit truncation.
-- **Artifact and release foundations:** package inventory checks, artifact digest verification/receipt tracking, release evidence reports, and a guarded benchmark dispatch path.
-- **Safety boundary:** publication and deployment are not enabled merely because a workflow is green or a catalog entry exists.
-
-## Completion rule
-
-A family should be marked **implemented** only after all of the following are present and tested:
-
-1. Family-specific inputs and configuration with stable contracts.
-2. Collection or execution of authoritative evidence for that family.
-3. Policy evaluation that fails closed on missing, ambiguous, stale, or mismatched evidence.
-4. Explicit handling of failures, skips, cancellation, truncation, and unknown outcomes where applicable.
-5. A deterministic machine-readable result and useful human-readable explanation.
-6. Contract tests for success, negative cases, and boundary/security behavior.
-7. No implicit publishing or deployment authority; consequential actions remain separately authorized and gated.
-
-Re-audit the table after substantive implementation changes. Do not increase the completed-family count just because an ID, interface, workflow YAML, or shared primitive has been added.
-
-<p align="center"><img src="https://raw.githubusercontent.com/TrentBest/FSM_API/master/Documentation/Branding/TheSingularityWorkshop.png" alt="The Singularity Workshop" width="480" /></p>
-
-
-## CI matrix expansion status
-
-`CiMatrixExpander` now performs deterministic, bounded matrix expansion with content-derived cell identities and explicit exclusions. The contract suite covers the matrix expansion rules. This is a local contract implementation; provider-side matrix execution and cross-job aggregation remain separate work.
+See [CODE RED implementation status and next steps](CODE_RED_NEXT_STEPS.md) for the retained intent from the consolidated PR stack.
