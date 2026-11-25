@@ -43,6 +43,9 @@ try
     var runCollection = await runCollector.GetRunsForCommitAsync(
         repository, headSha, maxPages: 10, perPage: 100, cancellationToken: CancellationToken.None);
 
+    var profileId = Environment.GetEnvironmentVariable("CIAI_OBSERVER_PROFILE");
+    var observerProfile = CiWorkflowObserverProfile.Resolve(
+        string.IsNullOrWhiteSpace(profileId) ? "ciai-default" : profileId);
     var requiredWorkflowPaths = (Environment.GetEnvironmentVariable("CIAI_REQUIRED_WORKFLOW_PATHS") ?? string.Empty)
         .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     var expectedWorkflowRef = Environment.GetEnvironmentVariable("CIAI_EXPECTED_WORKFLOW_REF");
@@ -63,10 +66,10 @@ try
 
         var identity = requiredWorkflowPaths[0].Split('#');
         if (identity.Length != 3 ||
-            !string.Equals(identity[0], ".github/workflows/ci.yml", StringComparison.Ordinal) ||
+            !string.Equals(identity[0], observerProfile.WorkflowPath, StringComparison.Ordinal) ||
             !long.TryParse(identity[1], out var provenanceRunId) || provenanceRunId <= 0 ||
             !int.TryParse(identity[2], out var provenanceRunAttempt) || provenanceRunAttempt <= 0)
-            throw new InvalidDataException("Required workflow identity must bind ci.yml to one exact run ID and attempt.");
+            throw new InvalidDataException($"Required workflow identity must bind {observerProfile.WorkflowPath} to one exact run ID and attempt.");
 
         var exactRun = runCollection.Runs
             .Where(item => item.Run.RunId == provenanceRunId && item.RunAttempt == provenanceRunAttempt)
@@ -74,14 +77,14 @@ try
         if (exactRun.Length != 1)
             throw new InvalidDataException("Workflow provenance requires exactly one independently observed source run attempt.");
 
-        var artifactName = $"ciai-workflow-provenance-{provenanceRunAttempt}";
+        var artifactName = observerProfile.ProvenanceArtifactName(provenanceRunId, provenanceRunAttempt);
         var providerArtifact = await new GitHubActionsArtifactCollector(httpClient, token)
             .GetRequiredArtifactAsync(repository, provenanceRunId, headSha, artifactName,
                 cancellationToken: CancellationToken.None);
         var archiveBytes = await File.ReadAllBytesAsync(archivePath);
         workflowProvenance = CiWorkflowProvenanceArtifactReader.Read(
-            archiveBytes, providerArtifact, artifactName, "workflow-provenance.json",
-            repository, provenanceRunId, provenanceRunAttempt, headSha,
+            archiveBytes, providerArtifact, observerProfile,
+            repository, provenanceRunId, provenanceRunAttempt, headSha, headSha, headSha,
             expectedWorkflowRef, expectedWorkflowSha, expectedWorkflowEvent, expectedWorkflowRef);
     }
 
@@ -186,14 +189,14 @@ try
         var testArchivePath = Environment.GetEnvironmentVariable("CIAI_TEST_RESULTS_ARCHIVE_PATH");
         if (string.IsNullOrWhiteSpace(testArchivePath))
             throw new InvalidDataException("Required source test-result archive path is not configured.");
-        var testArtifactName = $"ciai-test-results-{sourceRunAttempt}";
+        var testArtifactName = observerProfile.TestArtifactName(sourceRunId, sourceRunAttempt);
         var sourceProviderArtifact = await new GitHubActionsArtifactCollector(httpClient, token)
             .GetRequiredArtifactAsync(repository, sourceRunId, headSha, testArtifactName,
                 cancellationToken: CancellationToken.None);
         var sourceArchiveBytes = await File.ReadAllBytesAsync(testArchivePath);
         var requiredJobPolicy = new CiRequiredJobPolicy(new[]
         {
-            new CiRequiredJobDefinition(".github/workflows/ci.yml", "contract", "contract", testArtifactName)
+            new CiRequiredJobDefinition(observerProfile.WorkflowPath, observerProfile.RequiredJobKey, observerProfile.RequiredJobName, testArtifactName)
         });
         var observedAt = DateTimeOffset.UtcNow;
         var evidencePacket = CiWorkflowEvidencePacket.FromCollections(
@@ -206,13 +209,13 @@ try
             });
         var requiredJob = requiredJobCollection.Jobs.Single(job =>
             job.RunId == sourceRunId && job.RunAttempt == sourceRunAttempt &&
-            string.Equals(job.Name, "contract", StringComparison.Ordinal));
+            string.Equals(job.Name, observerProfile.RequiredJobName, StringComparison.Ordinal));
         var providerBinding = CiTestResultProviderArtifactBinding.FromObservedArtifact(
             sourceProviderArtifact, evidencePacket, requiredJobPolicy, requiredJob.JobId, "contract");
         var sourceArchive = CiTestResultArtifactArchive.Read(
-            sourceArchiveBytes, providerBinding, "results.trx", "provenance.json");
+            sourceArchiveBytes, providerBinding, observerProfile.TrxEntryName, "provenance.json");
         var source = CiTestResultArtifactSource.FromVerifiedProviderObservation(
-            evidencePacket, requiredJobPolicy, providerBinding, sourceArchive, "CiAi.ContractSuite");
+            evidencePacket, requiredJobPolicy, providerBinding, sourceArchive, observerProfile.TestProviderLabel);
         testResultReport = CiTestResultReport.ParseAndValidate(
             sourceArchive, evidencePacket, source, requiredJobPolicy, DateTimeOffset.UtcNow);
         Directory.CreateDirectory("artifacts");
@@ -243,6 +246,7 @@ try
     {
         schema = "ciai.commit-observation.v2",
         reportType = "read-only-workflow-observation",
+        observerProfile = observerProfile.Id,
         repository,
         headSha,
         retrievedAtUtc = DateTimeOffset.UtcNow,
