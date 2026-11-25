@@ -33,6 +33,30 @@ dotnet run --project samples/TheSingularityWorkshop.CiAi.ObserveRun -- TrentBest
 
 Use a real 40-character SHA in place of the placeholder. The observer uses bounded pagination and writes raw run/job evidence. To evaluate a policy, configure `CIAI_REQUIRED_WORKFLOW_PATHS` as a semicolon-separated list of exact workflow paths. Missing, duplicate, non-terminal, unsuccessful, or incomplete required evidence fails closed. The report separates API discovery completeness, required-evidence completeness, terminality, and success. Without a configured required-workflow policy, `complete` is false. The report is a raw, read-only observation—not a release verdict or publication approval.
 
+## 02 — Agentic development: CODE RED
+
+**The primary product direction is CiAi-driven, turn-stepped AI development.** An LLM is the developer under test: it receives bounded task context, proposes a typed repository operation, and must earn a fresh CiAi verdict for the exact candidate commit. A green CI result is evidence, not permission to mutate a repository.
+
+The intended responsibility split is:
+
+- **CiAi:** compose repository-development operations over CommandAi's generic proposal model; define required CI policy; validate exact-run provenance and test diagnostics; issue the authoritative evidence verdict.
+- **CommandAi:** own the generic versioned atomic command representation and codec. CiAi must consume its public types rather than copy them.
+- **GrammarAi / ProtocolAi:** validate structural form and carry interoperable correlation, provenance, and idempotency. Neither grants authority.
+- **HeadlessAi:** own bounded, resumable LLM/repair turns. Model output remains untrusted input.
+- **FSM_Foundry / host:** independently authenticate and authorize each proposed operation, enforce branch/base-SHA/path/capability/budget limits, and retain human approval at the host boundary.
+- **GitHub Actions:** remain the source of truth for workflow runs, exact checked-out commits, jobs, and test artifacts.
+
+The first proof target is the manifest-driven Minesweeper Experience: a failing exact-SHA test artifact must become a provenance-bound diagnostic report, drive a bounded repair proposal for the same task, pass independent host authorization before any isolated-branch change, and then produce a new exact-candidate green verdict. Only after that loop works should the local manifest be loaded and played as an Experience.
+
+**Implementation status:** the repository currently has draft provenance/evidence and TRX diagnostic slices; CommandAi has a separate generic proposal contract; FSM_Foundry has draft ingress, report-consumer, and secure-transport foundations. These are not yet a live connected pipeline. The AiCi proposal builder and clean-CI CommandAi source dependency are still being established. No end-to-end red → repair → green CODE RED run is claimed.
+
+Track the coordinated acceptance path:
+- [CODE RED umbrella and acceptance criteria](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/27)
+- [AgentDevelop product path](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/26)
+- [Provenance-bound test diagnostics](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/34)
+- [CommandAi proposal composition through AiCi](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/37)
+- [Experiences Minesweeper pilot](https://github.com/TrentBest/TheSingularityWorkshop.Experiences/issues/37)
+
 ## 03 — First real consumer: AnyApp
 
 AnyApp is CiAi's first source-based consumer pilot. It keeps GitHub Actions as the authoritative build/test/publish executor and uses CiAi to observe the exact AnyApp commit, run attempt, jobs, and steps. The integration is read-only and advisory; its first real runs are still exercising the failure-evidence path.
