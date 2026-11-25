@@ -5,14 +5,14 @@ using System.Text.Json;
 
 namespace TheSingularityWorkshop.CiAi;
 
-/// <summary>Obtains a short-lived Foundry ingress token from host-managed identity or secret storage.</summary>
+/// <summary>Obtains a short-lived Execution ingress token from host-managed identity or secret storage.</summary>
 /// <remarks>Implementations must never expose token values through logs, diagnostics, or model-visible data.</remarks>
 public interface IFoundryIngressCredentialProvider
 {
     ValueTask<string> GetBearerTokenAsync(CancellationToken cancellationToken = default);
 }
 
-/// <summary>One validated durable response from Foundry's v1 artifact-ready ingress.</summary>
+/// <summary>One validated durable response from Execution's v1 artifact-ready ingress.</summary>
 public sealed record FoundryArtifactIngressReceipt(
     string Contract,
     string ReceiptId,
@@ -47,7 +47,7 @@ public sealed record FoundryArtifactIngressResult(
 }
 
 /// <summary>
-/// Sends metadata-only ArtifactReadyNotice v1 messages to the Foundry-owned HTTPS ingress.
+/// Sends metadata-only ArtifactReadyNotice v1 messages to the Execution-owned HTTPS ingress.
 /// The caller retains and retries the same notice after transient failures; this client never
 /// invents a new notice or idempotency identity and never transfers artifact bytes.
 /// </summary>
@@ -59,7 +59,7 @@ public sealed record FoundryArtifactIngressResult(
 /// </remarks>
 public sealed class FoundryArtifactReadyNoticeClient
 {
-    public const string Contract = "foundry.ciai-artifact-ingress.v1";
+    public const string Contract = "execution.ciai-artifact-ingress.v1";
     public const string EndpointPath = "/api/v1/integrations/ciai/artifact-ready";
     public const int MaximumNoticeBytes = 64 * 1024;
 
