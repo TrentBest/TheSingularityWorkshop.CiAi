@@ -447,6 +447,8 @@ public sealed record CiWorkflowEvidencePacket
             requiredChecksElement.ValueKind != JsonValueKind.Array)
             throw new InvalidDataException("Evidence packet v1 contract version or schema is unsupported.");
 
+        ValidateProvenanceProperties(provenanceElement);
+
         var observedRun = JsonSerializer.Deserialize<CiWorkflowRunEvidenceObservation>(
             observedRunElement.GetRawText(), ObservationJsonOptions)
             ?? throw new InvalidDataException("Evidence packet v1 observed-run data produced no observation.");
@@ -569,6 +571,57 @@ public sealed record CiWorkflowEvidencePacket
                 yield return "required-check.incomplete";
             else if (check.Conclusion != "success") yield return "required-check.non-success";
         }
+    }
+
+    private static void ValidateProvenanceProperties(JsonElement provenance)
+    {
+        ValidateKnownProperties(provenance,
+            new HashSet<string>(StringComparer.Ordinal)
+            {
+                "schema", "repository", "runId", "runAttempt", "workflow", "event", "checkout"
+            },
+            "Evidence packet v1 provenance");
+        if (!provenance.TryGetProperty("schema", out var schema) ||
+            schema.ValueKind != JsonValueKind.String ||
+            !string.Equals(schema.GetString(), CiWorkflowProvenanceRecord.CurrentSchema, StringComparison.Ordinal))
+            throw new InvalidDataException("Evidence packet v1 provenance schema is unsupported.");
+
+        var workflow = RequiredObject(provenance, "workflow");
+        ValidateKnownProperties(workflow, new HashSet<string>(StringComparer.Ordinal) { "ref", "sha" },
+            "Evidence packet v1 workflow definition");
+        var eventElement = RequiredObject(provenance, "event");
+        ValidateKnownProperties(eventElement,
+            new HashSet<string>(StringComparer.Ordinal) { "name", "ref", "sha", "pullRequest" },
+            "Evidence packet v1 triggering event");
+        var checkout = RequiredObject(provenance, "checkout");
+        ValidateKnownProperties(checkout, new HashSet<string>(StringComparer.Ordinal) { "ref", "sha" },
+            "Evidence packet v1 candidate checkout");
+
+        if (!eventElement.TryGetProperty("pullRequest", out var pullRequest))
+            throw new InvalidDataException("Evidence packet v1 event is missing its pull-request identity field.");
+        if (pullRequest.ValueKind == JsonValueKind.Object)
+        {
+            ValidateKnownProperties(pullRequest,
+                new HashSet<string>(StringComparer.Ordinal) { "number", "head", "base" },
+                "Evidence packet v1 pull-request identity");
+            var head = RequiredObject(pullRequest, "head");
+            var @base = RequiredObject(pullRequest, "base");
+            ValidateKnownProperties(head, new HashSet<string>(StringComparer.Ordinal) { "ref", "sha" },
+                "Evidence packet v1 pull-request head");
+            ValidateKnownProperties(@base, new HashSet<string>(StringComparer.Ordinal) { "ref", "sha" },
+                "Evidence packet v1 pull-request base");
+        }
+        else if (pullRequest.ValueKind != JsonValueKind.Null)
+        {
+            throw new InvalidDataException("Evidence packet v1 pull-request identity must be an object or null.");
+        }
+    }
+
+    private static JsonElement RequiredObject(JsonElement parent, string propertyName)
+    {
+        if (!parent.TryGetProperty(propertyName, out var value) || value.ValueKind != JsonValueKind.Object)
+            throw new InvalidDataException($"Evidence packet v1 provenance is missing object '{propertyName}'.");
+        return value;
     }
 
     private static void ValidateKnownProperties(
