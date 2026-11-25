@@ -7,8 +7,6 @@
   ],
   "actual_branches": [
     "development",
-    "feature/ciai-external-observer-and-composition",
-    "feature/ciai-fluent-ecosystem-builder",
     "feature/ciai-trusted-trx-archive-reader",
     "feature/ciai-trx-diagnostic-verdict",
     "feature/ciai-versioned-ci-evidence-packet",
@@ -24,9 +22,9 @@
     "work/ciai-semantic-stack-foundation",
     "work/ecosystem-graph-performance-contract"
   ],
-  "branch_count": 17,
+  "branch_count": 15,
   "status": "NON-COMPLIANT",
-  "evaluated_at": "2026-11-25T03:19:11Z",
-  "workflow_run": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/45539133502",
-  "triggering_commit": "56a5d16adc1e589d2d4ea7ff4d022bfc03ef432b"
+  "evaluated_at": "2026-11-25T03:19:29Z",
+  "workflow_run": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/45539156248",
+  "triggering_commit": "6f9a6f1a65318fba0045b1e9fb12a9781b25d055"
 }
