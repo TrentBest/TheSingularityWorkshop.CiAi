@@ -270,6 +270,7 @@ public sealed record CiTestResultReport
         CandidateRef = evidence.CandidateRef;
         CandidateSha = evidence.CandidateSha;
         WorkflowPath = evidence.Provenance.WorkflowPath;
+        WorkflowEvidenceSha256 = evidence.PayloadSha256;
         WorkflowDefinitionRef = evidence.Provenance.WorkflowRef;
         PullRequestNumber = evidence.Provenance.PullRequest?.Number;
         PullRequestHeadRef = evidence.Provenance.PullRequest?.HeadRef;
@@ -317,6 +318,8 @@ public sealed record CiTestResultReport
     public string CandidateRef { get; }
     public string CandidateSha { get; }
     public string WorkflowPath { get; }
+    /// <summary>Digest of the exact canonical ciai.workflow-evidence.v1 envelope used to assess this report.</summary>
+    public string WorkflowEvidenceSha256 { get; }
     public string WorkflowDefinitionRef { get; }
     public int? PullRequestNumber { get; }
     public string? PullRequestHeadRef { get; }
