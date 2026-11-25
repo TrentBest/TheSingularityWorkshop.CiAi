@@ -253,14 +253,16 @@ async Task VerifyLiveProviderEvidenceAsync()
 {
     var repository = Environment.GetEnvironmentVariable("GITHUB_REPOSITORY")
         ?? throw new InvalidOperationException("GITHUB_REPOSITORY is unavailable.");
-    var headSha = Environment.GetEnvironmentVariable("GITHUB_SHA")
-        ?? throw new InvalidOperationException("GITHUB_SHA is unavailable.");
+    var headSha = Environment.GetEnvironmentVariable("CIAI_CANDIDATE_SHA")
+        ?? Environment.GetEnvironmentVariable("GITHUB_SHA")
+        ?? throw new InvalidOperationException("Candidate SHA is unavailable.");
     var runId = long.Parse(Environment.GetEnvironmentVariable("GITHUB_RUN_ID")
         ?? throw new InvalidOperationException("GITHUB_RUN_ID is unavailable."));
     var attempt = int.Parse(Environment.GetEnvironmentVariable("GITHUB_RUN_ATTEMPT")
         ?? throw new InvalidOperationException("GITHUB_RUN_ATTEMPT is unavailable."));
-    var candidateRef = Environment.GetEnvironmentVariable("GITHUB_REF")
-        ?? throw new InvalidOperationException("GITHUB_REF is unavailable.");
+    var candidateRef = Environment.GetEnvironmentVariable("CIAI_CANDIDATE_REF")
+        ?? Environment.GetEnvironmentVariable("GITHUB_REF")
+        ?? throw new InvalidOperationException("Candidate ref is unavailable.");
     var token = Environment.GetEnvironmentVariable("GH_TOKEN")
         ?? throw new InvalidOperationException("GH_TOKEN is unavailable.");
 
