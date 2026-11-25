@@ -7,7 +7,7 @@ public sealed record CiPagesPublicationPlanDraft(
     string ArtifactName = "pages-site",
     string PlanId = "pages-publication",
     string BuildCommand = "",
-    string OutputPath = "");
+    string OutputPath = ".");
 
 public sealed record CiPagesPublicationPlanExpansion(
     bool IsValid,
@@ -33,7 +33,7 @@ public static class CiPagesPublicationPlan
             errors.Add("pages.plan-id-invalid");
         if (!IsSafeBuildCommand(draft.BuildCommand))
             errors.Add("pages.build-command-invalid");
-        if (!IsSafeRelativePath(draft.OutputPath))
+        if (draft.OutputPath != "." && !IsSafeRelativePath(draft.OutputPath))
             errors.Add("pages.output-path-invalid");
 
         var policy = new CiPublicationPolicy("github-pages", CiPublicationMode.Automatic, CiPublicationApproval.None);
@@ -45,7 +45,7 @@ public static class CiPagesPublicationPlan
             draft.PlanId,
             Array.AsReadOnly(new[]
             {
-                Step("build-site", "Build Pages source using the declared repository command", "build-test"),
+                Step("build-site", "Build or stage Pages source using the declared repository command", "build-test"),
                 Step("validate-site", "Validate generated Pages site entry point", "documentation", "build-site"),
                 Step("package-site", "Package exact validated Pages artifact", "artifact-handoff", "validate-site"),
                 Step("deploy-pages", "Deploy validated artifact to GitHub Pages", "deployment", "package-site")
@@ -74,9 +74,8 @@ public static class CiPagesPublicationPlan
     }
 
     public static bool IsSafeBuildCommand(string? command) =>
-        !string.IsNullOrWhiteSpace(command) &&
-        command.Length <= 1000 &&
-        !command.Any(char.IsControl);
+        string.IsNullOrEmpty(command) ||
+        (command.Length <= 1000 && !command.Any(char.IsControl));
 
     private static bool IsStableId(string? value) =>
         !string.IsNullOrWhiteSpace(value) &&
