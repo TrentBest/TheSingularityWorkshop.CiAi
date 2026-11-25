@@ -308,7 +308,7 @@ jobs:
         id: package-consumer
         run: |
           set -euo pipefail
-          dotnet restore tests/PackageConsumerSmoke/PackageConsumerSmoke.csproj --source artifacts/local-feed --source https://api.nuget.org/v3/index.json
+          dotnet restore tests/PackageConsumerSmoke/PackageConsumerSmoke.csproj --packages artifacts/consumer-packages --source artifacts/local-feed --source https://api.nuget.org/v3/index.json
           dotnet build tests/PackageConsumerSmoke/PackageConsumerSmoke.csproj --configuration Release --no-restore
       - name: Validate packed artifacts
         id: validate-package
