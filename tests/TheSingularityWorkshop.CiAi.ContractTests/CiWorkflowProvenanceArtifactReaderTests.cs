@@ -87,8 +87,55 @@ internal static class CiWorkflowProvenanceArtifactReaderTests
             "TrentBest/CiAi", 42, 2, HeadSha, "refs/heads/development",
             WorkflowSha, "push", "refs/heads/development"));
 
-        Console.WriteLine("PASS: 4 provider-bound workflow provenance artifact checks.");
-        return 4;
+        var raWWarArchive = Convert.FromBase64String(
+            "UEsDBBQACAAIAElPdV0AAAAAAAAAAAAAAAAYAAAAd29ya2Zsb3ctcHJvdmVuYW5jZS5qc29urZI9b9swEIZ3/QpCc2zxUxI9Jd26FgUyFvw4WUQkUqFIB0Hg/15IlRID9ZiFw+G9e54j+VEgVM6mh1GVJ1Qap9zxLcSXbghvhymGC3jlDRwvpHxYohGmMLsU4vsS/x3Bpx8wpyqq52cVt0z2P215Qpy3kmJBJW/2+lNKME6pPCGylnZUeUIfBUIroLs3uTqeXeqzrvaOudLZDfb4Pg6PEbq5mvIwVARXI8QzrCLLZv26lsVcGGE0Jh3RVIMSALRuSMsIlkrUHdQaW9BlgdB1FYML+PRl5dUIy6AF8ifCa4Y57YzN+PsktrZl1q8NtYssKnnUEJcbxA97rQdlbzJfUs4nOEeVXPCVyin4MIY8HyxcYAjTCD4dJjfB4Pxue2vMGsytpKLVbSskaxmBzpLOypbRRgoqmVRWaVZunddPIa1muCt0Q74DtNZyg7UwwLjlilBJdFO3lGtaiwYToxkFzupPYLGf/17N9GBeQk7/fafv/SHFtfgLUEsHCImv2YZ3AQAAOAMAAFBLAQItAxQACAAIAElPdV2Jr9mGdwEAADgDAAAYAAAAAAAAAAAAIACkgQAAAAB3b3JrZmxvdy1wcm92ZW5hbmNlLmpzb25QSwUGAAAAAAEAAQBGAAAAvQEAAAAA");
+        var raWWarHead = "3704d9258b88593831efd1fd98327952939adab3";
+        var raWWarMerge = "d045c5cb01f1b2bea5ee267183109a56fe6b0deb";
+        var raWWarBase = "ddd4c0b5ce34d4a1291b76824b265701cb32e436";
+        const string raWWarArtifactName = "rawwar-workflow-provenance-1";
+        using var raWWarClient = new HttpClient(new StubHandler(request =>
+        {
+            var requestPath = request.RequestUri!.AbsolutePath;
+            if (requestPath.EndsWith("/actions/runs/44892052947/artifacts", StringComparison.Ordinal))
+                return Json("{\"total_count\":1,\"artifacts\":[{\"id\":14701779950,\"name\":\"rawwar-workflow-provenance-1\"}]}");
+            if (requestPath.EndsWith("/actions/artifacts/14701779950", StringComparison.Ordinal))
+                return Json("""
+                {
+                  "id": 14701779950,
+                  "name": "rawwar-workflow-provenance-1",
+                  "size_in_bytes": 537,
+                  "digest": "sha256:ee855a4bf0bb934d4baee8dd47e3c0419bd065dce6b2e986047e35542f29fe20",
+                  "expired": false,
+                  "created_at": "2026-11-21T09:58:19Z",
+                  "expires_at": "2099-12-31T00:00:00Z",
+                  "workflow_run": { "id": 44892052947, "head_sha": "3704d9258b88593831efd1fd98327952939adab3" },
+                  "archive_download_url": "https://api.github.com/repos/TrentBest/raWWar/actions/artifacts/14701779950/zip"
+                }
+                """);
+            throw new InvalidOperationException("Unexpected raWWar artifact API request: " + request.RequestUri);
+        }));
+        var raWWarArtifact = await new GitHubActionsArtifactCollector(raWWarClient)
+            .GetRequiredArtifactAsync("TrentBest/raWWar", 44892052947, raWWarHead, raWWarArtifactName);
+        var raWWarEvidence = CiWorkflowProvenanceArtifactReader.Read(
+            raWWarArchive, raWWarArtifact, CiWorkflowObserverProfile.RaWWar,
+            "TrentBest/raWWar", 44892052947, 1,
+            raWWarHead, raWWarMerge, raWWarMerge,
+            "refs/pull/10/merge",
+            raWWarMerge, "pull_request", "refs/pull/10/merge",
+            new CiProviderPullRequestObservation(
+                10, "integration/autonomous-development-pipeline", raWWarHead,
+                "development", raWWarBase));
+        Assert(raWWarEvidence.Provenance.WorkflowSha == raWWarMerge &&
+            raWWarEvidence.Provenance.EventSha == raWWarMerge &&
+            raWWarEvidence.Provenance.CheckoutSha == raWWarMerge &&
+            raWWarEvidence.Provenance.PullRequest?.HeadSha == raWWarHead &&
+            raWWarEvidence.Provenance.PullRequest?.BaseSha == raWWarBase &&
+            raWWarEvidence.PullRequestHeadBaseVerified &&
+            raWWarEvidence.ProviderArtifact.ArtifactId == 14701779950,
+            "real raWWar PR provenance fixture did not preserve source, merge, and provider head/base identities");
+
+        Console.WriteLine("PASS: 5 provider-bound workflow provenance artifact checks.");
+        return 5;
     }
 
     private static byte[] CreateArchive(byte[] payload)

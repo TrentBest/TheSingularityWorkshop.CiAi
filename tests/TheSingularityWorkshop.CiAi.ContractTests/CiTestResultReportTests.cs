@@ -11,8 +11,8 @@ internal static class CiTestResultReportTests
 {
     private const string Repository = "TrentBest/Experiences";
     private const string CandidateSha = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    private const string ProviderHeadSha = "cccccccccccccccccccccccccccccccccccccccc";
     private const string WorkflowSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    private const string MergeSha = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
     private const long RunId = 41234078182;
     private const int RunAttempt = 1;
     private const long JobId = 124634066027;
@@ -115,10 +115,10 @@ internal static class CiTestResultReportTests
         Assert(actionable.Repository == Repository && actionable.CandidateSha == CandidateSha &&
             actionable.RunId == RunId && actionable.RunAttempt == RunAttempt &&
             actionable.JobId == JobId && actionable.JobName == JobName &&
-            actionable.WorkflowPath == WorkflowPath && actionable.WorkflowDefinitionSha == MergeSha &&
+            actionable.WorkflowPath == WorkflowPath && actionable.WorkflowDefinitionSha == WorkflowSha &&
             actionable.PullRequestNumber == 17 &&
             actionable.PullRequestHeadRef == "feature/minesweeper-domain-pilot" &&
-            actionable.PullRequestHeadSha == CandidateSha &&
+            actionable.PullRequestHeadSha == new string('c', 40) &&
             actionable.PullRequestBaseRef == "development" &&
             actionable.PullRequestBaseSha == new string('d', 40) &&
             actionable.RunEvidenceUrl.AbsolutePath == $"/{Repository}/actions/runs/{RunId}" &&
@@ -336,51 +336,12 @@ internal static class CiTestResultReportTests
             RequiredPolicy, ObservedAt);
     }
 
-    internal static (CiTestResultReport Report, CiTestResultArtifactArchive Archive) CreatePassingReportForDevelopmentCapability(bool protectedPush = false)
-    {
-        var trx = Encoding.UTF8.GetBytes(CreateTrx(
-            ("test-1", "FirstPass", "Passed", null, null),
-            ("test-2", "SecondPass", "Passed", null, null),
-            ("test-3", "SkippedCase", "NotExecuted", null, null),
-            total: 3, passed: 2, failed: 0, skipped: 1));
-        var evidence = CreatePacket("success", protectedPush: protectedPush);
-        var (source, archive) = CreateSourceAndArchive(trx, conclusion: "success", protectedPush: protectedPush);
-        var report = CiTestResultReport.ParseAndValidate(archive, evidence, source, RequiredPolicy, ObservedAt);
-        return (report, archive);
-    }
-
-    internal static (CiTestResultReport Report, CiTestResultArtifactArchive Archive) CreateFailingReportForDevelopmentCapability(bool protectedPush = false)
-    {
-        var trx = Encoding.UTF8.GetBytes(CreateTrx(
-            ("test-fail", "ProviderCapabilityMustRejectInvalidMotion", "Failed",
-                "Expected: accepted; Actual: rejected", "at Physics.Tests.CapabilityTests.ProviderCapabilityMustRejectInvalidMotion() in CapabilityTests.cs:line 42"),
-            total: 1, passed: 0, failed: 1, skipped: 0));
-        var evidence = CreatePacket("success", protectedPush: protectedPush);
-        var (source, archive) = CreateSourceAndArchive(trx, conclusion: "success", protectedPush: protectedPush);
-        var report = CiTestResultReport.ParseAndValidate(archive, evidence, source, RequiredPolicy, ObservedAt);
-        return (report, archive);
-    }
-
     private static CiWorkflowEvidencePacket CreatePacket(
         string conclusion,
         bool workflowTrusted = true,
-        bool checkoutMatches = true,
-        bool protectedPush = false)
+        bool checkoutMatches = true)
     {
-        var eventRef = protectedPush ? "refs/heads/development" : "refs/pull/17/merge";
-        var checkoutRef = protectedPush ? "refs/heads/development" : "refs/heads/feature/minesweeper-domain-pilot";
-        var eventName = protectedPush ? "push" : "pull_request";
-        var eventSha = protectedPush ? CandidateSha : MergeSha;
-        var workflowSha = protectedPush ? CandidateSha : MergeSha;
-        var pullRequestJson = protectedPush
-            ? "null"
-            : """
-              {
-                "number": 17,
-                "head": { "ref": "feature/minesweeper-domain-pilot", "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" },
-                "base": { "ref": "development", "sha": "dddddddddddddddddddddddddddddddddddddddd" }
-              }
-              """;
+        var eventRef = "refs/pull/17/merge";
         var provenanceJson = $$"""
         {
           "schema": "{{CiWorkflowProvenanceRecord.CurrentSchema}}",
@@ -388,17 +349,21 @@ internal static class CiTestResultReportTests
           "runId": {{RunId}},
           "runAttempt": {{RunAttempt}},
           "workflow": {
-            "ref": "{{Repository}}/.github/workflows/ci.yml@{{eventRef}}",
-            "sha": "{{workflowSha}}"
+            "ref": "{{Repository}}/.github/workflows/ci.yml@refs/heads/development",
+            "sha": "{{WorkflowSha}}"
           },
           "event": {
-            "name": "{{eventName}}",
+            "name": "pull_request",
             "ref": "{{eventRef}}",
-            "sha": "{{eventSha}}",
-            "pullRequest": {{pullRequestJson}}
+            "sha": "{{CandidateSha}}",
+            "pullRequest": {
+              "number": 17,
+              "head": { "ref": "feature/minesweeper-domain-pilot", "sha": "{{ProviderHeadSha}}" },
+              "base": { "ref": "development", "sha": "dddddddddddddddddddddddddddddddddddddddd" }
+            }
           },
           "checkout": {
-            "ref": "{{checkoutRef}}",
+            "ref": "{{eventRef}}",
             "sha": "{{(checkoutMatches ? CandidateSha : new string('c', 40))}}"
           }
         }
@@ -407,39 +372,36 @@ internal static class CiTestResultReportTests
         var provenance = CiWorkflowProvenanceRecord.ParseAndValidate(
             provenanceBytes, Repository, RunId, RunAttempt,
             Convert.ToHexString(SHA256.HashData(provenanceBytes)));
-        var steps = new List<CiWorkflowStepObservation>();
-        if (!protectedPush)
-        {
-            steps.Add(new CiWorkflowStepObservation(1, "Checkout", "completed", "success",
-                "2026-10-31T01:00:10Z"));
-            steps.Add(new CiWorkflowStepObservation(2, "Create exact Physics workflow provenance", "completed", "success",
-                "2026-10-31T01:00:20Z"));
-        }
-        steps.Add(new CiWorkflowStepObservation(steps.Count + 1, "dotnet test", "completed", conclusion,
-            "2026-10-31T01:03:00Z"));
         var job = new CiWorkflowJobObservation(
             JobId, RunId, RunAttempt, JobName, "completed", conclusion,
             new Uri($"https://github.com/{Repository}/actions/runs/{RunId}/job/{JobId}"),
-            Array.AsReadOnly(steps.ToArray()))
+            Array.AsReadOnly(new[]
+            {
+                new CiWorkflowStepObservation(1, "dotnet test", "completed", conclusion,
+                    "2026-10-31T01:03:00Z")
+            }))
         {
             StartedAt = DateTimeOffset.Parse("2026-10-31T00:59:00Z"),
             CompletedAt = DateTimeOffset.Parse("2026-10-31T01:04:00Z")
         };
-        CiWorkflowCandidateCheckoutEvidence? candidateCheckoutEvidence =
-            !protectedPush && checkoutMatches
-                ? new CiWorkflowCandidateCheckoutEvidence(
-                    checkoutRef, CandidateSha, JobName, "Checkout", "Create exact Physics workflow provenance")
-                : null;
         var observed = new CiWorkflowRunEvidenceObservation(
             Repository, ".github/workflows/ci.yml", RunId, RunAttempt,
-            eventRef, eventSha, eventName, "Validation",
+            "refs/heads/development", ProviderHeadSha, "pull_request", "Validation",
             CiRunStatus.Completed,
             conclusion == "success" ? CiRunConclusion.Success : CiRunConclusion.Failure,
             new Uri($"https://github.com/{Repository}/actions/runs/{RunId}"),
-            ObservedAt, Array.AsReadOnly(new[] { job }), true, true,
-            candidateCheckoutEvidence: candidateCheckoutEvidence);
+            ObservedAt, Array.AsReadOnly(new[] { job }), true, true)
+        {
+            ProviderPullRequestObservation = new CiProviderPullRequestObservation(
+                17, "feature/minesweeper-domain-pilot", ProviderHeadSha,
+                "development", "dddddddddddddddddddddddddddddddddddddddd"),
+            ProviderPullRequestIdentity = new CiPullRequestProviderIdentity(
+                17, "feature/minesweeper-domain-pilot", ProviderHeadSha,
+                "development", "dddddddddddddddddddddddddddddddddddddddd",
+                CandidateSha, new[] { ProviderHeadSha, "dddddddddddddddddddddddddddddddddddddddd" })
+        };
         return CiWorkflowEvidencePacket.FromValidatedProvenance(
-            observed, provenance, workflowTrusted, candidateCheckoutEvidence);
+            observed, provenance, workflowTrusted);
     }
 
     private static CiTestResultArtifactSource CreateSource(
@@ -453,29 +415,9 @@ internal static class CiTestResultReportTests
         long? archiveSizeBytes = null,
         byte[]? archiveBytes = null,
         bool isExpired = false,
-        DateTimeOffset? createdAt = null,
-        string conclusion = "failure",
-        bool protectedPush = false) =>
-        CreateSourceAndArchive(
-            payload, repository, jobId, artifactName, jobKey, artifactId, archiveDigest,
-            archiveSizeBytes, archiveBytes, isExpired, createdAt, conclusion, protectedPush).Source;
-
-    private static (CiTestResultArtifactSource Source, CiTestResultArtifactArchive Archive) CreateSourceAndArchive(
-        byte[] payload,
-        string? repository = null,
-        long? jobId = null,
-        string? artifactName = null,
-        string? jobKey = null,
-        long? artifactId = null,
-        string? archiveDigest = null,
-        long? archiveSizeBytes = null,
-        byte[]? archiveBytes = null,
-        bool isExpired = false,
-        DateTimeOffset? createdAt = null,
-        string conclusion = "failure",
-        bool protectedPush = false)
+        DateTimeOffset? createdAt = null)
     {
-        var evidence = CreatePacket(conclusion, protectedPush: protectedPush);
+        var evidence = CreatePacket("failure");
         var exactArchiveBytes = archiveBytes ?? CreateArtifactArchive(payload, CreateProvenanceJson(evidence));
         var actualDigest = "sha256:" + Convert.ToHexString(SHA256.HashData(exactArchiveBytes)).ToLowerInvariant();
         var artifactRepository = repository ?? Repository;
@@ -494,7 +436,7 @@ internal static class CiTestResultReportTests
             created_at = providerCreatedAt,
             expires_at = ExpiresAt,
             archive_download_url = $"https://api.github.com/repos/{artifactRepository}/actions/artifacts/{providerArtifactId}/zip",
-            workflow_run = new { id = RunId, head_sha = evidence.ObservedRun.WorkflowSha }
+            workflow_run = new { id = RunId, head_sha = ProviderHeadSha }
         });
         var artifactListing = JsonSerializer.Serialize(new
         {
@@ -506,15 +448,14 @@ internal static class CiTestResultReportTests
             $"/repos/{artifactRepository}/actions/runs/{RunId}/artifacts",
             $"/repos/{artifactRepository}/actions/artifacts/{providerArtifactId}"));
         var observedArtifact = new GitHubActionsArtifactCollector(http)
-            .GetRequiredArtifactAsync(artifactRepository, RunId, evidence.ObservedRun.WorkflowSha, "minesweeper-test-results")
+            .GetRequiredArtifactAsync(artifactRepository, RunId, ProviderHeadSha, "minesweeper-test-results")
             .GetAwaiter().GetResult();
         var binding = CiTestResultProviderArtifactBinding.FromObservedArtifact(
             observedArtifact, evidence, RequiredPolicy, jobId ?? JobId, jobKey ?? JobKey);
         var archive = CiTestResultArtifactArchive.Read(
             exactArchiveBytes, binding, "results.trx", "provenance.json");
-        var source = CiTestResultArtifactSource.FromVerifiedProviderObservation(
+        return CiTestResultArtifactSource.FromVerifiedProviderObservation(
             evidence, RequiredPolicy, binding, archive, "xUnit");
-        return (source, archive);
     }
 
     private static void MutateExposedMemory(ReadOnlyMemory<byte> memory)

@@ -1,5 +1,9 @@
 # CiAi Repository Integration Samples
 
+<!-- CIAI:BADGES:START -->
+[![Sith Policy](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/workflows/sith-policy.yml/badge.svg)](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/workflows/sith-policy.yml)
+<!-- CIAI:BADGES:END -->
+
 This directory contains one repository-specific proposal per repository visible in the connected TrentBest GitHub inventory at the time these samples were drafted.
 
 These are **integration plans**, not assertions that every repository already has a CiAi client, a complete workflow audit, or machine-readable capability declarations. Several repository roles are inferred from names and prior ecosystem work and must be confirmed by their maintainers.
@@ -24,8 +28,6 @@ These are **integration plans**, not assertions that every repository already ha
 - Publishing and deployment remain explicitly gated outside CiAi's authority.
 
 ## Repository samples
-
-- [SingularityUniversalRoleplayingSystem](./SingularityUniversalRoleplayingSystem.md) — roleplaying ontology; exact-commit AgentOnboarding v1 admission is green, while its first Pages deployment evidence is correctly reported failed and remains under investigation.
 
 - [Tutorials](./Tutorials.md) — Tutorials/examples repository; CiAi should treat tutorial builds as reproducibility and documentation evidence.
 - [TrentCoRetailManager](./TrentCoRetailManager.md) — Legacy retail-management application; integrate only if it remains actively maintained, with its own build/test evidence.

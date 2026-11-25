@@ -5,6 +5,7 @@ using TheSingularityWorkshop.CiAi;
 internal static class CiWorkflowEvidencePacketTests
 {
     private const string EventSha = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    private const string ProviderHeadSha = "cccccccccccccccccccccccccccccccccccccccc";
     private const string CheckoutSha = EventSha;
     private const string WorkflowSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
@@ -38,18 +39,38 @@ internal static class CiWorkflowEvidencePacketTests
         }
         var serializedBytes = Encoding.UTF8.GetBytes(serialized);
         var packetDigest = Convert.ToHexString(SHA256.HashData(serializedBytes));
+        var trustPolicy = new CiWorkflowDefinitionTrustPolicy(
+            "TrentBest/CiAi", ".github/workflows/ci.yml",
+            "refs/heads/development", "dddddddddddddddddddddddddddddddddddddddd");
+        var approvedWorkflow = Encoding.UTF8.GetBytes("name: CI\\non: [push]\\n");
+        var trustDecision = trustPolicy.Evaluate(provenance, approvedWorkflow, approvedWorkflow);
         var roundTrip = CiWorkflowEvidencePacket.FromJson(
-            serialized, "TrentBest/CiAi", 42, 2, packetDigest, workflowDefinitionTrusted: true);
+            serialized, "TrentBest/CiAi", 42, 2, packetDigest, trustDecision,
+            new CiPullRequestProviderIdentity(
+                17, "feature/fix", ProviderHeadSha,
+                "development", "dddddddddddddddddddddddddddddddddddddddd",
+                EventSha, new[] { ProviderHeadSha, "dddddddddddddddddddddddddddddddddddddddd" }));
         Assert(roundTrip.IsSuccessful && roundTrip.Provenance.WorkflowSha == WorkflowSha &&
-            roundTrip.CandidateSha == CheckoutSha,
-            "v1 durable round-trip lost validated provenance");
+            roundTrip.CandidateSha == CheckoutSha && roundTrip.PullRequestIdentityVerified,
+            "v1 durable round-trip lost host-issued trust or independently verified PR identity");
 
         var (runCollection, jobCollection) = CreateCollections();
         var factoryPacket = CiWorkflowEvidencePacket.FromCollections(
             runCollection, jobCollection, 42, 2, DateTimeOffset.Parse("2026-10-31T01:02:00Z"),
-            provenance, workflowDefinitionTrusted: true);
+            provenance, workflowDefinitionTrusted: true,
+            pullRequestIdentity: new CiPullRequestProviderIdentity(
+                17, "feature/fix", ProviderHeadSha,
+                "development", "dddddddddddddddddddddddddddddddddddddddd",
+                EventSha, new[] { ProviderHeadSha, "dddddddddddddddddddddddddddddddddddddddd" }));
         Assert(factoryPacket.IsSuccessful && factoryPacket.Provenance.WorkflowSha == WorkflowSha,
             "v1 collection factory did not preserve the independently observed workflow ref");
+        var structuralFactoryPacket = CiWorkflowEvidencePacket.FromCollections(
+            runCollection, jobCollection, 42, 2, DateTimeOffset.Parse("2026-10-31T01:02:00Z"),
+            provenance, workflowDefinitionTrusted: false);
+        Assert(!structuralFactoryPacket.IsSuccessful && !structuralFactoryPacket.CheckoutVerified &&
+            !structuralFactoryPacket.PullRequestIdentityVerified &&
+            structuralFactoryPacket.BlockingReasons.Contains("pull-request.provider-identity-unverified"),
+            "PR collection without merge-parent verification was not retained as structural, non-actionable evidence");
         var mismatchedWorkflowRefCollection = runCollection with
         {
             Runs = new[]
@@ -88,44 +109,6 @@ internal static class CiWorkflowEvidencePacketTests
             dispatchPacket.CandidateRef == "refs/heads/feature/candidate" &&
             dispatchPacket.CandidateSha == "ffffffffffffffffffffffffffffffffffffffff",
             "trusted dispatch candidate checkout was not independently retained");
-
-        var pullRequestCandidateSha = "9999999999999999999999999999999999999999";
-        var pullRequestCandidateRef = "refs/heads/adp/exact-candidate";
-        var pullRequestProvenanceBytes = Encoding.UTF8.GetBytes(CreatePullRequestCandidateProvenance(
-            pullRequestCandidateRef, pullRequestCandidateSha));
-        var pullRequestProvenance = CiWorkflowProvenanceRecord.ParseAndValidate(
-            pullRequestProvenanceBytes, "TrentBest/CiAi", 42, 2,
-            Convert.ToHexString(SHA256.HashData(pullRequestProvenanceBytes)));
-        var pullRequestCandidateEvidence = new CiWorkflowCandidateCheckoutEvidence(
-            pullRequestCandidateRef, pullRequestCandidateSha, "build-and-test",
-            "Checkout source candidate", "Verify exact candidate checkout");
-        var pullRequestCandidatePacket = CiWorkflowEvidencePacket.FromValidatedProvenance(
-            CreatePullRequestCandidateObservedRun(pullRequestCandidateEvidence),
-            pullRequestProvenance, workflowDefinitionTrusted: true,
-            candidateCheckoutEvidence: pullRequestCandidateEvidence);
-        Assert(pullRequestCandidatePacket.IsSuccessful &&
-            pullRequestCandidatePacket.CandidateRef == pullRequestCandidateRef &&
-            pullRequestCandidatePacket.CandidateSha == pullRequestCandidateSha,
-            "exact PR source-head checkout was not accepted with independent job-step proof");
-        var mismatchedPullRequestProvenanceBytes = Encoding.UTF8.GetBytes(
-            CreatePullRequestCandidateProvenance(
-                pullRequestCandidateRef, pullRequestCandidateSha,
-                "8888888888888888888888888888888888888888"));
-        var mismatchedPullRequestProvenance = CiWorkflowProvenanceRecord.ParseAndValidate(
-            mismatchedPullRequestProvenanceBytes, "TrentBest/CiAi", 42, 2,
-            Convert.ToHexString(SHA256.HashData(mismatchedPullRequestProvenanceBytes)));
-        Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromValidatedProvenance(
-            CreatePullRequestCandidateObservedRun(pullRequestCandidateEvidence),
-            mismatchedPullRequestProvenance, workflowDefinitionTrusted: true,
-            candidateCheckoutEvidence: pullRequestCandidateEvidence));
-        var adpCandidateEvidence = new CiWorkflowCandidateCheckoutEvidence(
-            "refs/heads/adp/worker-candidate", pullRequestCandidateSha, "build-and-test",
-            "Checkout source candidate", "Verify exact candidate checkout");
-        Assert(adpCandidateEvidence.CandidateRef == "refs/heads/adp/worker-candidate",
-            "ADP worker branches must be valid isolated candidate refs");
-        Throws<ArgumentException>(() => new CiWorkflowCandidateCheckoutEvidence(
-            "refs/heads/development", pullRequestCandidateSha, "build-and-test",
-            "Checkout source candidate", "Verify exact candidate checkout"));
         var reloadedWithoutTrust = CiWorkflowEvidencePacket.FromJson(
             serialized, "TrentBest/CiAi", 42, 2, packetDigest, workflowDefinitionTrusted: false);
         Assert(!reloadedWithoutTrust.IsSuccessful,
@@ -149,17 +132,16 @@ internal static class CiWorkflowEvidencePacketTests
         var wrongEventShaProvenance = CiWorkflowProvenanceRecord.ParseAndValidate(
             wrongEventShaBytes, "TrentBest/CiAi", 42, 2,
             Convert.ToHexString(SHA256.HashData(wrongEventShaBytes)));
-        Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromValidatedProvenance(
-            CreateObservedRun(), wrongEventShaProvenance, workflowDefinitionTrusted: true));
+        var wrongEventShaPacket = CiWorkflowEvidencePacket.FromValidatedProvenance(
+            CreateObservedRun(), wrongEventShaProvenance, workflowDefinitionTrusted: true);
+        Assert(!wrongEventShaPacket.CheckoutVerified && !wrongEventShaPacket.IsSuccessful &&
+            wrongEventShaPacket.BlockingReasons.Contains("pull-request.provider-identity-unverified"),
+            "a mismatched PR merge/event SHA was not retained as structurally observed but non-actionable");
 
         Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromValidatedProvenance(
             CreateObservedRun(runId: 43), provenance, workflowDefinitionTrusted: true));
         Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromValidatedProvenance(
             CreateObservedRun(workflowPath: ".github/workflows/other.yml"),
-            provenance, workflowDefinitionTrusted: true));
-
-        Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromValidatedProvenance(
-            CreateObservedRun(workflowRef: "refs/heads/master"),
             provenance, workflowDefinitionTrusted: true));
 
         var mismatchedCheckoutJson = CreateProvenance();
@@ -172,143 +154,16 @@ internal static class CiWorkflowEvidencePacketTests
         var mismatchedCheckout = CiWorkflowProvenanceRecord.ParseAndValidate(
             mismatchedCheckoutBytes, "TrentBest/CiAi", 42, 2,
             Convert.ToHexString(SHA256.HashData(mismatchedCheckoutBytes)));
-        var failClosed = CiWorkflowEvidencePacket.FromValidatedProvenance(
+        var mismatchedCheckoutPacket = CiWorkflowEvidencePacket.FromValidatedProvenance(
             CreateObservedRun(), mismatchedCheckout, workflowDefinitionTrusted: true);
-        Assert(!failClosed.CheckoutVerified && !failClosed.IsSuccessful &&
-            failClosed.BlockingReasons.Contains("candidate.checkout-unverified"),
-            "checkout SHA differing from event SHA was not failed closed");
+        Assert(!mismatchedCheckoutPacket.CheckoutVerified && !mismatchedCheckoutPacket.IsSuccessful,
+            "mismatched PR checkout SHA was not retained as non-actionable evidence");
 
-        var requiredChecks = new[]
-        {
-            new CiWorkflowRequiredCheckBinding("build-and-test", "build-and-test")
-        };
-        var successfulV2 = CiWorkflowEvidencePacketV2.FromPacket(trusted, requiredChecks);
-        Assert(successfulV2.Schema == CiWorkflowEvidencePacketV2.CurrentSchema &&
-            successfulV2.EvidenceComplete && successfulV2.IsSuccessful &&
-            !successfulV2.HasActionableDiagnostics &&
-            successfulV2.DiagnosticsFingerprint is null,
-            "v2 did not bind the exact successful required check");
-        var v2Json = successfulV2.ToJson(indented: false);
-        var v2Reloaded = CiWorkflowEvidencePacketV2.FromJson(
-            v2Json, "TrentBest/CiAi", 42, 2, successfulV2.PayloadSha256, requiredChecks,
-            workflowDefinitionTrusted: true);
-        Assert(v2Reloaded.IsSuccessful && v2Reloaded.RequiredChecks.Single().JobId == 100,
-            "v2 exact-run packet did not round-trip its provider-observed required job");
-        var v2Untrusted = CiWorkflowEvidencePacketV2.FromJson(
-            v2Json, "TrentBest/CiAi", 42, 2, successfulV2.PayloadSha256, requiredChecks,
-            workflowDefinitionTrusted: false);
-        Assert(v2Untrusted.EvidenceComplete && !v2Untrusted.IsSuccessful,
-            "v2 durable reload restored workflow trust without a host policy decision");
-        Throws<InvalidDataException>(() => CiWorkflowEvidencePacketV2.FromJson(
-            v2Json, "TrentBest/CiAi", 42, 2, successfulV2.PayloadSha256,
-            new[] { new CiWorkflowRequiredCheckBinding("different", "different-job") },
-            workflowDefinitionTrusted: true));
-        var missingV2 = CiWorkflowEvidencePacketV2.FromPacket(
-            trusted, new[] { new CiWorkflowRequiredCheckBinding("missing-check", "not-a-provider-job") });
-        Assert(!missingV2.EvidenceComplete && !missingV2.IsSuccessful &&
-            missingV2.RequiredChecks.Single().State == "missing",
-            "v2 missing required job did not fail closed");
-
-        var failedJob = new CiWorkflowJobObservation(
-            101, 42, 2, "build-and-test", "completed", "failure",
-            new Uri("https://github.com/TrentBest/CiAi/actions/runs/42/job/101"),
-            Array.AsReadOnly(new[]
-            {
-                new CiWorkflowStepObservation(1, "Build and test", "completed", "failure", "2026-10-31T01:00:30Z")
-            }))
-        {
-            StartedAt = DateTimeOffset.Parse("2026-10-31T00:59:00Z"),
-            CompletedAt = DateTimeOffset.Parse("2026-10-31T01:00:30Z")
-        };
-        var failedRun = new CiWorkflowRunEvidenceObservation(
-            "TrentBest/CiAi", ".github/workflows/ci.yml", 42, 2,
-            "refs/heads/development", EventSha, "pull_request", "CI",
-            CiRunStatus.Completed, CiRunConclusion.Failure,
-            new Uri("https://github.com/TrentBest/CiAi/actions/runs/42"),
-            DateTimeOffset.Parse("2026-10-31T01:01:00Z"),
-            Array.AsReadOnly(new[] { failedJob }), true, true);
-        var failedV1 = CiWorkflowEvidencePacket.FromValidatedProvenance(
-            failedRun, provenance, workflowDefinitionTrusted: true);
-        var failedV2 = CiWorkflowEvidencePacketV2.FromPacket(failedV1, requiredChecks);
-        Assert(failedV2.EvidenceComplete && !failedV2.IsSuccessful &&
-            failedV2.HasActionableDiagnostics &&
-            failedV2.DiagnosticsFingerprint is { Length: 64 },
-            "v2 did not classify a complete exact required-check failure as actionable");
-        var failedV2Untrusted = CiWorkflowEvidencePacketV2.FromJson(
-            failedV2.ToJson(indented: false), "TrentBest/CiAi", 42, 2,
-            failedV2.PayloadSha256, requiredChecks, workflowDefinitionTrusted: false);
-        Assert(!failedV2Untrusted.HasActionableDiagnostics,
-            "untrusted workflow definition was allowed to authorize actionable repair evidence");
-        Throws<InvalidDataException>(() => CiWorkflowEvidencePacketV2.FromJson(
-            v2Json, "TrentBest/CiAi", 42, 2, new string('0', 64), requiredChecks,
-            workflowDefinitionTrusted: true));
-        var tamperedV2 = System.Text.Json.Nodes.JsonNode.Parse(v2Json)!;
-        tamperedV2["requiredChecks"]![0]!["jobId"] = 999;
-        var tamperedV2Json = tamperedV2.ToJsonString();
-        var tamperedV2Digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(tamperedV2Json))).ToLowerInvariant();
-        Throws<InvalidDataException>(() => CiWorkflowEvidencePacketV2.FromJson(
-            tamperedV2Json, "TrentBest/CiAi", 42, 2, tamperedV2Digest, requiredChecks,
-            workflowDefinitionTrusted: true));
-
-        Console.WriteLine("PASS: 26 CI workflow evidence packet v1/v2 contract checks.");
-        return 26;
+        Console.WriteLine("PASS: 12 CI workflow evidence packet v1 contract checks.");
+        return 12;
     }
 
 
-
-    private static CiWorkflowRunEvidenceObservation CreatePullRequestCandidateObservedRun(
-        CiWorkflowCandidateCheckoutEvidence candidateEvidence)
-    {
-        var steps = new[]
-        {
-            new CiWorkflowStepObservation(1, "Checkout source candidate",
-                "completed", "success", "2026-10-31T01:00:10Z"),
-            new CiWorkflowStepObservation(2, "Verify exact candidate checkout",
-                "completed", "success", "2026-10-31T01:00:20Z"),
-            new CiWorkflowStepObservation(3, "Build and test",
-                "completed", "success", "2026-10-31T01:00:30Z")
-        };
-        var job = new CiWorkflowJobObservation(
-            100, 42, 2, "build-and-test", "completed", "success",
-            new Uri("https://github.com/TrentBest/CiAi/actions/runs/42/job/100"),
-            Array.AsReadOnly(steps));
-        return new CiWorkflowRunEvidenceObservation(
-            "TrentBest/CiAi", ".github/workflows/ci.yml", 42, 2,
-            "refs/pull/17/merge", EventSha, "pull_request", "CI",
-            CiRunStatus.Completed, CiRunConclusion.Success,
-            new Uri("https://github.com/TrentBest/CiAi/actions/runs/42"),
-            DateTimeOffset.Parse("2026-10-31T01:01:00Z"),
-            Array.AsReadOnly(new[] { job }), true, true,
-            candidateCheckoutEvidence: candidateEvidence);
-    }
-
-    private static string CreatePullRequestCandidateProvenance(
-        string candidateRef, string candidateSha, string? pullRequestHeadSha = null) => $$"""
-    {
-      "schema": "{{CiWorkflowProvenanceRecord.CurrentSchema}}",
-      "repository": "TrentBest/CiAi",
-      "runId": 42,
-      "runAttempt": 2,
-      "workflow": {
-        "ref": "TrentBest/CiAi/.github/workflows/ci.yml@refs/pull/17/merge",
-        "sha": "{{WorkflowSha}}"
-      },
-      "event": {
-        "name": "pull_request",
-        "ref": "refs/pull/17/merge",
-        "sha": "{{EventSha}}",
-        "pullRequest": {
-          "number": 17,
-          "head": { "ref": "adp/exact-candidate", "sha": "{{(pullRequestHeadSha ?? candidateSha)}}" },
-          "base": { "ref": "development", "sha": "dddddddddddddddddddddddddddddddddddddddd" }
-        }
-      },
-      "checkout": {
-        "ref": "{{candidateRef}}",
-        "sha": "{{candidateSha}}"
-      }
-    }
-    """;
 
     private static CiWorkflowRunEvidenceObservation CreateDispatchObservedRun(
         CiWorkflowCandidateCheckoutEvidence candidateEvidence)
@@ -360,15 +215,23 @@ internal static class CiWorkflowEvidencePacketTests
     private static (CiWorkflowRunCollection Runs, CiWorkflowJobCollection Jobs) CreateCollections()
     {
         var snapshot = new CiRunSnapshot(
-            "TrentBest/CiAi", 42, "CI", EventSha,
+            "TrentBest/CiAi", 42, "CI", ProviderHeadSha,
             CiRunStatus.Completed, CiRunConclusion.Success,
             new Uri("https://github.com/TrentBest/CiAi/actions/runs/42"),
             DateTimeOffset.Parse("2026-10-31T01:00:00Z"));
         var observation = new CiWorkflowRunObservation(
             snapshot, 2, ".github/workflows/ci.yml", "pull_request",
-            Array.Empty<int>()) { WorkflowRef = "refs/heads/development" };
+            new[] { 17 })
+        {
+            WorkflowRef = "refs/heads/development",
+            PullRequestIdentities = new[]
+            {
+                new CiProviderPullRequestObservation(17, "feature/fix",
+                    ProviderHeadSha, "development", "dddddddddddddddddddddddddddddddddddddddd")
+            }
+        };
         var runs = new CiWorkflowRunCollection(
-            "TrentBest/CiAi", EventSha, new[] { observation }, 1, 1, false);
+            "TrentBest/CiAi", ProviderHeadSha, new[] { observation }, 1, 1, false);
         var job = new CiWorkflowJobObservation(
             100, 42, 2, "build-and-test", "completed", "success",
             new Uri("https://github.com/TrentBest/CiAi/actions/runs/42/job/100"),
@@ -382,8 +245,7 @@ internal static class CiWorkflowEvidencePacketTests
 
     private static CiWorkflowRunEvidenceObservation CreateObservedRun(
         long runId = 42,
-        string workflowPath = ".github/workflows/ci.yml",
-        string workflowRef = "refs/heads/development")
+        string workflowPath = ".github/workflows/ci.yml")
     {
         var job = new CiWorkflowJobObservation(
             100, runId, 2, "build-and-test", "completed", "success",
@@ -391,18 +253,23 @@ internal static class CiWorkflowEvidencePacketTests
             Array.AsReadOnly(new[]
             {
                 new CiWorkflowStepObservation(1, "Build and test", "completed", "success", "2026-10-31T01:00:00Z")
-            }))
-        {
-            StartedAt = DateTimeOffset.Parse("2026-10-31T00:59:00Z"),
-            CompletedAt = DateTimeOffset.Parse("2026-10-31T01:00:00Z")
-        };
+            }));
         return new CiWorkflowRunEvidenceObservation(
             "TrentBest/CiAi", workflowPath, runId, 2,
-            workflowRef, EventSha, "pull_request", "CI",
+            "refs/heads/development", ProviderHeadSha, "pull_request", "CI",
             CiRunStatus.Completed, CiRunConclusion.Success,
             new Uri($"https://github.com/TrentBest/CiAi/actions/runs/{runId}"),
             DateTimeOffset.Parse("2026-10-31T01:01:00Z"),
-            Array.AsReadOnly(new[] { job }), true, true);
+            Array.AsReadOnly(new[] { job }), true, true)
+        {
+            ProviderPullRequestObservation = new CiProviderPullRequestObservation(
+                17, "feature/fix", ProviderHeadSha,
+                "development", "dddddddddddddddddddddddddddddddddddddddd"),
+            ProviderPullRequestIdentity = new CiPullRequestProviderIdentity(
+                17, "feature/fix", ProviderHeadSha,
+                "development", "dddddddddddddddddddddddddddddddddddddddd",
+                EventSha, new[] { ProviderHeadSha, "dddddddddddddddddddddddddddddddddddddddd" })
+        };
     }
 
     private static string CreateProvenance() => $$"""

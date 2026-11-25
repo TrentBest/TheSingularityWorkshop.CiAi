@@ -18,7 +18,11 @@ internal static class GitHubActionsWorkflowRunCollectorTests
             "event": "push", "html_url": "https://github.com/TrentBest/SimpleDemos/actions/runs/42",
             "updated_at": "2026-10-24T04:00:00Z",
             "repository": { "full_name": "TrentBest/SimpleDemos" },
-            "pull_requests": [{ "number": 35 }]
+            "pull_requests": [{
+              "number": 35,
+              "head": { "ref": "feature/pull-request", "sha": "1111111111111111111111111111111111111111" },
+              "base": { "ref": "development", "sha": "2222222222222222222222222222222222222222" }
+            }]
           }]
         }
         """;
@@ -32,6 +36,32 @@ internal static class GitHubActionsWorkflowRunCollectorTests
                 .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha);
             Assert(collection.Runs[0].WorkflowRef == "refs/heads/development",
                 "workflow ref was not derived from provider head_branch when REST omitted the path suffix");
+        }
+
+        var pullRequestEventPage = page.Replace("\"event\": \"push\"", "\"event\": \"pull_request\"", StringComparison.Ordinal);
+        using (var client = new HttpClient(new StubHandler((_, _) => Task.FromResult(JsonResponse(pullRequestEventPage)))))
+        {
+            var collection = await new GitHubActionsWorkflowRunCollector(client)
+                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha);
+            Assert(collection.Runs[0].PullRequestIdentitiesComplete &&
+                collection.Runs[0].PullRequestIdentities.Count == 1,
+                "complete PR event did not retain its provider head/base identities");
+        }
+
+        var incompletePullRequestPage = pullRequestEventPage
+            .Replace("\"head\": { \"ref\": \"feature/pull-request\", \"sha\": \"1111111111111111111111111111111111111111\" },",
+                string.Empty, StringComparison.Ordinal)
+            .Replace("\"base\": { \"ref\": \"development\", \"sha\": \"2222222222222222222222222222222222222222\" }",
+                string.Empty, StringComparison.Ordinal);
+        incompletePullRequestPage = incompletePullRequestPage.Replace(
+            "\"number\": 35,", "\"number\": 35", StringComparison.Ordinal);
+        using (var client = new HttpClient(new StubHandler((_, _) => Task.FromResult(JsonResponse(incompletePullRequestPage)))))
+        {
+            var collection = await new GitHubActionsWorkflowRunCollector(client)
+                .GetRunsForCommitAsync("TrentBest/SimpleDemos", Sha);
+            Assert(!collection.Runs[0].PullRequestIdentitiesComplete &&
+                collection.Runs[0].PullRequestIdentities.Count == 0,
+                "incomplete PR provider metadata was incorrectly marked complete");
         }
 
         var invalidProviderBranch = apiPathWithoutWorkflowRef.Replace(
@@ -64,6 +94,11 @@ internal static class GitHubActionsWorkflowRunCollectorTests
                 "workflow path was not retained");
             Assert(collection.Runs[0].PullRequestNumbers.SequenceEqual(new[] { 35 }),
                 "PR correlation was not retained");
+            Assert(collection.Runs[0].PullRequestIdentities.Single().HeadSha ==
+                "1111111111111111111111111111111111111111" &&
+                collection.Runs[0].PullRequestIdentities.Single().BaseRef == "development" &&
+                collection.Runs[0].PullRequestIdentitiesComplete,
+                "provider-observed PR head/base identities were not retained independently");
             Assert(collection.Runs[0].Run.Conclusion == CiRunConclusion.Failure,
                 "failed conclusion was not preserved");
             Assert(collection.Runs[0].WorkflowRef == "refs/heads/development",

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" role="img" aria-labelledby="title desc">
   <title id="title">CiAi test-result evidence trust path</title>
-  <desc id="desc">A trusted host observes an exact GitHub Actions workflow attempt, verifies the provider artifact and job binding, validates workflow provenance and TRX bytes, and emits a bounded versioned report. FSM_Execution accepts and authorizes downstream work; HeadlessAi only consumes accepted context and returns a proposal.</desc>
+  <desc id="desc">A trusted host observes an exact GitHub Actions workflow attempt, verifies the provider artifact and job binding, validates workflow provenance and TRX bytes, and emits a bounded versioned report. Foundry accepts and authorizes downstream work; HeadlessAi only consumes accepted context and returns a proposal.</desc>
   <defs>
     <linearGradient id="flow" x1="0" x2="1"><stop offset="0" stop-color="#65dfbd"/><stop offset="1" stop-color="#78c9ff"/></linearGradient>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#78c9ff"/></marker>
@@ -52,7 +52,7 @@
   <g transform="translate(555 410)">
     <rect class="consumer" width="390" height="135" rx="18"/>
     <text x="195" y="39" text-anchor="middle" class="caps">DOWNSTREAM OWNERSHIP</text>
-    <text x="195" y="73" text-anchor="middle" class="title">FSM_Execution accepts evidence</text>
+    <text x="195" y="73" text-anchor="middle" class="title">Foundry accepts evidence</text>
     <text x="195" y="101" text-anchor="middle" class="body">Task lifecycle · replay · authorization</text>
   </g>
   <path class="line" d="M945 477H1000"/>

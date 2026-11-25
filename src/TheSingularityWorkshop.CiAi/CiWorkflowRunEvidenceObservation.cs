@@ -54,13 +54,11 @@ public sealed record CiWorkflowRunEvidenceObservation
             throw new ArgumentException("Completed runs require a conclusion; non-completed runs must not have one.", nameof(conclusion));
 
         if (candidateCheckoutEvidence is not null &&
-            string.Equals(@event, "workflow_dispatch", StringComparison.Ordinal) &&
             !string.Equals(workflowRef, "refs/heads/development", StringComparison.Ordinal))
-            throw new ArgumentException("workflow_dispatch candidate checkout requires the trusted development workflow ref.", nameof(workflowRef));
+            throw new ArgumentException("Separate candidate checkout evidence requires the trusted workflow-definition ref.", nameof(workflowRef));
         if (candidateCheckoutEvidence is not null &&
-            !string.Equals(@event, "workflow_dispatch", StringComparison.Ordinal) &&
-            !string.Equals(@event, "pull_request", StringComparison.Ordinal))
-            throw new ArgumentException("Separate candidate checkout evidence is supported only for trusted dispatch and pull-request runs.", nameof(@event));
+            !string.Equals(@event, "workflow_dispatch", StringComparison.Ordinal))
+            throw new ArgumentException("Separate candidate checkout evidence requires a trusted workflow_dispatch run.", nameof(@event));
 
         var expectedRunPath = $"/{repository}/actions/runs/{runId}";
         if (!IsSafeGitHubUrl(runEvidenceUrl) ||
@@ -124,6 +122,12 @@ public sealed record CiWorkflowRunEvidenceObservation
     public bool DiscoveryComplete { get; }
     public bool JobsComplete { get; }
     public IReadOnlyList<Uri> ArtifactReferences { get; }
+
+    /// <summary>Provider-observed pull-request head/base facts from the workflow-run API.</summary>
+    public CiProviderPullRequestObservation? ProviderPullRequestObservation { get; init; }
+
+    /// <summary>Host-verified pull-request merge and parent identity, when independently retrieved.</summary>
+    public CiPullRequestProviderIdentity? ProviderPullRequestIdentity { get; init; }
 
     /// <summary>Compatibility aliases for GitHub's run-level head fields; these are workflow provenance, not candidate provenance.</summary>
     [JsonIgnore]

@@ -56,6 +56,28 @@ internal static class CiRequiredWorkflowEvidenceEvaluatorTests
         Assert(!CiRequiredWorkflowEvidenceEvaluator.IsPassing(true, results) &&
             results.Single().State == "ambiguous",
             "duplicate matching workflow evidence must be treated as ambiguous");
+        results = CiRequiredWorkflowEvidenceEvaluator.Evaluate(new[] { build + "#10" },
+            new[]
+            {
+                pass with { RunAttempt = 1 },
+                pass with { RunAttempt = 2 }
+            });
+        Assert(!CiRequiredWorkflowEvidenceEvaluator.IsPassing(true, results) &&
+            results.Single().State == "ambiguous",
+            "multiple attempts for one run ID must be ambiguous when the attempt is not explicitly selected");
+
+        foreach (var conclusion in new[]
+        {
+            CiRunConclusion.Cancelled, CiRunConclusion.Skipped, CiRunConclusion.Stale,
+            CiRunConclusion.TimedOut, CiRunConclusion.ActionRequired, CiRunConclusion.Neutral
+        })
+        {
+            results = CiRequiredWorkflowEvidenceEvaluator.Evaluate(new[] { build },
+                new[] { pass with { Conclusion = conclusion } });
+            Assert(!CiRequiredWorkflowEvidenceEvaluator.IsPassing(true, results) &&
+                results.Single().Terminal && !results.Single().Successful,
+                $"terminal non-success conclusion '{conclusion}' was incorrectly accepted");
+        }
 
         Assert(!CiRequiredWorkflowEvidenceEvaluator.IsPassing(false,
             CiRequiredWorkflowEvidenceEvaluator.Evaluate(new[] { build }, new[] { pass })),
