@@ -32,11 +32,11 @@ try
         return 1;
     }
 
-    Console.WriteLine($"PASS: {manifest.Definition.Repository} manifest v{CiAiRepositoryManifest.CurrentSchema} is valid and canonical.");
+    Console.WriteLine($"PASS: {manifest.Definition.Repository} manifest schema {CiAiRepositoryManifest.CurrentSchema} is valid and canonical.");
     Console.WriteLine($"Badges: {manifest.Definition.Badges.Count}; dependencies: {manifest.Definition.Dependencies.Count}; extensions: {manifest.Definition.Extensions.Count}; observer: {manifest.ObserverProfile ?? "none"}");
     return 0;
 }
-catch (Exception exception) when (exception is IOException or JsonException or ArgumentException or InvalidDataException or InvalidOperationException)
+catch (Exception exception) when (exception is IOException or JsonException or ArgumentException or InvalidOperationException)
 {
     Console.Error.WriteLine($"CiAi manifest validation failed: {exception.Message}");
     return 1;
