@@ -66,7 +66,7 @@ internal static class CiWorkflowEvidencePacketTests
             "v1 collection factory did not preserve the independently observed workflow ref");
         var requiredCheckBindings = new[]
         {
-            new CiWorkflowRequiredCheckBinding("contract", "contract")
+            new CiWorkflowRequiredCheckBinding("build-and-test", "build-and-test")
         };
         var v2Packet = CiWorkflowEvidencePacketV2.FromPacket(factoryPacket, requiredCheckBindings);
         Assert(v2Packet.Schema == CiWorkflowEvidencePacketV2.CurrentSchema &&
