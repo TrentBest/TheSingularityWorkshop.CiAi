@@ -7,7 +7,6 @@
   ],
   "actual_branches": [
     "development",
-    "docs/ciai-code-red-primary-path",
     "experiment/http-projection-architecture",
     "experiment/read-only-ci-evidence-pilot",
     "feature/await-gate-contracts-31",
@@ -28,9 +27,9 @@
     "work/ciai-semantic-stack-foundation",
     "work/ecosystem-graph-performance-contract"
   ],
-  "branch_count": 21,
+  "branch_count": 20,
   "status": "NON-COMPLIANT",
-  "evaluated_at": "2026-11-25T03:17:30Z",
-  "workflow_run": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/45538927059",
-  "triggering_commit": "6140a174ecd72d29036c01f3a014a940dbe3a4ae"
+  "evaluated_at": "2026-11-25T03:17:58Z",
+  "workflow_run": "https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/45538987063",
+  "triggering_commit": "73c562b2a0e6489db2b582e20a63eacdf22dbdb7"
 }
