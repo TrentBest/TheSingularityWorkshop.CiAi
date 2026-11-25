@@ -147,7 +147,7 @@ public static class CiAiRepositoryAdmissionEvaluator
             configured.Any(repository => !RepositoryIdentity.IsValid(repository)))
             return Create(CiAiRepositoryAdmissionOutcome.InvalidRequest, "CIAI_LICENSE_ADMISSION_INVALID_REQUEST",
                 "The repository admission request contains an invalid repository identity or correlation ID.",
-                entitlement, candidate, 0, request, correlationId, null);
+                entitlement, candidate, 0, 0, request, correlationId, null);
 
         foreach (var repository in configured)
             distinct.Add(repository);
