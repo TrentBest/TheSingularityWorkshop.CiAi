@@ -92,3 +92,19 @@ The first deterministic Pages declaration now exists in `CiPagesPublicationPlan`
 The expansion is deterministic, provider-neutral, and side-effect free. It rejects absolute/traversal/platform-dependent source paths, unsupported source branches, malformed identifiers, and invalid repository identities. The resulting destination policy is explicitly automatic with no human approval, while the existing evidence evaluator still blocks failed, incomplete, stale, or ambiguous attempts.
 
 This slice now includes `CiPagesWorkflowGenerator`, a pure deterministic generator for a GitHub Pages workflow. It requires full 40-character action commit SHAs for checkout, Pages configuration, artifact upload, and deployment; it emits read-only contents permissions, the Pages deployment permissions, an explicit `github-pages` environment, a site-entry-point check, and non-cancelling per-repository deployment concurrency. `CiPipelineBuilder.WithPages(...)` composes the validated Pages plan into the immutable pipeline definition. The generator emits workflow text only: it does not write into a repository, overwrite user-authored workflows, invoke Actions, upload or retain artifacts, or deploy Pages. The GitHub host adapter, workflow diff/validation and installation boundary, provider evidence collection, durable last-good retention, and Blazer shell remain outstanding. Generator and composition contract tests are registered in the executable test runner; verification of the latest commit is pending.
+
+## Explicit build and artifact contract
+
+The current workflow generator now separates the build and deployment jobs:
+
+- `CiPagesPublicationPlanDraft.SourcePath` identifies the repository-relative Pages source directory.
+- `BuildCommand` is an optional, repository-owned, single-line command executed from the checkout root. An empty value supports an already-built static site; CiAi does not invent a framework or build command.
+- `OutputPath` is relative to `SourcePath` and must contain `index.html`. The default `.` means the source directory itself is the built site.
+- `ArtifactName` is used consistently by the Pages artifact producer and deployment consumer.
+- The build job checks out the exact workflow source revision without persisting checkout credentials, runs the configured build command when present, validates the output entry point, and uploads the Pages artifact.
+- The deploy job depends on successful build completion, configures Pages, and deploys that named artifact. It does not check out source or rebuild different content.
+- The generated workflow uses LF line endings and immutable full-SHA action pins. Version comments are explanatory labels; the host must supply and review the actual pinned revisions.
+
+The plan/generator remain pure: they validate declarations and return inspectable workflow text. They do not execute the command, write a workflow, invoke GitHub, or deploy. The repository owner must review the generated diff and explicitly install/manage it through the host boundary.
+
+The build/output declaration and split-job generator have contract coverage, but the latest development push still needs authoritative Contract Verification and Cog Ecosystem Integration results. This does not close the Pages host-adapter, exact deployment evidence, durable last-good retention, serialized dashboard assembly, or GUI.Blazer work.
