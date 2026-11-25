@@ -1,9 +1,11 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using TheSingularityWorkshop.CommandAi;
 
 namespace TheSingularityWorkshop.CiAi.RepositoryCommands;
 
-/// <summary>Stable CiAi action and parameter identities carried by CommandAi/1 proposals.</summary>
+/// <summary>Stable CiAi action, parameter, and outcome identities.</summary>
 /// <remarks>These identities describe repository-development intent only. They are not host capabilities or authorization.</remarks>
 public static class AiCiCommandCatalog
 {
@@ -14,17 +16,23 @@ public static class AiCiCommandCatalog
     public const ulong RequestBuild = 1005;
     public const ulong RequestTests = 1006;
 
+    // Retained for consumers of the original compact proposal shape; the enriched builder no longer emits these as arguments.
     public const ulong Repository = 1;
     public const ulong FeatureBranch = 2;
     public const ulong BaseSha = 3;
     public const ulong NameOrPath = 4;
     public const ulong ContentOrExpectedSha = 5;
     public const ulong PatchOrVersion = 6;
+
+    public const ulong RepositoryOperationOutcome = 9001;
+    public const ulong OutcomeStatus = 9002;
+    public const ulong OutcomeDetail = 9003;
+    public const ulong ResultCommitSha = 9004;
 }
 
 /// <summary>
 /// Pure fluent composer for bounded repository-development proposals.
-/// It creates CommandAi data; it does not access Git, execute tools, or authorize changes.
+/// It creates enriched CommandAi data; it does not access Git, execute tools, or authorize changes.
 /// </summary>
 public sealed class AiCiRepositoryBuilder
 {
@@ -117,7 +125,7 @@ public sealed class AiCiRepositoryBuilder
         return this;
     }
 
-    /// <summary>Returns an immutable CommandAi/1 proposal snapshot.</summary>
+    /// <summary>Returns an immutable enriched CommandAi/1 proposal snapshot.</summary>
     public CommandProposal Build()
     {
         if (_commands.Count == 0)
@@ -130,16 +138,49 @@ public sealed class AiCiRepositoryBuilder
         if (_commands.Count >= CommandLimits.MaxCommands)
             throw new InvalidOperationException($"A proposal cannot contain more than {CommandLimits.MaxCommands} commands.");
 
-        // CommandAi/1 has no target, scope, command ID, idempotency key, or outcome-contract fields.
-        // Keep all repository context explicit as ordinary, ordered typed arguments.
-        var arguments = new List<CommandArgument>
+        var arguments = values
+            .Select(item => new CommandArgument(item.Id, CommandValue.FromText(item.Value)))
+            .ToArray();
+
+        // Length-prefixed BinaryWriter fields make identity derivation deterministic and unambiguous.
+        // The command position distinguishes repeated identical operations in the same proposal.
+        using var identityStream = new MemoryStream();
+        using (var writer = new BinaryWriter(identityStream, Encoding.UTF8, leaveOpen: true))
         {
-            new(AiCiCommandCatalog.Repository, CommandValue.FromText(_repository)),
-            new(AiCiCommandCatalog.FeatureBranch, CommandValue.FromText(_branch)),
-            new(AiCiCommandCatalog.BaseSha, CommandValue.FromText(_baseSha))
-        };
-        arguments.AddRange(values.Select(item => new CommandArgument(item.Id, CommandValue.FromText(item.Value))));
-        _commands.Add(new CommandInstruction(actionId, arguments));
+            writer.Write(_repository);
+            writer.Write(_branch);
+            writer.Write(_baseSha);
+            writer.Write(actionId);
+            writer.Write(_commands.Count);
+            writer.Write(arguments.Length);
+            foreach (var argument in arguments)
+            {
+                writer.Write(argument.ParameterId);
+                writer.Write((int)argument.Value.Kind);
+                writer.Write(argument.Value.Identifier ?? 0UL);
+                writer.Write(argument.Value.Text ?? string.Empty);
+            }
+        }
+
+        var identityDigest = SHA256.HashData(identityStream.ToArray());
+        var commandId = new Guid(identityDigest.AsSpan(0, 16));
+        var idempotencyKey = "ciai:" + Convert.ToHexString(identityDigest).ToLowerInvariant();
+        var target = CommandValue.FromText(_repository);
+        var scope = CommandValue.FromText($"branch:{_branch};base:{_baseSha}");
+        var outcome = new CommandOutcomeContract(AiCiCommandCatalog.RepositoryOperationOutcome, [
+            new CommandOutcomeField(AiCiCommandCatalog.OutcomeStatus, CommandValueKind.LiteralText),
+            new CommandOutcomeField(AiCiCommandCatalog.OutcomeDetail, CommandValueKind.LiteralText, required: false),
+            new CommandOutcomeField(AiCiCommandCatalog.ResultCommitSha, CommandValueKind.LiteralText, required: false)
+        ]);
+
+        _commands.Add(new CommandInstruction(
+            commandId,
+            actionId,
+            target,
+            scope,
+            idempotencyKey,
+            outcome,
+            arguments));
     }
 
     private static void ValidatePath(string path)
