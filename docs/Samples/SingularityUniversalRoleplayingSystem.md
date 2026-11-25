@@ -25,11 +25,11 @@ The first read-only evidence lane is implemented on SURPS `development`.
 | AgentOnboarding contract | `ciai.agent-onboarding.v1` — **ELIGIBLE** |
 | Onboarding content SHA-256 | `bab414bb994cb4b45198b614e8e7f195780b28aaad25d3dce151f7bca0bd2c0e` |
 | CiAi evidence workflow | [run #45065589819](https://github.com/TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem/actions/runs/45065589819) — succeeded |
-| Authoritative Pages workflow | [run #45065589875](https://github.com/TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem/actions/runs/45065589875) — terminal, failed |
+| Authoritative Pages workflow | [run #45552474421](https://github.com/TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem/actions/runs/45552474421) — terminal, successful |
 
-The CiAi report marked discovery complete, required evidence complete, and the Pages workflow terminal. It correctly marked required workflow success false. The Pages build/upload job passed; the deployment job failed. The deployment root cause remains unresolved, so the hosted site is not yet considered verified.
+The earlier failed deployment was traced to the repository's `github-pages` environment deployment-branch restriction. After `development` was allowed, the existing failed deploy job was retried without rebuilding the artifact. The build and deploy jobs both completed successfully; the deploy log found the existing `github-pages` artifact, created the deployment for exact source SHA `009949d23ec0b04fa155451a4f16c1062cda210e`, and GitHub reported `Reported success!`. Published site: https://trentbest.github.io/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem/.
 
-The CiAi observer workflow's own success means it built the pinned observer, evaluated the exact commit's onboarding document, generated and schema-checked the evidence report, and uploaded both the observation report and the admission result (artifact ID `14770094697`). It does **not** mean the Pages deployment succeeded.
+The CiAi observer workflow remains a separate read-only evidence lane. Its success means it built the pinned observer, evaluated the exact commit's onboarding document, generated and schema-checked the evidence report, and uploaded the observation report and admission result. The Pages deployment is independently authoritative and is now confirmed successful by the provider deployment log.
 
 ## Evidence workflow
 
@@ -43,7 +43,7 @@ The required workflow selector includes the exact Pages run ID and attempt. CiAi
 
 ## Rulebook identity and cover validation\n\nSURPS is defining a descriptor-backed sourcebook identity contract. Canonical titles follow `Singularity Universal Roleplaying System - {Category} - LOD {N} - {Rulebook Title}`. Each book must have a machine-readable descriptor, a matching LOD badge, and a real cover image checked into the repository. SURPS owns this schema and its validator; CiAi remains read-only and observes exact-commit evidence from the validator workflow. It must not create or repair metadata, substitute missing covers, or authorize publication/deployment.\n\nTracking: [CiAi issue #85 — SURPS rulebook identity and cover validation](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/85).\n\n## Next integration steps
 
-1. Diagnose the Pages deployment failure using the GitHub Pages environment/deployment evidence; do not weaken the evidence policy to make the report green.
+1. Keep the Pages deployment environment's allowed-branch policy aligned with the intended publishing branch; do not weaken CiAi's evidence policy to make a report green.
 2. Add a source-validation workflow appropriate to the documentation-first SURPS repository (link integrity, Markdown/front-matter checks, and static-site validation).
 3. Include that workflow as a separate required evidence identity only after its purpose and execution are verified.
 4. Extend the SURPS ontology and source-book work only from domain requirements; do not let CI policy dictate in-world schemas.
