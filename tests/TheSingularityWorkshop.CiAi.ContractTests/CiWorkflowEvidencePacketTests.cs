@@ -64,6 +64,48 @@ internal static class CiWorkflowEvidencePacketTests
                 EventSha, new[] { ProviderHeadSha, "dddddddddddddddddddddddddddddddddddddddd" }));
         Assert(factoryPacket.IsSuccessful && factoryPacket.Provenance.WorkflowSha == WorkflowSha,
             "v1 collection factory did not preserve the independently observed workflow ref");
+        var requiredCheckBindings = new[]
+        {
+            new CiWorkflowRequiredCheckBinding("contract", "contract")
+        };
+        var v2Packet = CiWorkflowEvidencePacketV2.FromPacket(factoryPacket, requiredCheckBindings);
+        Assert(v2Packet.Schema == CiWorkflowEvidencePacketV2.CurrentSchema &&
+            v2Packet.EvidenceComplete && v2Packet.IsSuccessful &&
+            v2Packet.RequiredChecks.Single().State == "observed",
+            "v2 did not bind the registered required check to exact provider-observed job evidence");
+
+        var v2Json = v2Packet.ToJson(indented: false);
+        var v2Reloaded = CiWorkflowEvidencePacketV2.FromJson(
+            v2Json, "TrentBest/CiAi", 42, 2, v2Packet.PayloadSha256,
+            requiredCheckBindings, workflowDefinitionTrusted: false);
+        Assert(v2Reloaded.RequiredChecks.SequenceEqual(v2Packet.RequiredChecks) &&
+            !v2Reloaded.WorkflowEvidence.WorkflowDefinitionTrusted && !v2Reloaded.IsSuccessful,
+            "v2 durable round-trip restored workflow trust or changed required-check observations");
+
+        var missingRequiredCheck = CiWorkflowEvidencePacketV2.FromPacket(
+            structuralFactoryPacket,
+            new[] { new CiWorkflowRequiredCheckBinding("required-build", "required-build") });
+        Assert(!missingRequiredCheck.EvidenceComplete && !missingRequiredCheck.IsSuccessful &&
+            missingRequiredCheck.RequiredChecks.Single().State == "missing",
+            "v2 missing required-check evidence did not fail closed");
+
+        var outboxDirectory = Path.Combine(Path.GetTempPath(), "ciai-v2-outbox-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var outbox = new FileCiWorkflowEvidenceV2Outbox(Path.Combine(outboxDirectory, "evidence.jsonl"));
+            var delivery = new CiWorkflowEvidenceV2Delivery("run-42-attempt-2", v2Packet);
+            Assert(outbox.Enqueue(delivery) == CiWorkflowEvidenceV2EnqueueOutcome.Enqueued &&
+                outbox.Enqueue(delivery) == CiWorkflowEvidenceV2EnqueueOutcome.Duplicate,
+                "v2 outbox did not durably deduplicate the exact delivery");
+            var pending = outbox.ReadPending();
+            Assert(pending.Count == 1 && !pending[0].Packet.WorkflowEvidence.WorkflowDefinitionTrusted &&
+                outbox.ReadPending(new HashSet<string>(StringComparer.Ordinal) { delivery.DeliveryId }).Count == 0,
+                "v2 outbox reload restored trust or ignored the acknowledged-delivery filter");
+        }
+        finally
+        {
+            if (Directory.Exists(outboxDirectory)) Directory.Delete(outboxDirectory, recursive: true);
+        }
         var structuralFactoryPacket = CiWorkflowEvidencePacket.FromCollections(
             runCollection, jobCollection, 42, 2, DateTimeOffset.Parse("2026-10-31T01:02:00Z"),
             provenance, workflowDefinitionTrusted: false);
@@ -160,7 +202,7 @@ internal static class CiWorkflowEvidencePacketTests
             "mismatched PR checkout SHA was not retained as non-actionable evidence");
 
         Console.WriteLine("PASS: 12 CI workflow evidence packet v1 contract checks.");
-        return 12;
+        return 16;
     }
 
 
