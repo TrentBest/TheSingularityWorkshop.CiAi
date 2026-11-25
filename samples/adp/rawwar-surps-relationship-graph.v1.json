@@ -1,0 +1,33 @@
+{
+  "schema": "ciai.adp-relationship-graph.v1",
+  "version": 1,
+  "relationships": [
+    {
+      "relationshipId": "rawwar-content-contribution",
+      "contractVersion": 1,
+      "kind": "ContentContribution",
+      "sourceRepository": "TrentBest/raWWar",
+      "targetRepository": "TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem",
+      "artifactKind": "surps-content-proposal",
+      "authorityRepository": "TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem"
+    },
+    {
+      "relationshipId": "surps-canonical-content-consumption",
+      "contractVersion": 1,
+      "kind": "CanonicalContentConsumption",
+      "sourceRepository": "TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem",
+      "targetRepository": "TrentBest/raWWar",
+      "artifactKind": "surps-canonical-content",
+      "authorityRepository": "TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem"
+    },
+    {
+      "relationshipId": "rawwar-experience-validation",
+      "contractVersion": 1,
+      "kind": "ExperienceValidation",
+      "sourceRepository": "TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem",
+      "targetRepository": "TrentBest/raWWar",
+      "artifactKind": "rawwar-experience-candidate",
+      "authorityRepository": "TrentBest/raWWar"
+    }
+  ]
+}
