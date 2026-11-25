@@ -1,45 +1,67 @@
-# raWWar: CiAi Integration Sample
+# raWWar: bidirectional SURPS producer/consumer integration
 
-## Intended role
+## Repository roles
 
-Showcase/game-like application; validate real integrated flows and living SVG evidence without treating visuals as core-library tests.
+[raWWar](https://github.com/TrentBest/raWWar) is both a producer and a consumer of SURPS content, and it owns the Experience it delivers.
 
-This is an integration proposal based on the repository's known name and observed ecosystem role, not a claim that the repository has already implemented a CiAi client or a complete workflow inventory.
+- raWWar authors proposed roleplaying content.
+- [SURPS](https://github.com/TrentBest/TheSingularityWorkshop.SingularityUniversalRoleplayingSystem) admits, canonicalizes, versions, and owns shared roleplaying semantics.
+- raWWar consumes the exact canonical SURPS content revision and validates compatibility with its own Experience.
+- raWWar remains the authority for Experience composition, runtime behavior, and Experience acceptance.
 
-## What CiAi should consume
+CiAi coordinates the engineering pipeline. It does not become the authority for SURPS ontology or raWWar's Experience.
 
-- **Repository identity:** canonical owner/name, default branch, commit SHA, and the exact workflow/run URL.
-- **Workflow evidence:** workflow name and file, event, branch/ref, head SHA, run ID/attempt, status/conclusion, timestamps, and job/step results where available.
-- **Dependency provenance:** every sibling checkout or package dependency should record its resolved commit SHA or package version; a moving branch name alone is not reproducible evidence.
-- **Declared capabilities:** build/test/package/deploy/docs/benchmark or host-specific lanes, each explicitly classified rather than inferred from a green overall run.
-- **Limitations:** distinguish failed, cancelled, skipped, not triggered, unavailable, and unknown evidence. A missing workflow is not a failure, and a successful build is not proof of every capability.
+## Enrolled directed relationships
 
-## How this repository should consume CiAi
+CiAi's `.ciai/repository.json` uses `ciai.repository.v2` and declares three distinct edges:
 
-1. Keep GitHub Actions (or the repository's existing provider CI) as the authoritative executor. CiAi observes and correlates; it does not replace the workflow.
-2. Declare this repository's purpose, packages, capabilities, dependency constraints, sample entry points, and required evidence in a machine-readable declaration when that contract is finalized.
-3. Emit or expose a run-evidence record after CI completes. Prefer a stable identity of `repository#run-id#attempt`, plus the tested commit SHA and workflow/job identities.
-4. Let CiAi normalize provider facts, connect them to this repository and its dependencies, and produce a traceable compatibility/evidence view.
-5. Keep repository-specific validation in this repository's workflow. CiAi should report the exact failed job/step and link to provider logs rather than reimplementing the tests.
-6. Start in **read-only, advisory mode**. Do not make CiAi a required merge gate until evidence semantics and failure handling have been exercised against real runs.
+| ID | Direction | Kind | Authority |
+|---|---|---|---|
+| `rawwar-content-contribution` | raWWar → SURPS | ContentContribution | SURPS |
+| `surps-canonical-content-consumption` | SURPS → raWWar | CanonicalContentConsumption | SURPS |
+| `rawwar-experience-validation` | SURPS → raWWar | ExperienceValidation | raWWar |
 
-## Repository-specific evidence to prioritize
+These are content/Experience relationships, not inferred NuGet dependencies. The graph is enrolled with `adp: null`; durable event handling and autonomous execution are not yet enabled.
 
-- Clean-checkout build and test evidence, the repository's own domain-specific contract checks, package/deployment outputs where applicable, and links to the authoritative provider logs.
+## Exact-source evidence profile
 
-## Proposed adoption stages
+CiAi's built-in `rawwar-contracts-v1` observer profile identifies:
 
-- **Stage 0 — Inventory:** confirm repository purpose, active branches/workflows, package outputs, and dependency edges.
-- **Stage 1 — Evidence:** expose normalized run metadata without changing CI behavior.
-- **Stage 2 — Correlation:** connect test/package/docs/deploy lanes to the same commit and exact dependency revisions.
-- **Stage 3 — Compatibility:** evaluate declared constraints against consumer/provider evidence; label missing evidence as unknown.
-- **Stage 4 — Advisory reporting:** provide traceable summaries and actionable links. Keep privileged actions, publishing, and deployment outside CiAi's authority unless separately designed and explicitly approved.
+- `.github/workflows/build.yml`;
+- provenance artifact `rawwar-workflow-provenance-{runId}-{attempt}`;
+- contract artifact `rawwar-contract-results-{runId}-{attempt}`;
+- provenance entry `workflow-provenance.json`;
+- TRX entry `results.trx`;
+- required job key/name `build-and-contracts`.
 
-## Acceptance criteria
+The pinned observer retrieves provider artifacts by exact run and attempt, verifies provider metadata and archive digests, parses workflow provenance, validates genuine TRX records, and compares workflow bytes at the run revision with a pinned approved baseline revision.
 
-- Every displayed claim links to an authoritative run, job, artifact, or commit.
-- A run is successful only when provider status is completed and conclusion is success.
-- Unknown, skipped, cancelled, and missing evidence are not silently converted to success or failure.
-- Dependency compatibility includes resolved dependency identity, not only a branch name.
-- Duplicate deliveries do not create duplicate evidence; retries/attempts remain distinguishable.
-- CiAi remains read-only and cannot publish packages or deploy software.
+## First successful read-only proof
+
+| Evidence | Result |
+|---|---|
+| raWWar source commit | `385a03b342fc9a0b1790427a89feaf0cc6b8adf8` |
+| Source build | [45548626932](https://github.com/TrentBest/raWWar/actions/runs/45548626932) — success |
+| Actual contract results | 406 passed / 406 total |
+| CiAi observer | [45548626913](https://github.com/TrentBest/raWWar/actions/runs/45548626913) — success |
+| Exact source identity | `.github/workflows/build.yml#45548626932#1` |
+| Required workflow result | passed |
+| Workflow definition | matched pinned approved baseline |
+| TRX verdict | `CompletePass` |
+
+This is a read-only evidence reconciliation proof. It is not proof that the Experience is complete or launchable, and it does not authorize repository mutation.
+
+## Feedback and loop control
+
+A contribution, admission, canonical publication, or Experience validation is a distinct event. Every event retains the exact source commit and artifact digest. A delivery retry with the same relationship/version, source revision, artifact identity, and digest deduplicates; changed source bytes create new validation work. Causation IDs connect feedback events but do not suppress changed work.
+
+The loop is not an unbounded execution cycle. Each step is an immutable, bounded task with an explicit terminal result. Failed admission must not publish canonical content; canonical content changes trigger consumer/Experience revalidation; a new raWWar contribution is a new proposal against a new source revision.
+
+## Remaining implementation
+
+1. Persist relationship change notices and evidence receipts.
+2. Map accepted events into bounded ADP work groups and existing Await/Gate contracts.
+3. Connect work groups to FSM_Execution and the host authorization boundary.
+4. Demonstrate controlled failure, diagnosis, bounded proposal, explicit authorization, isolated change, and new exact-SHA validation.
+
+The observer workflow itself remains candidate-controlled repository configuration. The trusted host must independently validate its pinned observer revision and retain the trust decision. Merge, publication, release, and deployment remain separate authorization gates.
