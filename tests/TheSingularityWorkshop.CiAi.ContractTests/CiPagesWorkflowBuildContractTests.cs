@@ -50,6 +50,22 @@ internal static class CiPagesWorkflowBuildContractTests
                 "static site entry point was not validated");
         });
 
+        Check("manual Pages dispatch is pinned to the declared source branch", () =>
+        {
+            var yaml = CiPagesWorkflowGenerator.Generate(built, pins);
+            Assert(yaml.Contains("EXPECTED_REF: \"refs/heads/development\"", StringComparison.Ordinal) &&
+                   yaml.Contains("ACTUAL_REF: " + "$" + "{{ github.ref }}", StringComparison.Ordinal) &&
+                   yaml.Contains("if: github.event_name == 'workflow_dispatch'", StringComparison.Ordinal),
+                "manual dispatch can target a branch other than the declared source branch");
+        });
+
+        Check("Pages workflow does not path-filter away build dependencies", () =>
+        {
+            var yaml = CiPagesWorkflowGenerator.Generate(built, pins);
+            Assert(!yaml.Contains("    paths:", StringComparison.Ordinal),
+                "path filters could miss changes to files used by the configured build command");
+        });
+
         Check("multiline build commands and unsafe output paths fail closed", () =>
         {
             var multiline = built with { BuildCommand = "npm run build\nother-command" };
