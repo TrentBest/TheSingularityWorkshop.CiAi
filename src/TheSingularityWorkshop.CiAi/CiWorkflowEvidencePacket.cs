@@ -7,9 +7,9 @@ namespace TheSingularityWorkshop.CiAi;
 
 /// <summary>
 /// Canonical v1 evidence envelope. This contract requires a separately parsed,
-/// repository/run/attempt-bound workflow provenance artifact. The legacy packet is retained
-/// only as unversioned raw run/job observations owned by this envelope; workflow/candidate
-/// identity is authoritative only in the separately validated provenance artifact.
+/// repository/run/attempt-bound workflow provenance artifact. Raw provider run/job observations
+/// remain unversioned facts nested inside this single envelope; workflow/candidate identity is
+/// authoritative only in the separately validated provenance artifact.
 /// </summary>
 public sealed record CiWorkflowEvidencePacket
 {
@@ -444,6 +444,8 @@ public sealed record CiWorkflowEvidencePacket
         var serializedRequiredChecks = JsonSerializer.Deserialize<CiWorkflowRequiredCheckObservation[]>(
             requiredChecksElement.GetRawText(), new JsonSerializerOptions(JsonSerializerDefaults.Web))
             ?? throw new InvalidDataException("Evidence packet v1 required-check observations are invalid.");
+        if (serializedRequiredChecks.Any(check => check is null))
+            throw new InvalidDataException("Evidence packet v1 contains a null required-check observation.");
         var serializedBindings = serializedRequiredChecks.Select(check =>
             new CiWorkflowRequiredCheckBinding(check.Key, check.JobName)).ToArray();
         try { ValidateRequiredCheckBindings(serializedBindings); }
