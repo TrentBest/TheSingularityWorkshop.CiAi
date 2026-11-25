@@ -112,24 +112,31 @@ as an informational link and label it accurately.
   entitlement/grace policy; rejection of a new repository must not cancel
   unrelated work already in progress.
 
-## Implementation sequence
+## Implementation sequence and current status
 
-1. Define typed entitlement, admission request, decision, and report contracts
-   in CiAi.
-2. Add a deterministic evaluator for canonical identity, de-duplication,
-   existing-repository idempotency, and the five-repository free limit.
-3. Add contract tests for 0, 4, 5, 6, duplicate, case-variant, fork, malformed,
-   concurrent, expired, and unavailable entitlement cases.
-4. Integrate the evaluator at the host's actual repository enrollment point,
-   before queue insertion or observer/ADP scheduling.
-5. Add an authenticated entitlement provider and billing/customer portal.
-6. Add user-visible and machine-readable upgrade reports with the configured
-   purchase URL.
-7. Verify end-to-end that the sixth repository is refused before any work
-   starts, while the first five continue normally.
+**Implemented in the current development PR:** typed entitlement, admission
+request, decision, and report contracts; a deterministic evaluator for
+canonical identity, case-insensitive de-duplication, existing-repository
+idempotency, verified entitlement validity, and the five-repository free
+limit; contract tests for the first five/sixth repository, duplicates,
+case variants, forks, malformed identities, paid allowances, expired and
+unavailable entitlements, and upgrade URL validation.
 
-The pure evaluator is not the security boundary by itself. The host must
-supply authenticated identity and enforce the decision atomically.
+**Still required before the financial gate is operational:**
+
+1. Integrate the evaluator at the host's actual repository enrollment point,
+   before discovery, queue insertion, observer scheduling, or ADP planning.
+2. Add an authenticated entitlement provider and transactional or
+   reservation-based check-and-enroll operation.
+3. Add a customer/billing portal and configure its trusted upgrade URL.
+4. Add host-level concurrency tests and an end-to-end proof that the sixth
+   repository is refused before any work starts, while the first five
+   continue normally.
+
+The pure evaluator is not the security boundary by itself. It cannot
+authenticate a licensee, reserve a slot, prevent concurrent races, or stop a
+host that ignores its decision. The host must supply authenticated identity
+and enforce the decision atomically.
 
 ## Pricing research
 
