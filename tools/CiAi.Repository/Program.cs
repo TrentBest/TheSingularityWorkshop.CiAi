@@ -44,7 +44,7 @@ int CheckManifest()
         return 1;
     }
 
-    Console.WriteLine($"PASS: {manifest.Definition.Repository} manifest schema {CiAiRepositoryManifest.CurrentSchema} is valid and canonical.");
+    Console.WriteLine($"PASS: {manifest.Definition.Repository} manifest schema {manifest.Schema} is valid and canonical.");
     return 0;
 }
 
