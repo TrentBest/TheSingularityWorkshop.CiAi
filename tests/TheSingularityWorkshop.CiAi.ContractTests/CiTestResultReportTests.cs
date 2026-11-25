@@ -437,7 +437,8 @@ internal static class CiTestResultReportTests
             ProviderPullRequestObservation = providerObservation,
             ProviderPullRequestIdentity = providerIdentity
         };
-        return CiWorkflowEvidencePacket.FromValidatedProvenance(observed, provenance, workflowTrusted);
+        return CiWorkflowEvidencePacket.FromValidatedProvenance(observed, provenance, workflowTrusted,
+            new[] { new CiWorkflowRequiredCheckBinding(JobKey, JobName) });
     }
 
     private static (CiTestResultArtifactSource Source, CiTestResultArtifactArchive Archive) CreateSourceAndArchive(
