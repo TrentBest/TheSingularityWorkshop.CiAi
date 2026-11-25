@@ -161,7 +161,7 @@ internal static class CiWorkflowEvidencePacketTests
             workflowDefinitionTrusted: true));
 
         var untrusted = CiWorkflowEvidencePacket.FromValidatedProvenance(
-            CreateObservedRun(), provenance, workflowDefinitionTrusted: false);
+            CreateObservedRun(), provenance, workflowDefinitionTrusted: false, requiredCheckBindings);
         Assert(!untrusted.IsSuccessful &&
             untrusted.BlockingReasons.Contains("workflow.definition-untrusted"),
             "untrusted workflow definition was accepted as successful");
@@ -186,7 +186,7 @@ internal static class CiWorkflowEvidencePacketTests
             CreateObservedRun(runId: 43), provenance, workflowDefinitionTrusted: true, requiredCheckBindings));
         Throws<InvalidDataException>(() => CiWorkflowEvidencePacket.FromValidatedProvenance(
             CreateObservedRun(workflowPath: ".github/workflows/other.yml"),
-            provenance, workflowDefinitionTrusted: true));
+            provenance, workflowDefinitionTrusted: true, requiredCheckBindings));
 
         var mismatchedCheckoutJson = CreateProvenance();
         var checkoutStart = mismatchedCheckoutJson.IndexOf("\"checkout\": {", StringComparison.Ordinal);
