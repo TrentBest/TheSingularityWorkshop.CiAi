@@ -83,7 +83,7 @@ internal static class CiWorkflowEvidencePacketTests
             "v2 durable round-trip restored workflow trust or changed required-check observations");
 
         var missingRequiredCheck = CiWorkflowEvidencePacketV2.FromPacket(
-            structuralFactoryPacket,
+            factoryPacket,
             new[] { new CiWorkflowRequiredCheckBinding("required-build", "required-build") });
         Assert(!missingRequiredCheck.EvidenceComplete && !missingRequiredCheck.IsSuccessful &&
             missingRequiredCheck.RequiredChecks.Single().State == "missing",
