@@ -41,6 +41,31 @@ public sealed record CiWorkflowEvidencePacket
     /// artifact. The caller must obtain provenance through the trusted provider artifact boundary
     /// and apply protected workflow-definition policy before setting the trust argument.
     /// </summary>
+    /// <summary>
+    /// Builds evidence only after the caller has evaluated the exact workflow bytes against
+    /// a protected control-plane revision. The decision must identify this exact provenance.
+    /// </summary>
+    public static CiWorkflowEvidencePacket FromCollections(
+        CiWorkflowRunCollection runCollection,
+        CiWorkflowJobCollection jobCollection,
+        long runId,
+        int runAttempt,
+        DateTimeOffset observedAt,
+        CiWorkflowProvenanceRecord provenance,
+        CiWorkflowDefinitionTrustDecision trustDecision,
+        CiWorkflowCandidateCheckoutEvidence? candidateCheckoutEvidence = null,
+        IReadOnlyList<Uri>? artifactReferences = null,
+        CiPullRequestProviderIdentity? pullRequestIdentity = null)
+    {
+        ArgumentNullException.ThrowIfNull(trustDecision);
+        ArgumentNullException.ThrowIfNull(provenance);
+        if (!trustDecision.IsFor(provenance))
+            throw new InvalidDataException("Workflow trust decision does not identify this exact provenance record.");
+        return FromCollections(
+            runCollection, jobCollection, runId, runAttempt, observedAt, provenance,
+            trustDecision.IsTrusted, candidateCheckoutEvidence, artifactReferences, pullRequestIdentity);
+    }
+
     public static CiWorkflowEvidencePacket FromCollections(
         CiWorkflowRunCollection runCollection,
         CiWorkflowJobCollection jobCollection,
