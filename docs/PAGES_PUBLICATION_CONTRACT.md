@@ -108,3 +108,6 @@ The current workflow generator now separates the build and deployment jobs:
 The plan/generator remain pure: they validate declarations and return inspectable workflow text. They do not execute the command, write a workflow, invoke GitHub, or deploy. The repository owner must review the generated diff and explicitly install/manage it through the host boundary.
 
 The build/output declaration and split-job generator have contract coverage, but the latest development push still needs authoritative Contract Verification and Cog Ecosystem Integration results. This does not close the Pages host-adapter, exact deployment evidence, durable last-good retention, serialized dashboard assembly, or GUI.Blazer work.
+
+- Push triggers cover every commit on the declared source branch rather than path-filtering only the site directory; repository-specific build commands may depend on files elsewhere in the checkout.
+- Manual dispatch is explicitly rejected unless its selected ref is the declared source branch, so a manual run cannot silently deploy an unrelated branch.
