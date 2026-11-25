@@ -2,9 +2,7 @@ namespace TheSingularityWorkshop.CiAi;
 
 public sealed record CiPagesActionPins(
     string Checkout,
-    string UploadArtifact,
     string ConfigurePages,
-    string DownloadArtifact,
     string UploadPagesArtifact,
     string DeployPages)
 {
@@ -12,9 +10,7 @@ public sealed record CiPagesActionPins(
     {
         var errors = new List<string>();
         ValidatePin(Checkout, "checkout", errors);
-        ValidatePin(UploadArtifact, "upload-artifact", errors);
         ValidatePin(ConfigurePages, "configure-pages", errors);
-        ValidatePin(DownloadArtifact, "download-artifact", errors);
         ValidatePin(UploadPagesArtifact, "upload-pages-artifact", errors);
         ValidatePin(DeployPages, "deploy-pages", errors);
         return Array.AsReadOnly(errors.ToArray());
@@ -42,20 +38,18 @@ public static class CiPagesWorkflowGenerator
         if (pinErrors.Count > 0)
             throw new ArgumentException("Pages action pins are invalid: " + string.Join(", ", pinErrors), nameof(pins));
 
-        var source = draft.SourcePath;
-        var output = draft.OutputPath;
-        var artifact = draft.ArtifactName;
-        var branch = draft.SourceBranch;
-        var lines = new[]
+        var outputPath = draft.OutputPath == "." ? "index.html" : $"{draft.OutputPath}/index.html";
+        var artifactPath = draft.OutputPath == "." ? draft.SourcePath : $"{draft.SourcePath}/{draft.OutputPath}";
+        var lines = new List<string>
         {
             "name: Deploy Pages",
             "",
             "on:",
             "  push:",
             "    branches:",
-            $"      - \"{branch}\"",
+            $"      - \"{draft.SourceBranch}\"",
             "    paths:",
-            $"      - \"{source}/**\"",
+            $"      - \"{draft.SourcePath}/**\"",
             $"      - \"{WorkflowPath}\"",
             "  workflow_dispatch:",
             "",
@@ -63,7 +57,7 @@ public static class CiPagesWorkflowGenerator
             "  contents: read",
             "",
             "concurrency:",
-            "  group: pages-${{ github.repository }}",
+            "  group: pages-" + "$" + "{{ github.repository }}",
             "  cancel-in-progress: false",
             "",
             "jobs:",
@@ -75,25 +69,35 @@ public static class CiPagesWorkflowGenerator
             "      - name: Checkout exact source revision",
             $"        uses: actions/checkout@{pins.Checkout} # v4",
             "        with:",
-            "          persist-credentials: false",
-            "      - name: Build site",
-            $"        working-directory: \"{source}\"",
-            "        shell: bash",
-            "        run: |",
-            "          set -euo pipefail",
-            $"          {draft.BuildCommand}",
+            "          persist-credentials: false"
+        };
+
+        if (!string.IsNullOrWhiteSpace(draft.BuildCommand))
+        {
+            lines.AddRange(new[]
+            {
+                "      - name: Build site",
+                $"        working-directory: \"{draft.SourcePath}\"",
+                "        shell: bash",
+                "        run: |",
+                "          set -euo pipefail",
+                $"          {draft.BuildCommand}"
+            });
+        }
+
+        lines.AddRange(new[]
+        {
             "      - name: Validate generated site entry point",
-            $"        working-directory: \"{source}\"",
+            $"        working-directory: \"{draft.SourcePath}\"",
             "        shell: bash",
             "        run: |",
             "          set -euo pipefail",
-            $"          test -f \"{output}/index.html\"",
+            $"          test -f \"{outputPath}\"",
             "      - name: Upload exact built-site artifact",
-            $"        uses: actions/upload-artifact@{pins.UploadArtifact} # v4",
+            $"        uses: actions/upload-pages-artifact@{pins.UploadPagesArtifact} # v3",
             "        with:",
-            $"          name: \"{artifact}\"",
-            $"          path: \"{source}/{output}\"",
-            "          if-no-files-found: error",
+            $"          name: \"{draft.ArtifactName}\"",
+            $"          path: \"{artifactPath}\"",
             "          retention-days: 1",
             "",
             "  deploy:",
@@ -105,24 +109,17 @@ public static class CiPagesWorkflowGenerator
             "      id-token: write",
             "    environment:",
             "      name: github-pages",
-            "      url: ${{ steps.deployment.outputs.page_url }}",
+            "      url: " + "$" + "{{ steps.deployment.outputs.page_url }}",
             "    steps:",
             "      - name: Configure Pages",
             $"        uses: actions/configure-pages@{pins.ConfigurePages} # v5",
-            "      - name: Download exact built-site artifact",
-            $"        uses: actions/download-artifact@{pins.DownloadArtifact} # v4",
-            "        with:",
-            $"          name: \"{artifact}\"",
-            "          path: _site",
-            "      - name: Upload Pages deployment artifact",
-            $"        uses: actions/upload-pages-artifact@{pins.UploadPagesArtifact} # v3",
-            "        with:",
-            "          path: _site",
             "      - name: Deploy the exact uploaded artifact",
             "        id: deployment",
             $"        uses: actions/deploy-pages@{pins.DeployPages} # v4",
+            "        with:",
+            $"          artifact_name: \"{draft.ArtifactName}\"",
             ""
-        };
+        });
         return string.Join("\n", lines);
     }
 }
