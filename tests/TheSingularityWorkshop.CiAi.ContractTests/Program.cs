@@ -20,6 +20,7 @@ RunSuite("CiPipelineDefinitionContractTests", () => CiPipelineDefinitionContract
 RunSuite("CiWorkflowDomainCatalogContractTests", () => CiWorkflowDomainCatalogContractTests.Run());
 RunSuite("CiWorkflowDomainEvaluatorContractTests", () => CiWorkflowDomainEvaluatorContractTests.Run());
 RunSuite("CiWorkflowPlanContractTests", () => CiWorkflowPlanContractTests.Run());
+RunSuite("CiRepositoryRelationshipContractTests", () => CiRepositoryRelationshipContractTests.Run());
 RunSuite("CiWorkflowGrammarContractTests", () => CiWorkflowGrammarContractTests.Run());
 RunSuite("BenchmarkBuildDispatchTests", () => BenchmarkBuildDispatchTests.Run());
 RunSuite("SuccessfulBuildBenchmarkCoordinatorTests", () => SuccessfulBuildBenchmarkCoordinatorTests.Run());
