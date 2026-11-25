@@ -83,6 +83,8 @@ ServerSC2 is the next CODE RED evidence integration. ServerSC2 owns authoritativ
 
 - [Await and Gate contracts: durable dependency declarations, exact-source evidence, adjudication, and event receipts](docs/AWAIT_GATE_CONTRACTS.md)
 
+- [CI matrix workflow domain](docs/CI_MATRIX_DOMAIN.md) — deterministic bounded expansion and cell identity contracts.
+
 ## 06 — Architecture and proof
 
 - [Pages publication contract](docs/PAGES_PUBLICATION_CONTRACT.md) — destination-specific approval policy, failure-safe last-known-good experience, operational dashboard, and current implementation status.
