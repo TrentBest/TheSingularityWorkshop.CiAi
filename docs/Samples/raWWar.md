@@ -40,11 +40,11 @@ The pinned observer retrieves provider artifacts by exact run and attempt, verif
 
 | Evidence | Result |
 |---|---|
-| raWWar source commit | `385a03b342fc9a0b1790427a89feaf0cc6b8adf8` |
-| Source build | [45548626932](https://github.com/TrentBest/raWWar/actions/runs/45548626932) — success |
+| raWWar source commit | `eef1974a87d78eefe2802d77d7f2451f4f2b47a7` |
+| Source build | [45549019401](https://github.com/TrentBest/raWWar/actions/runs/45549019401) — success |
 | Actual contract results | 406 passed / 406 total |
-| CiAi observer | [45548626913](https://github.com/TrentBest/raWWar/actions/runs/45548626913) — success |
-| Exact source identity | `.github/workflows/build.yml#45548626932#1` |
+| CiAi observer | [45549019399](https://github.com/TrentBest/raWWar/actions/runs/45549019399) — success |
+| Exact source identity | `.github/workflows/build.yml#45549019401#1` |
 | Required workflow result | passed |
 | Workflow definition | matched pinned approved baseline |
 | TRX verdict | `CompletePass` |
