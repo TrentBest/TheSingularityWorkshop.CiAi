@@ -42,13 +42,14 @@ internal static class CiAiRepositoryAdmissionTests
         {
             var report = Evaluate("Owner/New", new[] { "Owner/Repo1", "owner/repo1", "OWNER/REPO1" },
                 entitlement, now);
-            Assert(report.ConfiguredRepositoryCount == 2 && report.MayStartWork,
-                "case variants consumed multiple slots");
+            Assert(report.ConfiguredRepositoryCount == 1 && report.ProjectedConfiguredRepositoryCount == 2 && report.MayStartWork,
+                "case variants consumed multiple slots or report counts were inconsistent");
         });
         Check("public and private repositories share the same identity count", () =>
         {
             var report = Evaluate("Owner/New", new[] { "Owner/Public", "Owner/Private" }, entitlement, now);
-            Assert(report.ConfiguredRepositoryCount == 3, "repository visibility incorrectly changed counting");
+            Assert(report.ConfiguredRepositoryCount == 2 && report.ProjectedConfiguredRepositoryCount == 3,
+                "repository visibility incorrectly changed counting or projected count");
         });
         Check("a configured fork is counted as a distinct repository identity", () =>
         {
