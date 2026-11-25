@@ -177,11 +177,22 @@ public static class CiAiRepositoryAdmissionEvaluator
             entitlement, candidate, count, count + 1, request, correlationId, null);
     }
 
+    private static string GetEntitlementStatus(CiAiRepositoryEntitlement entitlement, DateTimeOffset now)
+    {
+        if (entitlement.VerificationStatus != CiAiEntitlementVerificationStatus.Verified)
+            return "Unavailable";
+        if (now < entitlement.ValidFromUtc)
+            return "NotYetValid";
+        if (entitlement.ValidUntilUtc is not null && now >= entitlement.ValidUntilUtc.Value)
+            return "Expired";
+        return "Verified";
+    }
+
     private static CiAiRepositoryAdmissionReport Create(CiAiRepositoryAdmissionOutcome outcome, string code,
         string message, CiAiRepositoryEntitlement entitlement, string? candidate, int count,
         int projectedCount, CiAiRepositoryAdmissionRequest request, string correlationId, Uri? upgradeUrl) =>
         new(outcome, code, message, entitlement.LicenseeId, candidate, count, projectedCount,
             entitlement.MaximumConfiguredRepositories, entitlement.Tier,
-            entitlement.VerificationStatus.ToString(), request.RequestedAtUtc,
+            GetEntitlementStatus(entitlement, request.RequestedAtUtc), request.RequestedAtUtc,
             correlationId, upgradeUrl);
 }
