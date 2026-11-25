@@ -61,6 +61,7 @@ ServerSC2 is the next CODE RED evidence integration. ServerSC2 owns authoritativ
 
 - [Pages publication contract](docs/PAGES_PUBLICATION_CONTRACT.md) — destination-specific approval policy, failure-safe last-known-good experience, operational dashboard, and current implementation status.
 - [Repository composition](docs/REPOSITORY_COMPOSITION.md) — the single immutable fluent builder for badges, dependency/fallback declarations, development pipelines, optional ADP, and LLM allocation budgets.
+- [Repository manifest v1](docs/REPOSITORY_MANIFEST.md) — strict JSON declarations, built-in observer profiles, and explicit schema-version boundaries.
 
 - [Gallery](Gallery.md) — current demonstrations and evidence.
 - [Cross-Cog integration](integration/CogEcosystem.ContractTests/README.md) — pinned in-process contract proof.
