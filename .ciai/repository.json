@@ -1,5 +1,5 @@
 {
-  "schema": "ciai.repository.v2",
+  "schema": "ciai.repository.v1",
   "repository": "TrentBest/TheSingularityWorkshop.CiAi",
   "observerProfile": "ciai-default",
   "badges": [
