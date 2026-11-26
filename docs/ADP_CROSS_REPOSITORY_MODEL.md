@@ -82,7 +82,7 @@ This proves the read-only provider evidence lane and cross-repository reconcilia
 
 ## Initial implementation boundary
 
-CiAi now has typed declarations for directed repository relationships and immutable change notices. The existing immutable repository builder accepts `.WithRelationship(...)` declarations and carries the ordered graph into `CiAiRepositoryDefinition`. Manifest v2 (`ciai.repository.v2`) now serializes and validates the graph and optional bounded ADP settings; CiAi's own `.ciai/repository.json` declares all three raWWar/SURPS edges while leaving `adp` null. Contract tests cover builder and manifest enrollment, the raWWar → SURPS contribution edge, the SURPS → raWWar canonical-consumption edge, raWWar Experience ownership, exact commit/artifact provenance, and retry deduplication versus changed-input revalidation.
+CiAi now has typed declarations for directed repository relationships and immutable change notices. The existing immutable repository builder accepts `.WithRelationship(...)` declarations and carries the ordered graph into `CiAiRepositoryDefinition`. The single prerelease manifest contract now serializes and validates the graph and optional bounded ADP settings; CiAi's own `.ciai/repository.json` declares all three raWWar/SURPS edges while leaving `adp` null. Contract tests cover builder and manifest enrollment, the raWWar → SURPS contribution edge, the SURPS → raWWar canonical-consumption edge, raWWar Experience ownership, exact commit/artifact provenance, and retry deduplication versus changed-input revalidation.
 
 This is intentionally a contract foundation, not a claim that the entire ADP is running. The next slices are:
 
