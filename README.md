@@ -43,7 +43,7 @@ The intended responsibility split is:
 - **CommandAi:** own the generic versioned atomic command representation and codec. CiAi must consume its public types rather than copy them.
 - **GrammarAi / ProtocolAi:** validate structural form and carry interoperable correlation, provenance, and idempotency. Neither grants authority.
 - **HeadlessAi:** own bounded, resumable LLM/repair turns. Model output remains untrusted input.
-- **FSM_Foundry / host:** independently authenticate and authorize each proposed operation, enforce branch/base-SHA/path/capability/budget limits, and retain human approval at the host boundary.
+- **FSM_Execution / host:** independently authenticate and authorize each proposed operation, enforce branch/base-SHA/path/capability/budget limits, and retain human approval at the host boundary.
 - **GitHub Actions:** remain the source of truth for workflow runs, exact checked-out commits, jobs, and test artifacts.
 
 The first proof target is the manifest-driven Minesweeper Experience: a failing exact-SHA test artifact must become a provenance-bound diagnostic report, drive a bounded repair proposal for the same task, pass independent host authorization before any isolated-branch change, and then produce a new exact-candidate green verdict. Only after that loop works should the local manifest be loaded and played as an Experience.
@@ -100,7 +100,7 @@ ServerSC2 is the next CODE RED evidence integration. ServerSC2 owns authoritativ
 
 - [Pages publication contract](docs/PAGES_PUBLICATION_CONTRACT.md) — destination-specific approval policy, failure-safe last-known-good experience, operational dashboard, and current implementation status.
 - [Repository composition](docs/REPOSITORY_COMPOSITION.md) — the single immutable fluent builder for badges, dependency/fallback declarations, development pipelines, optional ADP, and LLM allocation budgets.
-- [Repository manifest v1/v2](docs/REPOSITORY_MANIFEST.md) — strict JSON declarations, directed ADP relationship graphs, built-in observer profiles, and deterministic validation.
+- [Repository manifest](docs/REPOSITORY_MANIFEST.md) — strict JSON declarations, directed ADP relationship graphs, built-in observer profiles, and deterministic validation.
 - [Development progress v1](docs/DEVELOPMENT_PROGRESS.md) — weighted, evidence-referenced readiness declarations with explicit unassessed states and a GUI.SVG rendering boundary.
 
 - [Gallery](Gallery.md) — current demonstrations and evidence.
