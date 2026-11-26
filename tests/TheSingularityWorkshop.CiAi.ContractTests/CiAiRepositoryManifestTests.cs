@@ -24,6 +24,23 @@ internal static class CiAiRepositoryManifestTests
             Assert(manifest.Definition.Extensions.Single().Id == "Gauntlet.Registrar", "extension missing");
             Assert(manifest.ObserverProfile == "ciai-default", "observer profile missing");
         });
+        Check("provider-neutral badge metadata round-trips without losing provenance semantics", () =>
+        {
+            const string json = """
+            {"schema":"ciai.repository.v1","repository":"TrentBest/FSM_API_Benchmark","badges":[
+              {"id":"fsm-api-powered","label":"Powered by FSM_API","providerId":"fsm-api","renderer":"svg",
+               "outputPath":"Documentation/Branding/fsm-api-powered.svg","altText":"Powered by FSM_API; gear motion reflects verified dependency and build state",
+               "evidenceSource":"ciai.fsm-api-dependency-observation","unknownState":"unknown"}],
+             "dependencies":[],"extensions":[]}
+            """;
+            var parsed = CiAiRepositoryManifest.ParseJson(json);
+            var badge = parsed.Definition.Badges.Single();
+            Assert(badge.ProviderId == "fsm-api" && badge.EvidenceSource == "ciai.fsm-api-dependency-observation" &&
+                badge.UnknownState == "unknown", "badge evidence semantics were lost");
+            var roundTrip = CiAiRepositoryManifest.ParseJson(parsed.ToJson()).Definition.Badges.Single();
+            Assert(roundTrip.OutputPath == "Documentation/Branding/fsm-api-powered.svg" &&
+                roundTrip.Renderer == "svg", "badge renderer or output path was lost");
+        });
         Check("manifest serialization is deterministic and round-trips", () =>
         {
             const string json = """
@@ -88,7 +105,7 @@ internal static class CiAiRepositoryManifestTests
             }
             """;
             var first = CiAiRepositoryManifest.ParseJson(json);
-            Assert(first.Schema == CiAiRepositoryManifest.CurrentSchemaV2 &&
+            Assert(first.Schema == CiAiRepositoryManifest.CurrentSchema &&
                 first.Definition.Relationships.Count == 3 &&
                 !first.Definition.AutonomousDevelopmentEnabled,
                 "relationship declarations implicitly enabled autonomous execution");
