@@ -1,0 +1,388 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thesingularityworkshop.github.io/CiAi/schemas/ciai.ecosystem-dashboard-snapshot.v1.schema.json",
+  "title": "CiAi Ecosystem Dashboard Snapshot v1",
+  "description": "Read-only, safe-to-publish projection of one validated ecosystem observation. Lifecycle, dependency readiness, and CI outcome remain separate dimensions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "snapshotId",
+    "generatedAt",
+    "freshness",
+    "sourceEvidenceDigest",
+    "repositories",
+    "dependencies",
+    "buildWaves",
+    "diagnostics"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "ciai.ecosystem-dashboard-snapshot.v1"
+    },
+    "snapshotId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "freshness": {
+      "enum": [
+        "CURRENT",
+        "STALE",
+        "UNKNOWN",
+        "UNAVAILABLE"
+      ]
+    },
+    "sourceEvidenceDigest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "sourceEvidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidenceReference"
+      }
+    },
+    "repositories": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/repository"
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/dependency"
+      }
+    },
+    "buildWaves": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "index",
+          "repositoryIds"
+        ],
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "repositoryIds": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "severity",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          },
+          "severity": {
+            "enum": [
+              "INFO",
+              "WARNING",
+              "ERROR"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "repositoryId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "evidenceId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "safeUrl": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://"
+    },
+    "evidenceReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidenceId",
+        "kind",
+        "url",
+        "observedAt",
+        "sourceDigest"
+      ],
+      "properties": {
+        "evidenceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "kind": {
+          "enum": [
+            "REPOSITORY",
+            "COMMIT",
+            "WORKFLOW_RUN",
+            "WORKFLOW_ATTEMPT",
+            "PACKAGE",
+            "DEPLOYMENT",
+            "LIFECYCLE",
+            "DEPENDENCY_GRAPH"
+          ]
+        },
+        "url": {
+          "$ref": "#/$defs/safeUrl"
+        },
+        "observedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "sourceDigest": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repositoryId",
+        "name",
+        "url",
+        "lifecycle",
+        "dependencyReadiness",
+        "ciOutcome",
+        "evidenceIds"
+      ],
+      "properties": {
+        "repositoryId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "url": {
+          "$ref": "#/$defs/safeUrl"
+        },
+        "sourceSha": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "lifecycle": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "authority",
+            "observedAt"
+          ],
+          "properties": {
+            "state": {
+              "enum": [
+                "OFF",
+                "AWAITING_HUMAN_APPROVAL",
+                "WORKING",
+                "UNKNOWN",
+                "UNAVAILABLE",
+                "STALE",
+                "CONTRADICTORY"
+              ]
+            },
+            "authority": {
+              "const": "FSM_EXECUTION"
+            },
+            "observedAt": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            }
+          }
+        },
+        "dependencyReadiness": {
+          "enum": [
+            "READY",
+            "BUILDING",
+            "WAITING",
+            "FAILED",
+            "STALE",
+            "UNKNOWN",
+            "UNAVAILABLE",
+            "SKIPPED",
+            "CANCELLED",
+            "INCOMPLETE"
+          ]
+        },
+        "ciOutcome": {
+          "enum": [
+            "SUCCESS",
+            "FAILURE",
+            "IN_PROGRESS",
+            "CANCELLED",
+            "SKIPPED",
+            "UNKNOWN",
+            "UNAVAILABLE"
+          ]
+        },
+        "workflowRunUrl": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/safeUrl"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "workflowRunId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64
+        },
+        "workflowAttempt": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "evidenceIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dependencyId",
+        "upstreamRepositoryId",
+        "downstreamRepositoryId",
+        "kind",
+        "required",
+        "readiness",
+        "evidenceIds"
+      ],
+      "properties": {
+        "dependencyId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "upstreamRepositoryId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "downstreamRepositoryId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": [
+            "BUILD",
+            "RUNTIME",
+            "TOOLING",
+            "OPTIONAL",
+            "PACKAGE"
+          ]
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "readiness": {
+          "enum": [
+            "READY",
+            "BUILDING",
+            "WAITING",
+            "FAILED",
+            "STALE",
+            "UNKNOWN",
+            "UNAVAILABLE",
+            "SKIPPED",
+            "CANCELLED",
+            "INCOMPLETE"
+          ]
+        },
+        "resolvedUpstreamSha": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "publishedPackageId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 200
+        },
+        "publishedPackageVersion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "evidenceIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}
