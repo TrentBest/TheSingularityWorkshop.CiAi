@@ -19,13 +19,13 @@ A delivery stores:
 - SHA-256 payload digest
 - Structured SHA-256 idempotency key
 
-The idempotency key is derived from repository, run ID, attempt, workflow ref/SHA, and checkout ref/SHA. It is not derived by delimiter-joining untrusted text. Repeating the same attempt and bytes is a duplicate; changing the payload for the same identity is a conflict.
+The idempotency key is derived from repository, run ID, attempt, workflow ref/SHA, checkout ref/SHA, and the sorted required-check keys/job names. It is not derived by delimiter-joining untrusted text. Repeating the same attempt and bytes is a duplicate; changing the payload or required-check policy for the same identity is a conflict.
 
 ## Persistence and reload
 
 The file outbox is append-only JSONL with exclusive file locking and disk flush. It rejects incomplete trailing records, malformed records, invalid digests, duplicate delivery IDs, and duplicate idempotency identities.
 
-On reload, the exact payload is reparsed and its digest and identity are revalidated. Host workflow trust is deliberately unset. A matching payload digest is not a substitute for current host policy.
+On reload, the host must supply its current registered required-check set. The outbox compares that trusted set with the persisted binding and reparses the exact payload against it; it never treats the binding copied from its own journal as current policy. Host workflow trust is deliberately unset. A matching payload digest is not a substitute for current host policy.
 
 ## Receipt semantics
 

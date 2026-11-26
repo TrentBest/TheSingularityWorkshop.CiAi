@@ -13,7 +13,7 @@ The deterministic validator lives in CiAi:
 - `AgentOnboardingValidator.Evaluate` returns a structured `AgentOnboardingAdmissionResult`.
 - The result records contract version, repository, exact target SHA, path, eligibility, outcome, failure code/reason, and SHA-256 content digest.
 
-**Ownership boundary:** CiAi validates the contract and records evidence. Foundry owns task acceptance, leases, model-turn orchestration, authorization, and handoff. The host adapter owns authenticated GitHub reads and concrete dispatch. HeadlessAi owns model invocation only. CiAi does not currently own or implement the Foundry task queue or a live autonomous-dispatch path.
+**Ownership boundary:** CiAi validates the contract and records evidence. FSM_Execution owns task acceptance, leases, model-turn orchestration, authorization, and handoff. The host adapter owns authenticated GitHub reads and concrete dispatch. HeadlessAi owns model invocation only. CiAi does not currently own or implement the FSM_Execution task queue or a live autonomous-dispatch path.
 
 ## Exact-source requirement
 
@@ -72,7 +72,7 @@ A passing result is necessary, not sufficient, for autonomous work. Repository a
 
 The validator is a pure contract evaluator; it does not retrieve GitHub content, authenticate a provider, create tasks, invoke HeadlessAi, dispatch work, or authorize repository writes. A host adapter must create the source observation from its authenticated provider read. Model output or repository text must never be allowed to manufacture trusted source observations.
 
-The runtime enforcement companion is tracked in [Foundry issue #39](https://github.com/TrentBest/TheSingularityWorkshop.FSM_Foundry/issues/39), linked to [CiAi issue #73](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/73). Foundry must enforce this contract before task acceptance and again before autonomous model turns, repository mutations, retries, and resumed work at a new target SHA. Until that host integration is implemented and verified, the existence of this validator does **not** mean ADP dispatch is gated end-to-end.
+The runtime enforcement companion is tracked in [FSM_Execution issue #39](https://github.com/TrentBest/TheSingularityWorkshop.FSM_Execution/issues/39), linked to [CiAi issue #73](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/73). FSM_Execution must enforce this contract before task acceptance and again before autonomous model turns, repository mutations, retries, and resumed work at a new target SHA. Until that host integration is implemented and verified, the existence of this validator does **not** mean ADP dispatch is gated end-to-end.
 
 ## Verification
 
@@ -82,7 +82,7 @@ The CiAi contract workflow passed on exact commit `29e213ed69f16e3f0db0b1d14c3c0
 - [Cog Ecosystem Integration run #43821362850](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/43821362850) — both the vertical contract and live-provider evidence jobs passed.
 - [Sith Policy run #43821362874](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/actions/runs/43821362874) — failed because the repository still has more than the required two permanent branches. No branch was deleted or rewritten.
 
-These checks validate CiAi's contract and existing evidence workflows; they do not prove Foundry runtime admission enforcement.
+These checks validate CiAi's contract and existing evidence workflows; they do not prove FSM_Execution runtime admission enforcement.
 
 ---
 

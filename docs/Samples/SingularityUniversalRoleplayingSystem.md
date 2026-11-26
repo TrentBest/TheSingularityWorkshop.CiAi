@@ -8,7 +8,7 @@ SURPS is not a replacement for its supporting repositories:
 - FSM_Dungeon owns the underground environment and its domain-specific phenomena.
 - Physics owns physical laws and physical consequences.
 - FSM_API owns state and transition foundations.
-- FSM_COS / FSM_Foundry own experience composition and runtime execution.
+- FSM_COS / FSM_Execution own experience composition and runtime execution.
 - StoryBuilder owns narrative construction.
 - GUI / GUI.SVG own presentation and living illustrations.
 

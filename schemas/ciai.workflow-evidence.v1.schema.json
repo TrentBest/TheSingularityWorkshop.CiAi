@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/TrentBest/TheSingularityWorkshop.CiAi/development/schemas/ciai.workflow-evidence.v1.schema.json",
+  "title": "CiAi canonical workflow evidence v1",
+  "description": "One exact-run envelope containing unversioned provider observations, independently validated workflow/event/checkout provenance, and the host-registered required-check observations. Host workflow trust is re-evaluated on every load and is never serialized as authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion",
+    "schema",
+    "observedRun",
+    "provenance",
+    "requiredChecks"
+  ],
+  "properties": {
+    "contractVersion": { "const": 1 },
+    "schema": { "const": "ciai.workflow-evidence.v1" },
+    "observedRun": {
+      "type": "object",
+      "description": "Unversioned provider-observed run/job facts for exactly one run attempt.",
+      "additionalProperties": true
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "repository", "runId", "runAttempt", "workflow", "event", "checkout"],
+      "properties": {
+        "schema": { "const": "ciai.workflow-provenance.v1" },
+        "repository": { "type": "string", "minLength": 3, "maxLength": 200 },
+        "runId": { "type": "integer", "minimum": 1 },
+        "runAttempt": { "type": "integer", "minimum": 1 },
+        "workflow": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ref", "sha"],
+          "properties": {
+            "ref": { "type": "string", "minLength": 1, "maxLength": 500 },
+            "sha": { "type": "string", "pattern": "^[0-9a-fA-F]{40}$" }
+          }
+        },
+        "event": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "ref", "sha", "pullRequest"],
+          "properties": {
+            "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+            "ref": { "type": "string", "minLength": 1, "maxLength": 500 },
+            "sha": { "type": "string", "pattern": "^[0-9a-fA-F]{40}$" },
+            "pullRequest": {
+              "type": ["object", "null"],
+              "additionalProperties": false,
+              "required": ["number", "head", "base"],
+              "properties": {
+                "number": { "type": "integer", "minimum": 1 },
+                "head": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["ref", "sha"],
+                  "properties": {
+                    "ref": { "type": "string", "minLength": 1, "maxLength": 500 },
+                    "sha": { "type": "string", "pattern": "^[0-9a-fA-F]{40}$" }
+                  }
+                },
+                "base": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["ref", "sha"],
+                  "properties": {
+                    "ref": { "type": "string", "minLength": 1, "maxLength": 500 },
+                    "sha": { "type": "string", "pattern": "^[0-9a-fA-F]{40}$" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "checkout": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ref", "sha"],
+          "properties": {
+            "ref": { "type": "string", "minLength": 1, "maxLength": 500 },
+            "sha": { "type": "string", "pattern": "^[0-9a-fA-F]{40}$" }
+          }
+        }
+      }
+    },
+    "requiredChecks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "jobName", "state", "jobId", "status", "conclusion", "evidenceUrl", "startedAt", "completedAt"],
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "^[A-Za-z0-9._-]+$"
+          },
+          "jobName": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "state": { "enum": ["observed", "missing", "ambiguous"] },
+          "jobId": { "type": ["integer", "null"], "minimum": 1 },
+          "status": { "type": ["string", "null"] },
+          "conclusion": {
+            "type": ["string", "null"],
+            "enum": ["success", "failure", "cancelled", "timed_out", "action_required", "neutral", "skipped", "stale", "startup_failure", null]
+          },
+          "evidenceUrl": { "type": ["string", "null"], "format": "uri" },
+          "startedAt": { "type": ["string", "null"], "format": "date-time" },
+          "completedAt": { "type": ["string", "null"], "format": "date-time" }
+        }
+      }
+    }
+  }
+}

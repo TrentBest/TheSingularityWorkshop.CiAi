@@ -1,6 +1,6 @@
 # CODE RED — implementation status and next steps
 
-> Status snapshot: 2026-11-25. Verified implementation commit: `7eb9727e8854255064f2bfb674ff40cedc0db24b`. This document distinguishes implemented contracts from the next capabilities to build.
+> Status snapshot: 2026-11-25. Verified development baseline: `7eb9727e8854255064f2bfb674ff40cedc0db24b`. Current draft candidate: [PR #92](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/pull/92), head `d6145fbfee7fb812fe72909fa1a8d2910ffb426c`; Contract Verification run `45570415845` and Cog Ecosystem Integration run `45570415737` both passed. This document distinguishes implemented contracts from the next capabilities to build.
 
 ## Implemented path
 
@@ -22,30 +22,28 @@ The CI workflow produced a package candidate artifact for inspection. **It did n
 
 ## Implemented capabilities
 
-- **Workflow provenance and trust:** exact workflow/run/attempt identity, protected workflow-definition comparison, and distinct PR head/base/merge identities.
-- **Test-result evidence:** required-job policy, provider artifact binding, digest-verified bounded TRX archive reading, structured test diagnostics, and evidence receipts/outboxes.
-- **Foundry handoff contracts:** Foundry artifact-ready notice, delivery coordination, and outbox contracts. These are contracts for the `FSM_Foundry` host boundary; a live host adapter is still future work.
+- **Workflow provenance and trust:** exact workflow/run/attempt identity, protected workflow-definition comparison, distinct PR head/base/merge identities, and one canonical `ciai.workflow-evidence.v1` envelope. The envelope combines unversioned provider facts, validated provenance, and host-registered required-check observations; host trust is re-evaluated on reload.
+- **Test-result evidence:** `ciai.test-results.v1` owns the stable `CompletePass` / `ActionableFailure` / `IncompleteOrUntrusted` / `NonActionableFailure` verdict and reason codes. Provider artifact binding, digest-verified bounded TRX reading, and normalized diagnostics are bound to the exact required check in the canonical v1 envelope.
+- **FSM_Execution handoff contracts:** FSM_Execution artifact-ready notice, delivery coordination, and outbox contracts. These are contracts for the `FSM_Execution` host boundary; a live host adapter is still future work.
 - **Execution planning:** typed workflow plans, deterministic scheduling, fail-closed in-process execution-result contracts, and Pages publication-plan composition.
 - **Await/Gate:** durable file-backed registrations and gate contracts plus an event outbox.
 - **CI Matrix:** deterministic bounded expansion, stable cell identity, and explicit exclusions.
 - **Semantic stack:** typed GrammarAi/ProtocolAi workflow catalogs and cross-reference validation.
 - **CommandAi/1 proposals:** deterministic command identity, idempotency keys, and explicit outcomes.
 - **Repository foundation:** the existing `CiAiRepositoryBuilder` and repository manifest remain the canonical composition API.
-- **Branch policy:** Sith continues to enforce the exact `master` + `development` inventory. It is intentionally non-compliant until the owner removes the 20 extra refs.
+- **Branch policy:** Sith enforces the exact `master` + `development` inventory. The last compliant baseline was run `45539466277`, before this temporary work began. The active PR #92 branch and one superseded, incorrectly based branch currently add temporary refs; the latter is ready for owner deletion, while PR #92's branch must remain until its review disposition.
 
 The 22-family workflow catalog remains a vocabulary inventory. A family appearing in the catalog is not evidence that its runtime, provider adapter, or release gate is implemented.
+
+The pre-work CiAi branch inventory was independently reported compliant by Sith Policy run `45539466277` at `2026-11-25T03:22:15Z`: exactly `master` and `development`. This feature work temporarily adds two refs; the superseded `feature/durable-ci-rerun-requests` branch was mistakenly based on the master snapshot and is ready for owner deletion. The active `feature/durable-ci-rerun-requests-development` branch carries draft [PR #92](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/pull/92) and remains until its review disposition.
 
 ## Deferred intent — rebuild from this plan, not from parallel branches
 
 ### 1. Durable rerun and dispatch requests
 
-The versioned evidence work introduced a distinct intent for `CiWorkflowDispatchInputContract`, `CiWorkflowRerunRequest`, and an append-only `FileCiWorkflowRerunRequestLedger`. These are not in the current implementation. When built, they must:
+**Implemented on the isolated candidate branch** `feature/durable-ci-rerun-requests-development` in draft [PR #92](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/pull/92); not yet integrated into `development`. The candidate now also removes the parallel `workflow-evidence.v2` packet/outbox/schema and folds host-registered required checks into the single `ciai.workflow-evidence.v1` envelope. The v1 rerun slice adds `CiWorkflowDispatchInputContract`, `CiWorkflowRerunRequest`, and `FileCiWorkflowRerunRequestLedger`, with contract tests and [the request-boundary specification](WORKFLOW_RERUN_REQUEST_V1.md). It binds the canonical repository, workflow YAML path, trusted `refs/heads/development` workflow-definition ref and exact workflow SHA, isolated candidate feature ref and exact candidate SHA, source run/attempt, correlation ID, idempotency key, expiry, and a maximum of three additional attempts. The ledger is append-only, digest-verified, bounded, and idempotent.
 
-- bind one repository, workflow path, exact source SHA, source run and attempt;
-- make branch and SHA targeting mutually exclusive and explicit;
-- carry an idempotency key and bounded attempt policy;
-- require host authorization before dispatch or rerun;
-- preserve an immutable audit record and never silently retry or dispatch.
+This is still request intent only. It does not dispatch, retry, authenticate the requester, or authorize a provider call. The host must independently verify that the trusted workflow revision is approved, that the workflow is registered for manual dispatch, and that the candidate feature ref still resolves to the candidate SHA before each dispatch. The next slice is the FSM_Execution host adapter and durable correlation to actual provider run IDs/attempts.
 
 ### 2. Repository enrollment and README badges
 
@@ -57,9 +55,9 @@ The intended feature is a deterministic, idempotent managed README region with c
 
 The `CiWorkflowObserverProfile` contract is present, but repository-manifest enrollment and rollout are not complete. Start with CiAi, then the proven raWWar workflow, then AnyApp. Each profile must bind the exact workflow path, required job, artifact templates, provider metadata, and protected workflow revision. A green repository-contract badge is not trusted test evidence and does not authorize autonomous repair.
 
-### 4. FSM_Foundry integration
+### 4. FSM_Execution integration
 
-Connect the Foundry notice contracts to an explicit `FSM_Foundry` adapter. The host owns execution, resource isolation, credentials, cleanup, and authorization. CiAi owns evidence validation and gate policy. HeadlessAi may assess validated evidence, but model output cannot change the verdict. Human approval remains authoritative for merge, NuGet publication, release, and deployment.
+Connect the FSM_Execution notice contracts to an explicit `FSM_Execution` adapter. The host owns execution, resource isolation, credentials, cleanup, and authorization. CiAi owns evidence validation and gate policy. HeadlessAi may assess validated evidence, but model output cannot change the verdict. Human approval remains authoritative for merge, NuGet publication, release, and deployment.
 
 ### 5. Gauntlet and adversarial execution
 
@@ -75,4 +73,4 @@ The dependency-readiness and ecosystem-performance documents describe intended g
 - No release or deployment was created.
 - No canonical branch was deleted or rewritten.
 - No branch was deleted by the assistant.
-- No automatic merge, rerun, or candidate-code execution was authorized by a passing evidence report.
+- No automatic merge, provider rerun/dispatch, or candidate-code execution was authorized by a passing evidence report.

@@ -5,7 +5,7 @@ using System.Text.Json;
 namespace TheSingularityWorkshop.CiAi;
 
 /// <summary>Stable delivery identity for one exact v1 workflow run attempt and checkout.</summary>
-public sealed record CiWorkflowEvidenceDelivery
+public sealed record CiWorkflowEvidenceDelivery : ICiWorkflowEvidenceDelivery
 {
     public CiWorkflowEvidenceDelivery(string deliveryId, CiWorkflowEvidencePacket packet)
     {
@@ -31,7 +31,9 @@ public sealed record CiWorkflowEvidenceDelivery
             workflowRef = provenance.WorkflowRef,
             workflowSha = provenance.WorkflowSha,
             checkoutRef = provenance.CheckoutRef,
-            checkoutSha = provenance.CheckoutSha
+            checkoutSha = provenance.CheckoutSha,
+            requiredChecks = packet.RequiredChecks.OrderBy(check => check.Key, StringComparer.Ordinal)
+                .Select(check => new { check.Key, check.JobName }).ToArray()
         });
         IdempotencyKey = "sha256:" +
             Convert.ToHexString(SHA256.HashData(identity)).ToLowerInvariant();
@@ -88,15 +90,23 @@ public sealed class FileCiWorkflowEvidenceOutbox
 
         var record = new OutboxRecord(delivery.DeliveryId, delivery.IdempotencyKey,
             delivery.Packet.ObservedRun.Repository, delivery.Packet.ObservedRun.RunId,
-            delivery.Packet.ObservedRun.RunAttempt, delivery.Payload, delivery.PayloadSha256);
+            delivery.Packet.ObservedRun.RunAttempt,
+            delivery.Packet.RequiredChecks.Select(check =>
+                new CiWorkflowRequiredCheckBinding(check.Key, check.JobName)).ToArray(),
+            delivery.Payload, delivery.PayloadSha256);
         Append(JsonSerializer.Serialize(record));
         return CiWorkflowEvidenceEnqueueOutcome.Enqueued;
     }
 
     /// <summary>Reloads pending packets with host trust deliberately unset; callers must re-evaluate it.</summary>
     public IReadOnlyList<CiWorkflowEvidenceDelivery> ReadPending(
+        IEnumerable<CiWorkflowRequiredCheckBinding> expectedRequiredChecks,
         IReadOnlySet<string>? acknowledgedDeliveryIds = null)
     {
+        ArgumentNullException.ThrowIfNull(expectedRequiredChecks);
+        var trustedRequiredChecks = expectedRequiredChecks.ToArray();
+        if (trustedRequiredChecks.Length == 0)
+            throw new ArgumentException("The host must supply its registered required-check set when reloading evidence.", nameof(expectedRequiredChecks));
         Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
         using var fileLock = AcquireFileLock();
         var pending = ReadRecords()
@@ -104,9 +114,12 @@ public sealed class FileCiWorkflowEvidenceOutbox
                 !acknowledgedDeliveryIds.Contains(record.DeliveryId))
             .Select(record =>
             {
+                if (!record.RequiredChecks.OrderBy(check => check.Key, StringComparer.Ordinal)
+                    .SequenceEqual(trustedRequiredChecks.OrderBy(check => check.Key, StringComparer.Ordinal)))
+                    throw new InvalidDataException("Evidence outbox required-check set does not match current host registration.");
                 var packet = CiWorkflowEvidencePacket.FromJson(
                     record.Payload, record.Repository, record.RunId, record.RunAttempt,
-                    record.PayloadSha256, workflowDefinitionTrusted: false);
+                    record.PayloadSha256, trustedRequiredChecks, workflowDefinitionTrusted: false);
                 var delivery = new CiWorkflowEvidenceDelivery(record.DeliveryId, packet);
                 if (!string.Equals(delivery.IdempotencyKey, record.IdempotencyKey, StringComparison.Ordinal) ||
                     !string.Equals(delivery.PayloadSha256, record.PayloadSha256, StringComparison.Ordinal))
@@ -152,6 +165,7 @@ public sealed class FileCiWorkflowEvidenceOutbox
                 !IsValidIdempotencyKey(record.IdempotencyKey) ||
                 !RepositoryIdentity.IsValid(record.Repository) ||
                 record.RunId <= 0 || record.RunAttempt <= 0 ||
+                record.RequiredChecks is null || record.RequiredChecks.Length == 0 ||
                 string.IsNullOrWhiteSpace(record.Payload) ||
                 string.IsNullOrWhiteSpace(record.PayloadSha256) ||
                 record.PayloadSha256.Length != 64 || !record.PayloadSha256.All(Uri.IsHexDigit))
@@ -183,6 +197,7 @@ public sealed class FileCiWorkflowEvidenceOutbox
         string Repository,
         long RunId,
         int RunAttempt,
+        CiWorkflowRequiredCheckBinding[] RequiredChecks,
         string Payload,
         string PayloadSha256);
 }

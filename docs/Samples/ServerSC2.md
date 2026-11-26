@@ -22,9 +22,9 @@ This sample defines the boundary and acceptance case. CiAi now has a bounded, DT
 | CI execution and provider facts | GitHub Actions | Authoritative workflow, run attempt, job, checkout SHA, and artifact identity |
 | CI artifact provenance and verdict | CiAi | Verifies exact repository/SHA/run/attempt/job/artifact provenance and digest; normalizes test evidence; emits stable reason-coded CI verdict |
 | LLM diagnostic consumption | HeadlessAi | Receives bounded, provenance-bound diagnostics as untrusted data |
-| Task lifecycle and authorization | Foundry / host | Owns dispatch, budgets, lifecycle, and explicit authorization for repository mutations |
+| Task lifecycle and authorization | FSM_Execution / host | Owns dispatch, budgets, lifecycle, and explicit authorization for repository mutations |
 
-ServerSC2 must not depend on CiAi as a runtime NuGet package. CiAi must not interpret SC2 game outcomes or create a competing match-evidence model. Foundry must not reinterpret raw CI logs or turn a successful evidence verdict into mutation authorization.
+ServerSC2 must not depend on CiAi as a runtime NuGet package. CiAi must not interpret SC2 game outcomes or create a competing match-evidence model. FSM_Execution must not reinterpret raw CI logs or turn a successful evidence verdict into mutation authorization.
 
 ## Evidence lanes
 

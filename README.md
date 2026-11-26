@@ -31,7 +31,7 @@ Observe every matching workflow run, its exact attempt, jobs, and steps for one 
 dotnet run --project samples/TheSingularityWorkshop.CiAi.ObserveRun -- TrentBest/TheSingularityWorkshop.CiAi <full-40-character-commit-sha> artifacts/commit-observation.json
 ```
 
-Use a real 40-character SHA in place of the placeholder. The observer uses bounded pagination and writes raw run/job evidence. To evaluate a policy, configure `CIAI_REQUIRED_WORKFLOW_PATHS` as a semicolon-separated list of exact workflow paths. Missing, duplicate, non-terminal, unsuccessful, or incomplete required evidence fails closed. The report separates API discovery completeness, required-evidence completeness, terminality, and success. Without a configured required-workflow policy, `complete` is false. The report is a raw, read-only observation—not a release verdict or publication approval.
+Use a real 40-character SHA in place of the placeholder. The observer uses bounded pagination and writes raw run/job evidence. To evaluate a policy, configure `CIAI_REQUIRED_WORKFLOW_PATHS` as a semicolon-separated list of exact workflow paths. Missing, duplicate, non-terminal, unsuccessful, or incomplete required evidence fails closed. The report separates API discovery completeness, required-evidence completeness, terminality, and success. Without a configured required-workflow policy, `complete` is false. The report is a raw, read-only observation—not a release verdict or publication approval. The observer emits one `ciai.workflow-evidence.v1` envelope containing provider observations, provenance, and host-registered required checks. Its companion `ciai.test-results.v1` report owns the stable test verdict (`CompletePass`, `ActionableFailure`, `IncompleteOrUntrusted`, or `NonActionableFailure`) and reason codes.
 
 ## 02 — Agentic development: CODE RED
 
@@ -43,12 +43,14 @@ The intended responsibility split is:
 - **CommandAi:** own the generic versioned atomic command representation and codec. CiAi must consume its public types rather than copy them.
 - **GrammarAi / ProtocolAi:** validate structural form and carry interoperable correlation, provenance, and idempotency. Neither grants authority.
 - **HeadlessAi:** own bounded, resumable LLM/repair turns. Model output remains untrusted input.
-- **FSM_Foundry / host:** independently authenticate and authorize each proposed operation, enforce branch/base-SHA/path/capability/budget limits, and retain human approval at the host boundary.
+- **FSM_Execution / host:** independently authenticate and authorize each proposed operation, enforce branch/base-SHA/path/capability/budget limits, and retain human approval at the host boundary.
 - **GitHub Actions:** remain the source of truth for workflow runs, exact checked-out commits, jobs, and test artifacts.
+
+The shared host boundary and metadata-only evidence handoff are documented in [the FSM_Execution integration boundary](docs/EXECUTION_INTEGRATION_BOUNDARY.md).
 
 The first proof target is the manifest-driven Minesweeper Experience: a failing exact-SHA test artifact must become a provenance-bound diagnostic report, drive a bounded repair proposal for the same task, pass independent host authorization before any isolated-branch change, and then produce a new exact-candidate green verdict. Only after that loop works should the local manifest be loaded and played as an Experience.
 
-**Implementation status:** the repository currently has draft provenance/evidence and TRX diagnostic slices; CommandAi has a separate generic proposal contract; FSM_Foundry has draft ingress, report-consumer, and secure-transport foundations. These are not yet a live connected pipeline. The AiCi proposal builder and clean-CI CommandAi source dependency are still being established. No end-to-end red → repair → green CODE RED run is claimed.
+**Implementation status:** the repository has the canonical `ciai.workflow-evidence.v1` envelope, provenance validation, required-check binding, and `ciai.test-results.v1` diagnostics/verdict slices; CommandAi has a separate generic proposal contract; the execution-host repository has draft ingress, report-consumer, and secure-transport foundations. These are not yet a live connected pipeline. The AiCi proposal builder and clean-CI CommandAi source dependency are still being established. No end-to-end red → repair → green CODE RED run is claimed.
 
 Track the coordinated acceptance path:
 - [CODE RED umbrella and acceptance criteria](https://github.com/TrentBest/TheSingularityWorkshop.CiAi/issues/27)
@@ -91,6 +93,7 @@ ServerSC2 is the next CODE RED evidence integration. ServerSC2 owns authoritativ
 - [CI semantic stack](docs/CI_SEMANTIC_STACK.md) — typed workflow vocabulary and protocol/grammar cross-reference validation.
 
 - [Test-result evidence v1](docs/TEST_RESULT_EVIDENCE_V1.md) — exact-run TRX provenance, required-job policy, bounded archive verification, and diagnostics.
+- [Workflow rerun request v1](docs/WORKFLOW_RERUN_REQUEST_V1.md) — exact-source, bounded, idempotent rerun intent and the host authorization boundary.
 - [Development capability evidence v1](docs/DEVELOPMENT_CAPABILITY_EVIDENCE_V1.md) — source-bound capability claims and verification.
 - [Composite pipeline gates](docs/COMPOSITE_PIPELINE_GATES.md) and [dependency readiness policy](docs/DEPENDENCY_READINESS_POLICY.md) — fail-closed dependency and gate composition.
 

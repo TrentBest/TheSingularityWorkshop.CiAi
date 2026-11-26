@@ -19,12 +19,12 @@ The latest verified inventory still contains **22 branches**: `master`, `develop
 
 | Branch | PR | Disposition |
 |---|---:|---|
-| `chore/replace-foundry-docs-with-execution` | #88 | Foundry docs corrected to the canonical `FSM_Foundry` name |
+| closed PR #88 | #88 | Documentation-only rename attempt closed without merge; not integrated; current Execution naming cleanup is carried by PR #92 |
 | `docs/ciai-code-red-primary-path` | #41 | CODE RED primary path and AnyApp provenance docs integrated |
 | `experiment/http-projection-architecture` | #2 | Projection model proposal integrated into docs |
 | `experiment/read-only-ci-evidence-pilot` | #1 | Read-only evidence pilot integrated |
 | `feature/await-gate-contracts-31` | #32 | Await/Gate stores, contracts, outbox and tests integrated |
-| `feature/ciai-external-observer-and-composition` | #77 | Trust, PR identity, Foundry notices and exact artifact observer integrated; competing composition/stamper API deferred and documented |
+| `feature/ciai-external-observer-and-composition` | #77 | Trust, PR identity, FSM_Execution notices and exact artifact observer integrated; competing composition/stamper API deferred and documented |
 | `feature/ciai-fluent-ecosystem-builder` | #79 | Superseded by the richer canonical `CiAiRepositoryBuilder` on development |
 | `feature/ciai-trusted-trx-archive-reader` | #45 | Digest-verified TRX archive capability integrated |
 | `feature/ciai-trx-diagnostic-verdict` | #36 | Structured TRX diagnostics and required-job policy integrated |
@@ -46,7 +46,7 @@ The latest verified inventory still contains **22 branches**: `master`, `develop
 - Their required code, tests, and documentation were integrated into `development`, or their distinct remaining intent was deliberately captured as a future task.
 - No open PR depends on any of these branches.
 - The stacked evidence chain (#28 → #30 → #36 → #45) was consolidated into the current V2 evidence, provenance, report, and archive implementation; the unique rerun/dispatch ledger is explicitly deferred.
-- PR #77 was retargeted to development before selected trust, provider identity, Foundry notice, and observer work was reconciled. The competing repository-composition/stamper API was not imported because development already has a canonical builder.
+- PR #77 was retargeted to development before selected trust, provider identity, FSM_Execution notice, and observer work was reconciled. The competing repository-composition/stamper API was not imported because development already has a canonical builder.
 
 ## Owner cleanup sequence
 

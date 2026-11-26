@@ -1,7 +1,7 @@
-# TheSingularityWorkshop.FSM_Foundry: CiAi Integration Sample
+# TheSingularityWorkshop.FSM_Execution: CiAi Integration Sample
 
 ## Intended role
-Build/FSM_Foundry tooling; validate generated outputs, package provenance, and reproducible builds.
+Build/FSM_Execution tooling; validate generated outputs, package provenance, and reproducible builds.
 
 This is a repository-specific integration proposal. Verify the role, workflow inventory, and source contracts before making it a required check.
 

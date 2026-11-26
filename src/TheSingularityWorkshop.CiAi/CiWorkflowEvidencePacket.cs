@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -6,9 +7,9 @@ namespace TheSingularityWorkshop.CiAi;
 
 /// <summary>
 /// Canonical v1 evidence envelope. This contract requires a separately parsed,
-/// repository/run/attempt-bound workflow provenance artifact. The legacy packet is retained
-/// only as unversioned raw run/job observations owned by this envelope; workflow/candidate
-/// identity is authoritative only in the separately validated provenance artifact.
+/// repository/run/attempt-bound workflow provenance artifact. Raw provider run/job observations
+/// remain unversioned facts nested inside this single envelope; workflow/candidate identity is
+/// authoritative only in the separately validated provenance artifact.
 /// </summary>
 public sealed record CiWorkflowEvidencePacket
 {
@@ -19,15 +20,18 @@ public sealed record CiWorkflowEvidencePacket
         CiWorkflowRunEvidenceObservation observedRun,
         CiWorkflowProvenanceRecord provenance,
         bool workflowDefinitionTrusted,
-        bool checkoutVerified)
+        bool checkoutVerified,
+        IReadOnlyList<CiWorkflowRequiredCheckObservation> requiredChecks)
     {
         ObservedRun = observedRun;
         Provenance = provenance;
         WorkflowDefinitionTrusted = workflowDefinitionTrusted;
         CheckoutVerified = checkoutVerified;
+        RequiredChecks = Array.AsReadOnly(requiredChecks.OrderBy(check => check.Key, StringComparer.Ordinal).ToArray());
+        ValidateRequiredCheckObservations(RequiredChecks);
         CandidateRef = provenance.CheckoutRef;
         CandidateSha = provenance.CheckoutSha;
-        BlockingReasons = Array.AsReadOnly(BuildBlockingReasons().ToArray());
+        BlockingReasons = Array.AsReadOnly(BuildBlockingReasons().Distinct(StringComparer.Ordinal).ToArray());
     }
 
     /// <summary>
@@ -53,6 +57,7 @@ public sealed record CiWorkflowEvidencePacket
         DateTimeOffset observedAt,
         CiWorkflowProvenanceRecord provenance,
         CiWorkflowDefinitionTrustDecision trustDecision,
+        IEnumerable<CiWorkflowRequiredCheckBinding> requiredChecks,
         CiWorkflowCandidateCheckoutEvidence? candidateCheckoutEvidence = null,
         IReadOnlyList<Uri>? artifactReferences = null,
         CiPullRequestProviderIdentity? pullRequestIdentity = null)
@@ -61,9 +66,10 @@ public sealed record CiWorkflowEvidencePacket
         ArgumentNullException.ThrowIfNull(provenance);
         if (!trustDecision.IsFor(provenance))
             throw new InvalidDataException("Workflow trust decision does not identify this exact provenance record.");
+        ArgumentNullException.ThrowIfNull(requiredChecks);
         return FromCollections(
             runCollection, jobCollection, runId, runAttempt, observedAt, provenance,
-            trustDecision.IsTrusted, candidateCheckoutEvidence, artifactReferences, pullRequestIdentity);
+            trustDecision.IsTrusted, requiredChecks, candidateCheckoutEvidence, artifactReferences, pullRequestIdentity);
     }
 
     public static CiWorkflowEvidencePacket FromCollections(
@@ -74,6 +80,7 @@ public sealed record CiWorkflowEvidencePacket
         DateTimeOffset observedAt,
         CiWorkflowProvenanceRecord provenance,
         bool workflowDefinitionTrusted,
+        IEnumerable<CiWorkflowRequiredCheckBinding> requiredChecks,
         CiWorkflowCandidateCheckoutEvidence? candidateCheckoutEvidence = null,
         IReadOnlyList<Uri>? artifactReferences = null,
         CiPullRequestProviderIdentity? pullRequestIdentity = null)
@@ -81,6 +88,9 @@ public sealed record CiWorkflowEvidencePacket
         ArgumentNullException.ThrowIfNull(runCollection);
         ArgumentNullException.ThrowIfNull(jobCollection);
         ArgumentNullException.ThrowIfNull(provenance);
+        ArgumentNullException.ThrowIfNull(requiredChecks);
+        var requiredCheckBindings = requiredChecks.ToArray();
+        ValidateRequiredCheckBindings(requiredCheckBindings);
         if (runId <= 0) throw new ArgumentOutOfRangeException(nameof(runId));
         if (runAttempt <= 0) throw new ArgumentOutOfRangeException(nameof(runAttempt));
 
@@ -153,6 +163,7 @@ public sealed record CiWorkflowEvidencePacket
             observedRun,
             provenance,
             workflowDefinitionTrusted,
+            requiredCheckBindings,
             candidateCheckoutEvidence);
     }
 
@@ -161,6 +172,7 @@ public sealed record CiWorkflowEvidencePacket
         CiWorkflowRunEvidenceObservation observedRun,
         CiWorkflowProvenanceRecord provenance,
         CiWorkflowDefinitionTrustDecision trustDecision,
+        IEnumerable<CiWorkflowRequiredCheckBinding> requiredChecks,
         CiPullRequestProviderIdentity? pullRequestIdentity = null,
         CiWorkflowCandidateCheckoutEvidence? candidateCheckoutEvidence = null)
     {
@@ -168,6 +180,7 @@ public sealed record CiWorkflowEvidencePacket
         ArgumentNullException.ThrowIfNull(provenance);
         if (!trustDecision.IsFor(provenance))
             throw new InvalidDataException("Workflow trust decision does not identify this exact provenance record.");
+        ArgumentNullException.ThrowIfNull(requiredChecks);
         if (provenance.PullRequest is not null && pullRequestIdentity is not null)
         {
             if (!pullRequestIdentity.Matches(provenance) ||
@@ -186,17 +199,21 @@ public sealed record CiWorkflowEvidencePacket
             observedRun.ProviderPullRequestIdentity.Matches(observedRun.ProviderPullRequestObservation);
         if (trustDecision.IsTrusted && !pullRequestIdentityVerified)
             throw new InvalidDataException("A trusted pull-request verdict requires independently verified head, base, merge commit, and merge-parent identities.");
-        return FromValidatedProvenance(observedRun, provenance, trustDecision.IsTrusted, candidateCheckoutEvidence);
+        return FromValidatedProvenance(observedRun, provenance, trustDecision.IsTrusted, requiredChecks, candidateCheckoutEvidence);
     }
 
     public static CiWorkflowEvidencePacket FromValidatedProvenance(
         CiWorkflowRunEvidenceObservation observedRun,
         CiWorkflowProvenanceRecord provenance,
         bool workflowDefinitionTrusted,
+        IEnumerable<CiWorkflowRequiredCheckBinding> requiredChecks,
         CiWorkflowCandidateCheckoutEvidence? candidateCheckoutEvidence = null)
     {
         ArgumentNullException.ThrowIfNull(observedRun);
         ArgumentNullException.ThrowIfNull(provenance);
+        ArgumentNullException.ThrowIfNull(requiredChecks);
+        var requiredCheckBindings = requiredChecks.ToArray();
+        ValidateRequiredCheckBindings(requiredCheckBindings);
 
         if (!string.Equals(observedRun.Repository, provenance.Repository, StringComparison.OrdinalIgnoreCase) ||
             observedRun.RunId != provenance.RunId ||
@@ -259,8 +276,9 @@ public sealed record CiWorkflowEvidencePacket
         if (provenance.PullRequest is not null)
             checkoutVerified = checkoutVerified && providerHeadMatches && pullRequestIdentityVerified;
 
+        var requiredCheckObservations = BuildRequiredCheckObservations(observedRun, requiredCheckBindings);
         return new CiWorkflowEvidencePacket(
-            observedRun, provenance, workflowDefinitionTrusted, checkoutVerified);
+            observedRun, provenance, workflowDefinitionTrusted, checkoutVerified, requiredCheckObservations);
     }
 
     public int ContractVersion => CurrentContractVersion;
@@ -271,18 +289,59 @@ public sealed record CiWorkflowEvidencePacket
     public string CandidateRef { get; }
     public string CandidateSha { get; }
     public bool CheckoutVerified { get; }
+    public IReadOnlyList<CiWorkflowRequiredCheckObservation> RequiredChecks { get; }
     public bool PullRequestIdentityVerified => Provenance.PullRequest is null ||
         ObservedRun.ProviderPullRequestObservation is not null &&
         ObservedRun.ProviderPullRequestIdentity is not null &&
         ObservedRun.ProviderPullRequestIdentity.Matches(Provenance) &&
         ObservedRun.ProviderPullRequestIdentity.Matches(ObservedRun.ProviderPullRequestObservation);
-    public bool EvidenceComplete => ObservedRun.EvidenceComplete;
+    public bool EvidenceComplete =>
+        ObservedRun.EvidenceComplete &&
+        RequiredChecks.Count > 0 &&
+        RequiredChecks.All(check =>
+            check.State == "observed" &&
+            check.JobId is > 0 &&
+            check.Status == "completed" &&
+            check.Conclusion is not null &&
+            check.StartedAt.HasValue &&
+            check.CompletedAt.HasValue &&
+            check.CompletedAt.Value >= check.StartedAt.Value);
+
     public bool IsSuccessful =>
+        EvidenceComplete &&
         WorkflowDefinitionTrusted &&
         CheckoutVerified &&
-        EvidenceComplete &&
         ObservedRun.Conclusion == CiRunConclusion.Success &&
-        ObservedRun.Jobs.All(job => job.Status == "completed" && job.Conclusion == "success");
+        RequiredChecks.All(check => check.Conclusion == "success");
+
+    public bool HasActionableDiagnostics =>
+        EvidenceComplete &&
+        WorkflowDefinitionTrusted &&
+        CheckoutVerified &&
+        ObservedRun.Status == CiRunStatus.Completed &&
+        ObservedRun.Conclusion == CiRunConclusion.Failure &&
+        RequiredChecks.All(check => check.Conclusion is "success" or "failure") &&
+        RequiredChecks.Any(check => check.Status == "completed" && check.Conclusion == "failure");
+
+    public string? DiagnosticsFingerprint
+    {
+        get
+        {
+            if (!HasActionableDiagnostics)
+                return null;
+            var material = string.Join("\n", RequiredChecks
+                .OrderBy(check => check.Key, StringComparer.Ordinal)
+                .Select(check => string.Join("|",
+                    check.Key,
+                    check.JobId!.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    check.Status,
+                    check.Conclusion)));
+            return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(material))).ToLowerInvariant();
+        }
+    }
+
+    public string PayloadSha256 =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(ToJson(indented: false)))).ToLowerInvariant();
 
     public IReadOnlyList<string> BlockingReasons { get; }
 
@@ -320,7 +379,19 @@ public sealed record CiWorkflowEvidencePacket
             contractVersion = CurrentContractVersion,
             schema = CurrentSchema,
             observedRun,
-            provenance
+            provenance,
+            requiredChecks = RequiredChecks.Select(check => new
+            {
+                key = check.Key,
+                jobName = check.JobName,
+                state = check.State,
+                jobId = check.JobId,
+                status = check.Status,
+                conclusion = check.Conclusion,
+                evidenceUrl = check.EvidenceUrl,
+                startedAt = check.StartedAt,
+                completedAt = check.CompletedAt
+            }).ToArray()
         };
         return JsonSerializer.Serialize(envelope, new JsonSerializerOptions { WriteIndented = indented });
     }
@@ -336,9 +407,13 @@ public sealed record CiWorkflowEvidencePacket
         long expectedRunId,
         int expectedRunAttempt,
         string expectedPacketSha256,
+        IEnumerable<CiWorkflowRequiredCheckBinding> expectedRequiredChecks,
         bool workflowDefinitionTrusted)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(json);
+        ArgumentNullException.ThrowIfNull(expectedRequiredChecks);
+        var trustedRequiredChecks = expectedRequiredChecks.ToArray();
+        ValidateRequiredCheckBindings(trustedRequiredChecks);
         ArgumentException.ThrowIfNullOrWhiteSpace(expectedPacketSha256);
         if (expectedPacketSha256.Length != 64 || !expectedPacketSha256.All(Uri.IsHexDigit))
             throw new ArgumentException("Expected packet digest must be a full SHA-256 hexadecimal value.", nameof(expectedPacketSha256));
@@ -351,6 +426,12 @@ public sealed record CiWorkflowEvidencePacket
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
         ValidateNoDuplicateProperties(root);
+        ValidateKnownProperties(root,
+            new HashSet<string>(StringComparer.Ordinal)
+            {
+                "contractVersion", "schema", "observedRun", "provenance", "requiredChecks"
+            },
+            "Evidence packet v1 envelope");
         if (root.ValueKind != JsonValueKind.Object ||
             !root.TryGetProperty("contractVersion", out var version) ||
             !version.TryGetInt32(out var parsedVersion) ||
@@ -361,8 +442,12 @@ public sealed record CiWorkflowEvidencePacket
             !root.TryGetProperty("observedRun", out var observedRunElement) ||
             observedRunElement.ValueKind != JsonValueKind.Object ||
             !root.TryGetProperty("provenance", out var provenanceElement) ||
-            provenanceElement.ValueKind != JsonValueKind.Object)
+            provenanceElement.ValueKind != JsonValueKind.Object ||
+            !root.TryGetProperty("requiredChecks", out var requiredChecksElement) ||
+            requiredChecksElement.ValueKind != JsonValueKind.Array)
             throw new InvalidDataException("Evidence packet v1 contract version or schema is unsupported.");
+
+        ValidateProvenanceProperties(provenanceElement);
 
         var observedRun = JsonSerializer.Deserialize<CiWorkflowRunEvidenceObservation>(
             observedRunElement.GetRawText(), ObservationJsonOptions)
@@ -375,11 +460,39 @@ public sealed record CiWorkflowEvidencePacket
             expectedRunAttempt,
             Convert.ToHexString(SHA256.HashData(provenanceBytes)));
 
-        return FromValidatedProvenance(
+        var serializedRequiredChecks = JsonSerializer.Deserialize<CiWorkflowRequiredCheckObservation[]>(
+            requiredChecksElement.GetRawText(), new JsonSerializerOptions(JsonSerializerDefaults.Web))
+            ?? throw new InvalidDataException("Evidence packet v1 required-check observations are invalid.");
+        if (serializedRequiredChecks.Any(check => check is null))
+            throw new InvalidDataException("Evidence packet v1 contains a null required-check observation.");
+        foreach (var checkElement in requiredChecksElement.EnumerateArray())
+            ValidateKnownProperties(checkElement,
+                new HashSet<string>(StringComparer.Ordinal)
+                {
+                    "key", "jobName", "state", "jobId", "status", "conclusion",
+                    "evidenceUrl", "startedAt", "completedAt"
+                },
+                "Evidence packet v1 required-check observation");
+        var serializedBindings = serializedRequiredChecks.Select(check =>
+            new CiWorkflowRequiredCheckBinding(check.Key, check.JobName)).ToArray();
+        try { ValidateRequiredCheckBindings(serializedBindings); }
+        catch (ArgumentException exception)
+        {
+            throw new InvalidDataException("Evidence packet v1 contains invalid required-check identities.", exception);
+        }
+        if (!trustedRequiredChecks.OrderBy(item => item.Key, StringComparer.Ordinal)
+                .SequenceEqual(serializedBindings.OrderBy(item => item.Key, StringComparer.Ordinal)))
+            throw new InvalidDataException("Evidence packet v1 required-check set does not match the trusted host registration.");
+
+        var packet = FromValidatedProvenance(
             observedRun,
             provenance,
             workflowDefinitionTrusted,
+            trustedRequiredChecks,
             observedRun.CandidateCheckoutEvidence);
+        if (!packet.RequiredChecks.SequenceEqual(serializedRequiredChecks))
+            throw new InvalidDataException("Evidence packet v1 required-check observations do not match provider-observed jobs.");
+        return packet;
     }
 
     /// <summary>Reloads evidence using a host-issued protected workflow trust decision.</summary>
@@ -389,17 +502,21 @@ public sealed record CiWorkflowEvidencePacket
         long expectedRunId,
         int expectedRunAttempt,
         string expectedPacketSha256,
+        IEnumerable<CiWorkflowRequiredCheckBinding> expectedRequiredChecks,
         CiWorkflowDefinitionTrustDecision trustDecision,
         CiPullRequestProviderIdentity? pullRequestIdentity = null)
     {
         ArgumentNullException.ThrowIfNull(trustDecision);
+        ArgumentNullException.ThrowIfNull(expectedRequiredChecks);
+        var requiredCheckBindings = expectedRequiredChecks.ToArray();
         var observed = FromJson(
             json, expectedRepository, expectedRunId, expectedRunAttempt,
-            expectedPacketSha256, workflowDefinitionTrusted: false);
+            expectedPacketSha256, requiredCheckBindings, workflowDefinitionTrusted: false);
         return FromValidatedProvenance(
             observed.ObservedRun,
             observed.Provenance,
             trustDecision,
+            requiredCheckBindings,
             pullRequestIdentity,
             observed.ObservedRun.CandidateCheckoutEvidence);
     }
@@ -445,5 +562,161 @@ public sealed record CiWorkflowEvidencePacket
             yield return "pull-request.provider-identity-unverified";
         if (!CheckoutVerified)
             yield return "candidate.checkout-unverified";
+        foreach (var check in RequiredChecks)
+        {
+            if (check.State == "missing") yield return "required-check.missing";
+            else if (check.State == "ambiguous") yield return "required-check.ambiguous";
+            else if (check.Status != "completed" || check.Conclusion is null ||
+                !check.StartedAt.HasValue || !check.CompletedAt.HasValue)
+                yield return "required-check.incomplete";
+            else if (check.Conclusion != "success") yield return "required-check.non-success";
+        }
     }
+
+    private static void ValidateProvenanceProperties(JsonElement provenance)
+    {
+        ValidateKnownProperties(provenance,
+            new HashSet<string>(StringComparer.Ordinal)
+            {
+                "schema", "repository", "runId", "runAttempt", "workflow", "event", "checkout"
+            },
+            "Evidence packet v1 provenance");
+        if (!provenance.TryGetProperty("schema", out var schema) ||
+            schema.ValueKind != JsonValueKind.String ||
+            !string.Equals(schema.GetString(), CiWorkflowProvenanceRecord.CurrentSchema, StringComparison.Ordinal))
+            throw new InvalidDataException("Evidence packet v1 provenance schema is unsupported.");
+
+        var workflow = RequiredObject(provenance, "workflow");
+        ValidateKnownProperties(workflow, new HashSet<string>(StringComparer.Ordinal) { "ref", "sha" },
+            "Evidence packet v1 workflow definition");
+        var eventElement = RequiredObject(provenance, "event");
+        ValidateKnownProperties(eventElement,
+            new HashSet<string>(StringComparer.Ordinal) { "name", "ref", "sha", "pullRequest" },
+            "Evidence packet v1 triggering event");
+        var checkout = RequiredObject(provenance, "checkout");
+        ValidateKnownProperties(checkout, new HashSet<string>(StringComparer.Ordinal) { "ref", "sha" },
+            "Evidence packet v1 candidate checkout");
+
+        if (!eventElement.TryGetProperty("pullRequest", out var pullRequest))
+            throw new InvalidDataException("Evidence packet v1 event is missing its pull-request identity field.");
+        if (pullRequest.ValueKind == JsonValueKind.Object)
+        {
+            ValidateKnownProperties(pullRequest,
+                new HashSet<string>(StringComparer.Ordinal) { "number", "head", "base" },
+                "Evidence packet v1 pull-request identity");
+            var head = RequiredObject(pullRequest, "head");
+            var @base = RequiredObject(pullRequest, "base");
+            ValidateKnownProperties(head, new HashSet<string>(StringComparer.Ordinal) { "ref", "sha" },
+                "Evidence packet v1 pull-request head");
+            ValidateKnownProperties(@base, new HashSet<string>(StringComparer.Ordinal) { "ref", "sha" },
+                "Evidence packet v1 pull-request base");
+        }
+        else if (pullRequest.ValueKind != JsonValueKind.Null)
+        {
+            throw new InvalidDataException("Evidence packet v1 pull-request identity must be an object or null.");
+        }
+    }
+
+    private static JsonElement RequiredObject(JsonElement parent, string propertyName)
+    {
+        if (!parent.TryGetProperty(propertyName, out var value) || value.ValueKind != JsonValueKind.Object)
+            throw new InvalidDataException($"Evidence packet v1 provenance is missing object '{propertyName}'.");
+        return value;
+    }
+
+    private static void ValidateKnownProperties(
+        JsonElement element,
+        IReadOnlySet<string> allowedProperties,
+        string scope)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+            throw new InvalidDataException($"{scope} must be a JSON object.");
+        foreach (var property in element.EnumerateObject())
+        {
+            if (!allowedProperties.Contains(property.Name))
+                throw new InvalidDataException($"{scope} contains unsupported property '{property.Name}'.");
+        }
+    }
+
+    private static IReadOnlyList<CiWorkflowRequiredCheckObservation> BuildRequiredCheckObservations(
+        CiWorkflowRunEvidenceObservation observedRun,
+        IReadOnlyList<CiWorkflowRequiredCheckBinding> bindings)
+    {
+        return Array.AsReadOnly(bindings.OrderBy(binding => binding.Key, StringComparer.Ordinal).Select(binding =>
+        {
+            var matches = observedRun.Jobs.Where(job =>
+                string.Equals(job.Name, binding.JobName, StringComparison.Ordinal)).ToArray();
+            if (matches.Length == 0)
+                return new CiWorkflowRequiredCheckObservation(
+                    binding.Key, binding.JobName, "missing", null, null, null, null, null, null);
+            if (matches.Length > 1)
+                return new CiWorkflowRequiredCheckObservation(
+                    binding.Key, binding.JobName, "ambiguous", null, null, null, null, null, null);
+            var job = matches[0];
+            return new CiWorkflowRequiredCheckObservation(
+                binding.Key, binding.JobName, "observed", job.JobId, job.Status, job.Conclusion,
+                job.EvidenceUrl, job.StartedAt, job.CompletedAt);
+        }).ToArray());
+    }
+
+    private static void ValidateRequiredCheckBindings(IReadOnlyList<CiWorkflowRequiredCheckBinding> bindings)
+    {
+        if (bindings.Count == 0 || bindings.Any(binding =>
+            binding is null || string.IsNullOrWhiteSpace(binding.Key) || binding.Key.Length > 100 ||
+            !binding.Key.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_' or '.') ||
+            string.IsNullOrWhiteSpace(binding.JobName) || binding.JobName.Length > 200 ||
+            binding.JobName.Any(char.IsControl)))
+            throw new ArgumentException("At least one valid required-check key and exact provider job name is required.", nameof(bindings));
+        if (bindings.Select(binding => binding.Key).Distinct(StringComparer.Ordinal).Count() != bindings.Count ||
+            bindings.Select(binding => binding.JobName).Distinct(StringComparer.Ordinal).Count() != bindings.Count)
+            throw new ArgumentException("Required-check keys and provider job names must be unique.", nameof(bindings));
+    }
+
+    private static void ValidateRequiredCheckObservations(IReadOnlyList<CiWorkflowRequiredCheckObservation> checks)
+    {
+        if (checks.Any(check => check is null))
+            throw new InvalidDataException("Evidence packet v1 contains a null required-check observation.");
+        ValidateRequiredCheckBindings(checks.Select(check =>
+            new CiWorkflowRequiredCheckBinding(check.Key, check.JobName)).ToArray());
+        foreach (var check in checks)
+        {
+            if (check.State is not ("observed" or "missing" or "ambiguous"))
+                throw new InvalidDataException("Evidence packet v1 contains an unknown required-check observation state.");
+            if (check.State == "observed")
+            {
+                if (check.JobId is not > 0 || check.Status is null ||
+                    (check.Conclusion is not null && !IsKnownConclusion(check.Conclusion)) ||
+                    check.EvidenceUrl is null || !IsSafeGitHubUrl(check.EvidenceUrl) ||
+                    !check.StartedAt.HasValue || !check.CompletedAt.HasValue ||
+                    check.CompletedAt.Value < check.StartedAt.Value)
+                    throw new InvalidDataException("Evidence packet v1 contains malformed provider job evidence.");
+            }
+            else if (check.JobId.HasValue || check.Status is not null || check.Conclusion is not null ||
+                check.EvidenceUrl is not null || check.StartedAt.HasValue || check.CompletedAt.HasValue)
+                throw new InvalidDataException("Missing or ambiguous required checks cannot carry unverified job identity.");
+        }
+    }
+
+    private static bool IsKnownConclusion(string value) =>
+        value is "success" or "failure" or "cancelled" or "timed_out" or "action_required" or
+            "neutral" or "skipped" or "stale" or "startup_failure";
+
+    private static bool IsSafeGitHubUrl(Uri uri) =>
+        uri.IsAbsoluteUri && uri.Scheme == Uri.UriSchemeHttps && uri.IsDefaultPort &&
+        string.Equals(uri.Host, "github.com", StringComparison.OrdinalIgnoreCase) &&
+        string.IsNullOrEmpty(uri.UserInfo) && string.IsNullOrEmpty(uri.Query) &&
+        string.IsNullOrEmpty(uri.Fragment);
 }
+
+public sealed record CiWorkflowRequiredCheckBinding(string Key, string JobName);
+
+public sealed record CiWorkflowRequiredCheckObservation(
+    string Key,
+    string JobName,
+    string State,
+    long? JobId,
+    string? Status,
+    string? Conclusion,
+    Uri? EvidenceUrl,
+    DateTimeOffset? StartedAt,
+    DateTimeOffset? CompletedAt);

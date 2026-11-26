@@ -60,6 +60,8 @@ internal static class CiTestResultReportTests
         Throws<ArgumentException>(() => new CiRequiredJobDefinition(WorkflowPath, "../unsafe", JobName));
         var actionable = CiTestResultReport.ParseAndValidate(
             failedTrx, failedPacket, failedSource, RequiredPolicy, ObservedAt);
+        Assert(actionable.WorkflowEvidenceSha256 == failedPacket.PayloadSha256,
+            "test-result verdict is not bound to the exact canonical v1 workflow-evidence payload digest");
 
         // Exercise the complete trust path: provider ZIP digest -> bounded archive extraction ->
         // embedded provenance digest/identity -> trusted run evidence -> normalized test verdict.
@@ -322,8 +324,8 @@ internal static class CiTestResultReportTests
             truncated.Results[0].StackTrace!.Length <= 8_020,
             "diagnostic message or stack trace was not bounded");
 
-        Console.WriteLine("PASS: 52 provenance-bound TRX diagnostic report contract checks.");
-        return 52;
+        Console.WriteLine("PASS: 53 provenance-bound TRX diagnostic report contract checks.");
+        return 53;
     }
 
     internal static CiTestResultReport CreateSampleReport()
@@ -437,7 +439,8 @@ internal static class CiTestResultReportTests
             ProviderPullRequestObservation = providerObservation,
             ProviderPullRequestIdentity = providerIdentity
         };
-        return CiWorkflowEvidencePacket.FromValidatedProvenance(observed, provenance, workflowTrusted);
+        return CiWorkflowEvidencePacket.FromValidatedProvenance(observed, provenance, workflowTrusted,
+            new[] { new CiWorkflowRequiredCheckBinding(JobKey, JobName) });
     }
 
     private static (CiTestResultArtifactSource Source, CiTestResultArtifactArchive Archive) CreateSourceAndArchive(

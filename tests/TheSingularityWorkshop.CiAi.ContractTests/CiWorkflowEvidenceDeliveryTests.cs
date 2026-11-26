@@ -5,6 +5,8 @@ using TheSingularityWorkshop.CiAi;
 
 internal static class CiWorkflowEvidenceDeliveryTests
 {
+    private static readonly CiWorkflowRequiredCheckBinding[] RequiredChecks =
+        { new("build", "build") };
     public static int Run()
     {
         var root = Path.Combine(Path.GetTempPath(), "ciai-v1-delivery-" + Guid.NewGuid().ToString("N"));
@@ -29,7 +31,7 @@ internal static class CiWorkflowEvidenceDeliveryTests
                 CiWorkflowEvidenceEnqueueOutcome.Duplicate,
                 "v1 run attempt was not deduplicated across delivery IDs");
 
-            var replay = new FileCiWorkflowEvidenceOutbox(Path.Combine(root, "v1-outbox.jsonl")).ReadPending();
+            var replay = new FileCiWorkflowEvidenceOutbox(Path.Combine(root, "v1-outbox.jsonl")).ReadPending(RequiredChecks);
             Assert(replay.Count == 1 && replay[0].PayloadSha256 == delivery.PayloadSha256 &&
                 replay[0].IdempotencyKey == delivery.IdempotencyKey,
                 "v1 outbox did not replay the exact payload and provenance identity");
@@ -41,13 +43,13 @@ internal static class CiWorkflowEvidenceDeliveryTests
             File.WriteAllText(uppercaseKeyPath, persistedOutbox.Replace(
                 delivery.IdempotencyKey, "sha256:" + new string('A', 64), StringComparison.Ordinal));
             AssertThrows<InvalidDataException>(() =>
-                new FileCiWorkflowEvidenceOutbox(uppercaseKeyPath).ReadPending());
+                new FileCiWorkflowEvidenceOutbox(uppercaseKeyPath).ReadPending(RequiredChecks));
             var nullKeyPath = Path.Combine(root, "v1-outbox-null-key.jsonl");
             File.WriteAllText(nullKeyPath, persistedOutbox.Replace(
                 "\"IdempotencyKey\":\"" + delivery.IdempotencyKey + "\"",
                 "\"IdempotencyKey\":null", StringComparison.Ordinal));
             AssertThrows<InvalidDataException>(() =>
-                new FileCiWorkflowEvidenceOutbox(nullKeyPath).ReadPending());
+                new FileCiWorkflowEvidenceOutbox(nullKeyPath).ReadPending(RequiredChecks));
 
             var changedPacket = CreatePacket(workflowName: "Different observed workflow label");
             var conflict = new CiWorkflowEvidenceDelivery("v1-delivery-conflict", changedPacket);
@@ -67,7 +69,7 @@ internal static class CiWorkflowEvidenceDeliveryTests
             Assert(ledger.ReadAcknowledgedDeliveryIds().Contains(delivery.DeliveryId),
                 "accepted v1 receipt did not acknowledge the exact delivery");
             Assert(new FileCiWorkflowEvidenceOutbox(Path.Combine(root, "v1-outbox.jsonl"))
-                .ReadPending(ledger.ReadAcknowledgedDeliveryIds()).Count == 0,
+                .ReadPending(RequiredChecks, ledger.ReadAcknowledgedDeliveryIds()).Count == 0,
                 "accepted v1 receipt did not suppress replay");
 
             var rejectedDelivery = new CiWorkflowEvidenceDelivery("v1-delivery-rejected",
@@ -235,7 +237,11 @@ internal static class CiWorkflowEvidenceDeliveryTests
             Array.AsReadOnly(new[]
             {
                 new CiWorkflowStepObservation(1, "Build and test", "completed", "success", "2026-10-31T01:00:00Z")
-            }));
+            }))
+        {
+            StartedAt = DateTimeOffset.Parse("2026-10-31T00:59:00Z"),
+            CompletedAt = DateTimeOffset.Parse("2026-10-31T01:00:30Z")
+        };
         var observed = new CiWorkflowRunEvidenceObservation(
             "TrentBest/SimpleDemos", ".github/workflows/ci.yml", runId, 1,
             "refs/heads/development", eventSha, "push", workflowName,
@@ -244,7 +250,8 @@ internal static class CiWorkflowEvidenceDeliveryTests
             DateTimeOffset.Parse("2026-10-31T01:01:00Z"),
             Array.AsReadOnly(new[] { job }), true, true);
         return CiWorkflowEvidencePacket.FromValidatedProvenance(
-            observed, provenance, workflowDefinitionTrusted: true);
+            observed, provenance, workflowDefinitionTrusted: true,
+            new[] { new CiWorkflowRequiredCheckBinding("build", "build") });
     }
 
     private static void Assert(bool condition, string message)

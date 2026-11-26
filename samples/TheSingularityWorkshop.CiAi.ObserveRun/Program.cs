@@ -196,7 +196,7 @@ try
     }
 
     CiTestResultReport? testResultReport = null;
-    CiWorkflowEvidencePacketV2? workflowEvidenceV2 = null;
+    CiWorkflowEvidencePacket? workflowEvidence = null;
     if (provenanceRequired && workflowTrustDecision?.IsTrusted == true)
     {
         if (workflowProvenance is null || requiredJobCollection is null)
@@ -220,32 +220,33 @@ try
             new CiRequiredJobDefinition(observerProfile.WorkflowPath, observerProfile.RequiredJobKey, observerProfile.RequiredJobName, testArtifactName)
         });
         var observedAt = DateTimeOffset.UtcNow;
-        var evidencePacket = CiWorkflowEvidencePacket.FromCollections(
+        var requiredCheckBindings = new[]
+        {
+            new CiWorkflowRequiredCheckBinding(observerProfile.RequiredJobKey, observerProfile.RequiredJobName)
+        };
+        workflowEvidence = CiWorkflowEvidencePacket.FromCollections(
             runCollection, requiredJobCollection, sourceRunId, sourceRunAttempt,
-            observedAt, workflowProvenance.Provenance, workflowTrustDecision!,
+            observedAt, workflowProvenance.Provenance, workflowTrustDecision!, requiredCheckBindings,
             artifactReferences: new[]
             {
                 new Uri($"https://github.com/{repository}/actions/runs/{sourceRunId}/artifacts/{workflowProvenance.ProviderArtifact.ArtifactId}"),
                 new Uri($"https://github.com/{repository}/actions/runs/{sourceRunId}/artifacts/{sourceProviderArtifact.ArtifactId}")
             });
-        workflowEvidenceV2 = CiWorkflowEvidencePacketV2.FromPacket(
-            evidencePacket,
-            new[] { new CiWorkflowRequiredCheckBinding(observerProfile.RequiredJobKey, observerProfile.RequiredJobName) });
         Directory.CreateDirectory("artifacts");
         await File.WriteAllTextAsync(
-            "artifacts/commit-observation.workflow-evidence-v2.json",
-            workflowEvidenceV2.ToJson());
+            "artifacts/commit-observation.workflow-evidence-v1.json",
+            workflowEvidence.ToJson());
         var requiredJob = requiredJobCollection.Jobs.Single(job =>
             job.RunId == sourceRunId && job.RunAttempt == sourceRunAttempt &&
             string.Equals(job.Name, observerProfile.RequiredJobName, StringComparison.Ordinal));
         var providerBinding = CiTestResultProviderArtifactBinding.FromObservedArtifact(
-            sourceProviderArtifact, evidencePacket, requiredJobPolicy, requiredJob.JobId, observerProfile.RequiredJobKey);
+            sourceProviderArtifact, workflowEvidence, requiredJobPolicy, requiredJob.JobId, observerProfile.RequiredJobKey);
         var sourceArchive = CiTestResultArtifactArchive.Read(
             sourceArchiveBytes, providerBinding, observerProfile.TrxEntryName, "provenance.json");
         var source = CiTestResultArtifactSource.FromVerifiedProviderObservation(
-            evidencePacket, requiredJobPolicy, providerBinding, sourceArchive, observerProfile.TestProviderLabel);
+            workflowEvidence, requiredJobPolicy, providerBinding, sourceArchive, observerProfile.TestProviderLabel);
         testResultReport = CiTestResultReport.ParseAndValidate(
-            sourceArchive, evidencePacket, source, requiredJobPolicy, DateTimeOffset.UtcNow);
+            sourceArchive, workflowEvidence, source, requiredJobPolicy, DateTimeOffset.UtcNow);
         Directory.CreateDirectory("artifacts");
         await File.WriteAllBytesAsync("artifacts/test-results-report.json", testResultReport.ToCanonicalUtf8Bytes());
     }
@@ -270,20 +271,20 @@ try
     var testResultReportValid = !provenanceRequired || testResultReport is not null;
     var complete = CiRequiredWorkflowEvidenceEvaluator.IsPassing(discoveryComplete, requiredWorkflowResults) &&
         exactRunBindingValid && workflowProvenanceValid && testResultReportValid &&
-        (!provenanceRequired || workflowEvidenceV2?.EvidenceComplete == true);
-    JsonElement? workflowEvidenceV2Json = null;
-    if (workflowEvidenceV2 is not null)
+        (!provenanceRequired || workflowEvidence?.EvidenceComplete == true);
+    JsonElement? workflowEvidenceJson = null;
+    if (workflowEvidence is not null)
     {
-        using var v2Document = JsonDocument.Parse(workflowEvidenceV2.ToJson());
-        workflowEvidenceV2Json = v2Document.RootElement.Clone();
+        using var evidenceDocument = JsonDocument.Parse(workflowEvidence.ToJson());
+        workflowEvidenceJson = evidenceDocument.RootElement.Clone();
     }
-    var workflowEvidenceV2Complete = workflowEvidenceV2?.EvidenceComplete ?? false;
-    var workflowEvidenceV2Successful = workflowEvidenceV2?.IsSuccessful ?? false;
-    var workflowEvidenceV2HasActionableDiagnostics = workflowEvidenceV2?.HasActionableDiagnostics ?? false;
+    var workflowEvidenceComplete = workflowEvidence?.EvidenceComplete ?? false;
+    var workflowEvidenceSuccessful = workflowEvidence?.IsSuccessful ?? false;
+    var workflowEvidenceHasActionableDiagnostics = workflowEvidence?.HasActionableDiagnostics ?? false;
 
     var report = new
     {
-        schema = "ciai.commit-observation.v2",
+        schema = "ciai.commit-observation.v1",
         reportType = "read-only-workflow-observation",
         observerProfile = observerProfile.Id,
         repository,
@@ -318,11 +319,11 @@ try
             checkoutSha = workflowProvenance?.Provenance.CheckoutSha
         },
         workflowProvenanceValid,
-        workflowEvidenceV2 = workflowEvidenceV2Json,
-        workflowEvidenceV2Sha256 = workflowEvidenceV2?.PayloadSha256,
-        workflowEvidenceV2Complete,
-        workflowEvidenceV2Successful,
-        workflowEvidenceV2HasActionableDiagnostics,
+        workflowEvidence = workflowEvidenceJson,
+        workflowEvidenceSha256 = workflowEvidence?.PayloadSha256,
+        workflowEvidenceComplete,
+        workflowEvidenceSuccessful,
+        workflowEvidenceHasActionableDiagnostics,
         workflowDefinitionTrust = new
         {
             evaluated = workflowTrustDecision is not null,

@@ -189,8 +189,8 @@ internal static class ExecutionArtifactReadyNoticeDeliveryCoordinatorTests
         var sha = "abcdef0123456789abcdef0123456789abcdef01";
         var manifest = new ArtifactManifest(
             "request-" + noticeId, "operation-" + noticeId, idempotencyKey,
-            "TrentBest/TheSingularityWorkshop.CiAi", "ci.evidence", "2.0.0",
-            sha, "artifact-" + noticeId, "v2", sha,
+            "TrentBest/TheSingularityWorkshop.CiAi", "ci.evidence", "1.0.0",
+            sha, "artifact-" + noticeId, CiWorkflowEvidencePacket.CurrentSchema, sha,
             "SHA-256", new string('a', 64), "application/json", 1024,
             new Uri("https://artifacts.example/evidence/" + noticeId),
             DateTimeOffset.Parse("2026-10-31T00:00:00Z"),

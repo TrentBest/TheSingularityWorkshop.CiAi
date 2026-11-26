@@ -14,7 +14,7 @@ CiAi should use GrammarAi to define its own versioned CI domain map: workflow pl
 - **GrammarAi:** reusable production/structural grammar definitions, typed node and slot identities, schema versioning, graph validation, and compact integer-first proposal codec.
 - **CiAi:** CI-specific action vocabulary and parameter identities, workflow-domain semantics, evidence/policy evaluation, and CI-provider adapters.
 - **CommandAi:** generic atomic-command proposal representation and serialization.
-- **Foundry/host:** live-state checks, runtime stepping, authorization, approval, dispatch, execution, retry/replay lifecycle.
+- **FSM_Execution/host:** live-state checks, runtime stepping, authorization, approval, dispatch, execution, retry/replay lifecycle.
 - **CI provider:** authoritative workflow, run, job, step, and artifact state.
 
 A valid GrammarAi structure is untrusted intent. Structural validity does not establish semantic correctness, successful CI evidence, authorization, or permission to execute, publish, or deploy.
@@ -46,7 +46,7 @@ The CiAi integration should retain the existing provider evidence contract:
 - exact resolved source revisions of each sibling dependency, including the GrammarAi and ProtocolAi pins;
 - distinct missing, not-triggered, skipped, cancelled, unavailable, unknown, failed, and successful states.
 
-GrammarAi validates the proposed structure. CiAi evaluates the meaning of the declared CI policy against provider evidence. Foundry/host owns execution authorization and lifecycle.
+GrammarAi validates the proposed structure. CiAi evaluates the meaning of the declared CI policy against provider evidence. FSM_Execution/host owns execution authorization and lifecycle.
 
 ## Adoption and verification
 
