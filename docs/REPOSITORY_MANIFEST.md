@@ -11,7 +11,7 @@ Supported root fields:
 - `schema`: exactly `ciai.repository.v1`.
 - `repository`: canonical `owner/repository` identity.
 - `observerProfile`: optional built-in profile ID.
-- `badges`: declarative badge registrations.
+- `badges`: provider-neutral declarative badge registrations, including renderer, artifact, accessibility, and evidence metadata.
 - `dependencies`: direct repository dependencies with optional capability labels.
 - `extensions`: declarative extension IDs and versions.
 - `relationships`: directed repository relationship declarations.
