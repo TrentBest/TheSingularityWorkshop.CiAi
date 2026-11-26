@@ -1,77 +1,42 @@
-# Repository manifest v1
+# Repository manifest
 
-CiAi repositories may declare their repository-level composition in
-`.ciai/repository.json`. The manifest is data, not executable workflow
-instructions. It is parsed into the existing immutable
-`CiAiRepositoryDefinition` builder model.
+CiAi repositories declare repository-level composition in `.ciai/repository.json`. The manifest is data, not executable workflow instructions. It is parsed into the existing immutable `CiAiRepositoryDefinition` builder model.
 
-## Supported fields
+## Single prerelease contract
 
-- `schema`: must be `ciai.repository.v1`.
+The current prerelease contract uses the existing identifier `ciai.repository.v1`. There is one canonical parser and serializer, with no compatibility split for unreleased formats.
+
+Supported root fields:
+
+- `schema`: exactly `ciai.repository.v1`.
 - `repository`: canonical `owner/repository` identity.
-- `observerProfile`: optional built-in profile ID (`ciai-default`,
-  `rawwar-contracts-v1`, or `anyapp-development-v1`).
-- `badges`: live workflow badge declarations.
-- `dependencies`: direct repository dependencies with optional capability
-  labels.
+- `observerProfile`: optional built-in profile ID.
+- `badges`: provider-neutral declarative badge registrations, including renderer, artifact, accessibility, and evidence metadata.
+- `dependencies`: direct repository dependencies with optional capability labels.
 - `extensions`: declarative extension IDs and versions.
+- `relationships`: directed repository relationship declarations.
+- `adp`: optional bounded ADP settings; null or omission leaves autonomous development disabled.
 
-Unknown properties, duplicate JSON properties, unknown observer profiles,
-invalid identities, and self-dependencies are rejected. The parser does not
-execute extension content or infer package adoption.
+Relationships are versioned edges with explicit source, target, artifact kind, and authority repository. Supported kinds are `ContentContribution`, `CanonicalContentConsumption`, `ExperienceValidation`, and `BuildDependency`.
 
-## Version 2: ADP relationship graph
+The optional `adp` object contains `maximumRepairAttempts` and `requireHumanApprovalForWrites`. Relationship metadata does not itself enable autonomous execution. ADP is enabled only by explicit non-null settings.
 
-Manifest v2 uses `ciai.repository.v2` and adds a required `relationships` array plus optional `adp` settings. Each relationship is a directed, versioned edge with explicit source, target, artifact kind, and authority repository. Supported kinds are:
+Unknown properties, duplicate JSON properties, unknown observer profiles, invalid identities, self-dependencies, malformed relationships, and invalid ADP bounds are rejected. The parser does not execute extension content or infer package adoption.
 
-- `ContentContribution`
-- `CanonicalContentConsumption`
-- `ExperienceValidation`
-- `BuildDependency`
+Schema: [ciai.repository.schema.json](../schemas/ciai.repository.schema.json).
 
-The v2 parser validates each edge and rejects duplicate relationship IDs, malformed endpoints, unsupported kinds, unknown properties, and invalid ADP bounds. The optional `adp` object contains `maximumRepairAttempts` and `requireHumanApprovalForWrites`. Omitting it or setting it to null enrolls relationship metadata without enabling autonomous execution.
+## Boundaries
 
-CiAi's own `.ciai/repository.json` now declares the three raWWar/SURPS feedback edges. Its `adp` value is intentionally null: the graph is enrolled, but durable event delivery and authorized execution are not yet operational.
+The manifest is a composition declaration—not a release gate, CI dispatch permission, LLM budget grant, or publication authorization. It does not silently flatten dependency expressions it cannot represent; serialization rejects unsupported declarations rather than losing information.
 
-Schema: [ciai.repository.v2.schema.json](../schemas/ciai.repository.v2.schema.json).
-
-## Version boundary
-
-Manifest v1 intentionally serializes direct repository dependencies only.
-The fluent builder can also express ordered fallback dependencies and ADP
-pipeline/allocation declarations, but those richer declarations are not
-silently flattened into this schema. `ToJson()` rejects a definition that
-contains dependency expressions v1 cannot represent. A later schema revision
-must encode those concepts explicitly and preserve their order and bounds.
-
-## Observer profiles
-
-Profiles describe expected workflow paths, artifact naming templates, and
-test-result entry names. They are not evidence. Provider-observed run/job/
-artifact metadata, exact source and checkout identities, workflow-definition
-trust, and host authorization remain independent inputs to any evidence
-verdict.
-
-The manifest is therefore a composition declaration—not a release gate, CI
-dispatch permission, LLM budget grant, or publication authorization.
+Observer profiles describe expected workflow paths, artifact naming templates, and test-result entry names. They are not evidence. Provider-observed run/job/artifact metadata, exact source and checkout identities, workflow-definition trust, and host authorization remain independent inputs to any evidence verdict.
 
 ## Automated validation
-
-The repository solution includes the read-only validator:
 
 ```bash
 dotnet run --project tools/CiAi.Repository -- --check-manifest
 ```
 
-The command verifies the manifest schema, repository identity (when
-`GITHUB_REPOSITORY` is available), and canonical deterministic JSON. It does
-not write files or contact GitHub. The main contract workflow runs it after
-the solution build.
+The command verifies the manifest schema, repository identity (when `GITHUB_REPOSITORY` is available), and canonical deterministic JSON. It does not write files or contact GitHub.
 
-Consumers can call
-`.github/workflows/ciai-repository.yml` as a reusable workflow. Pin the
-workflow reference itself and its required `ciai-ref` input to the same
-reviewed, immutable 40-character CiAi commit SHA. The reusable workflow checks
-out the consumer's exact event commit, validates the pin, and runs the
-read-only manifest check. No consumer workflow has been migrated by adding
-this reusable capability.
+Consumers can call `.github/workflows/ciai-repository.yml` as a reusable workflow. Pin the workflow reference itself and its required `ciai-ref` input to the same reviewed, immutable 40-character CiAi commit SHA. No consumer workflow is migrated merely by adding this reusable capability.

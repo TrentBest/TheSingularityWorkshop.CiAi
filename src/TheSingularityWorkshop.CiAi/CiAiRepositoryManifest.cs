@@ -4,12 +4,11 @@ namespace TheSingularityWorkshop.CiAi;
 
 /// <summary>
 /// Parsed, immutable repository manifest. It contains declarations only; it grants no CI, network,
-/// LLM, deployment, or repository-write authority. Manifest v2 adds directed ADP relationships and optional bounded execution settings.
+/// LLM, deployment, or repository-write authority. The single prerelease contract includes directed ADP relationships and optional bounded execution settings.
 /// </summary>
 public sealed record CiAiRepositoryManifest
 {
     public const string CurrentSchema = "ciai.repository.v1";
-    public const string CurrentSchemaV2 = "ciai.repository.v2";
 
     private CiAiRepositoryManifest(CiAiRepositoryDefinition definition, string? observerProfile, string schema)
     {
@@ -30,13 +29,9 @@ public sealed record CiAiRepositoryManifest
         RequireObject(root, "manifest");
         RejectDuplicateProperties(root);
         var schema = RequiredString(root, "schema");
-        var isV2 = string.Equals(schema, CurrentSchemaV2, StringComparison.Ordinal);
-        if (!isV2 && !string.Equals(schema, CurrentSchema, StringComparison.Ordinal))
+        if (!string.Equals(schema, CurrentSchema, StringComparison.Ordinal))
             throw new InvalidDataException($"Repository manifest schema '{schema}' is not supported.");
-        if (isV2)
-            EnsureAllowedProperties(root, "schema", "repository", "observerProfile", "badges", "dependencies", "extensions", "relationships", "adp");
-        else
-            EnsureAllowedProperties(root, "schema", "repository", "observerProfile", "badges", "dependencies", "extensions");
+        EnsureAllowedProperties(root, "schema", "repository", "observerProfile", "badges", "dependencies", "extensions", "relationships", "adp");
 
         var repository = RequiredString(root, "repository");
         var builder = CiAi.ForRepository(repository);
@@ -44,9 +39,20 @@ public sealed record CiAiRepositoryManifest
         foreach (var badge in RequiredArray(root, "badges").EnumerateArray())
         {
             RequireObject(badge, "badge");
-            EnsureAllowedProperties(badge, "id", "label", "workflowFile");
+            EnsureAllowedProperties(badge, "id", "label", "providerId", "renderer", "outputPath", "altText", "evidenceSource", "unknownState", "workflowFile", "targetUrl", "imageUrl");
+            var badgeId = RequiredString(badge, "id");
+            var badgeLabel = RequiredString(badge, "label");
             builder = builder.WithBadge(new CiAiBadgeDefinition(
-                RequiredString(badge, "id"), RequiredString(badge, "label"), RequiredString(badge, "workflowFile")));
+                badgeId, badgeLabel,
+                OptionalString(badge, "providerId") ?? "github-actions",
+                OptionalString(badge, "renderer") ?? "github-actions-workflow",
+                OptionalString(badge, "outputPath") ?? ".github/badges/" + badgeId + ".svg",
+                OptionalString(badge, "altText") ?? badgeLabel + " status badge",
+                OptionalString(badge, "evidenceSource") ?? "github-actions-workflow",
+                OptionalString(badge, "unknownState") ?? "unavailable",
+                OptionalString(badge, "workflowFile"),
+                OptionalString(badge, "targetUrl"),
+                OptionalString(badge, "imageUrl")));
         }
 
         foreach (var dependency in RequiredArray(root, "dependencies").EnumerateArray())
@@ -65,9 +71,11 @@ public sealed record CiAiRepositoryManifest
                 RequiredString(extension, "id"), RequiredString(extension, "version")));
         }
 
-        if (isV2)
+        if (root.TryGetProperty("relationships", out var relationships))
         {
-            foreach (var relationship in RequiredArray(root, "relationships").EnumerateArray())
+            if (relationships.ValueKind != JsonValueKind.Array)
+                throw new InvalidDataException("Repository manifest property 'relationships' must be an array.");
+            foreach (var relationship in relationships.EnumerateArray())
             {
                 RequireObject(relationship, "relationship");
                 EnsureAllowedProperties(relationship, "relationshipId", "contractVersion", "kind", "sourceRepository", "targetRepository", "artifactKind", "authorityRepository");
@@ -83,15 +91,15 @@ public sealed record CiAiRepositoryManifest
                     RequiredString(relationship, "artifactKind"),
                     RequiredString(relationship, "authorityRepository")));
             }
+        }
 
-            if (root.TryGetProperty("adp", out var adp) && adp.ValueKind != JsonValueKind.Null)
-            {
-                RequireObject(adp, "ADP settings");
-                EnsureAllowedProperties(adp, "maximumRepairAttempts", "requireHumanApprovalForWrites");
-                builder = builder.WithADP(new CiAiAdpSettings(
-                    RequiredInt32(adp, "maximumRepairAttempts"),
-                    RequiredBoolean(adp, "requireHumanApprovalForWrites")));
-            }
+        if (root.TryGetProperty("adp", out var adp) && adp.ValueKind != JsonValueKind.Null)
+        {
+            RequireObject(adp, "ADP settings");
+            EnsureAllowedProperties(adp, "maximumRepairAttempts", "requireHumanApprovalForWrites");
+            builder = builder.WithADP(new CiAiAdpSettings(
+                RequiredInt32(adp, "maximumRepairAttempts"),
+                RequiredBoolean(adp, "requireHumanApprovalForWrites")));
         }
 
         var profile = OptionalString(root, "observerProfile");
@@ -105,17 +113,18 @@ public sealed record CiAiRepositoryManifest
     {
         var definition = Definition;
         if (definition.Dependencies.Any(item => item is not CiAiRepositoryDependency))
-            throw new InvalidOperationException("Repository manifests serialize direct repository dependencies only; fallback expressions require a later schema version.");
+            throw new InvalidOperationException("Repository manifests serialize direct repository dependencies only; fallback expressions are not represented by the current manifest contract.");
         if (definition.LlmAllocation is not null)
             throw new InvalidOperationException("LLM allocation is not yet part of the repository manifest contract.");
-        if (Schema == CurrentSchema && (definition.Relationships.Count > 0 || definition.AdpSettings is not null))
-            throw new InvalidOperationException("Repository manifest v1 cannot serialize ADP relationships or settings; use schema v2.");
-        if (Schema is not (CurrentSchema or CurrentSchemaV2))
+        if (Schema != CurrentSchema)
             throw new InvalidOperationException($"Unsupported repository manifest schema '{Schema}'.");
 
         var badges = definition.Badges.OrderBy(x => x.Id, StringComparer.Ordinal).Select(x => new
         {
-            id = x.Id, label = x.Label, workflowFile = x.WorkflowFile
+            id = x.Id, label = x.Label, providerId = x.ProviderId, renderer = x.Renderer,
+            outputPath = x.OutputPath, altText = x.AltText, evidenceSource = x.EvidenceSource,
+            unknownState = x.UnknownState, workflowFile = x.WorkflowFile,
+            targetUrl = x.StaticTargetUrl, imageUrl = x.StaticImageUrl
         }).ToArray();
         var dependencies = definition.Dependencies.SelectMany(item => item switch
         {
@@ -127,20 +136,6 @@ public sealed record CiAiRepositoryManifest
         }).OrderBy(x => x.repository, StringComparer.Ordinal).ThenBy(x => x.capability, StringComparer.Ordinal).ToArray();
         var extensions = definition.Extensions.OrderBy(x => x.Id, StringComparer.Ordinal)
             .Select(x => new { id = x.Id, version = x.Version }).ToArray();
-
-        if (Schema == CurrentSchema)
-        {
-            var payloadV1 = new
-            {
-                schema = CurrentSchema,
-                repository = definition.Repository,
-                observerProfile = ObserverProfile,
-                badges,
-                dependencies,
-                extensions
-            };
-            return JsonSerializer.Serialize(payloadV1, new JsonSerializerOptions { WriteIndented = true }) + "\n";
-        }
 
         var relationships = definition.Relationships.OrderBy(x => x.RelationshipId, StringComparer.Ordinal)
             .Select(x => new
@@ -158,9 +153,9 @@ public sealed record CiAiRepositoryManifest
             maximumRepairAttempts = definition.AdpSettings.MaximumRepairAttempts,
             requireHumanApprovalForWrites = definition.AdpSettings.RequireHumanApprovalForWrites
         };
-        var payloadV2 = new
+        var payload = new
         {
-            schema = CurrentSchemaV2,
+            schema = CurrentSchema,
             repository = definition.Repository,
             observerProfile = ObserverProfile,
             badges,
@@ -169,7 +164,7 @@ public sealed record CiAiRepositoryManifest
             relationships,
             adp
         };
-        return JsonSerializer.Serialize(payloadV2, new JsonSerializerOptions { WriteIndented = true }) + "\n";
+        return JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }) + "\n";
     }
 
     private sealed record DependencyJson(string repository, string? capability);

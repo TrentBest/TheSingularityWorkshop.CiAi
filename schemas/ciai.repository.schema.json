@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/TrentBest/TheSingularityWorkshop.CiAi/development/schemas/ciai.repository.v2.schema.json",
-  "title": "CiAi repository manifest v2",
+  "$id": "https://raw.githubusercontent.com/TrentBest/TheSingularityWorkshop.CiAi/development/schemas/ciai.repository.schema.json",
+  "title": "CiAi repository manifest",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -9,12 +9,11 @@
     "repository",
     "badges",
     "dependencies",
-    "extensions",
-    "relationships"
+    "extensions"
   ],
   "properties": {
     "schema": {
-      "const": "ciai.repository.v2"
+      "const": "ciai.repository.v1"
     },
     "repository": {
       "$ref": "#/$defs/repository"
@@ -70,26 +69,19 @@
     "badge": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "id",
-        "label",
-        "workflowFile"
-      ],
+      "required": ["id", "label"],
       "properties": {
-        "id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 64
-        },
-        "label": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 80
-        },
-        "workflowFile": {
-          "type": "string",
-          "pattern": "^[^/]+\\.ya?ml$"
-        }
+        "id": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9_.-]+$" },
+        "label": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "providerId": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "renderer": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "outputPath": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "altText": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "evidenceSource": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "unknownState": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "workflowFile": { "type": ["string", "null"], "pattern": "^[^/]+\\.ya?ml$" },
+        "targetUrl": { "type": ["string", "null"], "format": "uri", "pattern": "^https://" },
+        "imageUrl": { "type": ["string", "null"], "format": "uri", "pattern": "^https://" }
       }
     },
     "dependency": {

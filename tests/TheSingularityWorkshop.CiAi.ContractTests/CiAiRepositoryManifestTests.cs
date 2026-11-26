@@ -24,6 +24,23 @@ internal static class CiAiRepositoryManifestTests
             Assert(manifest.Definition.Extensions.Single().Id == "Gauntlet.Registrar", "extension missing");
             Assert(manifest.ObserverProfile == "ciai-default", "observer profile missing");
         });
+        Check("provider-neutral badge metadata round-trips without losing provenance semantics", () =>
+        {
+            const string json = """
+            {"schema":"ciai.repository.v1","repository":"TrentBest/FSM_API_Benchmark","badges":[
+              {"id":"fsm-api-powered","label":"Powered by FSM_API","providerId":"fsm-api","renderer":"svg",
+               "outputPath":"Documentation/Branding/fsm-api-powered.svg","altText":"Powered by FSM_API; gear motion reflects verified dependency and build state",
+               "evidenceSource":"ciai.fsm-api-dependency-observation","unknownState":"unknown"}],
+             "dependencies":[],"extensions":[]}
+            """;
+            var parsed = CiAiRepositoryManifest.ParseJson(json);
+            var badge = parsed.Definition.Badges.Single();
+            Assert(badge.ProviderId == "fsm-api" && badge.EvidenceSource == "ciai.fsm-api-dependency-observation" &&
+                badge.UnknownState == "unknown", "badge evidence semantics were lost");
+            var roundTrip = CiAiRepositoryManifest.ParseJson(parsed.ToJson()).Definition.Badges.Single();
+            Assert(roundTrip.OutputPath == "Documentation/Branding/fsm-api-powered.svg" &&
+                roundTrip.Renderer == "svg", "badge renderer or output path was lost");
+        });
         Check("manifest serialization is deterministic and round-trips", () =>
         {
             const string json = """
@@ -36,20 +53,20 @@ internal static class CiAiRepositoryManifestTests
             Assert(serialized == second.ToJson(), "manifest serialization is not deterministic");
             Assert(second.Definition.DependencyRepositories.Single() == "TrentBest/B", "round-trip lost dependency");
         });
-        Check("manifest v1 preserves its original wire shape", () =>
+        Check("single prerelease manifest contract always emits relationships and ADP settings", () =>
         {
-            const string json = """{"schema":"ciai.repository.v1","repository":"TrentBest/A","observerProfile":null,"badges":[],"dependencies":[],"extensions":[]}""";
+            const string json = """{"schema":"ciai.repository.v1","repository":"TrentBest/A","observerProfile":null,"badges":[],"dependencies":[],"extensions":[],"relationships":[],"adp":null}""";
             var serialized = CiAiRepositoryManifest.ParseJson(json).ToJson();
             using var document = System.Text.Json.JsonDocument.Parse(serialized);
-            Assert(!document.RootElement.TryGetProperty("relationships", out _) &&
-                !document.RootElement.TryGetProperty("adp", out _),
-                "v1 serialization leaked v2-only fields");
+            Assert(document.RootElement.TryGetProperty("relationships", out _) &&
+                document.RootElement.TryGetProperty("adp", out _),
+                "canonical manifest omitted relationship or ADP fields");
         });
-        Check("manifest v2 round-trips the bidirectional raWWar SURPS graph without enabling ADP", () =>
+        Check("manifest canonical contract round-trips the bidirectional raWWar SURPS graph without enabling ADP", () =>
         {
             const string json = """
             {
-              "schema": "ciai.repository.v2",
+              "schema": "ciai.repository.v1",
               "repository": "TrentBest/TheSingularityWorkshop.CiAi",
               "observerProfile": "ciai-default",
               "badges": [],
@@ -88,10 +105,10 @@ internal static class CiAiRepositoryManifestTests
             }
             """;
             var first = CiAiRepositoryManifest.ParseJson(json);
-            Assert(first.Schema == CiAiRepositoryManifest.CurrentSchemaV2 &&
+            Assert(first.Schema == CiAiRepositoryManifest.CurrentSchema &&
                 first.Definition.Relationships.Count == 3 &&
                 !first.Definition.AutonomousDevelopmentEnabled,
-                "v2 relationship declarations implicitly enabled autonomous execution");
+                "relationship declarations implicitly enabled autonomous execution");
             var serialized = first.ToJson();
             var second = CiAiRepositoryManifest.ParseJson(serialized);
             Assert(serialized == second.ToJson() &&
@@ -101,13 +118,13 @@ internal static class CiAiRepositoryManifestTests
                     "rawwar-experience-validation",
                     "surps-canonical-content-consumption"
                 }),
-                "v2 graph serialization was not deterministic or lost a relationship");
+                "canonical graph serialization was not deterministic or lost a relationship");
         });
-        Check("manifest v2 requires explicit bounded ADP settings to enable autonomous development", () =>
+        Check("manifest canonical contract requires explicit bounded ADP settings to enable autonomous development", () =>
         {
             const string json = """
             {
-              "schema": "ciai.repository.v2",
+              "schema": "ciai.repository.v1",
               "repository": "TrentBest/A",
               "observerProfile": null,
               "badges": [],
@@ -128,14 +145,19 @@ internal static class CiAiRepositoryManifestTests
             Assert(CiAiRepositoryManifest.ParseJson(manifest.ToJson()).Definition.AutonomousDevelopmentEnabled,
                 "ADP policy did not survive deterministic serialization");
         });
-        Check("manifest v2 rejects unknown relationship kinds and duplicate relationship IDs", () =>
+        Check("manifest canonical contract rejects unknown relationship kinds and duplicate relationship IDs", () =>
         {
-            const string prefix = """{"schema":"ciai.repository.v2","repository":"TrentBest/A","badges":[],"dependencies":[],"extensions":[],"relationships":[""";
+            const string prefix = """{"schema":"ciai.repository.v1","repository":"TrentBest/A","badges":[],"dependencies":[],"extensions":[],"relationships":[""";
             const string edge = """{"relationshipId":"edge","contractVersion":1,"kind":"Unknown","sourceRepository":"TrentBest/B","targetRepository":"TrentBest/C","artifactKind":"content","authorityRepository":"TrentBest/C"}""";
             const string suffix = """],"adp":null}""";
             Throws<InvalidDataException>(() => CiAiRepositoryManifest.ParseJson(prefix + edge + suffix));
             const string validEdge = """{"relationshipId":"edge","contractVersion":1,"kind":"BuildDependency","sourceRepository":"TrentBest/B","targetRepository":"TrentBest/C","artifactKind":"build","authorityRepository":"TrentBest/B"}""";
             Throws<InvalidOperationException>(() => CiAiRepositoryManifest.ParseJson(prefix + validEdge + "," + validEdge + suffix));
+        });
+        Check("unreleased parallel manifest schema identifiers are rejected", () =>
+        {
+            Throws<InvalidDataException>(() => CiAiRepositoryManifest.ParseJson(
+                """{"schema":"ciai.repository.v2","repository":"TrentBest/A","badges":[],"dependencies":[],"extensions":[]}"""));
         });
         Check("manifest rejects duplicate and unknown properties", () =>
         {
