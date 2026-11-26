@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: sith-policy-${{ github.repository }}
@@ -50,7 +50,7 @@ jobs:
                   "${branches[1]}" == "master" ]]; then
               status="COMPLIANT"
             else
-              status="NON-COMPLIANT"
+              status="DEVIATION"
             fi
           fi
 
@@ -73,9 +73,9 @@ jobs:
                   <circle cx="48" cy="29" r="3" fill="#fff" opacity=".9"/>
                 </g>'
               ;;
-            NON-COMPLIANT)
-              headline="THE TRAINING GROUND IS EMPTY"
-              detail="$branch_count branches · exactly 2 required"
+            DEVIATION)
+              headline="THE TRAINING GROUND HAS CHANGED"
+              detail="$branch_count branches · Sith expects master + development"
               accent="#ff4d6d"
               glow="#ff1744"
               scene_markup='
@@ -114,11 +114,12 @@ jobs:
             --argjson branches "$branch_json" \
             '{
               repository: $repository,
-              policy: "exactly-master-and-development",
+              policy: "SithPolicy (safe default; advisory)",
               required_branches: ["development", "master"],
               actual_branches: $branches,
               branch_count: $branch_count,
               status: $status,
+              enforcement: "advisory",
               evaluated_at: $evaluated_at,
               workflow_run: $workflow_run,
               triggering_commit: $commit
@@ -154,21 +155,9 @@ jobs:
           </svg>
           SVG
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          event_deleted="$(jq -r '.deleted // false' "$GITHUB_EVENT_PATH")"
-          # Only an evaluation running on the default branch (or a branch deletion
-          # evaluated from the default branch) may commit the living badge. A
-          # development-triggered run must never push its HEAD to master.
-          if [[ "$GITHUB_REF" == "refs/heads/$DEFAULT_BRANCH" || "$GITHUB_EVENT_NAME" == "delete" || "$event_deleted" == "true" ]]; then
-            git add assets/sith-policy.svg assets/sith-policy.json
-            if ! git diff --cached --quiet; then
-              git commit -m "chore: refresh Sith policy evidence"
-              git push origin "HEAD:$DEFAULT_BRANCH"
-            fi
-          else
-            echo "Badge publication is reserved for default-branch evaluations."
-          fi
+          # Branch-policy reporting is read-only. Never commit or push generated
+          # badge files from a policy evaluation; branch strategy is advisory.
+          echo "Generated branch-policy evidence remains in this workflow run."
 
           {
             echo "## Sith Policy: $status"
@@ -184,7 +173,8 @@ jobs:
             echo "- Evaluated: $evaluated_at"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [[ "$status" != "COMPLIANT" ]]; then
-            echo "::error::Sith Policy requires exactly master and development; status is $status."
-            exit 1
+          if [[ "$status" == "DEVIATION" ]]; then
+            echo "::warning::Sith is the default advisory profile; observed branches differ from master + development."
+          elif [[ "$status" == "UNVERIFIED" ]]; then
+            echo "::warning::Branch inventory is unknown; no compliance claim is made."
           fi
