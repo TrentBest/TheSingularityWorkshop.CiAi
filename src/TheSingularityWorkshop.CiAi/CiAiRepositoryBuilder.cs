@@ -28,29 +28,72 @@ public static class CiAi
     }
 }
 
+/// <summary>Provider-neutral immutable badge declaration; it describes rendering and evidence but performs no work.</summary>
 public sealed record CiAiBadgeDefinition
 {
     public CiAiBadgeDefinition(string id, string label, string workflowFile)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(id);
-        ArgumentException.ThrowIfNullOrWhiteSpace(label);
-        ArgumentException.ThrowIfNullOrWhiteSpace(workflowFile);
-        if (id.Length > 64 || id.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not '-' and not '_'))
-            throw new ArgumentException("Badge ID must be a short stable identifier.", nameof(id));
-        if (label.Length > 80 || label.Any(char.IsControl))
-            throw new ArgumentException("Badge label is invalid.", nameof(label));
-        if (workflowFile.Contains('/') || !(workflowFile.EndsWith(".yml", StringComparison.Ordinal) || workflowFile.EndsWith(".yaml", StringComparison.Ordinal)))
-            throw new ArgumentException("Badge workflow must be a workflow filename.", nameof(workflowFile));
-        Id = id;
-        Label = label;
-        WorkflowFile = workflowFile;
-    }
+        : this(id, label, "github-actions", "github-actions-workflow", ".github/badges/" + id + ".svg",
+            label + " status badge", "github-actions-workflow", "unavailable", workflowFile) { }
 
+    public CiAiBadgeDefinition(string id, string label, string providerId, string renderer,
+        string outputPath, string altText, string evidenceSource, string unknownState,
+        string? workflowFile = null, string? targetUrl = null, string? imageUrl = null)
+    {
+        ValidateToken(id, 64, nameof(id)); ValidateText(label, 80, nameof(label));
+        ValidateToken(providerId, 100, nameof(providerId)); ValidateToken(renderer, 80, nameof(renderer));
+        ValidateRelativePath(outputPath, nameof(outputPath)); ValidateText(altText, 200, nameof(altText));
+        ValidateToken(evidenceSource, 120, nameof(evidenceSource)); ValidateToken(unknownState, 40, nameof(unknownState));
+        if (workflowFile is not null && (workflowFile.Contains('/') ||
+            !(workflowFile.EndsWith(".yml", StringComparison.Ordinal) || workflowFile.EndsWith(".yaml", StringComparison.Ordinal))))
+            throw new ArgumentException("Badge workflow must be a workflow filename.", nameof(workflowFile));
+        if (targetUrl is not null) ValidateHttpsUrl(targetUrl, nameof(targetUrl));
+        if (imageUrl is not null) ValidateHttpsUrl(imageUrl, nameof(imageUrl));
+        Id=id; Label=label; ProviderId=providerId; Renderer=renderer; OutputPath=outputPath;
+        AltText=altText; EvidenceSource=evidenceSource; UnknownState=unknownState;
+        WorkflowFile=workflowFile; StaticTargetUrl=targetUrl; StaticImageUrl=imageUrl;
+    }
     public string Id { get; }
     public string Label { get; }
-    public string WorkflowFile { get; }
-    public string ImageUrl(string repository) => $"https://github.com/{ValidateRepository(repository)}/actions/workflows/{WorkflowFile}/badge.svg";
-    public string TargetUrl(string repository) => $"https://github.com/{ValidateRepository(repository)}/actions/workflows/{WorkflowFile}";
+    public string ProviderId { get; }
+    public string Renderer { get; }
+    public string OutputPath { get; }
+    public string AltText { get; }
+    public string EvidenceSource { get; }
+    public string UnknownState { get; }
+    public string? WorkflowFile { get; }
+    public string? StaticTargetUrl { get; }
+    public string? StaticImageUrl { get; }
+    public string ImageUrl(string repository) => WorkflowFile is not null
+        ? "https://github.com/" + ValidateRepository(repository) + "/actions/workflows/" + WorkflowFile + "/badge.svg"
+        : StaticImageUrl ?? OutputPath;
+    public string TargetUrl(string repository) => WorkflowFile is not null
+        ? "https://github.com/" + ValidateRepository(repository) + "/actions/workflows/" + WorkflowFile
+        : StaticTargetUrl ?? OutputPath;
+    private static void ValidateToken(string value, int max, string parameter)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
+        if (value.Length > max || value.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not '-' and not '_' and not '.'))
+            throw new ArgumentException("Badge metadata token is invalid.", parameter);
+    }
+    private static void ValidateText(string value, int max, string parameter)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
+        if (value.Length > max || value.Any(char.IsControl))
+            throw new ArgumentException("Badge text metadata is invalid.", parameter);
+    }
+    private static void ValidateRelativePath(string value, string parameter)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
+        if (value.Length > 240 || value.StartsWith('/') || value.Contains('\\') ||
+            value.Split('/').Any(part => part is "" or "." or "..") || value.Any(c => char.IsControl(c) || c == ':'))
+            throw new ArgumentException("Badge output path must be a safe repository-relative path.", parameter);
+    }
+    private static void ValidateHttpsUrl(string value, string parameter)
+    {
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps ||
+            !string.IsNullOrEmpty(uri.UserInfo))
+            throw new ArgumentException("Badge URLs must be absolute HTTPS URLs without user information.", parameter);
+    }
     private static string ValidateRepository(string repository) =>
         RepositoryIdentity.IsValid(repository) ? repository :
         throw new ArgumentException("Repository must use canonical owner/repository identity.", nameof(repository));
@@ -59,8 +102,12 @@ public sealed record CiAiBadgeDefinition
 public static class Badges
 {
     public static CiAiBadgeDefinition SithPolicy() => new("sith-policy", "Sith Policy", "sith-policy.yml");
+    public static CiAiBadgeDefinition FsmApi() => new(
+        "fsm-api-powered", "Powered by FSM_API", "fsm-api", "svg",
+        "Documentation/Branding/fsm-api-powered.svg",
+        "Powered by FSM_API; gear motion reflects verified dependency and build state",
+        "ciai.fsm-api-dependency-observation", "unknown");
 }
-
 public sealed record CiAiExtensionDefinition
 {
     public CiAiExtensionDefinition(string id, string version)
