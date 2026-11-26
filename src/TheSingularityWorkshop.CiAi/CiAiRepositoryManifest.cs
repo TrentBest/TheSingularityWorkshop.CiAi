@@ -4,7 +4,7 @@ namespace TheSingularityWorkshop.CiAi;
 
 /// <summary>
 /// Parsed, immutable repository manifest. It contains declarations only; it grants no CI, network,
-/// LLM, deployment, or repository-write authority. Manifest v2 adds directed ADP relationships and optional bounded execution settings.
+/// LLM, deployment, or repository-write authority. The single prerelease contract includes directed ADP relationships and optional bounded execution settings.
 /// </summary>
 public sealed record CiAiRepositoryManifest
 {
@@ -60,21 +60,26 @@ public sealed record CiAiRepositoryManifest
                 RequiredString(extension, "id"), RequiredString(extension, "version")));
         }
 
-        foreach (var relationship in RequiredArray(root, "relationships").EnumerateArray())
+        if (root.TryGetProperty("relationships", out var relationships))
         {
-            RequireObject(relationship, "relationship");
-            EnsureAllowedProperties(relationship, "relationshipId", "contractVersion", "kind", "sourceRepository", "targetRepository", "artifactKind", "authorityRepository");
-            var kindText = RequiredString(relationship, "kind");
-            if (!Enum.TryParse<CiRepositoryRelationshipKind>(kindText, ignoreCase: false, out var kind) || !Enum.IsDefined(kind))
-                throw new InvalidDataException($"Unknown ADP relationship kind '{kindText}'.");
-            builder = builder.WithRelationship(new CiRepositoryRelationship(
-                RequiredString(relationship, "relationshipId"),
-                RequiredInt32(relationship, "contractVersion"),
-                kind,
-                RequiredString(relationship, "sourceRepository"),
-                RequiredString(relationship, "targetRepository"),
-                RequiredString(relationship, "artifactKind"),
-                RequiredString(relationship, "authorityRepository")));
+            if (relationships.ValueKind != JsonValueKind.Array)
+                throw new InvalidDataException("Repository manifest property 'relationships' must be an array.");
+            foreach (var relationship in relationships.EnumerateArray())
+            {
+                RequireObject(relationship, "relationship");
+                EnsureAllowedProperties(relationship, "relationshipId", "contractVersion", "kind", "sourceRepository", "targetRepository", "artifactKind", "authorityRepository");
+                var kindText = RequiredString(relationship, "kind");
+                if (!Enum.TryParse<CiRepositoryRelationshipKind>(kindText, ignoreCase: false, out var kind) || !Enum.IsDefined(kind))
+                    throw new InvalidDataException($"Unknown ADP relationship kind '{kindText}'.");
+                builder = builder.WithRelationship(new CiRepositoryRelationship(
+                    RequiredString(relationship, "relationshipId"),
+                    RequiredInt32(relationship, "contractVersion"),
+                    kind,
+                    RequiredString(relationship, "sourceRepository"),
+                    RequiredString(relationship, "targetRepository"),
+                    RequiredString(relationship, "artifactKind"),
+                    RequiredString(relationship, "authorityRepository")));
+            }
         }
 
         if (root.TryGetProperty("adp", out var adp) && adp.ValueKind != JsonValueKind.Null)
@@ -97,7 +102,7 @@ public sealed record CiAiRepositoryManifest
     {
         var definition = Definition;
         if (definition.Dependencies.Any(item => item is not CiAiRepositoryDependency))
-            throw new InvalidOperationException("Repository manifests serialize direct repository dependencies only; fallback expressions require a later schema version.");
+            throw new InvalidOperationException("Repository manifests serialize direct repository dependencies only; fallback expressions are not represented by the current manifest contract.");
         if (definition.LlmAllocation is not null)
             throw new InvalidOperationException("LLM allocation is not yet part of the repository manifest contract.");
         if (Schema != CurrentSchema)
