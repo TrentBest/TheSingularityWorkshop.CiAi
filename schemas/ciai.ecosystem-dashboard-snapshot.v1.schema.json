@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://thesingularityworkshop.github.io/CiAi/schemas/ciai.ecosystem-dashboard-snapshot.v1.schema.json",
+  "$id": "https://raw.githubusercontent.com/TrentBest/TheSingularityWorkshop.CiAi/development/schemas/ciai.ecosystem-dashboard-snapshot.v1.schema.json",
   "title": "CiAi Ecosystem Dashboard Snapshot v1",
   "description": "Read-only, safe-to-publish projection of one validated ecosystem observation. Lifecycle, dependency readiness, and CI outcome remain separate dimensions.",
   "type": "object",
