@@ -10,7 +10,10 @@
     "snapshotId",
     "generatedAt",
     "freshness",
+    "digestAlgorithm",
+    "snapshotDigest",
     "sourceEvidenceDigest",
+    "sourceEvidence",
     "repositories",
     "dependencies",
     "buildWaves",
@@ -125,6 +128,12 @@
           }
         }
       }
+    },
+    "digestAlgorithm": {
+      "const": "SHA-256"
+    },
+    "snapshotDigest": {
+      "$ref": "#/$defs/sha256"
     }
   },
   "$defs": {
