@@ -280,7 +280,11 @@ internal static class CiWorkflowEvidencePacketTests
             Array.AsReadOnly(new[]
             {
                 new CiWorkflowStepObservation(1, "Build and test", "completed", "success", "2026-10-31T01:00:30Z")
-            }));
+            }))
+        {
+            StartedAt = DateTimeOffset.Parse("2026-10-31T01:00:20Z"),
+            CompletedAt = DateTimeOffset.Parse("2026-10-31T01:00:30Z")
+        };
         var jobs = new CiWorkflowJobCollection("TrentBest/CiAi", 42, 2, new[] { job }, 1, 1, false);
         return (runs, jobs);
     }
