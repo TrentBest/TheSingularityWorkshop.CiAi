@@ -10,6 +10,7 @@ on:
       - ".github/workflows/**"
       - "external/**"
       - "tests/**"
+      - "schemas/**"
       - "tools/**"
       - "samples/**"
       - "docs/**"
