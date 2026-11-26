@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="112" viewBox="0 0 420 112" role="img" aria-labelledby="title desc">
+  <title id="title">Powered by FSM_API</title>
+  <desc id="desc">Provider badge. Neutral gears indicate that verified dependency and current build evidence are not yet available. Verified successful builds rotate the gears; evidenced build failures show steam.</desc>
+  <style>
+    .gear-a{transform-origin:52px 56px}
+    .gear-b{transform-origin:101px 56px}
+    .state-verified-success .gear-a{animation:spin 8s linear infinite}
+    .state-verified-success .gear-b{animation:spin-reverse 6s linear infinite}
+    .steam{opacity:0}
+    .state-build-failed .steam{opacity:1;animation:steam 2.4s ease-in-out infinite}
+    .state-build-failed .steam.delay{animation-delay:1.1s}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes spin-reverse{to{transform:rotate(-360deg)}}
+    @keyframes steam{0%{transform:translateY(8px);opacity:0}25%{opacity:.85}100%{transform:translateY(-15px);opacity:0}}
+    @media (prefers-reduced-motion:reduce){
+      .state-verified-success .gear-a,.state-verified-success .gear-b,.state-build-failed .steam{animation:none}
+      .state-build-failed .steam{opacity:.75}
+    }
+  </style>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#15243b"/><stop offset="1" stop-color="#26344f"/>
+    </linearGradient>
+    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#47d7ff"/><stop offset="1" stop-color="#2586e8"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd36e"/><stop offset="1" stop-color="#ed8d31"/>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="418" height="110" rx="17" fill="url(#bg)" stroke="#52647f" stroke-width="2"/>
+  <g class="steam" fill="none" stroke="#d7e8f4" stroke-width="3.2" stroke-linecap="round">
+    <path d="M42 27c-8-7 7-9 0-17"/><path d="M57 23c-8-7 7-9 0-17"/>
+  </g>
+  <g class="steam delay" fill="none" stroke="#d7e8f4" stroke-width="3.2" stroke-linecap="round">
+    <path d="M92 26c-8-7 7-9 0-17"/><path d="M108 24c-8-7 7-9 0-17"/>
+  </g>
+  <g class="gear-a">
+    <path d="M 0.00 -22.00 L 3.52 -26.77 L 6.99 -26.08 L 8.42 -20.33 L 11.00 -19.05 L 16.44 -21.42 L 19.09 -19.09 L 17.45 -13.39 L 19.05 -11.00 L 24.94 -10.33 L 26.08 -6.99 L 21.81 -2.87 L 22.00 0.00 L 26.77 3.52 L 26.08 6.99 L 20.33 8.42 L 19.05 11.00 L 21.42 16.44 L 19.09 19.09 L 13.39 17.45 L 11.00 19.05 L 10.33 24.94 L 6.99 26.08 L 2.87 21.81 L 0.00 22.00 L -3.52 26.77 L -6.99 26.08 L -8.42 20.33 L -11.00 19.05 L -16.44 21.42 L -19.09 19.09 L -17.45 13.39 L -19.05 11.00 L -24.94 10.33 L -26.08 6.99 L -21.81 2.87 L -22.00 0.00 L -26.77 -3.52 L -26.08 -6.99 L -20.33 -8.42 L -19.05 -11.00 L -21.42 -16.44 L -19.09 -19.09 L -13.39 -17.45 L -11.00 -19.05 L -10.33 -24.94 L -6.99 -26.08 L -2.87 -21.81 Z" transform="translate(52 61)" fill="url(#g1)" stroke="#a6efff" stroke-width="1.8"/>
+    <circle cx="52" cy="61" r="10.5" fill="#162b46" stroke="#b9f3ff" stroke-width="3"/>
+    <circle cx="52" cy="61" r="3.3" fill="#7ce6ff"/>
+  </g>
+  <g class="gear-b">
+    <path d="M 0.00 -17.00 L 3.44 -21.73 L 6.80 -20.92 L 7.72 -15.15 L 9.99 -13.75 L 15.56 -15.56 L 17.80 -12.93 L 15.15 -7.72 L 16.17 -5.25 L 21.73 -3.44 L 22.00 0.00 L 16.79 2.66 L 16.17 5.25 L 19.60 9.99 L 17.80 12.93 L 12.02 12.02 L 9.99 13.75 L 9.99 19.60 L 6.80 20.92 L 2.66 16.79 L 0.00 17.00 L -3.44 21.73 L -6.80 20.92 L -7.72 15.15 L -9.99 13.75 L -15.56 15.56 L -17.80 12.93 L -15.15 7.72 L -16.17 5.25 L -21.73 3.44 L -22.00 0.00 L -16.79 -2.66 L -16.17 -5.25 L -19.60 -9.99 L -17.80 -12.93 L -12.02 -12.02 L -9.99 -13.75 L -9.99 -19.60 L -6.80 -20.92 L -2.66 -16.79 Z" transform="translate(101 56)" fill="url(#g2)" stroke="#ffe2a1" stroke-width="1.8"/>
+    <circle cx="101" cy="56" r="8.5" fill="#2b3041" stroke="#ffedc8" stroke-width="3"/>
+    <circle cx="101" cy="56" r="3" fill="#ffd36e"/>
+  </g>
+  <g fill="#d7e5f7">
+    <circle cx="133" cy="27" r="3" opacity=".8"/><circle cx="140" cy="36" r="2" opacity=".5"/>
+  </g>
+  <path d="M158 20v72" stroke="#52647f" stroke-width="1.5"/>
+  <text x="178" y="49" fill="#f7fbff" font-family="Segoe UI,Arial,sans-serif" font-size="21" font-weight="700">Powered by FSM_API</text>
+  <text x="179" y="73" fill="#b9c9df" font-family="Segoe UI,Arial,sans-serif" font-size="11.5" letter-spacing="1.1">DEPENDENCY + BUILD EVIDENCE</text>
+  <rect x="178" y="82" width="54" height="17" rx="8.5" fill="#42516a"/>
+  <text x="205" y="94" fill="#e3ebf6" font-family="Segoe UI,Arial,sans-serif" font-size="9" font-weight="700" text-anchor="middle">UNKNOWN</text>
+</svg>
