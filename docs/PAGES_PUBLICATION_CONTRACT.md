@@ -1,6 +1,6 @@
 # Destination-specific publication policy and Pages experience contract
 
-**Status (verified 2026-11-26):** The policy evaluator, deterministic Pages plan, and workflow text generator are implemented on `development`. Contract Verification passed 123/123 tests on `711ccd529d75bda0b7e586e5448d8499aa52ab75`; Exact Commit Evidence, Sith Policy, Cog Ecosystem Integration, and the existing Pages workflow also succeeded for that exact SHA. The GitHub Actions Pages host adapter, durable site assembly, and GUI.Blazer integration remain planned and unverified.
+**Status (verified 2026-11-26):** The policy evaluator, deterministic Pages plan, and workflow text generator are implemented on `development`. Contract Verification, Exact Commit Evidence, Sith Policy, and the existing Pages deployment all succeeded for exact SHA `900cda96c18c2b4cc3dbe27d4ecd280202a01ec8`. The preceding source-contract baseline `711ccd529d75bda0b7e586e5448d8499aa52ab75` passed 123/123 contract tests and also passed Cog Ecosystem Integration. The GitHub Actions Pages host adapter, durable site assembly, and GUI.Blazer integration remain planned and unverified.
 
 ## Why publication policy belongs to the destination
 
