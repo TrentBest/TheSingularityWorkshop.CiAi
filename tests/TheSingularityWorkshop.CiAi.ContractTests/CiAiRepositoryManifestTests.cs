@@ -91,7 +91,7 @@ internal static class CiAiRepositoryManifestTests
             Assert(first.Schema == CiAiRepositoryManifest.CurrentSchemaV2 &&
                 first.Definition.Relationships.Count == 3 &&
                 !first.Definition.AutonomousDevelopmentEnabled,
-                "v2 relationship declarations implicitly enabled autonomous execution");
+                "relationship declarations implicitly enabled autonomous execution");
             var serialized = first.ToJson();
             var second = CiAiRepositoryManifest.ParseJson(serialized);
             Assert(serialized == second.ToJson() &&
@@ -136,6 +136,11 @@ internal static class CiAiRepositoryManifestTests
             Throws<InvalidDataException>(() => CiAiRepositoryManifest.ParseJson(prefix + edge + suffix));
             const string validEdge = """{"relationshipId":"edge","contractVersion":1,"kind":"BuildDependency","sourceRepository":"TrentBest/B","targetRepository":"TrentBest/C","artifactKind":"build","authorityRepository":"TrentBest/B"}""";
             Throws<InvalidOperationException>(() => CiAiRepositoryManifest.ParseJson(prefix + validEdge + "," + validEdge + suffix));
+        });
+        Check("unreleased parallel manifest schema identifiers are rejected", () =>
+        {
+            Throws<InvalidDataException>(() => CiAiRepositoryManifest.ParseJson(
+                """{"schema":"ciai.repository.v2","repository":"TrentBest/A","badges":[],"dependencies":[],"extensions":[]}"""));
         });
         Check("manifest rejects duplicate and unknown properties", () =>
         {
