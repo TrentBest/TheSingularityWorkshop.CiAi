@@ -1,6 +1,6 @@
 # Destination-specific publication policy and Pages experience contract
 
-**Status:** Initial policy contract implemented on `development`; GitHub Actions Pages host adapter, durable site assembly, and GUI.Blazer integration remain planned and unverified.
+**Status (verified 2026-11-26):** The policy evaluator, deterministic Pages plan, and workflow text generator are implemented on `development`. Contract Verification passed 123/123 tests on `711ccd529d75bda0b7e586e5448d8499aa52ab75`; Exact Commit Evidence, Sith Policy, Cog Ecosystem Integration, and the existing Pages workflow also succeeded for that exact SHA. The GitHub Actions Pages host adapter, durable site assembly, and GUI.Blazer integration remain planned and unverified.
 
 ## Why publication policy belongs to the destination
 
@@ -71,7 +71,7 @@ CiAi coordinates contracts and evidence across specialized builders, validators,
 | Destination-specific automatic / manual / disabled policy | Implemented as a pure contract and evaluator |
 | Approval-required destination mode | Implemented as a pure contract and evaluator |
 | Fail-closed exact-attempt eligibility inputs | Implemented as a pure evaluator; provider binding remains future work |
-| Deterministic Pages plan expansion and pipeline composition | Implemented and contract-tested; latest verification pending |\n| Deterministic Actions workflow text generation with full-SHA action pins | Implemented; host-side validation and installation not yet implemented |
+| Deterministic Pages plan expansion and pipeline composition | Implemented and contract-tested; verified on `711ccd529d75bda0b7e586e5448d8499aa52ab75` |\n| Deterministic Actions workflow text generation with full-SHA action pins | Implemented; host-side validation and installation not yet implemented |
 | GitHub Actions Pages host adapter and deployment evidence | Not implemented |
 | Durable immutable last-good content retention | Not implemented |
 | Single serialized full-site publisher and rollback proof | Not implemented |
@@ -91,7 +91,7 @@ The first deterministic Pages declaration now exists in `CiPagesPublicationPlan`
 
 The expansion is deterministic, provider-neutral, and side-effect free. It rejects absolute/traversal/platform-dependent source paths, unsupported source branches, malformed identifiers, and invalid repository identities. The resulting destination policy is explicitly automatic with no human approval, while the existing evidence evaluator still blocks failed, incomplete, stale, or ambiguous attempts.
 
-This slice now includes `CiPagesWorkflowGenerator`, a pure deterministic generator for a GitHub Pages workflow. It requires full 40-character action commit SHAs for checkout, Pages configuration, artifact upload, and deployment; it emits read-only contents permissions, the Pages deployment permissions, an explicit `github-pages` environment, a site-entry-point check, and non-cancelling per-repository deployment concurrency. `CiPipelineBuilder.WithPages(...)` composes the validated Pages plan into the immutable pipeline definition. The generator emits workflow text only: it does not write into a repository, overwrite user-authored workflows, invoke Actions, upload or retain artifacts, or deploy Pages. The GitHub host adapter, workflow diff/validation and installation boundary, provider evidence collection, durable last-good retention, and Blazer shell remain outstanding. Generator and composition contract tests are registered in the executable test runner; verification of the latest commit is pending.
+This slice now includes `CiPagesWorkflowGenerator`, a pure deterministic generator for a GitHub Pages workflow. It requires full 40-character action commit SHAs for checkout, Pages configuration, artifact upload, and deployment; it emits read-only contents permissions, the Pages deployment permissions, an explicit `github-pages` environment, a site-entry-point check, and non-cancelling per-repository deployment concurrency. `CiPipelineBuilder.WithPages(...)` composes the validated Pages plan into the immutable pipeline definition. The generator emits workflow text only: it does not write into a repository, overwrite user-authored workflows, invoke Actions, upload or retain artifacts, or deploy Pages. The GitHub host adapter, workflow diff/validation and installation boundary, provider evidence collection, durable last-good retention, and Blazer shell remain outstanding. Generator and composition contract tests are registered in the executable test runner; the exact-source Contract Verification run passed 123/123 tests on `711ccd529d75bda0b7e586e5448d8499aa52ab75`.
 
 ## Explicit build and artifact contract
 
@@ -107,7 +107,7 @@ The current workflow generator now separates the build and deployment jobs:
 
 The plan/generator remain pure: they validate declarations and return inspectable workflow text. They do not execute the command, write a workflow, invoke GitHub, or deploy. The repository owner must review the generated diff and explicitly install/manage it through the host boundary.
 
-The build/output declaration and split-job generator have contract coverage, but the latest development push still needs authoritative Contract Verification and Cog Ecosystem Integration results. This does not close the Pages host-adapter, exact deployment evidence, durable last-good retention, serialized dashboard assembly, or GUI.Blazer work.
+The build/output declaration and split-job generator have contract coverage. Contract Verification and Cog Ecosystem Integration both succeeded on `711ccd529d75bda0b7e586e5448d8499aa52ab75`. This does not close the Pages host-adapter, exact deployment evidence, durable last-good retention, serialized dashboard assembly, or GUI.Blazer work.
 
 - Push triggers cover every commit on the declared source branch rather than path-filtering only the site directory; repository-specific build commands may depend on files elsewhere in the checkout.
 - Manual dispatch is explicitly rejected unless its selected ref is the declared source branch, so a manual run cannot silently deploy an unrelated branch.
