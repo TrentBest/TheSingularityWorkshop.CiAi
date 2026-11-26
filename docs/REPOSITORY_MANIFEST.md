@@ -4,7 +4,7 @@ CiAi repositories declare repository-level composition in `.ciai/repository.json
 
 ## Single prerelease contract
 
-The current prerelease contract uses the existing identifier `ciai.repository.v1`. There is one schema path: no parallel v1/v2 parser or serializer and no compatibility split for unreleased formats.
+The current prerelease contract uses the existing identifier `ciai.repository.v1`. There is one canonical parser and serializer, with no compatibility split for unreleased formats.
 
 Supported root fields:
 
