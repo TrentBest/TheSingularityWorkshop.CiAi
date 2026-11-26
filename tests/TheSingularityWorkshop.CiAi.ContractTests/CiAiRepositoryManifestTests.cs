@@ -36,20 +36,20 @@ internal static class CiAiRepositoryManifestTests
             Assert(serialized == second.ToJson(), "manifest serialization is not deterministic");
             Assert(second.Definition.DependencyRepositories.Single() == "TrentBest/B", "round-trip lost dependency");
         });
-        Check("manifest v1 preserves its original wire shape", () =>
+        Check("single prerelease manifest contract always emits relationships and ADP settings", () =>
         {
-            const string json = """{"schema":"ciai.repository.v1","repository":"TrentBest/A","observerProfile":null,"badges":[],"dependencies":[],"extensions":[]}""";
+            const string json = """{"schema":"ciai.repository.v1","repository":"TrentBest/A","observerProfile":null,"badges":[],"dependencies":[],"extensions":[],"relationships":[],"adp":null}""";
             var serialized = CiAiRepositoryManifest.ParseJson(json).ToJson();
             using var document = System.Text.Json.JsonDocument.Parse(serialized);
-            Assert(!document.RootElement.TryGetProperty("relationships", out _) &&
-                !document.RootElement.TryGetProperty("adp", out _),
-                "v1 serialization leaked v2-only fields");
+            Assert(document.RootElement.TryGetProperty("relationships", out _) &&
+                document.RootElement.TryGetProperty("adp", out _),
+                "canonical manifest omitted relationship or ADP fields");
         });
-        Check("manifest v2 round-trips the bidirectional raWWar SURPS graph without enabling ADP", () =>
+        Check("manifest canonical contract round-trips the bidirectional raWWar SURPS graph without enabling ADP", () =>
         {
             const string json = """
             {
-              "schema": "ciai.repository.v2",
+              "schema": "ciai.repository.v1",
               "repository": "TrentBest/TheSingularityWorkshop.CiAi",
               "observerProfile": "ciai-default",
               "badges": [],
@@ -101,13 +101,13 @@ internal static class CiAiRepositoryManifestTests
                     "rawwar-experience-validation",
                     "surps-canonical-content-consumption"
                 }),
-                "v2 graph serialization was not deterministic or lost a relationship");
+                "canonical graph serialization was not deterministic or lost a relationship");
         });
-        Check("manifest v2 requires explicit bounded ADP settings to enable autonomous development", () =>
+        Check("manifest canonical contract requires explicit bounded ADP settings to enable autonomous development", () =>
         {
             const string json = """
             {
-              "schema": "ciai.repository.v2",
+              "schema": "ciai.repository.v1",
               "repository": "TrentBest/A",
               "observerProfile": null,
               "badges": [],
@@ -128,9 +128,9 @@ internal static class CiAiRepositoryManifestTests
             Assert(CiAiRepositoryManifest.ParseJson(manifest.ToJson()).Definition.AutonomousDevelopmentEnabled,
                 "ADP policy did not survive deterministic serialization");
         });
-        Check("manifest v2 rejects unknown relationship kinds and duplicate relationship IDs", () =>
+        Check("manifest canonical contract rejects unknown relationship kinds and duplicate relationship IDs", () =>
         {
-            const string prefix = """{"schema":"ciai.repository.v2","repository":"TrentBest/A","badges":[],"dependencies":[],"extensions":[],"relationships":[""";
+            const string prefix = """{"schema":"ciai.repository.v1","repository":"TrentBest/A","badges":[],"dependencies":[],"extensions":[],"relationships":[""";
             const string edge = """{"relationshipId":"edge","contractVersion":1,"kind":"Unknown","sourceRepository":"TrentBest/B","targetRepository":"TrentBest/C","artifactKind":"content","authorityRepository":"TrentBest/C"}""";
             const string suffix = """],"adp":null}""";
             Throws<InvalidDataException>(() => CiAiRepositoryManifest.ParseJson(prefix + edge + suffix));
