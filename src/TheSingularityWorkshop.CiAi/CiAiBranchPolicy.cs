@@ -42,7 +42,7 @@ public sealed record CiAiBranchPolicyProfile
     public IReadOnlyList<string> ExpectedBranches { get; }
 
     public static CiAiBranchPolicyProfile SithPolicy() =>
-        new("SithPolicy", CiAiBranchPolicyKind.Sith, new[] { "development", "master" });
+        new("SithPolicy", CiAiBranchPolicyKind.Sith, Array.Empty<string>());
 
     public static CiAiBranchPolicyProfile Disabled() =>
         new("Disabled", CiAiBranchPolicyKind.Disabled, Array.Empty<string>());
@@ -109,9 +109,12 @@ public sealed record CiAiBranchPolicyInventory
 {
     private CiAiBranchPolicyInventory(bool isComplete, IEnumerable<string> branches, string? failureReason)
     {
+        var values = branches.ToArray();
+        if (values.Any(string.IsNullOrWhiteSpace))
+            throw new ArgumentException("A complete branch inventory cannot contain blank branch names.", nameof(branches));
         IsComplete = isComplete;
-        Branches = Array.AsReadOnly(branches.Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal).ToArray());
+        Branches = Array.AsReadOnly(values.Distinct(StringComparer.Ordinal)
+            .OrderBy(x => x, StringComparer.Ordinal).ToArray());
         FailureReason = failureReason;
     }
 
