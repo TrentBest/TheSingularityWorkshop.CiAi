@@ -41,4 +41,4 @@ Both paths produce the same `CiAiRepositoryDefinition`. Each fluent call returns
 
 ## Validation status
 
-The unified builder and contract suite are implemented on `development`. The next integration step is to connect the definition to the existing `.ciai/repository.json` parser/serializer, observer-profile contract, and reusable enrollment workflow without introducing a second builder or a second manifest schema. This document does not claim those integration steps are complete.
+The unified builder and contract suite are implemented on `development`. The repository composition is connected to the single prerelease `.ciai/repository.json` manifest contract and its observer-profile validation. Badge providers and verified dependency evidence remain separate implementation work; this document does not claim those steps are complete.
