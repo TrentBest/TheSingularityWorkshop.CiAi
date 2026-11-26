@@ -37,6 +37,7 @@ RunSuite("TrxTestResultParserContractTests", () => TrxTestResultParserContractTe
 RunSuite("CiBenchmarkEvidencePolicyEvaluatorTests", () => CiBenchmarkEvidencePolicyEvaluatorTests.Run());
 RunSuite("CiAiRepositoryBuilderContractTests", () => CiAiRepositoryBuilderContractTests.Run());
 RunSuite("CiAiRepositoryManifestTests", () => CiAiRepositoryManifestTests.Run());
+RunSuite("CiAiBranchPolicyContractTests", () => CiAiBranchPolicyContractTests.Run());
 RunSuite("CiPublicationPolicyContractTests", () => CiPublicationPolicyContractTests.Run());
 RunSuite("CiPagesPublicationPlanContractTests", () => CiPagesPublicationPlanContractTests.Run());
 RunSuite("CiPagesWorkflowBuildContractTests", () => CiPagesWorkflowBuildContractTests.Run());
