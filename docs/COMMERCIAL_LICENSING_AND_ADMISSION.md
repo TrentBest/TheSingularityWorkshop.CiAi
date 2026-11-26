@@ -12,9 +12,52 @@ internal use on up to five configured repositories to individuals,
 non-profits, educational projects, and commercial organizations alike.
 More than five configured repositories requires a paid entitlement.
 
-This is a product policy and implementation contract, not a published price
-schedule. Paid tier thresholds and prices must be set after analysis of
-representative GitHub organization data and customer discovery.
+This is a product policy and implementation contract. The tier schedule below
+is a working commercial hypothesis for implementation and discussion, not a
+binding offer, activated billing configuration, or final price list. Prices,
+eligibility, employee-count verification, taxes, billing intervals, and
+contract terms remain subject to validation and approval.
+
+## Working subscription model (November 2026)
+
+| Plan | Organization size | Working price | Intended boundary |
+|---|---:|---:|---|
+| Free | Individual or organization | $0 | Up to five configured repositories |
+| Indie | One-person independent developer | $10/month | No CiAi usage quota; paid repository admission |
+| Small Company | 2–9 employees | $20/month | Paid organizational tier |
+| Growing Company | 10–99 employees | $40/month | Paid organizational tier |
+| Large Company | 100–999 employees | $80/month | Paid organizational tier |
+| Enterprise | 1,000+ employees | Contact for pricing | No public price; sales/contact request |
+
+The five-repository free allowance is shared across the licensee's accounts
+and organizations. The sixth distinct repository is refused before CiAi
+starts work unless a valid paid entitlement is present. Paid tiers are
+intended to remove the free-tier admission block; the authoritative
+entitlement still supplies an explicit repository allowance, so the host
+never infers permission from a plan label alone.
+
+The employee bands are pricing classifiers, not repository-count formulas.
+The meaning of employee count (for example, employees versus contractors,
+subsidiaries, and parent-company aggregation), evidence requirements, and
+treatment of non-profits, education, open-source maintainers, and multi-entity
+groups must be settled before checkout is enabled.
+
+"Unlimited CiAi usage" for Indie means no artificial product usage quota in
+the proposed plan. It does not mean bypassing security, abuse prevention,
+provider rate limits, GitHub API limits, or infrastructure safety controls.
+It also must not be silently converted into a compute or agent-turn quota.
+The other paid plans' usage policy remains to be specified explicitly rather
+than implied by their employee bands.
+
+Enterprise is deliberately contact-led. It should not appear as a numerical
+price on the public pricing board; the site should invite an enterprise
+conversation instead. All amounts above are provisional examples supplied
+for product exploration and must be labelled accordingly until approved.
+
+This schedule should be tested against empirical organization-size and
+repository-count distributions, plus real CiAi operating costs and customer
+discovery. Repository count and employee count are separate dimensions: the
+former governs admission; the latter is a proposed pricing segmentation.
 
 ## Repository counting rule
 
@@ -29,7 +72,8 @@ representative GitHub organization data and customer discovery.
 - A fork is a separate repository if it is configured for CiAi.
 - Reconfiguring the same repository must not consume another slot.
 - The first five distinct repositories are eligible under the free grant.
-  The sixth and subsequent repositories require a paid entitlement.
+  The sixth and subsequent repositories require a verified paid entitlement
+  whose authoritative repository allowance covers the candidate.
 
 The count is not the number of repositories that happen to be running at one
 instant. It is the number the licensee has configured CiAi to operate on.
@@ -187,6 +231,8 @@ A defensible research sample should:
 7. test candidate tier boundaries against percentile bands and customer
    interviews before publishing prices.
 
-The initial five-repository free allowance is a product policy, not a claim
-that five is a statistically optimal boundary. Pricing should be revisited
-after real opt-in CiAi usage data exists.
+The five-repository free allowance is a deliberate product boundary, not a
+claim that five is a statistically optimal measure of developer value. The
+employee-based tier bands are a separate commercial hypothesis. Pricing
+should be revisited after customer discovery and real opt-in CiAi usage and
+operating-cost data exist.
