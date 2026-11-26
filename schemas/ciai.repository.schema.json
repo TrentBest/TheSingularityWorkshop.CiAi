@@ -69,26 +69,19 @@
     "badge": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "id",
-        "label",
-        "workflowFile"
-      ],
+      "required": ["id", "label"],
       "properties": {
-        "id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 64
-        },
-        "label": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 80
-        },
-        "workflowFile": {
-          "type": "string",
-          "pattern": "^[^/]+\\.ya?ml$"
-        }
+        "id": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9_.-]+$" },
+        "label": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "providerId": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "renderer": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "outputPath": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "altText": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "evidenceSource": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "unknownState": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "workflowFile": { "type": "string", "pattern": "^[^/]+\\.ya?ml$" },
+        "targetUrl": { "type": "string", "format": "uri", "pattern": "^https://" },
+        "imageUrl": { "type": "string", "format": "uri", "pattern": "^https://" }
       }
     },
     "dependency": {
