@@ -59,14 +59,14 @@ A branch name is a mutable locator, not provenance. A package version alone is n
 - raWWar owns its Experience, its world and game semantics, Experience composition, and its acceptance criteria.
 - CiAi owns ADP orchestration contracts, relationship graph validation, task grouping, causal event identity, dependency scheduling, CI evidence correlation, policy evaluation, and bounded LLM work packets.
 - FSM_Execution remains the durable task execution mechanism; ADP must not invent a second scheduler.
-- The trusted host/FSM_Foundry independently authenticates and authorizes each proposed repository operation within its exact task scope. Human approval remains at that host boundary.
+- The trusted host/FSM_Execution independently authenticates and authorizes each proposed repository operation within its exact task scope. Human approval remains at that host boundary.
 - GitHub Actions and the owning repository's CI remain authoritative for build/test execution and provider evidence.
 
 An LLM may propose content or code and explain a failure. It cannot declare content canonical, authenticate CI evidence, authorize a write, merge, publish, release, or deploy.
 
 ## First read-only cross-repository proof
 
-The first raWWar/SURPS relationship graph is enrolled in CiAi's `.ciai/repository.json` using manifest v2. The graph declares content contribution, canonical content consumption, and Experience validation as separate directed edges. The manifest leaves `adp` null, so relationship enrollment does not enable autonomous execution.
+The first raWWar/SURPS relationship graph is enrolled in CiAi's `.ciai/repository.json` using single prerelease manifest contract. The graph declares content contribution, canonical content consumption, and Experience validation as separate directed edges. The manifest leaves `adp` null, so relationship enrollment does not enable autonomous execution.
 
 For raWWar commit `eef1974a87d78eefe2802d77d7f2451f4f2b47a7`:
 
