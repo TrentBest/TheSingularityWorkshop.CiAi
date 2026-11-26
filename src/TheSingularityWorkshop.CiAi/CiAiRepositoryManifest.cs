@@ -39,9 +39,20 @@ public sealed record CiAiRepositoryManifest
         foreach (var badge in RequiredArray(root, "badges").EnumerateArray())
         {
             RequireObject(badge, "badge");
-            EnsureAllowedProperties(badge, "id", "label", "workflowFile");
+            EnsureAllowedProperties(badge, "id", "label", "providerId", "renderer", "outputPath", "altText", "evidenceSource", "unknownState", "workflowFile", "targetUrl", "imageUrl");
+            var badgeId = RequiredString(badge, "id");
+            var badgeLabel = RequiredString(badge, "label");
             builder = builder.WithBadge(new CiAiBadgeDefinition(
-                RequiredString(badge, "id"), RequiredString(badge, "label"), RequiredString(badge, "workflowFile")));
+                badgeId, badgeLabel,
+                OptionalString(badge, "providerId") ?? "github-actions",
+                OptionalString(badge, "renderer") ?? "github-actions-workflow",
+                OptionalString(badge, "outputPath") ?? ".github/badges/" + badgeId + ".svg",
+                OptionalString(badge, "altText") ?? badgeLabel + " status badge",
+                OptionalString(badge, "evidenceSource") ?? "github-actions-workflow",
+                OptionalString(badge, "unknownState") ?? "unavailable",
+                OptionalString(badge, "workflowFile"),
+                OptionalString(badge, "targetUrl"),
+                OptionalString(badge, "imageUrl")));
         }
 
         foreach (var dependency in RequiredArray(root, "dependencies").EnumerateArray())
@@ -110,7 +121,10 @@ public sealed record CiAiRepositoryManifest
 
         var badges = definition.Badges.OrderBy(x => x.Id, StringComparer.Ordinal).Select(x => new
         {
-            id = x.Id, label = x.Label, workflowFile = x.WorkflowFile
+            id = x.Id, label = x.Label, providerId = x.ProviderId, renderer = x.Renderer,
+            outputPath = x.OutputPath, altText = x.AltText, evidenceSource = x.EvidenceSource,
+            unknownState = x.UnknownState, workflowFile = x.WorkflowFile,
+            targetUrl = x.StaticTargetUrl, imageUrl = x.StaticImageUrl
         }).ToArray();
         var dependencies = definition.Dependencies.SelectMany(item => item switch
         {
