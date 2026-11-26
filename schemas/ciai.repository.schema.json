@@ -79,9 +79,9 @@
         "altText": { "type": "string", "minLength": 1, "maxLength": 200 },
         "evidenceSource": { "type": "string", "minLength": 1, "maxLength": 120 },
         "unknownState": { "type": "string", "minLength": 1, "maxLength": 40 },
-        "workflowFile": { "type": "string", "pattern": "^[^/]+\\.ya?ml$" },
-        "targetUrl": { "type": "string", "format": "uri", "pattern": "^https://" },
-        "imageUrl": { "type": "string", "format": "uri", "pattern": "^https://" }
+        "workflowFile": { "type": ["string", "null"], "pattern": "^[^/]+\\.ya?ml$" },
+        "targetUrl": { "type": ["string", "null"], "format": "uri", "pattern": "^https://" },
+        "imageUrl": { "type": ["string", "null"], "format": "uri", "pattern": "^https://" }
       }
     },
     "dependency": {
