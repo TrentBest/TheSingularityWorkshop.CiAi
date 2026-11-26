@@ -17,6 +17,28 @@ internal static class CiAiRepositoryBuilderContractTests
             Assert(definition.DependencyRepositories.SequenceEqual(new[] { "TrentBest/B" }), "dependency identity changed");
             Assert(definition.Extensions.Single().Id == "Gauntlet.Registrar", "Gauntlet opt-in was not preserved");
         });
+        Check("provider-neutral badges compose without executing provider code", () =>
+        {
+            var definition = CiAi.ForRepository("TrentBest/FSM_API_Benchmark")
+                .WithBadge(Badges.FsmApi()).Build();
+            var badge = definition.Badges.Single();
+            Assert(badge.Id == "fsm-api-powered" && badge.Label == "Powered by FSM_API",
+                "FSM_API badge identity or label changed");
+            Assert(badge.ProviderId == "fsm-api" && badge.Renderer == "svg" &&
+                badge.EvidenceSource == "ciai.fsm-api-dependency-observation" && badge.UnknownState == "unknown",
+                "FSM_API provider metadata was not preserved");
+            Assert(badge.OutputPath == "Documentation/Branding/fsm-api-powered.svg",
+                "FSM_API badge artifact path changed");
+        });
+        Check("badge contracts reject unsafe paths and non-HTTPS links", () =>
+        {
+            Throws<ArgumentException>(() => new CiAiBadgeDefinition(
+                "unsafe", "Unsafe", "third-party", "svg", "../outside.svg", "Unsafe badge",
+                "external.status", "unknown"));
+            Throws<ArgumentException>(() => new CiAiBadgeDefinition(
+                "unsafe-url", "Unsafe URL", "third-party", "svg", "badges/unsafe.svg", "Unsafe badge",
+                "external.status", "unknown", targetUrl: "http://example.com"));
+        });
         Check("unbound and repository-bound fluent entry points compose the same model", () =>
         {
             var fromBound = CiAi.ForRepository("TrentBest/A").WithDependency("TrentBest/B").Build();
