@@ -9,8 +9,7 @@
     "repository",
     "badges",
     "dependencies",
-    "extensions",
-    "relationships"
+    "extensions"
   ],
   "properties": {
     "schema": {
