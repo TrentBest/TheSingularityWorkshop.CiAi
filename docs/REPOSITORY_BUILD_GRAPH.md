@@ -60,3 +60,12 @@ GUI owns generic SVG layout and serialization; CiAi owns the graph model and sem
 The generator is read-only with respect to repository state. CI/Pages should generate the SVG and Markdown into the build output, validate that both are present and internally consistent, and publish only through the existing explicitly authorized Pages workflow. It must not push generated files back to a branch, merge, publish packages, or grant deployment authority.
 
 A future README embed can point at the generated SVG served by the repository's Pages site. Until the renderer and Pages artifact path are verified, do not add a broken image link or describe the graph as live.
+
+
+## Federated ecosystem graph projection
+
+`CiAiEcosystemGraphSnapshot.FromLedgers(...)` projects a supplied set of accepted source ledgers into one deterministic, renderer-neutral directed graph. Each repository identity has one node, so shared dependencies, diamonds, and cycles do not duplicate nodes or require recursive traversal. Edges point from the declaring source repository to its declared dependency and retain registration identity, dependency kind, capability, declaration/candidate order, source revision, and exact source SHA.
+
+The focal repository is explicit even when no ledger for it was supplied. The snapshot reports `CiAiEcosystemGraphCoverage.Partial` by design: a collection of discovered ledgers cannot establish that unobserved repositories or declarations do not exist. Complete coverage would require a separate authoritative repository inventory and verified source coverage for every inventory entry.
+
+ADP clusters are supplied separately as `CiAiAdpClusterDefinition` values. Each cluster has an explicit identity, title, and member-repository set, projected as a cluster node and membership edges. Neither dependency adjacency nor visual proximity creates ADP membership. The graph model leaves dashed boundary geometry and title-gap rendering to GUI's generic renderer.
