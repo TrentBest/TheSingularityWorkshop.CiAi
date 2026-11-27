@@ -50,6 +50,19 @@ internal static class CiWorkflowEvidencePacketTests
             "refs/heads/development", "dddddddddddddddddddddddddddddddddddddddd");
         var approvedWorkflow = Encoding.UTF8.GetBytes("name: CI\\non: [push]\\n");
         var trustDecision = trustPolicy.Evaluate(provenance, approvedWorkflow, approvedWorkflow);
+        var wrongWorkflowRefJson = CreateProvenance().Replace(
+            "TrentBest/CiAi/.github/workflows/ci.yml@refs/heads/development",
+            "TrentBest/CiAi/.github/workflows/ci.yml@refs/heads/feature/untrusted",
+            StringComparison.Ordinal);
+        var wrongWorkflowRefBytes = Encoding.UTF8.GetBytes(wrongWorkflowRefJson);
+        var wrongWorkflowRefProvenance = CiWorkflowProvenanceRecord.ParseAndValidate(
+            wrongWorkflowRefBytes, "TrentBest/CiAi", 42, 2,
+            Convert.ToHexString(SHA256.HashData(wrongWorkflowRefBytes)));
+        var wrongWorkflowRefDecision = trustPolicy.Evaluate(
+            wrongWorkflowRefProvenance, approvedWorkflow, approvedWorkflow);
+        Assert(!wrongWorkflowRefDecision.IsTrusted &&
+            wrongWorkflowRefDecision.ReasonCode == "workflow-definition.identity-mismatch",
+            "identical workflow content on an unapproved feature ref was trusted");
         var roundTrip = CiWorkflowEvidencePacket.FromJson(
             serialized, "TrentBest/CiAi", 42, 2, packetDigest, requiredCheckBindings, trustDecision,
             new CiPullRequestProviderIdentity(
@@ -228,8 +241,8 @@ internal static class CiWorkflowEvidencePacketTests
         Assert(!mismatchedCheckoutPacket.CheckoutVerified && !mismatchedCheckoutPacket.IsSuccessful,
             "mismatched PR checkout SHA was not retained as non-actionable evidence");
 
-        Console.WriteLine("PASS: 23 CI workflow evidence packet v1 contract checks.");
-        return 23;
+        Console.WriteLine("PASS: 24 CI workflow evidence packet v1 contract checks.");
+        return 24;
     }
 
 
