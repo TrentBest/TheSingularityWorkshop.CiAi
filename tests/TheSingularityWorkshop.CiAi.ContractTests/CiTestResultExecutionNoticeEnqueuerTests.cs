@@ -43,16 +43,16 @@ internal static class CiTestResultExecutionNoticeEnqueuerTests
                 "identical report notice retry was not idempotent");
 
             var badDigestOutbox = new FileExecutionArtifactReadyNoticeOutbox(Path.Combine(root, "bad-digest.jsonl"));
-            var badDigestPublisher = new FakePublisher((value, payload) =>
+            var badDigestPublisher = new FakePublisher((value, dispatch, payload) =>
                 CreateManifest(value, identity, payload.Span, recipient, new string('0', 64), null));
             var badDigestEnqueuer = new CiTestResultExecutionNoticeEnqueuer(badDigestPublisher, badDigestOutbox);
             await AssertThrowsAsync<InvalidDataException>(() => badDigestEnqueuer.PublishAndEnqueueAsync(
-                report, recipient, "notice-bad-digest", notifiedAt));
+                report, identity, recipient, "notice-bad-digest", notifiedAt));
             Assert(badDigestOutbox.ReadPending().Count == 0,
                 "invalid publisher digest was persisted as a deliverable notice");
 
             var tamperedReportOutbox = new FileExecutionArtifactReadyNoticeOutbox(Path.Combine(root, "tampered-report.jsonl"));
-            var tamperedReportPublisher = new FakePublisher((value, payload) =>
+            var tamperedReportPublisher = new FakePublisher((value, dispatch, payload) =>
             {
                 var alteredBytes = payload.ToArray();
                 alteredBytes[0] ^= 0x01;
@@ -60,16 +60,16 @@ internal static class CiTestResultExecutionNoticeEnqueuerTests
             });
             var tamperedReportEnqueuer = new CiTestResultExecutionNoticeEnqueuer(tamperedReportPublisher, tamperedReportOutbox);
             await AssertThrowsAsync<InvalidDataException>(() => tamperedReportEnqueuer.PublishAndEnqueueAsync(
-                report, recipient, "notice-tampered-report", notifiedAt));
+                report, identity, recipient, "notice-tampered-report", notifiedAt));
             Assert(tamperedReportOutbox.ReadPending().Count == 0,
                 "publisher-substituted report bytes were persisted as a deliverable FSM_Execution notice");
 
             var wrongCandidateOutbox = new FileExecutionArtifactReadyNoticeOutbox(Path.Combine(root, "wrong-candidate.jsonl"));
-            var wrongCandidatePublisher = new FakePublisher((value, payload) =>
+            var wrongCandidatePublisher = new FakePublisher((value, dispatch, payload) =>
                 CreateManifest(value, identity, payload.Span, recipient, null, new string('f', 40)));
             var wrongCandidateEnqueuer = new CiTestResultExecutionNoticeEnqueuer(wrongCandidatePublisher, wrongCandidateOutbox);
             await AssertThrowsAsync<UnauthorizedAccessException>(() => wrongCandidateEnqueuer.PublishAndEnqueueAsync(
-                report, recipient, "notice-wrong-candidate", notifiedAt));
+                report, identity, recipient, "notice-wrong-candidate", notifiedAt));
             Assert(wrongCandidateOutbox.ReadPending().Count == 0,
                 "wrong candidate SHA was persisted as a deliverable notice");
 
