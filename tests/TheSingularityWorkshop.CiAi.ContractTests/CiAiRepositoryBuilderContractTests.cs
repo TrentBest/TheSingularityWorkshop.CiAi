@@ -215,6 +215,47 @@ internal static class CiAiRepositoryBuilderContractTests
             Assert(empty.Registrations.Count == 0,
                 "an authoritative empty dependency snapshot must remain representable");
         });
+        Check("dependency registration receiver reconciliation is idempotent, monotonic, and withdraws removed declarations", () =>
+        {
+            const string sha1 = "0123456789abcdef0123456789abcdef01234567";
+            const string sha2 = "fedcba9876543210fedcba9876543210fedcba98";
+            var first = CiAiDependencyRegistrationSnapshot.FromDefinition(
+                CiAi.ForRepository("TrentBest/Consumer").WithDependency("TrentBest/Provider").Build(), sha1);
+            var accepted = CiAiDependencyRegistrationLedger.ApplyVerifiedSnapshot(null, first, 1);
+            Assert(accepted.Status == CiAiDependencyRegistrationApplyStatus.Applied &&
+                accepted.Ledger!.Registrations.Count == 1, "first complete snapshot was not accepted");
+
+            var replay = CiAiDependencyRegistrationLedger.ApplyVerifiedSnapshot(accepted.Ledger, first, 1);
+            Assert(replay.Status == CiAiDependencyRegistrationApplyStatus.Duplicate &&
+                ReferenceEquals(replay.Ledger, accepted.Ledger), "identical replay was not idempotent");
+
+            var stale = CiAiDependencyRegistrationLedger.ApplyVerifiedSnapshot(accepted.Ledger, first, 0);
+            Assert(stale.Status == CiAiDependencyRegistrationApplyStatus.Stale,
+                "older source revision was not rejected");
+
+            var conflicting = CiAiDependencyRegistrationSnapshot.FromDefinition(
+                CiAi.ForRepository("TrentBest/Consumer").WithDependency("TrentBest/Other").Build(), sha2);
+            var conflict = CiAiDependencyRegistrationLedger.ApplyVerifiedSnapshot(accepted.Ledger, conflicting, 1);
+            Assert(conflict.Status == CiAiDependencyRegistrationApplyStatus.Conflict &&
+                conflict.Ledger!.Registrations.Single().TargetRepository == "TrentBest/Provider",
+                "same-revision conflicting snapshot replaced accepted state");
+
+            var empty = CiAiDependencyRegistrationSnapshot.FromDefinition(
+                CiAi.ForRepository("TrentBest/Consumer").Build(), sha2);
+            var withdrawn = CiAiDependencyRegistrationLedger.ApplyVerifiedSnapshot(accepted.Ledger, empty, 2);
+            Assert(withdrawn.Status == CiAiDependencyRegistrationApplyStatus.Applied &&
+                withdrawn.Ledger!.Registrations.Count == 0,
+                "newer complete empty snapshot did not withdraw removed registrations");
+
+            var wrongSource = CiAiDependencyRegistrationSnapshot.FromDefinition(
+                CiAi.ForRepository("TrentBest/AnotherSource").Build(), sha2);
+            var mismatch = CiAiDependencyRegistrationLedger.ApplyVerifiedSnapshot(accepted.Ledger, wrongSource, 2);
+            Assert(mismatch.Status == CiAiDependencyRegistrationApplyStatus.SourceMismatch,
+                "ledger accepted a snapshot from another source");
+
+            Throws<ArgumentOutOfRangeException>(() =>
+                CiAiDependencyRegistrationLedger.ApplyVerifiedSnapshot(null, first, 0));
+        });
         return passed;
 
         void Check(string name, Action action)
