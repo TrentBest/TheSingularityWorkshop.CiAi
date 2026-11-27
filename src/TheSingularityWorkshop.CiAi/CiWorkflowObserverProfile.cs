@@ -15,7 +15,9 @@ public sealed record CiWorkflowObserverProfile
         string trxEntryName,
         string testProviderLabel,
         string requiredJobKey,
-        string requiredJobName)
+        string requiredJobName,
+        string? resolutionStepName = null,
+        string? verificationStepName = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ValidateWorkflowPath(workflowPath);
@@ -26,6 +28,13 @@ public sealed record CiWorkflowObserverProfile
         RequireText(testProviderLabel, nameof(testProviderLabel), 100);
         RequireIdentifier(requiredJobKey, nameof(requiredJobKey), 100);
         RequireText(requiredJobName, nameof(requiredJobName), 200);
+        if ((resolutionStepName is null) != (verificationStepName is null))
+            throw new ArgumentException("Candidate resolution and verification steps must be declared together.");
+        if (resolutionStepName is not null)
+        {
+            RequireText(resolutionStepName, nameof(resolutionStepName), 200);
+            RequireText(verificationStepName!, nameof(verificationStepName), 200);
+        }
         if (id.Length > 80 || id.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not '-' and not '_' and not '.'))
             throw new ArgumentException("Profile ID is invalid.", nameof(id));
 
@@ -38,6 +47,8 @@ public sealed record CiWorkflowObserverProfile
         TestProviderLabel = testProviderLabel;
         RequiredJobKey = requiredJobKey;
         RequiredJobName = requiredJobName;
+        ResolutionStepName = resolutionStepName;
+        VerificationStepName = verificationStepName;
     }
 
     public string Id { get; }
@@ -49,6 +60,8 @@ public sealed record CiWorkflowObserverProfile
     public string TestProviderLabel { get; }
     public string RequiredJobKey { get; }
     public string RequiredJobName { get; }
+    public string? ResolutionStepName { get; }
+    public string? VerificationStepName { get; }
 
     public string ProvenanceArtifactName(long runId, int attempt)
         => Expand(ProvenanceArtifactNameTemplate, runId, attempt);
