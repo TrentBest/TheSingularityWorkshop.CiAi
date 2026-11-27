@@ -15,6 +15,11 @@ public sealed record CiWorkflowDefinitionTrustPolicy
             throw new ArgumentException("Repository must use canonical owner/repository identity.", nameof(repository));
         ArgumentException.ThrowIfNullOrWhiteSpace(workflowPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(approvedProtectedRef);
+        if (approvedProtectedRef.Length > 512 ||
+            approvedProtectedRef.Any(char.IsControl) ||
+            approvedProtectedRef.Any(char.IsWhiteSpace) ||
+            !approvedProtectedRef.StartsWith("refs/heads/", StringComparison.Ordinal))
+            throw new ArgumentException("Approved protected ref must be a bounded fully-qualified branch ref.", nameof(approvedProtectedRef));
         ValidateSha(approvedProtectedRevisionSha, nameof(approvedProtectedRevisionSha));
         Repository = repository;
         WorkflowPath = workflowPath;
@@ -40,11 +45,11 @@ public sealed record CiWorkflowDefinitionTrustPolicy
         ArgumentNullException.ThrowIfNull(provenance);
         var observedDigest = Digest(workflowBytesAtRunRevision);
         var approvedDigest = Digest(workflowBytesAtApprovedRevision);
-        var workflowRefSuffix = "/" + WorkflowPath + "@";
+        var expectedWorkflowRef = Repository + "/" + WorkflowPath + "@" + ApprovedProtectedRef;
         var correctWorkflowIdentity =
             string.Equals(provenance.Repository, Repository, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(provenance.WorkflowPath, WorkflowPath, StringComparison.Ordinal) &&
-            provenance.WorkflowRef.StartsWith(Repository + workflowRefSuffix, StringComparison.Ordinal) &&
+            string.Equals(provenance.WorkflowRef, expectedWorkflowRef, StringComparison.Ordinal) &&
             provenance.WorkflowSha.Length == 40;
 
         var bytesMatch = workflowBytesAtRunRevision.Length > 0 &&
