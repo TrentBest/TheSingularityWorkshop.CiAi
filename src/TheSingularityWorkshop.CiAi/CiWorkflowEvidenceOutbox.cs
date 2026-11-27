@@ -9,12 +9,12 @@ namespace TheSingularityWorkshop.CiAi;
 /// protocol identity, not locally regenerated packet hashes: Execution validates all three
 /// against the exact mapping created before workflow_dispatch.
 /// </summary>
-public sealed record CiWorkflowEvidenceDeliveryIdentity(
+public sealed record CiAiArtifactDeliveryIdentity(
     string RequestId,
     string OperationId,
     string IdempotencyKey)
 {
-    public CiWorkflowEvidenceDeliveryIdentity Validate()
+    public CiAiArtifactDeliveryIdentity Validate()
     {
         static bool Clean(string? value) =>
             !string.IsNullOrWhiteSpace(value) && value.Length <= 128 &&
@@ -29,7 +29,7 @@ public sealed record CiWorkflowEvidenceDeliveryIdentity(
 public sealed record CiWorkflowEvidenceDelivery : ICiWorkflowEvidenceDelivery
 {
     public CiWorkflowEvidenceDelivery(
-        CiWorkflowEvidenceDeliveryIdentity identity,
+        CiAiArtifactDeliveryIdentity identity,
         CiWorkflowEvidencePacket packet)
     {
         ArgumentNullException.ThrowIfNull(identity);
@@ -48,7 +48,7 @@ public sealed record CiWorkflowEvidenceDelivery : ICiWorkflowEvidenceDelivery
         string operationId,
         string idempotencyKey,
         CiWorkflowEvidencePacket packet)
-        : this(new CiWorkflowEvidenceDeliveryIdentity(deliveryId, operationId, idempotencyKey), packet)
+        : this(new CiAiArtifactDeliveryIdentity(deliveryId, operationId, idempotencyKey), packet)
     {
     }
 
