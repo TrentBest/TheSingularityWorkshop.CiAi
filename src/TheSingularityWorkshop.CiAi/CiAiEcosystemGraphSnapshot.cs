@@ -109,6 +109,8 @@ public sealed record CiAiEcosystemGraphSnapshot
         }
 
         var clusters = (adpClusters ?? Array.Empty<CiAiAdpClusterDefinition>()).ToArray();
+        if (clusters.Any(x => x is null))
+            throw new ArgumentException("ADP cluster collection cannot contain null entries.", nameof(adpClusters));
         var clusterIds = new HashSet<string>(StringComparer.Ordinal);
         foreach (var cluster in clusters.OrderBy(x => x.Id, StringComparer.Ordinal))
         {
