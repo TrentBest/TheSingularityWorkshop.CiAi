@@ -197,6 +197,21 @@ internal static class CiAiRepositoryBuilderContractTests
                 json.Contains(sha, StringComparison.Ordinal),
                 "registration JSON was not deterministic or did not retain exact source provenance");
 
+            var restored = CiAiDependencyRegistrationSnapshot.FromJson(json);
+            Assert(restored.SourceRepository == snapshot.SourceRepository &&
+                restored.SourceCommitSha == snapshot.SourceCommitSha &&
+                restored.Registrations.SequenceEqual(snapshot.Registrations) &&
+                restored.ToJson() == json,
+                "registration JSON did not round-trip through validated intake");
+            Throws<System.Text.Json.JsonException>(() =>
+                CiAiDependencyRegistrationSnapshot.FromJson(json.Replace(
+                    CiAiDependencyRegistrationSnapshot.CurrentSchema, "ciai.dependency-registration.v0",
+                    StringComparison.Ordinal)));
+            var forgedIdentity = json.Replace(snapshot.Registrations[0].RegistrationId,
+                "depreg-forged", StringComparison.Ordinal);
+            Throws<ArgumentException>(() =>
+                CiAiDependencyRegistrationSnapshot.FromJson(forgedIdentity));
+
             var repeated = CiAiDependencyRegistrationSnapshot.FromDefinition(definition, sha);
             Assert(snapshot.Registrations.SequenceEqual(repeated.Registrations),
                 "identical source declaration did not produce stable registration identities");
