@@ -129,7 +129,7 @@ public sealed class CiWorkflowEvidenceExecutionNoticeEnqueuer
         var packet = delivery.Packet;
         var run = packet.ObservedRun;
         if (!string.Equals(manifest.RequestId, delivery.DeliveryId, StringComparison.Ordinal) ||
-            !string.Equals(manifest.OperationId, $"workflow-evidence:{run.RunId}:{run.RunAttempt}", StringComparison.Ordinal) ||
+            !string.Equals(manifest.OperationId, delivery.OperationId, StringComparison.Ordinal) ||
             !string.Equals(manifest.IdempotencyKey, delivery.IdempotencyKey, StringComparison.Ordinal))
             throw new InvalidDataException("Published evidence manifest does not preserve the exact delivery identity.");
         if (!string.Equals(manifest.ProviderRepository, run.Repository, StringComparison.OrdinalIgnoreCase) ||
