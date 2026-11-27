@@ -256,6 +256,40 @@ internal static class CiAiRepositoryBuilderContractTests
             Throws<ArgumentOutOfRangeException>(() =>
                 CiAiDependencyRegistrationLedger.ApplyVerifiedSnapshot(null, first, 0));
         });
+        Check("ecosystem graph deduplicates cycles and diamonds and keeps ADP membership explicit", () =>
+        {
+            const string sha = "0123456789abcdef0123456789abcdef01234567";
+            var a = CiAiDependencyRegistrationSnapshot.FromDefinition(
+                CiAi.ForRepository("TrentBest/A").WithDependency("TrentBest/B").WithDependency("TrentBest/C").Build(), sha);
+            var b = CiAiDependencyRegistrationSnapshot.FromDefinition(
+                CiAi.ForRepository("TrentBest/B").WithDependency("TrentBest/D").Build(), sha);
+            var c = CiAiDependencyRegistrationSnapshot.FromDefinition(
+                CiAi.ForRepository("TrentBest/C").WithDependency("TrentBest/D").Build(), sha);
+            var d = CiAiDependencyRegistrationSnapshot.FromDefinition(
+                CiAi.ForRepository("TrentBest/D").WithDependency("TrentBest/A").Build(), sha);
+            var ledgers = new[] { a, b, c, d }.Select(x =>
+                CiAiDependencyRegistrationLedger.ApplyVerifiedSnapshot(null, x, 1).Ledger!).ToArray();
+            var cluster = new CiAiAdpClusterDefinition("adp-core", "Autonomous Development Pipeline",
+                new[] { "TrentBest/A", "TrentBest/D" });
+
+            var graph = CiAiEcosystemGraphSnapshot.FromLedgers("TrentBest/A", ledgers, new[] { cluster });
+            Assert(graph.Coverage == CiAiEcosystemGraphCoverage.Partial,
+                "a supplied ledger set was incorrectly presented as complete ecosystem coverage");
+            Assert(graph.Nodes.Count(x => x.Repository == "TrentBest/D") == 1,
+                "shared dependency or cycle duplicated a repository node");
+            Assert(graph.Edges.Count(x => x.Kind == "required") == 5,
+                "directed dependency declarations were lost");
+            Assert(graph.Edges.Count(x => x.Kind == "adp-membership") == 2,
+                "explicit ADP membership edges were not projected");
+            Assert(graph.Nodes.Single(x => x.Repository == "TrentBest/A").Kind == "repository-focal",
+                "focal repository was not distinguished");
+            Assert(graph.Nodes.Single(x => x.Kind == "adp-cluster").Label == "Autonomous Development Pipeline",
+                "explicit ADP cluster title was not retained");
+            var repeated = CiAiEcosystemGraphSnapshot.FromLedgers("TrentBest/A", ledgers, new[] { cluster });
+            Assert(graph.Nodes.SequenceEqual(repeated.Nodes) && graph.Edges.SequenceEqual(repeated.Edges),
+                "ecosystem graph projection was not deterministic");
+            Throws<ArgumentException>(() => new CiAiAdpClusterDefinition("empty", "Empty", Array.Empty<string>()));
+        });
         return passed;
 
         void Check(string name, Action action)
