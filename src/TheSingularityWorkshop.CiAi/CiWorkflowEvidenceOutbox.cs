@@ -4,42 +4,56 @@ using System.Text.Json;
 
 namespace TheSingularityWorkshop.CiAi;
 
-/// <summary>Stable delivery identity for one exact v1 workflow run attempt and checkout.</summary>
+/// <summary>
+/// The dispatch identity copied from the host-persisted request mapping. These values are
+/// protocol identity, not locally regenerated packet hashes: Execution validates all three
+/// against the exact mapping created before workflow_dispatch.
+/// </summary>
+public sealed record CiWorkflowEvidenceDeliveryIdentity(
+    string RequestId,
+    string OperationId,
+    string IdempotencyKey)
+{
+    public CiWorkflowEvidenceDeliveryIdentity Validate()
+    {
+        static bool Clean(string? value) =>
+            !string.IsNullOrWhiteSpace(value) && value.Length <= 128 &&
+            !value.Any(character => char.IsControl(character) || char.IsWhiteSpace(character));
+        if (!Clean(RequestId) || !Clean(OperationId) || !Clean(IdempotencyKey))
+            throw new ArgumentException("Dispatch request, operation, and idempotency identities must be bounded and non-empty.");
+        return this;
+    }
+}
+
+/// <summary>One exact v1 packet paired with the original host-approved dispatch identity.</summary>
 public sealed record CiWorkflowEvidenceDelivery : ICiWorkflowEvidenceDelivery
 {
-    public CiWorkflowEvidenceDelivery(string deliveryId, CiWorkflowEvidencePacket packet)
+    public CiWorkflowEvidenceDelivery(
+        CiWorkflowEvidenceDeliveryIdentity identity,
+        CiWorkflowEvidencePacket packet)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(deliveryId);
+        ArgumentNullException.ThrowIfNull(identity);
         ArgumentNullException.ThrowIfNull(packet);
-        if (deliveryId.Length > 200 || deliveryId.Any(char.IsControl))
-            throw new ArgumentException("Delivery ID is invalid.", nameof(deliveryId));
-
-        DeliveryId = deliveryId;
+        identity.Validate();
+        DeliveryId = identity.RequestId;
+        OperationId = identity.OperationId;
+        IdempotencyKey = identity.IdempotencyKey;
         Packet = packet;
         Payload = packet.ToJson(indented: false);
         PayloadSha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Payload))).ToLowerInvariant();
-        var provenance = packet.Provenance;
-        // Hash a structured identity rather than delimiter-joining untrusted refs.
-        // This keeps the key bounded and prevents ambiguous tuples if a workflow path
-        // contains punctuation that would otherwise collide with the separator.
-        var identity = JsonSerializer.SerializeToUtf8Bytes(new
-        {
-            schema = CiWorkflowEvidencePacket.CurrentSchema,
-            repository = packet.ObservedRun.Repository,
-            runId = packet.ObservedRun.RunId,
-            runAttempt = packet.ObservedRun.RunAttempt,
-            workflowRef = provenance.WorkflowRef,
-            workflowSha = provenance.WorkflowSha,
-            checkoutRef = provenance.CheckoutRef,
-            checkoutSha = provenance.CheckoutSha,
-            requiredChecks = packet.RequiredChecks.OrderBy(check => check.Key, StringComparer.Ordinal)
-                .Select(check => new { check.Key, check.JobName }).ToArray()
-        });
-        IdempotencyKey = "sha256:" +
-            Convert.ToHexString(SHA256.HashData(identity)).ToLowerInvariant();
+    }
+
+    internal CiWorkflowEvidenceDelivery(
+        string deliveryId,
+        string operationId,
+        string idempotencyKey,
+        CiWorkflowEvidencePacket packet)
+        : this(new CiWorkflowEvidenceDeliveryIdentity(deliveryId, operationId, idempotencyKey), packet)
+    {
     }
 
     public string DeliveryId { get; }
+    public string OperationId { get; }
     public string IdempotencyKey { get; }
     public CiWorkflowEvidencePacket Packet { get; }
     public string Payload { get; }
@@ -88,7 +102,7 @@ public sealed class FileCiWorkflowEvidenceOutbox
                 ? CiWorkflowEvidenceEnqueueOutcome.Duplicate
                 : CiWorkflowEvidenceEnqueueOutcome.Conflict;
 
-        var record = new OutboxRecord(delivery.DeliveryId, delivery.IdempotencyKey,
+        var record = new OutboxRecord(delivery.DeliveryId, delivery.OperationId, delivery.IdempotencyKey,
             delivery.Packet.ObservedRun.Repository, delivery.Packet.ObservedRun.RunId,
             delivery.Packet.ObservedRun.RunAttempt,
             delivery.Packet.RequiredChecks.Select(check =>
@@ -120,7 +134,8 @@ public sealed class FileCiWorkflowEvidenceOutbox
                 var packet = CiWorkflowEvidencePacket.FromJson(
                     record.Payload, record.Repository, record.RunId, record.RunAttempt,
                     record.PayloadSha256, trustedRequiredChecks, workflowDefinitionTrusted: false);
-                var delivery = new CiWorkflowEvidenceDelivery(record.DeliveryId, packet);
+                var delivery = new CiWorkflowEvidenceDelivery(
+                    record.DeliveryId, record.OperationId, record.IdempotencyKey, packet);
                 if (!string.Equals(delivery.IdempotencyKey, record.IdempotencyKey, StringComparison.Ordinal) ||
                     !string.Equals(delivery.PayloadSha256, record.PayloadSha256, StringComparison.Ordinal))
                     throw new InvalidDataException("outbox record integrity or identity validation failed.");
@@ -130,6 +145,7 @@ public sealed class FileCiWorkflowEvidenceOutbox
     }
 
     private bool SamePayload(OutboxRecord record, CiWorkflowEvidenceDelivery delivery) =>
+        string.Equals(record.OperationId, delivery.OperationId, StringComparison.Ordinal) &&
         string.Equals(record.PayloadSha256, delivery.PayloadSha256, StringComparison.Ordinal) &&
         string.Equals(record.Payload, delivery.Payload, StringComparison.Ordinal) &&
         string.Equals(record.IdempotencyKey, delivery.IdempotencyKey, StringComparison.Ordinal);
@@ -162,6 +178,8 @@ public sealed class FileCiWorkflowEvidenceOutbox
             var record = JsonSerializer.Deserialize<OutboxRecord>(line)
                 ?? throw new InvalidDataException("Evidence outbox contains an empty record.");
             if (string.IsNullOrWhiteSpace(record.DeliveryId) ||
+                string.IsNullOrWhiteSpace(record.OperationId) ||
+                record.OperationId.Length > 128 || record.OperationId.Any(char.IsControl) ||
                 !IsValidIdempotencyKey(record.IdempotencyKey) ||
                 !RepositoryIdentity.IsValid(record.Repository) ||
                 record.RunId <= 0 || record.RunAttempt <= 0 ||
@@ -184,15 +202,12 @@ public sealed class FileCiWorkflowEvidenceOutbox
     }
 
     private static bool IsValidIdempotencyKey(string? value) =>
-        value is { Length: 71 } &&
-        value.StartsWith("sha256:", StringComparison.Ordinal) &&
-        value.AsSpan(7).ToString().All(IsLowerHex);
-
-    private static bool IsLowerHex(char value) =>
-        value is >= '0' and <= '9' or >= 'a' and <= 'f';
+        value is { Length: > 0 and <= 128 } &&
+        !value.Any(character => char.IsControl(character) || char.IsWhiteSpace(character));
 
     private sealed record OutboxRecord(
         string DeliveryId,
+        string OperationId,
         string IdempotencyKey,
         string Repository,
         long RunId,
