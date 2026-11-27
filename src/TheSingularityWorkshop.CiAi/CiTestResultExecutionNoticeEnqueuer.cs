@@ -10,6 +10,7 @@ public interface ICiTestResultArtifactPublisher
 {
     Task<ArtifactManifest> PublishAsync(
         CiTestResultReport report,
+        CiAiArtifactDeliveryIdentity identity,
         ReadOnlyMemory<byte> canonicalReportBytes,
         CancellationToken cancellationToken = default);
 }
@@ -39,12 +40,15 @@ public sealed class CiTestResultExecutionNoticeEnqueuer
 
     public async Task<ExecutionArtifactNoticeEnqueueOutcome> PublishAndEnqueueAsync(
         CiTestResultReport report,
+        CiAiArtifactDeliveryIdentity identity,
         string recipientIdentity,
         string noticeId,
         DateTimeOffset notifiedAt,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(report);
+        ArgumentNullException.ThrowIfNull(identity);
+        identity.Validate();
         ArgumentException.ThrowIfNullOrWhiteSpace(recipientIdentity);
         ArgumentException.ThrowIfNullOrWhiteSpace(noticeId);
         if (notifiedAt == default)
@@ -56,8 +60,8 @@ public sealed class CiTestResultExecutionNoticeEnqueuer
         var reportBytes = report.ToCanonicalUtf8Bytes();
         var reportDigest = SHA256.HashData(reportBytes);
         var manifest = await _publisher.PublishAsync(
-            report, new ReadOnlyMemory<byte>(reportBytes.ToArray()), cancellationToken).ConfigureAwait(false);
-        ValidateManifest(report, manifest, recipientIdentity, reportBytes.Length, reportDigest, notifiedAt);
+            report, identity, new ReadOnlyMemory<byte>(reportBytes.ToArray()), cancellationToken).ConfigureAwait(false);
+        ValidateManifest(report, identity, manifest, recipientIdentity, reportBytes.Length, reportDigest, notifiedAt);
 
         var notice = new ArtifactReadyNotice(
             ArtifactReadyNotice.SupportedContractVersion,
@@ -70,6 +74,7 @@ public sealed class CiTestResultExecutionNoticeEnqueuer
 
     private static void ValidateManifest(
         CiTestResultReport report,
+        CiAiArtifactDeliveryIdentity identity,
         ArtifactManifest manifest,
         string recipientIdentity,
         int expectedSize,
@@ -77,6 +82,10 @@ public sealed class CiTestResultExecutionNoticeEnqueuer
         DateTimeOffset notifiedAt)
     {
         ArgumentNullException.ThrowIfNull(manifest);
+        if (!string.Equals(manifest.RequestId, identity.RequestId, StringComparison.Ordinal) ||
+            !string.Equals(manifest.OperationId, identity.OperationId, StringComparison.Ordinal) ||
+            !string.Equals(manifest.IdempotencyKey, identity.IdempotencyKey, StringComparison.Ordinal))
+            throw new InvalidDataException("Published report manifest does not preserve the exact host dispatch identity.");
         if (!string.Equals(manifest.ProviderRepository, report.Repository, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(manifest.SourceSha, report.CandidateSha, StringComparison.OrdinalIgnoreCase) ||
             manifest.ProviderRunId != report.RunId)
@@ -86,8 +95,10 @@ public sealed class CiTestResultExecutionNoticeEnqueuer
             !string.Equals(manifest.MediaType, MediaType, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(manifest.ClientIdentity, recipientIdentity, StringComparison.Ordinal))
             throw new InvalidDataException("Published report manifest has an unexpected capability, media type, or recipient.");
-        if (!string.Equals(manifest.IdempotencyKey, report.ReportIdentity, StringComparison.Ordinal))
-            throw new InvalidDataException("Published report manifest idempotency key does not match the canonical report identity.");
+        var expectedArtifactName = $"ciai-test-results-{report.RunId}-{report.RunAttempt}";
+        if (!string.Equals(manifest.ArtifactName, expectedArtifactName, StringComparison.Ordinal) ||
+            !string.Equals(manifest.ImplementationRevision, report.WorkflowDefinitionSha, StringComparison.Ordinal))
+            throw new InvalidDataException("Published report manifest artifact name or implementation revision does not match the exact report.");
         if (!string.Equals(manifest.DigestAlgorithm, "SHA-256", StringComparison.Ordinal) ||
             manifest.SizeBytes != expectedSize ||
             manifest.Digest.Length != 64 ||
