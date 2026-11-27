@@ -39,6 +39,10 @@ Both paths produce the same `CiAiRepositoryDefinition`. Each fluent call returns
 - The builder does not schedule repositories, invoke LLMs, execute CI, authenticate evidence, dispatch privileged workflows, or grant repository-write authority.
 - Gauntlet registration is an opt-in declaration only; a separately trusted host remains responsible for any execution.
 
+## Visual graph projection
+
+The immutable definition can be projected through `CiAiRepositoryGraphSnapshot.FromDefinition(...)`. The renderer-neutral graph includes every effective declaration represented by the builder: badges, direct and ordered-fallback dependencies, extensions, named/implicit pipelines, ADP relationships and settings, and LLM allocations. See [Repository build graph](REPOSITORY_BUILD_GRAPH.md) for the graph contract and the separate configuration, execution, and evidence layers.
+
 ## Validation status
 
 The unified builder and contract suite are implemented on `development`. The next integration step is to connect the definition to the existing `.ciai/repository.json` parser/serializer, observer-profile contract, and reusable enrollment workflow without introducing a second builder or a second manifest schema. This document does not claim those integration steps are complete.
