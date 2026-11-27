@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text.Json;
 using System.Text;
 
 namespace TheSingularityWorkshop.CiAi;
@@ -87,6 +88,28 @@ public sealed record CiAiDependencyRegistrationSnapshot
             return new CiAiDependencyRegistration(id, definition.Repository, targetRepository,
                 capability, kind, declarationIndex, candidateIndex);
         }
+    }
+
+    /// <summary>Serializes the complete snapshot as deterministic, indented JSON for an explicit transport stage.</summary>
+    public string ToJson()
+    {
+        var payload = new
+        {
+            schema = CurrentSchema,
+            sourceRepository = SourceRepository,
+            sourceCommitSha = SourceCommitSha,
+            registrations = Registrations.Select(x => new
+            {
+                registrationId = x.RegistrationId,
+                sourceRepository = x.SourceRepository,
+                targetRepository = x.TargetRepository,
+                capability = x.Capability,
+                dependencyKind = x.DependencyKind,
+                declarationIndex = x.DeclarationIndex,
+                candidateIndex = x.CandidateIndex
+            }).ToArray()
+        };
+        return JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }) + "\n";
     }
 
     private void Validate()
