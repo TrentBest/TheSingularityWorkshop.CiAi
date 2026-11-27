@@ -15,7 +15,7 @@ internal static class CiWorkflowEvidenceExecutionNoticeEnqueuerTests
         {
             var packet = CreatePacket();
             var delivery = new CiWorkflowEvidenceDelivery(
-                new CiWorkflowEvidenceDeliveryIdentity("evidence-request-42-1", "evidence-operation-42-1", "evidence-idempotency-42-1"),
+                new CiAiArtifactDeliveryIdentity("evidence-request-42-1", "evidence-operation-42-1", "evidence-idempotency-42-1"),
                 packet);
             var publisher = new FakePublisher((item, bytes) => CreateManifest(item, bytes.Span, Recipient));
             var outbox = new FileExecutionArtifactReadyNoticeOutbox(Path.Combine(root, "notices.jsonl"));
