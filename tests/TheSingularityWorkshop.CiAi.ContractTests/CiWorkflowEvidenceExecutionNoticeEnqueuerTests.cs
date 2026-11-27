@@ -55,7 +55,7 @@ internal static class CiWorkflowEvidenceExecutionNoticeEnqueuerTests
             var batch = await batchEnqueuer.PublishPendingAndEnqueueAsync(
                 evidenceOutbox,
                 new[] { new CiWorkflowRequiredCheckBinding("build", "build") },
-                acknowledgedDeliveryIds: null,
+                null,
                 Recipient,
                 notifiedAt);
             Assert(batch.PendingAtStart == 1 && batch.Attempted == 1 && batch.Enqueued == 1 &&
@@ -114,7 +114,7 @@ internal static class CiWorkflowEvidenceExecutionNoticeEnqueuerTests
             CiWorkflowEvidenceExecutionNoticeEnqueuer.MediaType,
             bytes.Length,
             new Uri("https://artifacts.example.com/ciai/workflow-evidence/packet.json"),
-            ObservedAt.AddSeconds(1),
+            ObservedAt.AddSeconds(-30),
             ObservedAt.AddHours(24),
             "ci-evidence",
             recipient,
