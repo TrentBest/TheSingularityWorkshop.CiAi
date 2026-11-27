@@ -113,6 +113,58 @@ internal static class CiAiRepositoryBuilderContractTests
             Throws<InvalidOperationException>(() => CiAi.ForRepository("TrentBest/A")
                 .WithRelationship(contribution).WithRelationship(contribution));
         });
+        Check("repository graph visibly projects every effective fluent modifier and preserves fallback order", () =>
+        {
+            var relationship = new CiRepositoryRelationship(
+                "graph-content", 1, CiRepositoryRelationshipKind.ContentContribution,
+                "TrentBest/Producer", "TrentBest/Consumer", "content-proposal", "TrentBest/Consumer");
+            var definition = CiAi.ForRepository("TrentBest/Graph")
+                .WithBadge(Badges.SithPolicy())
+                .WithDependency("TrentBest/Direct")
+                .WithDependency(CiAi.Logic.Or("TrentBest/FallbackA", "TrentBest/FallbackB"))
+                .ExtendWith(new CiAiExtensionDefinition("Example.Extension", "2"))
+                .WithNamedDevelopmentPipeline("Core")
+                .WithRelationship(relationship)
+                .WithADP(new CiAiAdpSettings(2))
+                .WithLLMAllocation(new CiAiLlmAllocation("OpenAI", "model-x", 2, 30, 50_000,
+                    TimeSpan.FromMinutes(15), CiAiLlmPriority.High))
+                .Build();
+
+            var graph = CiAiRepositoryGraphSnapshot.FromDefinition(definition);
+            var kinds = graph.Nodes.Select(node => node.Kind).ToHashSet(StringComparer.Ordinal);
+            foreach (var expected in new[]
+            {
+                "repository-root", "repository", "badge", "ordered-fallback", "extension",
+                "development-pipeline", "adp-relationship", "adp-settings", "llm-allocation"
+            })
+                Assert(kinds.Contains(expected), $"graph omitted fluent modifier category '{expected}'");
+
+            var fallback = graph.Nodes.Single(node => node.Kind == "ordered-fallback");
+            var candidates = graph.Edges.Where(edge => edge.SourceNodeId == fallback.Id)
+                .OrderBy(edge => edge.Order).ToArray();
+            Assert(candidates.Length == 2 && candidates[0].Label == "candidate 1" &&
+                candidates[1].Label == "candidate 2", "fallback candidate order was not represented");
+            Assert(graph.Nodes.Any(node => node.Kind == "development-pipeline" &&
+                node.Label == "Core" && node.IsExplicit), "explicit pipeline membership was omitted");
+            Assert(graph.Nodes.Any(node => node.Kind == "adp-relationship" &&
+                node.Label == "graph-content" && node.Details.Contains("authority: TrentBest/Consumer", StringComparison.Ordinal)),
+                "relationship contract or authority was omitted");
+            Assert(graph.Nodes.Any(node => node.Kind == "llm-allocation" &&
+                node.Details.Contains("Tokens/window: 50000", StringComparison.Ordinal)),
+                "LLM allocation bounds were omitted");
+            Assert(graph.Edges.All(edge =>
+                graph.Nodes.Any(node => node.Id == edge.SourceNodeId) &&
+                graph.Nodes.Any(node => node.Id == edge.TargetNodeId)),
+                "graph contains a dangling edge");
+
+            var repeated = CiAiRepositoryGraphSnapshot.FromDefinition(definition);
+            Assert(graph.Nodes.SequenceEqual(repeated.Nodes) && graph.Edges.SequenceEqual(repeated.Edges),
+                "identical definitions did not produce an identical graph projection");
+
+            var defaultGraph = CiAiRepositoryGraphSnapshot.FromDefinition(CiAi.ForRepository("TrentBest/Default").Build());
+            Assert(defaultGraph.Nodes.Single(node => node.Kind == "development-pipeline").IsExplicit == false,
+                "implicit default pipeline was presented as an explicit fluent modifier");
+        });
         return passed;
 
         void Check(string name, Action action)
