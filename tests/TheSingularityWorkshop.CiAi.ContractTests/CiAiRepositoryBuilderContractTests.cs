@@ -207,6 +207,24 @@ internal static class CiAiRepositoryBuilderContractTests
                 CiAiDependencyRegistrationSnapshot.FromJson(json.Replace(
                     CiAiDependencyRegistrationSnapshot.CurrentSchema, "ciai.dependency-registration.v0",
                     StringComparison.Ordinal)));
+            Throws<System.Text.Json.JsonException>(() =>
+                CiAiDependencyRegistrationSnapshot.FromJson("[]"));
+            Throws<System.Text.Json.JsonException>(() =>
+                CiAiDependencyRegistrationSnapshot.FromJson(json.Replace(
+                    "\"schema\": \"" + CiAiDependencyRegistrationSnapshot.CurrentSchema + "\"",
+                    "\"schema\": \"" + CiAiDependencyRegistrationSnapshot.CurrentSchema + "\",\n  \"schema\": \"" +
+                    CiAiDependencyRegistrationSnapshot.CurrentSchema + "\"",
+                    StringComparison.Ordinal)));
+            Throws<System.Text.Json.JsonException>(() =>
+                CiAiDependencyRegistrationSnapshot.FromJson(json.Replace(
+                    "\"schema\": \"" + CiAiDependencyRegistrationSnapshot.CurrentSchema + "\"",
+                    "\"schema\": \"" + CiAiDependencyRegistrationSnapshot.CurrentSchema + "\",\n  \"unexpected\": true",
+                    StringComparison.Ordinal)));
+            var unexpectedRegistrationProperty = json.Replace(
+                "\"registrationId\":",
+                "\"unexpected\": true,\n        \"registrationId\":", StringComparison.Ordinal);
+            Throws<System.Text.Json.JsonException>(() =>
+                CiAiDependencyRegistrationSnapshot.FromJson(unexpectedRegistrationProperty));
             var forgedIdentity = json.Replace(snapshot.Registrations[0].RegistrationId,
                 "depreg-forged", StringComparison.Ordinal);
             Throws<ArgumentException>(() =>
