@@ -68,8 +68,9 @@ public enum CiWorkflowEvidenceEnqueueOutcome
 }
 
 /// <summary>
-/// The single append-only outbox for canonical v1 evidence packets. Reload verifies bytes and identity but never restores host trust.
-/// Workflow-definition and tested-checkout identities both participate in the v1 idempotency boundary.
+/// The single append-only outbox for canonical v1 evidence packets. It preserves the exact
+/// request, operation, and idempotency identities supplied by the host's persisted dispatch
+/// mapping. Packet bytes have a separate SHA-256 digest; reload never restores host trust.
 /// </summary>
 public sealed class FileCiWorkflowEvidenceOutbox
 {
@@ -177,9 +178,8 @@ public sealed class FileCiWorkflowEvidenceOutbox
         {
             var record = JsonSerializer.Deserialize<OutboxRecord>(line)
                 ?? throw new InvalidDataException("Evidence outbox contains an empty record.");
-            if (string.IsNullOrWhiteSpace(record.DeliveryId) ||
-                string.IsNullOrWhiteSpace(record.OperationId) ||
-                record.OperationId.Length > 128 || record.OperationId.Any(char.IsControl) ||
+            if (!IsValidDispatchIdentity(record.DeliveryId) ||
+                !IsValidDispatchIdentity(record.OperationId) ||
                 !IsValidIdempotencyKey(record.IdempotencyKey) ||
                 !RepositoryIdentity.IsValid(record.Repository) ||
                 record.RunId <= 0 || record.RunAttempt <= 0 ||
@@ -201,9 +201,11 @@ public sealed class FileCiWorkflowEvidenceOutbox
         return records.ToArray();
     }
 
-    private static bool IsValidIdempotencyKey(string? value) =>
+    private static bool IsValidDispatchIdentity(string? value) =>
         value is { Length: > 0 and <= 128 } &&
         !value.Any(character => char.IsControl(character) || char.IsWhiteSpace(character));
+
+    private static bool IsValidIdempotencyKey(string? value) => IsValidDispatchIdentity(value);
 
     private sealed record OutboxRecord(
         string DeliveryId,
