@@ -80,8 +80,8 @@ internal static class CiWorkflowEvidenceExecutionNoticeEnqueuerTests
 
             Assert(outbox.ReadPending().Count == 1,
                 "rejected manifests created additional notices");
-            Console.WriteLine("PASS: 11 canonical V1 evidence-to-Execution artifact notice checks.");
-            return 7;
+            Console.WriteLine("PASS: 12 canonical V1 evidence-to-Execution artifact notice checks.");
+            return 12;
         }
         finally
         {
@@ -190,7 +190,7 @@ internal static class CiWorkflowEvidenceExecutionNoticeEnqueuerTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             PublishedBytes = canonicalPacketBytes.ToArray();
-            return Task.FromResult(createManifest(delivery, canonicalPacketBytes, Recipient));
+            return Task.FromResult(createManifest(delivery, canonicalPacketBytes));
         }
     }
 
