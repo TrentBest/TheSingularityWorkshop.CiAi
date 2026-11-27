@@ -151,7 +151,7 @@ internal static class CiWorkflowProvenanceArtifactReaderTests
           "event": {
             "name": "workflow_dispatch",
             "ref": "refs/heads/development",
-            "sha": "{{WorkflowSha}}",
+            "sha": "{{HeadSha}}",
             "pullRequest": null
           },
           "checkout": {
@@ -178,18 +178,18 @@ internal static class CiWorkflowProvenanceArtifactReaderTests
                   "expired": false,
                   "created_at": "{{now.AddMinutes(-1):O}}",
                   "expires_at": "{{now.AddHours(1):O}}",
-                  "workflow_run": { "id": 42, "head_sha": "{{WorkflowSha}}" },
+                  "workflow_run": { "id": 42, "head_sha": "{{HeadSha}}" },
                   "archive_download_url": "https://api.github.com/repos/TrentBest/CiAi/actions/artifacts/8/zip"
                 }
                 """);
             throw new InvalidOperationException("Unexpected dispatch artifact API request: " + request.RequestUri);
         }));
         var dispatchArtifact = await new GitHubActionsArtifactCollector(dispatchClient)
-            .GetRequiredArtifactAsync("TrentBest/CiAi", 42, WorkflowSha, dispatchArtifactName);
+            .GetRequiredArtifactAsync("TrentBest/CiAi", 42, HeadSha, dispatchArtifactName);
         var dispatchEvidence = CiWorkflowProvenanceArtifactReader.Read(
             dispatchArchive, dispatchArtifact, CiWorkflowObserverProfile.CiAiDefault,
             "TrentBest/CiAi", 42, 2,
-            WorkflowSha, WorkflowSha, candidateRef, candidateSha,
+            HeadSha, HeadSha, candidateRef, candidateSha,
             "refs/heads/development", WorkflowSha,
             "workflow_dispatch", "refs/heads/development");
         Assert(dispatchEvidence.Provenance.EventRef == "refs/heads/development" &&
@@ -200,7 +200,7 @@ internal static class CiWorkflowProvenanceArtifactReaderTests
         Throws<InvalidDataException>(() => CiWorkflowProvenanceArtifactReader.Read(
             dispatchArchive, dispatchArtifact, CiWorkflowObserverProfile.CiAiDefault,
             "TrentBest/CiAi", 42, 2,
-            WorkflowSha, WorkflowSha, candidateSha,
+            HeadSha, HeadSha, candidateSha,
             "refs/heads/development", WorkflowSha,
             "workflow_dispatch", "refs/heads/development"));
 
