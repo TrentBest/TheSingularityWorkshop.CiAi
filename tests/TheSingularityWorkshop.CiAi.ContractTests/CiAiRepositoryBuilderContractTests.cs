@@ -165,6 +165,49 @@ internal static class CiAiRepositoryBuilderContractTests
             Assert(defaultGraph.Nodes.Single(node => node.Kind == "development-pipeline").IsExplicit == false,
                 "implicit default pipeline was presented as an explicit fluent modifier");
         });
+        Check("dependency registration snapshot is deterministic, exact-SHA-bound, and preserves dependency direction", () =>
+        {
+            const string sha = "0123456789abcdef0123456789abcdef01234567";
+            var definition = CiAi.ForRepository("TrentBest/Consumer")
+                .WithDependency(CiAi.Resolve("TrentBest/Provider", "runtime"))
+                .WithDependency(CiAi.Logic.Or("TrentBest/Primary", "TrentBest/Fallback"))
+                .Build();
+
+            var snapshot = CiAiDependencyRegistrationSnapshot.FromDefinition(definition, sha);
+            Assert(snapshot.SchemaVersion == CiAiDependencyRegistrationSnapshot.CurrentSchema,
+                "registration schema changed");
+            Assert(snapshot.SourceRepository == "TrentBest/Consumer" &&
+                snapshot.SourceCommitSha == sha, "source identity or exact SHA was not retained");
+            Assert(snapshot.Registrations.Count == 3, "direct and fallback registrations were not all emitted");
+            Assert(snapshot.Registrations[0].TargetRepository == "TrentBest/Provider" &&
+                snapshot.Registrations[0].Capability == "runtime" &&
+                snapshot.Registrations[0].DependencyKind == "required",
+                "direct dependency direction or capability was lost");
+            Assert(snapshot.Registrations[1].TargetRepository == "TrentBest/Primary" &&
+                snapshot.Registrations[1].DependencyKind == "fallback-candidate" &&
+                snapshot.Registrations[1].CandidateIndex == 0 &&
+                snapshot.Registrations[2].TargetRepository == "TrentBest/Fallback" &&
+                snapshot.Registrations[2].CandidateIndex == 1,
+                "fallback order was not retained in registration payload");
+
+            var repeated = CiAiDependencyRegistrationSnapshot.FromDefinition(definition, sha);
+            Assert(snapshot.Registrations.SequenceEqual(repeated.Registrations),
+                "identical source declaration did not produce stable registration identities");
+            var nextRevision = CiAiDependencyRegistrationSnapshot.FromDefinition(definition,
+                "fedcba9876543210fedcba9876543210fedcba98");
+            Assert(snapshot.Registrations.SequenceEqual(nextRevision.Registrations),
+                "stable declaration identity incorrectly changed with source commit revision");
+
+            Throws<ArgumentException>(() =>
+                CiAiDependencyRegistrationSnapshot.FromDefinition(definition, "short-sha"));
+            Throws<ArgumentException>(() =>
+                CiAiDependencyRegistrationSnapshot.FromDefinition(
+                    CiAi.ForRepository("TrentBest/Self").WithDependency("TrentBest/Self").Build(), sha));
+            var empty = CiAiDependencyRegistrationSnapshot.FromDefinition(
+                CiAi.ForRepository("TrentBest/Independent").Build(), sha);
+            Assert(empty.Registrations.Count == 0,
+                "an authoritative empty dependency snapshot must remain representable");
+        });
         return passed;
 
         void Check(string name, Action action)
