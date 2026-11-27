@@ -70,6 +70,53 @@ public sealed class CiWorkflowEvidenceExecutionNoticeEnqueuer
         return _noticeOutbox.Enqueue(new ExecutionArtifactReadyNoticeDelivery(notice));
     }
 
+    /// <summary>
+    /// Projects pending durable evidence packets into immutable provider artifacts and
+    /// metadata-only Execution notices. The caller supplies the current host check set
+    /// and acknowledged delivery identities on every invocation.
+    /// </summary>
+    public async Task<CiWorkflowEvidenceNoticeEnqueueBatch> PublishPendingAndEnqueueAsync(
+        FileCiWorkflowEvidenceOutbox evidenceOutbox,
+        IEnumerable<CiWorkflowRequiredCheckBinding> expectedRequiredChecks,
+        IReadOnlySet<string>? acknowledgedDeliveryIds,
+        string recipientIdentity,
+        DateTimeOffset notifiedAt,
+        int maximumDeliveries = 20,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(evidenceOutbox);
+        ArgumentNullException.ThrowIfNull(expectedRequiredChecks);
+        ArgumentException.ThrowIfNullOrWhiteSpace(recipientIdentity);
+        if (maximumDeliveries is < 1 or > 100)
+            throw new ArgumentOutOfRangeException(nameof(maximumDeliveries),
+                "Evidence handoff batch size must be between 1 and 100.");
+
+        var pending = evidenceOutbox.ReadPending(expectedRequiredChecks, acknowledgedDeliveryIds);
+        var attempts = new List<CiWorkflowEvidenceNoticeEnqueueAttempt>();
+        foreach (var delivery in pending.Take(maximumDeliveries))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var noticeId = CreateStableNoticeId(delivery.DeliveryId);
+            var outcome = await PublishAndEnqueueAsync(
+                delivery, recipientIdentity, noticeId, notifiedAt, cancellationToken).ConfigureAwait(false);
+            attempts.Add(new CiWorkflowEvidenceNoticeEnqueueAttempt(
+                delivery.DeliveryId, noticeId, outcome));
+        }
+
+        return new CiWorkflowEvidenceNoticeEnqueueBatch(
+            pending.Count, attempts.Count,
+            attempts.Count(item => item.Outcome == ExecutionArtifactNoticeEnqueueOutcome.Enqueued),
+            attempts.Count(item => item.Outcome == ExecutionArtifactNoticeEnqueueOutcome.Duplicate),
+            attempts.Count(item => item.Outcome == ExecutionArtifactNoticeEnqueueOutcome.Conflict),
+            Array.AsReadOnly(attempts.ToArray()));
+    }
+
+    private static string CreateStableNoticeId(string deliveryId)
+    {
+        var digest = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(deliveryId));
+        return "ciai-workflow-evidence-" + Convert.ToHexString(digest).ToLowerInvariant();
+    }
+
     private static void ValidateManifest(
         CiWorkflowEvidenceDelivery delivery,
         ArtifactManifest manifest,
@@ -104,3 +151,18 @@ public sealed class CiWorkflowEvidenceExecutionNoticeEnqueuer
             throw new InvalidDataException("Published evidence manifest or notice timestamp is outside the observed evidence validity window.");
     }
 }
+
+/// <summary>One durable evidence-to-notice projection result.</summary>
+public sealed record CiWorkflowEvidenceNoticeEnqueueAttempt(
+    string DeliveryId,
+    string NoticeId,
+    ExecutionArtifactNoticeEnqueueOutcome Outcome);
+
+/// <summary>Summary of one bounded pass projecting evidence outbox entries to Execution notices.</summary>
+public sealed record CiWorkflowEvidenceNoticeEnqueueBatch(
+    int PendingAtStart,
+    int Attempted,
+    int Enqueued,
+    int Duplicates,
+    int Conflicts,
+    IReadOnlyList<CiWorkflowEvidenceNoticeEnqueueAttempt> Attempts);
