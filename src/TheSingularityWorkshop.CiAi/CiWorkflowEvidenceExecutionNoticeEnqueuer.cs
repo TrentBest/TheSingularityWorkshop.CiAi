@@ -147,8 +147,8 @@ public sealed class CiWorkflowEvidenceExecutionNoticeEnqueuer
             manifest.Digest.Length != 64 ||
             !CryptographicOperations.FixedTimeEquals(expectedDigest, Convert.FromHexString(manifest.Digest)))
             throw new InvalidDataException("Published evidence manifest does not preserve the exact canonical packet bytes.");
-        if (manifest.CreatedAt < run.ObservedAt || notifiedAt < manifest.CreatedAt || notifiedAt >= manifest.ExpiresAt)
-            throw new InvalidDataException("Published evidence manifest or notice timestamp is outside the observed evidence validity window.");
+        if (notifiedAt < manifest.CreatedAt || notifiedAt >= manifest.ExpiresAt)
+            throw new InvalidDataException("Notice timestamp is outside the published artifact validity window.");
     }
 }
 
