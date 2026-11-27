@@ -14,7 +14,7 @@ internal static class CiWorkflowEvidenceDeliveryTests
         try
         {
             var packet = CreatePacket();
-            var identity = new CiWorkflowEvidenceDeliveryIdentity(
+            var identity = new CiAiArtifactDeliveryIdentity(
                 "v1-delivery-1", "operation-1", "idempotency-1");
             var delivery = new CiWorkflowEvidenceDelivery(identity, packet);
             Assert(delivery.DeliveryId == identity.RequestId &&
@@ -22,7 +22,7 @@ internal static class CiWorkflowEvidenceDeliveryTests
                 delivery.IdempotencyKey == identity.IdempotencyKey,
                 "v1 delivery did not preserve the host-persisted dispatch identity");
             Assert(new CiWorkflowEvidenceDelivery(
-                new CiWorkflowEvidenceDeliveryIdentity("v1-delivery-stable", "operation-1", "idempotency-1"),
+                new CiAiArtifactDeliveryIdentity("v1-delivery-stable", "operation-1", "idempotency-1"),
                 packet).IdempotencyKey == delivery.IdempotencyKey,
                 "same dispatch idempotency identity was not preserved across delivery projections");
             var outboxPath = Path.Combine(root, "v1-outbox.jsonl");
@@ -32,7 +32,7 @@ internal static class CiWorkflowEvidenceDeliveryTests
             Assert(outbox.Enqueue(delivery) == CiWorkflowEvidenceEnqueueOutcome.Duplicate,
                 "identical v1 delivery retry was not deduplicated");
             Assert(outbox.Enqueue(new CiWorkflowEvidenceDelivery(
-                new CiWorkflowEvidenceDeliveryIdentity("v1-delivery-alias", "operation-1", "idempotency-1"), packet)) ==
+                new CiAiArtifactDeliveryIdentity("v1-delivery-alias", "operation-1", "idempotency-1"), packet)) ==
                 CiWorkflowEvidenceEnqueueOutcome.Duplicate,
                 "v1 run attempt was not deduplicated across delivery IDs");
 
@@ -78,7 +78,7 @@ internal static class CiWorkflowEvidenceDeliveryTests
                 "accepted v1 receipt did not suppress replay");
 
             var rejectedDelivery = new CiWorkflowEvidenceDelivery(
-                new CiWorkflowEvidenceDeliveryIdentity("v1-delivery-rejected", "operation-rejected", "idempotency-rejected"),
+                new CiAiArtifactDeliveryIdentity("v1-delivery-rejected", "operation-rejected", "idempotency-rejected"),
                 CreatePacket(runId: 43));
             var rejected = new CiWorkflowEvidenceRemoteReceipt(
                 1, "remote-receipt-2", rejectedDelivery.DeliveryId, rejectedDelivery.IdempotencyKey,
@@ -146,7 +146,7 @@ internal static class CiWorkflowEvidenceDeliveryTests
             AssertThrows<ArgumentException>(() => ledger.Record(mismatch, delivery));
 
             var rejectionThenAcceptance = new CiWorkflowEvidenceDelivery(
-                new CiWorkflowEvidenceDeliveryIdentity("v1-delivery-rejection-retry", "operation-rejection-retry", "idempotency-rejection-retry"),
+                new CiAiArtifactDeliveryIdentity("v1-delivery-rejection-retry", "operation-rejection-retry", "idempotency-rejection-retry"),
                 CreatePacket(runId: 44));
             var firstRejection = new CiWorkflowEvidenceRemoteReceipt(
                 1, "remote-receipt-rejection-retry", rejectionThenAcceptance.DeliveryId,
