@@ -36,7 +36,7 @@ public static class CiWorkflowProvenanceArtifactReader
         => ReadCore(archiveBytes, providerArtifact, expectedArtifactName, expectedEntryName,
             expectedRepository, expectedRunId, expectedRunAttempt, expectedHeadSha, expectedHeadSha,
             expectedHeadSha, expectedWorkflowPath: ".github/workflows/ci.yml", expectedWorkflowRef,
-            expectedWorkflowSha, expectedEventName, expectedEventRef, expectedPullRequest: null);
+            expectedWorkflowSha, expectedEventName, expectedEventRef, expectedEventRef, expectedPullRequest: null);
 
     /// <summary>
     /// Reads an external workflow profile. Provider head, event SHA, and checkout SHA remain separate
@@ -58,13 +58,40 @@ public static class CiWorkflowProvenanceArtifactReader
         string expectedEventName,
         string expectedEventRef,
         CiProviderPullRequestObservation? expectedPullRequest = null)
+        => Read(archiveBytes, providerArtifact, profile, expectedRepository, expectedRunId,
+            expectedRunAttempt, expectedProviderHeadSha, expectedEventSha, expectedEventRef,
+            expectedCheckoutSha, expectedWorkflowRef, expectedWorkflowSha, expectedEventName,
+            expectedEventRef, expectedPullRequest);
+
+    /// <summary>
+    /// Reads a provenance artifact when the event ref and actual checked-out candidate ref differ,
+    /// as they do for trusted workflow_dispatch runs that check out an isolated feature branch.
+    /// Both refs must be independently bound by the host to provider run and dispatch intent.
+    /// </summary>
+    public static CiWorkflowProvenanceArtifactEvidence Read(
+        ReadOnlyMemory<byte> archiveBytes,
+        CiProviderArtifactObservation providerArtifact,
+        CiWorkflowObserverProfile profile,
+        string expectedRepository,
+        long expectedRunId,
+        int expectedRunAttempt,
+        string expectedProviderHeadSha,
+        string expectedEventSha,
+        string expectedCheckoutRef,
+        string expectedCheckoutSha,
+        string expectedWorkflowRef,
+        string expectedWorkflowSha,
+        string expectedEventName,
+        string expectedEventRef,
+        CiProviderPullRequestObservation? expectedPullRequest = null)
     {
         ArgumentNullException.ThrowIfNull(profile);
         return ReadCore(archiveBytes, providerArtifact,
             profile.ProvenanceArtifactName(expectedRunId, expectedRunAttempt),
             profile.ProvenanceEntryName, expectedRepository, expectedRunId, expectedRunAttempt,
-            expectedProviderHeadSha, expectedEventSha, expectedCheckoutSha, profile.WorkflowPath,
-            expectedWorkflowRef, expectedWorkflowSha, expectedEventName, expectedEventRef, expectedPullRequest);
+            expectedProviderHeadSha, expectedEventSha, expectedCheckoutRef, expectedCheckoutSha,
+            profile.WorkflowPath, expectedWorkflowRef, expectedWorkflowSha, expectedEventName,
+            expectedEventRef, expectedPullRequest);
     }
 
     private static CiWorkflowProvenanceArtifactEvidence ReadCore(
@@ -77,6 +104,7 @@ public static class CiWorkflowProvenanceArtifactReader
         int expectedRunAttempt,
         string expectedProviderHeadSha,
         string expectedEventSha,
+        string expectedCheckoutRef,
         string expectedCheckoutSha,
         string expectedWorkflowPath,
         string expectedWorkflowRef,
@@ -94,6 +122,10 @@ public static class CiWorkflowProvenanceArtifactReader
         ArgumentException.ThrowIfNullOrWhiteSpace(expectedEventRef);
         ValidateSha(expectedProviderHeadSha, nameof(expectedProviderHeadSha));
         ValidateSha(expectedEventSha, nameof(expectedEventSha));
+        ArgumentException.ThrowIfNullOrWhiteSpace(expectedCheckoutRef);
+        if (expectedCheckoutRef.Length > 512 || expectedCheckoutRef.Any(char.IsControl) ||
+            expectedCheckoutRef.Any(char.IsWhiteSpace) || !expectedCheckoutRef.StartsWith("refs/", StringComparison.Ordinal))
+            throw new ArgumentException("Expected checkout ref must be a bounded fully-qualified provider ref.", nameof(expectedCheckoutRef));
         ValidateSha(expectedCheckoutSha, nameof(expectedCheckoutSha));
         ValidateSha(expectedWorkflowSha, nameof(expectedWorkflowSha));
         if (expectedRunId <= 0) throw new ArgumentOutOfRangeException(nameof(expectedRunId));
@@ -151,7 +183,7 @@ public static class CiWorkflowProvenanceArtifactReader
             !string.Equals(provenance.EventName, expectedEventName, StringComparison.Ordinal) ||
             !string.Equals(provenance.EventRef, expectedEventRef, StringComparison.Ordinal) ||
             !string.Equals(provenance.EventSha, expectedEventSha, StringComparison.OrdinalIgnoreCase) ||
-            !string.Equals(provenance.CheckoutRef, expectedEventRef, StringComparison.Ordinal) ||
+            !string.Equals(provenance.CheckoutRef, expectedCheckoutRef, StringComparison.Ordinal) ||
             !string.Equals(provenance.CheckoutSha, expectedCheckoutSha, StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("Workflow provenance does not match the independently trusted workflow, event, and checkout policy.");
 
