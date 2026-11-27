@@ -132,7 +132,7 @@ public sealed record CiAiRepositoryGraphSnapshot
             var id = StableId("llm-allocation", allocation.Provider + "|" + allocation.Model);
             AddNode(new(id, "llm-allocation", $"{allocation.Provider} · {allocation.Model}",
                 $"Concurrency: {allocation.MaximumConcurrentCalls} · Calls/window: {allocation.MaximumCallsPerWindow} · " +
-                $"Tokens/window: {allocation.MaximumTokensPerWindow} · Window ticks: {allocation.Window.Ticks} · " +
+                $"Tokens/window: {allocation.MaximumTokensPerWindow} · Window: {allocation.Window} · " +
                 $"Priority: {allocation.Priority}",
                 true, null));
             AddEdge("configuration", rootId, id, "llm-allocation", "requests LLM allocation");
@@ -164,8 +164,8 @@ public sealed record CiAiRepositoryGraphSnapshot
         {
             if (nodes.TryGetValue(node.Id, out var existing))
             {
-                if (existing.Kind is "repository" or "repository-root" &&
-                    node.Kind is "repository" or "repository-root")
+                if ((existing.Kind is "repository" or "repository-root") &&
+                    (node.Kind is "repository" or "repository-root"))
                 {
                     if (existing.Kind == "repository-root" || node.Kind == "repository-root")
                         nodes[node.Id] = existing with
