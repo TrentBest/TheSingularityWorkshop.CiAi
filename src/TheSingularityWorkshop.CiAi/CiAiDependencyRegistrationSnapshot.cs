@@ -90,6 +90,59 @@ public sealed record CiAiDependencyRegistrationSnapshot
         }
     }
 
+    /// <summary>
+    /// Parses a registration payload and validates its schema and declaration identities.
+    /// Parsing does not authenticate the source or verify commit provenance; callers must do that
+    /// independently before passing the snapshot to receiver reconciliation.
+    /// </summary>
+    public static CiAiDependencyRegistrationSnapshot FromJson(string json)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(json);
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+        if (root.ValueKind != JsonValueKind.Object ||
+            !string.Equals(root.GetProperty("schema").GetString(), CurrentSchema, StringComparison.Ordinal))
+            throw new JsonException("Dependency registration schema is missing or unsupported.");
+
+        var sourceRepository = root.GetProperty("sourceRepository").GetString()
+            ?? throw new JsonException("Dependency registration source repository is required.");
+        var sourceCommitSha = root.GetProperty("sourceCommitSha").GetString()
+            ?? throw new JsonException("Dependency registration source SHA is required.");
+        var registrationArray = root.GetProperty("registrations");
+        if (registrationArray.ValueKind != JsonValueKind.Array)
+            throw new JsonException("Dependency registrations must be an array.");
+
+        var registrations = new List<CiAiDependencyRegistration>();
+        foreach (var item in registrationArray.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.Object)
+                throw new JsonException("Every dependency registration must be an object.");
+
+            var capabilityElement = item.GetProperty("capability");
+            var capability = capabilityElement.ValueKind switch
+            {
+                JsonValueKind.Null => null,
+                JsonValueKind.String => capabilityElement.GetString(),
+                _ => throw new JsonException("Dependency capability must be a string or null.")
+            };
+
+            registrations.Add(new CiAiDependencyRegistration(
+                item.GetProperty("registrationId").GetString()
+                    ?? throw new JsonException("Registration identity is required."),
+                item.GetProperty("sourceRepository").GetString()
+                    ?? throw new JsonException("Registration source is required."),
+                item.GetProperty("targetRepository").GetString()
+                    ?? throw new JsonException("Registration target is required."),
+                capability,
+                item.GetProperty("dependencyKind").GetString()
+                    ?? throw new JsonException("Registration kind is required."),
+                item.GetProperty("declarationIndex").GetInt32(),
+                item.GetProperty("candidateIndex").GetInt32()));
+        }
+
+        return new CiAiDependencyRegistrationSnapshot(sourceRepository, sourceCommitSha, registrations);
+    }
+
     /// <summary>Serializes the complete snapshot as deterministic, indented JSON for an explicit transport stage.</summary>
     public string ToJson()
     {
@@ -120,6 +173,7 @@ public sealed record CiAiDependencyRegistrationSnapshot
             throw new ArgumentException("Registration source commit must be a full 40-character hexadecimal SHA.");
 
         var ids = new HashSet<string>(StringComparer.Ordinal);
+        var positions = new HashSet<(int DeclarationIndex, int CandidateIndex)>();
         foreach (var registration in Registrations)
         {
             if (!ids.Add(registration.RegistrationId))
@@ -129,10 +183,34 @@ public sealed record CiAiDependencyRegistrationSnapshot
             if (!RepositoryIdentity.IsValid(registration.TargetRepository) ||
                 string.Equals(registration.TargetRepository, SourceRepository, StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException("Registration targets must be canonical and cannot be the source repository.");
-            if (registration.DependencyKind is not ("required" or "fallback-candidate") ||
-                registration.DeclarationIndex < 0 || registration.CandidateIndex < 0)
+            if (string.IsNullOrWhiteSpace(registration.RegistrationId) ||
+                registration.DependencyKind is not ("required" or "fallback-candidate") ||
+                registration.DeclarationIndex < 0 || registration.CandidateIndex < 0 ||
+                (registration.DependencyKind == "required" && registration.CandidateIndex != 0) ||
+                (registration.DependencyKind == "fallback-candidate" && registration.Capability is not null))
                 throw new ArgumentException("Dependency registration metadata is invalid.");
+
+            var expectedId = CreateRegistrationId(SourceRepository, registration.TargetRepository,
+                registration.Capability, registration.DependencyKind,
+                registration.DeclarationIndex, registration.CandidateIndex);
+            if (!string.Equals(registration.RegistrationId, expectedId, StringComparison.Ordinal))
+                throw new ArgumentException($"Dependency registration identity '{registration.RegistrationId}' does not match its declaration.");
+
+            if (!positions.Add((registration.DeclarationIndex, registration.CandidateIndex)))
+                throw new ArgumentException("Dependency declaration/candidate positions must be unique.");
         }
+    }
+
+    private static string CreateRegistrationId(
+        string sourceRepository, string targetRepository, string? capability,
+        string kind, int declarationIndex, int candidateIndex)
+    {
+        var identity = string.Join("|", sourceRepository.ToUpperInvariant(),
+            targetRepository.ToUpperInvariant(), capability ?? string.Empty, kind,
+            declarationIndex.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            candidateIndex.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        return "depreg-" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity))
+            .AsSpan(0, 16)).ToLowerInvariant();
     }
 
     private static bool IsCommitSha(string? value) =>
