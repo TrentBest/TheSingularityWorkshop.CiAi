@@ -46,6 +46,24 @@ internal static class CiWorkflowEvidenceExecutionNoticeEnqueuerTests
             Assert(duplicate == ExecutionArtifactNoticeEnqueueOutcome.Duplicate,
                 "replaying the same evidence delivery did not deduplicate at the notice outbox");
 
+            var evidenceOutbox = new FileCiWorkflowEvidenceOutbox(Path.Combine(root, "evidence.jsonl"));
+            Assert(evidenceOutbox.Enqueue(delivery) == CiWorkflowEvidenceEnqueueOutcome.Enqueued,
+                "source evidence packet was not durably queued");
+            var batchNoticeOutbox = new FileExecutionArtifactReadyNoticeOutbox(Path.Combine(root, "batch-notices.jsonl"));
+            var batchEnqueuer = new CiWorkflowEvidenceExecutionNoticeEnqueuer(
+                new FakePublisher((item, bytes) => CreateManifest(item, bytes.Span, Recipient)), batchNoticeOutbox);
+            var batch = await batchEnqueuer.PublishPendingAndEnqueueAsync(
+                evidenceOutbox,
+                new[] { new CiWorkflowRequiredCheckBinding("build", "build") },
+                acknowledgedDeliveryIds: null,
+                Recipient,
+                notifiedAt);
+            Assert(batch.PendingAtStart == 1 && batch.Attempted == 1 && batch.Enqueued == 1 &&
+                batch.Duplicates == 0 && batch.Conflicts == 0,
+                "durable evidence outbox was not projected into one Execution notice");
+            Assert(batchNoticeOutbox.ReadPending().Count == 1,
+                "outbox projection did not persist the resulting metadata-only notice");
+
             var wrongDigestPublisher = new FakePublisher((item, bytes) =>
                 CreateManifest(item, bytes.Span, Recipient, digestOverride: new string('f', 64)));
             var wrongDigestEnqueuer = new CiWorkflowEvidenceExecutionNoticeEnqueuer(
@@ -62,7 +80,7 @@ internal static class CiWorkflowEvidenceExecutionNoticeEnqueuerTests
 
             Assert(outbox.ReadPending().Count == 1,
                 "rejected manifests created additional notices");
-            Console.WriteLine("PASS: 7 canonical V1 evidence-to-Execution artifact notice checks.");
+            Console.WriteLine("PASS: 11 canonical V1 evidence-to-Execution artifact notice checks.");
             return 7;
         }
         finally
