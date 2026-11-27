@@ -13,7 +13,6 @@ RunSuite("CiWorkflowRerunRequestLedgerTests", () => CiWorkflowRerunRequestLedger
 RunSuite("CiTestResultArtifactArchiveTests", () => CiTestResultArtifactArchiveTests.Run());
 RunSuite("CiWorkflowEvidenceDeliveryTests", () => CiWorkflowEvidenceDeliveryTests.Run());
 await RunSuiteAsync("CiWorkflowEvidenceExecutionNoticeEnqueuerTests", () => CiWorkflowEvidenceExecutionNoticeEnqueuerTests.RunAsync());
-await RunSuiteAsync("CiWorkflowEvidenceExecutionNoticeEnqueuerTests", () => CiWorkflowEvidenceExecutionNoticeEnqueuerTests.RunAsync());
 await RunSuiteAsync("ExecutionArtifactReadyNoticeClientTests", () => ExecutionArtifactReadyNoticeClientTests.RunAsync());
 RunSuite("ExecutionArtifactReadyNoticeOutboxTests", () => ExecutionArtifactReadyNoticeOutboxTests.Run());
 await RunSuiteAsync("ExecutionArtifactReadyNoticeDeliveryCoordinatorTests", () => ExecutionArtifactReadyNoticeDeliveryCoordinatorTests.RunAsync());
