@@ -190,6 +190,11 @@ internal static class CiAiRepositoryBuilderContractTests
                 snapshot.Registrations[2].CandidateIndex == 1,
                 "fallback order was not retained in registration payload");
 
+            var json = snapshot.ToJson();
+            Assert(json == snapshot.ToJson() && json.Contains(CiAiDependencyRegistrationSnapshot.CurrentSchema, StringComparison.Ordinal) &&
+                json.Contains("\\"sourceCommitSha\\": \\"" + sha + "\\"", StringComparison.Ordinal),
+                "registration JSON was not deterministic or did not retain exact source provenance");
+
             var repeated = CiAiDependencyRegistrationSnapshot.FromDefinition(definition, sha);
             Assert(snapshot.Registrations.SequenceEqual(repeated.Registrations),
                 "identical source declaration did not produce stable registration identities");
