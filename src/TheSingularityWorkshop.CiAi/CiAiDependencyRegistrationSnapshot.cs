@@ -100,8 +100,8 @@ public sealed record CiAiDependencyRegistrationSnapshot
         ArgumentException.ThrowIfNullOrWhiteSpace(json);
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
-        if (root.ValueKind != JsonValueKind.Object ||
-            !string.Equals(root.GetProperty("schema").GetString(), CurrentSchema, StringComparison.Ordinal))
+        ValidateObjectProperties(root, "schema", "sourceRepository", "sourceCommitSha", "registrations");
+        if (!string.Equals(root.GetProperty("schema").GetString(), CurrentSchema, StringComparison.Ordinal))
             throw new JsonException("Dependency registration schema is missing or unsupported.");
 
         var sourceRepository = root.GetProperty("sourceRepository").GetString()
@@ -115,8 +115,8 @@ public sealed record CiAiDependencyRegistrationSnapshot
         var registrations = new List<CiAiDependencyRegistration>();
         foreach (var item in registrationArray.EnumerateArray())
         {
-            if (item.ValueKind != JsonValueKind.Object)
-                throw new JsonException("Every dependency registration must be an object.");
+            ValidateObjectProperties(item, "registrationId", "sourceRepository", "targetRepository",
+                "capability", "dependencyKind", "declarationIndex", "candidateIndex");
 
             var capabilityElement = item.GetProperty("capability");
             var capability = capabilityElement.ValueKind switch
@@ -163,6 +163,26 @@ public sealed record CiAiDependencyRegistrationSnapshot
             }).ToArray()
         };
         return JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }) + "\n";
+    }
+
+    private static void ValidateObjectProperties(JsonElement element, params string[] expectedProperties)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+            throw new JsonException("The dependency registration payload contains a non-object value.");
+
+        var expected = expectedProperties.ToHashSet(StringComparer.Ordinal);
+        var actual = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var property in element.EnumerateObject())
+        {
+            if (!expected.Contains(property.Name))
+                throw new JsonException($"Unexpected dependency registration property '{property.Name}'.");
+            if (!actual.Add(property.Name))
+                throw new JsonException($"Duplicate dependency registration property '{property.Name}'.");
+        }
+
+        var missing = expected.Except(actual, StringComparer.Ordinal).ToArray();
+        if (missing.Length != 0)
+            throw new JsonException($"Required dependency registration property '{missing[0]}' is missing.");
     }
 
     private void Validate()
