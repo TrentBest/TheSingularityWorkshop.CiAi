@@ -26,6 +26,14 @@ Every effective declaration represented by the current fluent builder has a grap
 
 The graph is a projection of the effective immutable definition. Repeated declarations that are rejected or are semantic no-ops do not appear as extra phantom nodes. Ordered fallback candidates retain their order.
 
+## Federated dependency registration
+
+A source repository can now produce a deterministic `ciai.dependency-registration.v1` snapshot from its effective `CiAiRepositoryDefinition` using `CiAiDependencyRegistrationSnapshot.FromDefinition(definition, exactSourceSha)`. The payload lists every direct dependency and every ordered fallback candidate, including capability, declaration order, and a stable registration identity. The exact 40-character source commit SHA binds the complete snapshot to the declaration revision.
+
+This is an export contract, not a transport or receiver implementation. Creating the snapshot performs no network I/O and does not modify another repository. A trusted, explicit synchronization stage may deliver each registration to its target. The target must retain it as derived inbound information; the source remains authoritative for its outgoing declaration. A newer complete snapshot, including an empty one, is the reconciliation input from which removed registrations can be withdrawn. Receivers must still authenticate the sender, verify source provenance and revision ordering, and reject stale or conflicting updates. Those receiver-side persistence, authentication, and revocation mechanics are not claimed implemented by this slice.
+
+The stable registration identity intentionally excludes the source commit SHA: a declaration keeps its identity across revisions, while the enclosing snapshot records which exact revision asserted it. This supports deduplication without confusing identity with freshness.
+
 ## Three distinct graph layers
 
 Do not collapse these views:
