@@ -121,6 +121,8 @@ Keep the first proof deliberately small and non-destructive:
 
 ## Current Execution ingress mapping
 
+The canonical workflow-evidence artifact is `ciai.workflow-evidence.v1`. `CiWorkflowEvidenceExecutionNoticeEnqueuer` publishes the exact canonical packet bytes through a host-supplied `ICiWorkflowEvidenceArtifactPublisher`, validates the returned manifest against the delivery ID, idempotency key, repository, candidate SHA, workflow-definition SHA, run ID, byte length, and SHA-256 digest, then persists a metadata-only `ArtifactReadyNotice` in the existing Execution notice outbox. The workflow-evidence packet and `ciai.test-results.v1` remain separate capabilities and artifacts. The publisher is an explicit host adapter; this contract does not claim a live storage provider or authenticated host composition.
+
 The current metadata-only CiAi ready-notice client targets the Execution-owned v1 route:
 
 - `POST /api/v1/integrations/ciai/artifact-ready`
@@ -130,6 +132,6 @@ The current metadata-only CiAi ready-notice client targets the Execution-owned v
 The manifest capability identity/version selects the bounded consumer. Keep these payload contracts distinct:
 
 - `ciai.test-results.v1` is diagnostic context for a bounded HeadlessAi turn. Its verdict is not authoritative workflow evidence and grants no operation authority.
-- `ciai.workflow-evidence.v2` is the authoritative exact-run/candidate evidence packet used by Execution's evidence and gate policy.
+- `ciai.workflow-evidence.v1` is the authoritative exact-run/candidate evidence packet used by Execution's evidence and gate policy.
 
 A receiver must validate the outer notice first, then dispatch by the registered capability identity/version to the matching bounded payload consumer. It must never parse one payload as the other or infer authorization from a report verdict. The normative host route, authentication, request mapping, receipt, and retrieval rules remain in [Execution's callback contract](https://github.com/TrentBest/TheSingularityWorkshop.FSM_Execution/blob/development/docs/CIAI_ARTIFACT_CALLBACK_CONTRACT.md). The receiver is not yet implemented on current Execution development; this mapping is a producer-side contract alignment, not proof of a live callback.
