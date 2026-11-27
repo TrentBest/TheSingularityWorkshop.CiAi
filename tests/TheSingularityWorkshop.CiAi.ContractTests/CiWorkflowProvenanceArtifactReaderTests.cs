@@ -134,8 +134,78 @@ internal static class CiWorkflowProvenanceArtifactReaderTests
             raWWarEvidence.ProviderArtifact.ArtifactId == 14701779950,
             "real raWWar PR provenance fixture did not preserve source, merge, and provider head/base identities");
 
-        Console.WriteLine("PASS: 5 provider-bound workflow provenance artifact checks.");
-        return 5;
+        // A trusted workflow_dispatch may run from development while checking out a separate
+        // candidate feature branch. Event ref and checkout ref are distinct provenance facts.
+        var candidateSha = "cccccccccccccccccccccccccccccccccccccccc";
+        var candidateRef = "refs/heads/feature/candidate";
+        var dispatchPayload = Encoding.UTF8.GetBytes($"""
+        {
+          "schema": "{{CiWorkflowProvenanceRecord.CurrentSchema}}",
+          "repository": "TrentBest/CiAi",
+          "runId": 42,
+          "runAttempt": 2,
+          "workflow": {
+            "ref": "TrentBest/CiAi/.github/workflows/ci.yml@refs/heads/development",
+            "sha": "{{WorkflowSha}}"
+          },
+          "event": {
+            "name": "workflow_dispatch",
+            "ref": "refs/heads/development",
+            "sha": "{{WorkflowSha}}",
+            "pullRequest": null
+          },
+          "checkout": {
+            "ref": "{{candidateRef}}",
+            "sha": "{{candidateSha}}"
+          }
+        }
+        """);
+        var dispatchArchive = CreateArchive(dispatchPayload);
+        var dispatchDigest = "sha256:" + Convert.ToHexString(SHA256.HashData(dispatchArchive)).ToLowerInvariant();
+        var dispatchArtifactName = CiWorkflowObserverProfile.CiAiDefault.ProvenanceArtifactName(42, 2);
+        using var dispatchClient = new HttpClient(new StubHandler(request =>
+        {
+            var requestPath = request.RequestUri!.AbsolutePath;
+            if (requestPath.EndsWith("/actions/runs/42/artifacts", StringComparison.Ordinal))
+                return Json("{\"total_count\":1,\"artifacts\":[{\"id\":8,\"name\":\"" + dispatchArtifactName + "\"}]}");
+            if (requestPath.EndsWith("/actions/artifacts/8", StringComparison.Ordinal))
+                return Json($"""
+                {
+                  "id": 8,
+                  "name": "{{dispatchArtifactName}}",
+                  "size_in_bytes": {{dispatchArchive.Length}},
+                  "digest": "{{dispatchDigest}}",
+                  "expired": false,
+                  "created_at": "{{now.AddMinutes(-1):O}}",
+                  "expires_at": "{{now.AddHours(1):O}}",
+                  "workflow_run": { "id": 42, "head_sha": "{{WorkflowSha}}" },
+                  "archive_download_url": "https://api.github.com/repos/TrentBest/CiAi/actions/artifacts/8/zip"
+                }
+                """);
+            throw new InvalidOperationException("Unexpected dispatch artifact API request: " + request.RequestUri);
+        }));
+        var dispatchArtifact = await new GitHubActionsArtifactCollector(dispatchClient)
+            .GetRequiredArtifactAsync("TrentBest/CiAi", 42, WorkflowSha, dispatchArtifactName);
+        var dispatchEvidence = CiWorkflowProvenanceArtifactReader.Read(
+            dispatchArchive, dispatchArtifact, CiWorkflowObserverProfile.CiAiDefault,
+            "TrentBest/CiAi", 42, 2,
+            WorkflowSha, WorkflowSha, candidateRef, candidateSha,
+            "refs/heads/development", WorkflowSha,
+            "workflow_dispatch", "refs/heads/development");
+        Assert(dispatchEvidence.Provenance.EventRef == "refs/heads/development" &&
+            dispatchEvidence.Provenance.CheckoutRef == candidateRef &&
+            dispatchEvidence.Provenance.CheckoutSha == candidateSha,
+            "workflow_dispatch provenance collapsed the event ref and isolated candidate checkout ref");
+
+        Throws<InvalidDataException>(() => CiWorkflowProvenanceArtifactReader.Read(
+            dispatchArchive, dispatchArtifact, CiWorkflowObserverProfile.CiAiDefault,
+            "TrentBest/CiAi", 42, 2,
+            WorkflowSha, WorkflowSha, candidateSha,
+            "refs/heads/development", WorkflowSha,
+            "workflow_dispatch", "refs/heads/development"));
+
+        Console.WriteLine("PASS: 6 provider-bound workflow provenance artifact checks.");
+        return 6;
     }
 
     private static byte[] CreateArchive(byte[] payload)
