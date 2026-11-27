@@ -44,7 +44,7 @@ internal static class CiWorkflowProvenanceArtifactReaderTests
             if (requestPath.EndsWith("/actions/runs/42/artifacts", StringComparison.Ordinal))
                 return Json("{\"total_count\":1,\"artifacts\":[{\"id\":7,\"name\":\"" + artifactName + "\"}]}");
             if (requestPath.EndsWith("/actions/artifacts/7", StringComparison.Ordinal))
-                return Json($"""
+                return Json($$"""
                 {
                   "id": 7,
                   "name": "{{artifactName}}",
