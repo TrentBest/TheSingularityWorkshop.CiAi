@@ -35,8 +35,8 @@ public static class CiWorkflowProvenanceArtifactReader
         string expectedEventRef)
         => ReadCore(archiveBytes, providerArtifact, expectedArtifactName, expectedEntryName,
             expectedRepository, expectedRunId, expectedRunAttempt, expectedHeadSha, expectedHeadSha,
-            expectedHeadSha, expectedWorkflowPath: ".github/workflows/ci.yml", expectedWorkflowRef,
-            expectedWorkflowSha, expectedEventName, expectedEventRef, expectedEventRef, expectedPullRequest: null);
+            expectedEventRef, expectedHeadSha, ".github/workflows/ci.yml", expectedWorkflowRef,
+            expectedWorkflowSha, expectedEventName, expectedEventRef, expectedPullRequest: null);
 
     /// <summary>
     /// Reads an external workflow profile. Provider head, event SHA, and checkout SHA remain separate
