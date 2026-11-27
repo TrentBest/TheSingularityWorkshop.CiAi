@@ -7,6 +7,7 @@ namespace TheSingularityWorkshop.CiAi;
 public interface ICiWorkflowEvidenceDelivery
 {
     string DeliveryId { get; }
+    string OperationId { get; }
     string IdempotencyKey { get; }
     string Payload { get; }
     string PayloadSha256 { get; }
