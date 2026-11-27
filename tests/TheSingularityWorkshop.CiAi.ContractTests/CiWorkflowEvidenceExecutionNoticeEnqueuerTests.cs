@@ -14,7 +14,9 @@ internal static class CiWorkflowEvidenceExecutionNoticeEnqueuerTests
         try
         {
             var packet = CreatePacket();
-            var delivery = new CiWorkflowEvidenceDelivery("evidence-delivery-42-1", packet);
+            var delivery = new CiWorkflowEvidenceDelivery(
+                new CiWorkflowEvidenceDeliveryIdentity("evidence-request-42-1", "evidence-operation-42-1", "evidence-idempotency-42-1"),
+                packet);
             var publisher = new FakePublisher((item, bytes) => CreateManifest(item, bytes.Span, Recipient));
             var outbox = new FileExecutionArtifactReadyNoticeOutbox(Path.Combine(root, "notices.jsonl"));
             var enqueuer = new CiWorkflowEvidenceExecutionNoticeEnqueuer(publisher, outbox);
@@ -100,7 +102,7 @@ internal static class CiWorkflowEvidenceExecutionNoticeEnqueuerTests
         var digest = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
         return new ArtifactManifest(
             delivery.DeliveryId,
-            $"workflow-evidence:{packet.ObservedRun.RunId}:{packet.ObservedRun.RunAttempt}",
+            delivery.OperationId,
             delivery.IdempotencyKey,
             packet.ObservedRun.Repository,
             CiWorkflowEvidenceExecutionNoticeEnqueuer.CapabilityId,
