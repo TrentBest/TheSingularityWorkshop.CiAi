@@ -69,6 +69,17 @@ public sealed record CiWorkflowObserverProfile
     public string TestArtifactName(long runId, int attempt)
         => Expand(TestArtifactNameTemplate, runId, attempt);
 
+    /// <summary>
+    /// Resolves the artifact name that can be persisted before dispatch. A profile whose
+    /// artifact template depends on the not-yet-known provider run ID cannot be prebound.
+    /// </summary>
+    public string TestArtifactNameForDispatch(int attempt)
+    {
+        if (TestArtifactNameTemplate.Contains("{runId}", StringComparison.Ordinal))
+            throw new InvalidOperationException("A run-ID-dependent artifact name cannot be fixed in the pre-dispatch mapping.");
+        return Expand(TestArtifactNameTemplate, 1, attempt);
+    }
+
     /// <summary>Creates the exact required-job policy for one source run attempt.</summary>
     public CiRequiredJobPolicy CreateRequiredJobPolicy(long runId, int attempt)
         => new(new[]
