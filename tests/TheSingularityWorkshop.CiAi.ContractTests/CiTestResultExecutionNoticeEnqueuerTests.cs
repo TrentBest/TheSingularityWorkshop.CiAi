@@ -12,14 +12,15 @@ internal static class CiTestResultExecutionNoticeEnqueuerTests
             var report = CiTestResultReportTests.CreateSampleReport();
             var bytes = report.ToCanonicalUtf8Bytes();
             var recipient = "foundry-host";
+            var identity = new CiAiArtifactDeliveryIdentity("request-42-1", "operation-42-1", "idempotency-42-1");
             var notifiedAt = report.ObservedAt.AddMinutes(2);
-            var publisher = new FakePublisher((value, payload) =>
-                CreateManifest(value, payload.Span, recipient, digestOverride: null, sourceShaOverride: null));
+            var publisher = new FakePublisher((value, dispatch, payload) =>
+                CreateManifest(value, dispatch, payload.Span, recipient, digestOverride: null, sourceShaOverride: null));
             var outbox = new FileExecutionArtifactReadyNoticeOutbox(Path.Combine(root, "notices.jsonl"));
             var enqueuer = new CiTestResultExecutionNoticeEnqueuer(publisher, outbox);
 
             var first = await enqueuer.PublishAndEnqueueAsync(
-                report, recipient, "notice-report-42-1", notifiedAt);
+                report, identity, recipient, "notice-report-42-1", notifiedAt);
             Assert(first == ExecutionArtifactNoticeEnqueueOutcome.Enqueued,
                 "canonical report was not durably enqueued for FSM_Execution");
             Assert(publisher.PublishedBytes is not null && publisher.PublishedBytes.SequenceEqual(bytes),
@@ -29,19 +30,21 @@ internal static class CiTestResultExecutionNoticeEnqueuerTests
             Assert(pending.Count == 1 &&
                 pending[0].Notice.Manifest.Digest == report.ReportSha256 &&
                 pending[0].Notice.Manifest.SizeBytes == bytes.Length &&
-                pending[0].Notice.Manifest.IdempotencyKey == report.ReportIdentity &&
+                pending[0].Notice.Manifest.RequestId == identity.RequestId &&
+                pending[0].Notice.Manifest.OperationId == identity.OperationId &&
+                pending[0].Notice.Manifest.IdempotencyKey == identity.IdempotencyKey &&
                 pending[0].Notice.Manifest.SourceSha == report.CandidateSha &&
                 pending[0].Notice.Manifest.ProviderRunId == report.RunId,
                 "FSM_Execution notice did not preserve report digest, size, identity, and exact run/candidate lineage");
 
             var duplicate = await enqueuer.PublishAndEnqueueAsync(
-                report, recipient, "notice-report-42-1", notifiedAt);
+                report, identity, recipient, "notice-report-42-1", notifiedAt);
             Assert(duplicate == ExecutionArtifactNoticeEnqueueOutcome.Duplicate,
                 "identical report notice retry was not idempotent");
 
             var badDigestOutbox = new FileExecutionArtifactReadyNoticeOutbox(Path.Combine(root, "bad-digest.jsonl"));
             var badDigestPublisher = new FakePublisher((value, payload) =>
-                CreateManifest(value, payload.Span, recipient, new string('0', 64), null));
+                CreateManifest(value, identity, payload.Span, recipient, new string('0', 64), null));
             var badDigestEnqueuer = new CiTestResultExecutionNoticeEnqueuer(badDigestPublisher, badDigestOutbox);
             await AssertThrowsAsync<InvalidDataException>(() => badDigestEnqueuer.PublishAndEnqueueAsync(
                 report, recipient, "notice-bad-digest", notifiedAt));
@@ -53,7 +56,7 @@ internal static class CiTestResultExecutionNoticeEnqueuerTests
             {
                 var alteredBytes = payload.ToArray();
                 alteredBytes[0] ^= 0x01;
-                return CreateManifest(value, alteredBytes, recipient, digestOverride: null, sourceShaOverride: null);
+                return CreateManifest(value, identity, alteredBytes, recipient, digestOverride: null, sourceShaOverride: null);
             });
             var tamperedReportEnqueuer = new CiTestResultExecutionNoticeEnqueuer(tamperedReportPublisher, tamperedReportOutbox);
             await AssertThrowsAsync<InvalidDataException>(() => tamperedReportEnqueuer.PublishAndEnqueueAsync(
@@ -63,7 +66,7 @@ internal static class CiTestResultExecutionNoticeEnqueuerTests
 
             var wrongCandidateOutbox = new FileExecutionArtifactReadyNoticeOutbox(Path.Combine(root, "wrong-candidate.jsonl"));
             var wrongCandidatePublisher = new FakePublisher((value, payload) =>
-                CreateManifest(value, payload.Span, recipient, null, new string('f', 40)));
+                CreateManifest(value, identity, payload.Span, recipient, null, new string('f', 40)));
             var wrongCandidateEnqueuer = new CiTestResultExecutionNoticeEnqueuer(wrongCandidatePublisher, wrongCandidateOutbox);
             await AssertThrowsAsync<UnauthorizedAccessException>(() => wrongCandidateEnqueuer.PublishAndEnqueueAsync(
                 report, recipient, "notice-wrong-candidate", notifiedAt));
@@ -81,6 +84,7 @@ internal static class CiTestResultExecutionNoticeEnqueuerTests
 
     private static ArtifactManifest CreateManifest(
         CiTestResultReport report,
+        CiAiArtifactDeliveryIdentity identity,
         ReadOnlySpan<byte> bytes,
         string recipient,
         string? digestOverride,
@@ -88,9 +92,9 @@ internal static class CiTestResultExecutionNoticeEnqueuerTests
     {
         var digest = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
         return new ArtifactManifest(
-            "request-" + report.RunId,
-            "operation-" + report.RunId,
-            report.ReportIdentity,
+            identity.RequestId,
+            identity.OperationId,
+            identity.IdempotencyKey,
             report.Repository,
             CiTestResultExecutionNoticeEnqueuer.CapabilityId,
             CiTestResultExecutionNoticeEnqueuer.CapabilityVersion,
@@ -111,19 +115,20 @@ internal static class CiTestResultExecutionNoticeEnqueuerTests
     }
 
     private sealed class FakePublisher(
-        Func<CiTestResultReport, ReadOnlyMemory<byte>, ArtifactManifest> createManifest)
+        Func<CiTestResultReport, CiAiArtifactDeliveryIdentity, ReadOnlyMemory<byte>, ArtifactManifest> createManifest)
         : ICiTestResultArtifactPublisher
     {
         public byte[]? PublishedBytes { get; private set; }
 
         public Task<ArtifactManifest> PublishAsync(
             CiTestResultReport report,
+            CiAiArtifactDeliveryIdentity identity,
             ReadOnlyMemory<byte> canonicalReportBytes,
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             PublishedBytes = canonicalReportBytes.ToArray();
-            return Task.FromResult(createManifest(report, canonicalReportBytes));
+            return Task.FromResult(createManifest(report, identity, canonicalReportBytes));
         }
     }
 
