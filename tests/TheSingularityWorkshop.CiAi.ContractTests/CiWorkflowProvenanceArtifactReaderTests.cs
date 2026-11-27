@@ -44,7 +44,7 @@ internal static class CiWorkflowProvenanceArtifactReaderTests
             if (requestPath.EndsWith("/actions/runs/42/artifacts", StringComparison.Ordinal))
                 return Json("{\"total_count\":1,\"artifacts\":[{\"id\":7,\"name\":\"" + artifactName + "\"}]}");
             if (requestPath.EndsWith("/actions/artifacts/7", StringComparison.Ordinal))
-                return Json($$"""
+                return Json($$$"""
                 {
                   "id": 7,
                   "name": "{{artifactName}}",
@@ -138,7 +138,7 @@ internal static class CiWorkflowProvenanceArtifactReaderTests
         // candidate feature branch. Event ref and checkout ref are distinct provenance facts.
         var candidateSha = "cccccccccccccccccccccccccccccccccccccccc";
         var candidateRef = "refs/heads/feature/candidate";
-        var dispatchPayload = Encoding.UTF8.GetBytes($"""
+        var dispatchPayload = Encoding.UTF8.GetBytes($$"""
         {
           "schema": "{{CiWorkflowProvenanceRecord.CurrentSchema}}",
           "repository": "TrentBest/CiAi",
