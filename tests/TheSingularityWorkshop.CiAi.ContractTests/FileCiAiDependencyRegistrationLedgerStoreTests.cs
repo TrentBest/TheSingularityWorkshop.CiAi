@@ -26,6 +26,25 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
 
             var delivery = CiAiDependencyRegistrationDelivery.FromVerification(verification,
                 new[] { "TrentBest/Provider", "TrentBest/PriorDependent" });
+            var inventory = CiAiRepositoryInventorySnapshot.CreateFromTrustedProvider(
+                "github-app-installation:trusted-org-inventory", 9,
+                new[] { "TrentBest/Consumer", "TrentBest/Provider", "TrentBest/NewRepository" },
+                isComplete: true, new string('b', 64));
+            var fanOutRecipients = CiAiDependencyRegistrationFanOutPlanner.CreateRecipients(
+                "TrentBest/Consumer", inventory, new[] { delivery });
+            Assert(fanOutRecipients.SequenceEqual(new[]
+                { "TrentBest/NewRepository", "TrentBest/PriorDependent", "TrentBest/Provider" }),
+                "fan-out plan did not combine complete current inventory with former recipients");
+            var incompleteInventory = CiAiRepositoryInventorySnapshot.CreateFromTrustedProvider(
+                "github-app-installation:trusted-org-inventory", 10,
+                new[] { "TrentBest/Provider" }, isComplete: false, new string('c', 64));
+            AssertThrows<InvalidDataException>(() =>
+                CiAiDependencyRegistrationFanOutPlanner.CreateRecipients(
+                    "TrentBest/Consumer", incompleteInventory, new[] { delivery }));
+            AssertThrows<ArgumentException>(() =>
+                CiAiRepositoryInventorySnapshot.CreateFromTrustedProvider(
+                    "trusted", 11, new[] { "TrentBest/Provider", "trentbest/provider" },
+                    isComplete: true, new string('d', 64)));
             var outbox = new FileCiAiDependencyRegistrationOutbox(Path.Combine(root, "outbox", "deliveries.jsonl"));
             Assert(outbox.Enqueue(delivery) == CiAiDependencyRegistrationOutboxEnqueueOutcome.Enqueued,
                 "first federated delivery was not enqueued");
@@ -202,8 +221,8 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             File.WriteAllText(corrupt, alteredDigest);
             AssertThrows<InvalidDataException>(() => reopened.ReadAll());
 
-            Console.WriteLine("PASS: 35 durable dependency federation, receiver, receipt, retry, and GitHub transport checks.");
-            return 35;
+            Console.WriteLine("PASS: 38 durable dependency federation, inventory, receiver, receipt, retry, and GitHub transport checks.");
+            return 38;
         }
         finally
         {
