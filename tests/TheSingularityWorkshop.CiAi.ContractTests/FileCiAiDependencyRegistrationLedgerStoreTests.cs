@@ -45,6 +45,64 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
                 CiAiRepositoryInventorySnapshot.CreateFromTrustedProvider(
                     "trusted", 11, new[] { "TrentBest/Provider", "trentbest/provider" },
                     isComplete: true, new string('d', 64)));
+            using var inventoryHttp = new HttpClient(new StubHttpMessageHandler(request =>
+            {
+                Assert(request.RequestUri!.Host == "api.github.com" &&
+                    request.Headers.Authorization?.Parameter == "inventory-token",
+                    "inventory provider did not use the authenticated GitHub installation endpoint");
+                var page = System.Web.HttpUtility.ParseQueryString(request.RequestUri.Query).Get("page");
+                var pageRepositories = page == "1"
+                    ? Enumerable.Range(0, 100).Select(index => new { full_name = "TrentBest/Repo" + index.ToString("D3") }).ToArray()
+                    : new[] { new { full_name = "TrentBest/Repo100" } };
+                var body = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    total_count = 101,
+                    repositories = pageRepositories
+                });
+                return new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.OK)
+                {
+                    Content = new StringContent(body, Encoding.UTF8, "application/json")
+                };
+            }));
+            var inventoryProvider = new GitHubInstallationRepositoryInventoryProvider(
+                inventoryHttp, new FixedInstallationInventoryTokenProvider(),
+                new FixedInventoryRevisionProvider(77), installationId: 1234);
+            var githubInventory = inventoryProvider.GetCompleteInventoryAsync().AsTask().GetAwaiter().GetResult();
+            Assert(githubInventory.IsComplete && githubInventory.Revision == 77 &&
+                githubInventory.Repositories.Count == 101 && githubInventory.EvidencePayloadSha256.Length == 64,
+                "GitHub inventory provider did not reconcile all pages and retain evidence identity");
+            using var incompleteInventoryHttp = new HttpClient(new StubHttpMessageHandler(_ =>
+                new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.OK)
+                {
+                    Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        total_count = 101,
+                        repositories = Enumerable.Range(0, 50)
+                            .Select(index => new { full_name = "TrentBest/Partial" + index.ToString("D3") })
+                    }), Encoding.UTF8, "application/json")
+                }));
+            var incompleteInventoryProvider = new GitHubInstallationRepositoryInventoryProvider(
+                incompleteInventoryHttp, new FixedInstallationInventoryTokenProvider(),
+                new FixedInventoryRevisionProvider(78), installationId: 1234);
+            AssertThrows<InvalidDataException>(() =>
+                incompleteInventoryProvider.GetCompleteInventoryAsync().AsTask().GetAwaiter().GetResult());
+            using var duplicateInventoryHttp = new HttpClient(new StubHttpMessageHandler(_ =>
+                new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.OK)
+                {
+                    Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        total_count = 2,
+                        repositories = new[] {
+                            new { full_name = "TrentBest/Duplicate" },
+                            new { full_name = "trentbest/duplicate" }
+                        }
+                    }), Encoding.UTF8, "application/json")
+                }));
+            var duplicateInventoryProvider = new GitHubInstallationRepositoryInventoryProvider(
+                duplicateInventoryHttp, new FixedInstallationInventoryTokenProvider(),
+                new FixedInventoryRevisionProvider(79), installationId: 1234);
+            AssertThrows<InvalidDataException>(() =>
+                duplicateInventoryProvider.GetCompleteInventoryAsync().AsTask().GetAwaiter().GetResult());
             var outbox = new FileCiAiDependencyRegistrationOutbox(Path.Combine(root, "outbox", "deliveries.jsonl"));
             Assert(outbox.Enqueue(delivery) == CiAiDependencyRegistrationOutboxEnqueueOutcome.Enqueued,
                 "first federated delivery was not enqueued");
@@ -221,8 +279,8 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             File.WriteAllText(corrupt, alteredDigest);
             AssertThrows<InvalidDataException>(() => reopened.ReadAll());
 
-            Console.WriteLine("PASS: 38 durable dependency federation, inventory, receiver, receipt, retry, and GitHub transport checks.");
-            return 38;
+            Console.WriteLine("PASS: 41 durable dependency federation, inventory, receiver, receipt, retry, and GitHub transport checks.");
+            return 41;
         }
         finally
         {
@@ -298,6 +356,18 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             new[] { new CiWorkflowRequiredCheckBinding("build-and-test", "build-and-test") });
         return CiAiDependencyRegistrationSourceVerification.Verify(snapshot, packetV2, trustDecision,
             allowedSourceRefs ?? new[] { sourceRef });
+    }
+
+    private sealed class FixedInstallationInventoryTokenProvider : ICiAiGitHubInstallationInventoryTokenProvider
+    {
+        public ValueTask<string> GetInstallationTokenAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult("inventory-token");
+    }
+
+    private sealed class FixedInventoryRevisionProvider(long revision) : ICiAiRepositoryInventoryRevisionProvider
+    {
+        public ValueTask<long> GetNextRevisionAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(revision);
     }
 
     private sealed class FixedInstallationTokenProvider : ICiAiGitHubInstallationTokenProvider
