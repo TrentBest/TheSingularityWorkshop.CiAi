@@ -77,8 +77,17 @@ public sealed class GitHubDependencyRegistrationDispatchTransport : ICiAiDepende
             return new(CiAiDependencyRegistrationTransportDisposition.PermanentFailure, null,
                 "github.client-payload-too-large");
 
-        var token = await _tokenProvider.GetInstallationTokenAsync(targetRepository, cancellationToken)
-            .ConfigureAwait(false);
+        string token;
+        try
+        {
+            token = await _tokenProvider.GetInstallationTokenAsync(targetRepository, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (HttpRequestException)
+        {
+            return new(CiAiDependencyRegistrationTransportDisposition.RetryableFailure, null,
+                "github.token-provider-transport-error");
+        }
         if (string.IsNullOrWhiteSpace(token))
             throw new InvalidOperationException("GitHub installation token provider returned no token.");
 
