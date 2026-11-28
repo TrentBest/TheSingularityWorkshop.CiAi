@@ -44,6 +44,33 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             AssertThrows<System.Text.Json.JsonException>(() =>
                 CiAiDependencyRegistrationDelivery.FromJson(delivery.Payload.Replace(
                     "\"schema\":", "\"unexpected\": 1, \"schema\":", StringComparison.Ordinal)));
+            var acceptedReceipt = CiAiDependencyRegistrationReceipt.FromApplyResult(delivery,
+                "TrentBest/Provider", applied);
+            Assert(acceptedReceipt.Status == CiAiDependencyRegistrationReceiptStatus.Accepted &&
+                acceptedReceipt.SourceRevision == 42 && acceptedReceipt.SourceCommitSha == first.SourceCommitSha &&
+                acceptedReceipt.DeliveryPayloadSha256 == delivery.PayloadSha256,
+                "accepted receipt did not bind exact delivery identity and digest");
+            Assert(CiAiDependencyRegistrationReceipt.FromJson(acceptedReceipt.Payload).Payload == acceptedReceipt.Payload,
+                "receipt JSON round-trip changed its canonical payload");
+            var receiptStorePath = Path.Combine(root, "receipts", "receipts.jsonl");
+            var receiptStore = new FileCiAiDependencyRegistrationReceiptStore(receiptStorePath);
+            Assert(receiptStore.Record(acceptedReceipt) == CiAiDependencyRegistrationReceiptStoreOutcome.Recorded,
+                "first receiver receipt was not durably recorded");
+            Assert(new FileCiAiDependencyRegistrationReceiptStore(receiptStorePath).Record(acceptedReceipt) ==
+                CiAiDependencyRegistrationReceiptStoreOutcome.Duplicate,
+                "identical receiver receipt retry was not deduplicated after reopening");
+            var contradictoryReceipt = CiAiDependencyRegistrationReceipt.FromApplyResult(delivery,
+                "TrentBest/Provider", new CiAiDependencyRegistrationApplyResult(
+                    CiAiDependencyRegistrationApplyStatus.Stale, applied.Ledger));
+            Assert(receiptStore.Record(contradictoryReceipt) == CiAiDependencyRegistrationReceiptStoreOutcome.Conflict,
+                "contradictory receipt reused the same delivery/recipient identity");
+            Assert(receiptStore.ReadAll().Single().Payload == acceptedReceipt.Payload,
+                "receipt journal did not preserve the accepted receipt");
+            AssertThrows<ArgumentException>(() => CiAiDependencyRegistrationReceipt.FromApplyResult(delivery,
+                "TrentBest/NotARecipient", applied));
+            AssertThrows<System.Text.Json.JsonException>(() =>
+                CiAiDependencyRegistrationReceipt.FromJson(acceptedReceipt.Payload.Replace(
+                    "\\"schema\\":", "\\"unexpected\\": 1, \\"schema\\":", StringComparison.Ordinal)));
             Assert(applied.Status == CiAiDependencyRegistrationApplyStatus.Applied, "initial snapshot was not applied");
             Assert(store.ApplyVerifiedSnapshot(CreateVerification(first, 42)).Status == CiAiDependencyRegistrationApplyStatus.Duplicate,
                 "identical replay was not idempotent");
