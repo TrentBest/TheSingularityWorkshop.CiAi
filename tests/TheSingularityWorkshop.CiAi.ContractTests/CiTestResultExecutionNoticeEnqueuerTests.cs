@@ -32,7 +32,7 @@ internal static class CiTestResultExecutionNoticeEnqueuerTests
                 pending[0].Notice.Manifest.SizeBytes == bytes.Length &&
                 pending[0].Notice.Manifest.RequestId == identity.RequestId &&
                 pending[0].Notice.Manifest.OperationId == identity.OperationId &&
-                pending[0].Notice.Manifest.IdempotencyKey == identity.IdempotencyKey &&
+                pending[0].Notice.Manifest.IdempotencyKey == identity.DeriveIdempotencyKey(CiTestResultExecutionNoticeEnqueuer.CapabilityId) &&
                 pending[0].Notice.Manifest.SourceSha == report.CandidateSha &&
                 pending[0].Notice.Manifest.ProviderRunId == report.RunId,
                 "FSM_Execution notice did not preserve report digest, size, identity, and exact run/candidate lineage");
@@ -94,7 +94,7 @@ internal static class CiTestResultExecutionNoticeEnqueuerTests
         return new ArtifactManifest(
             identity.RequestId,
             identity.OperationId,
-            identity.IdempotencyKey,
+            identity.DeriveIdempotencyKey(CiTestResultExecutionNoticeEnqueuer.CapabilityId),
             report.Repository,
             CiTestResultExecutionNoticeEnqueuer.CapabilityId,
             CiTestResultExecutionNoticeEnqueuer.CapabilityVersion,
