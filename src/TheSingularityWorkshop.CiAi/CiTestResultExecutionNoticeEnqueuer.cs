@@ -38,6 +38,23 @@ public sealed class CiTestResultExecutionNoticeEnqueuer
         _outbox = outbox;
     }
 
+    public static string CreateStableNoticeId(CiAiArtifactDeliveryIdentity identity)
+    {
+        ArgumentNullException.ThrowIfNull(identity);
+        var capabilityKey = identity.DeriveIdempotencyKey(CapabilityId);
+        var digest = SHA256.HashData(Encoding.UTF8.GetBytes(capabilityKey));
+        return "ciai-test-results-" + Convert.ToHexString(digest).ToLowerInvariant();
+    }
+
+    public Task<ExecutionArtifactNoticeEnqueueOutcome> PublishAndEnqueueAsync(
+        CiTestResultReport report,
+        CiAiArtifactDeliveryIdentity identity,
+        string recipientIdentity,
+        DateTimeOffset notifiedAt,
+        CancellationToken cancellationToken = default) =>
+        PublishAndEnqueueAsync(report, identity, recipientIdentity,
+            CreateStableNoticeId(identity), notifiedAt, cancellationToken);
+
     public async Task<ExecutionArtifactNoticeEnqueueOutcome> PublishAndEnqueueAsync(
         CiTestResultReport report,
         CiAiArtifactDeliveryIdentity identity,
