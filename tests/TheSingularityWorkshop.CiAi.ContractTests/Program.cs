@@ -37,6 +37,7 @@ RunSuite("TrxTestResultParserContractTests", () => TrxTestResultParserContractTe
 RunSuite("CiBenchmarkEvidencePolicyEvaluatorTests", () => CiBenchmarkEvidencePolicyEvaluatorTests.Run());
 RunSuite("CiFsmRuntimeBenchmarkReportEvaluatorTests", () => CiFsmRuntimeBenchmarkReportEvaluatorTests.Run());
 RunSuite("CiWorkflowDispatchAuthorizationEvaluatorTests", () => CiWorkflowDispatchAuthorizationEvaluatorTests.Run());
+RunSuite("CiWorkflowDispatchAuthorizationReplayLedgerTests", () => CiWorkflowDispatchAuthorizationReplayLedgerTests.Run());
 RunSuite("CiAiRepositoryBuilderContractTests", () => CiAiRepositoryBuilderContractTests.Run());
 RunSuite("FileCiAiDependencyRegistrationLedgerStoreTests", () => FileCiAiDependencyRegistrationLedgerStoreTests.Run());
 RunSuite("CiAiRepositoryManifestTests", () => CiAiRepositoryManifestTests.Run());
