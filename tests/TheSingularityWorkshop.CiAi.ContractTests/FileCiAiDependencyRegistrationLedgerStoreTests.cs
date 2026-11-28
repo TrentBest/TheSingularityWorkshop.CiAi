@@ -248,6 +248,25 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
                 "GitHub permission rejection was not classified as permanent");
             AssertThrows<ArgumentException>(() => githubTransport.DispatchAsync(delivery,
                 "TrentBest/NotARecipient").AsTask().GetAwaiter().GetResult());
+            var remoteReceiptStore = new FileCiAiDependencyRegistrationReceiptStore(
+                Path.Combine(root, "remote-receipts", "receipts.jsonl"));
+            var receiptIngestor = new CiAiDependencyRegistrationReceiptIngestor(
+                remoteReceiptStore, new FixedReceiptAuthenticator(authenticated: true));
+            Assert(receiptIngestor.IngestAsync(acceptedReceipt.Payload, delivery, "TrentBest/Provider")
+                .AsTask().GetAwaiter().GetResult() == CiAiDependencyRegistrationReceiptStoreOutcome.Recorded,
+                "authenticated remote receipt was not ingested");
+            Assert(receiptIngestor.IngestAsync(acceptedReceipt.Payload, delivery, "TrentBest/Provider")
+                .AsTask().GetAwaiter().GetResult() == CiAiDependencyRegistrationReceiptStoreOutcome.Duplicate,
+                "authenticated receipt retry was not deduplicated");
+            var rejectingIngestor = new CiAiDependencyRegistrationReceiptIngestor(
+                new FileCiAiDependencyRegistrationReceiptStore(Path.Combine(root, "rejected-receipts", "receipts.jsonl")),
+                new FixedReceiptAuthenticator(authenticated: false));
+            AssertThrows<InvalidDataException>(() =>
+                rejectingIngestor.IngestAsync(acceptedReceipt.Payload, delivery, "TrentBest/Provider")
+                    .AsTask().GetAwaiter().GetResult());
+            AssertThrows<InvalidDataException>(() =>
+                receiptIngestor.IngestAsync(acceptedReceipt.Payload, delivery, "TrentBest/PriorDependent")
+                    .AsTask().GetAwaiter().GetResult());
             Assert(applied.Status == CiAiDependencyRegistrationApplyStatus.Applied, "initial snapshot was not applied");
             Assert(store.ApplyVerifiedSnapshot(CreateVerification(first, 42)).Status == CiAiDependencyRegistrationApplyStatus.Duplicate,
                 "identical replay was not idempotent");
@@ -289,8 +308,8 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             File.WriteAllText(corrupt, alteredDigest);
             AssertThrows<InvalidDataException>(() => reopened.ReadAll());
 
-            Console.WriteLine("PASS: 43 durable dependency federation, inventory, receiver, receipt, retry, and GitHub transport checks.");
-            return 43;
+            Console.WriteLine("PASS: 46 durable dependency federation, inventory, receiver, receipt authentication, retry, and GitHub transport checks.");
+            return 46;
         }
         finally
         {
@@ -366,6 +385,13 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             new[] { new CiWorkflowRequiredCheckBinding("build-and-test", "build-and-test") });
         return CiAiDependencyRegistrationSourceVerification.Verify(snapshot, packetV2, trustDecision,
             allowedSourceRefs ?? new[] { sourceRef });
+    }
+
+    private sealed class FixedReceiptAuthenticator(bool authenticated)
+        : ICiAiDependencyRegistrationReceiptAuthenticator
+    {
+        public ValueTask<bool> AuthenticateAsync(CiAiDependencyRegistrationReceipt receipt,
+            CancellationToken cancellationToken = default) => ValueTask.FromResult(authenticated);
     }
 
     private sealed class FixedInstallationInventoryTokenProvider : ICiAiGitHubInstallationInventoryTokenProvider
