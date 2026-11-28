@@ -101,15 +101,15 @@ public sealed class CiAiDependencyRegistrationReceipt
 
     private void Validate()
     {
-        if (!string.Equals(DeliveryId, CiAiDependencyRegistrationDelivery.CreateDeliveryId(
-                SourceRepository, SourceRevision, SourceCommitSha), StringComparison.Ordinal))
-            throw new ArgumentException("Receipt delivery identity does not match its source revision.");
         if (!RepositoryIdentity.IsValid(TargetRepository) || !RepositoryIdentity.IsValid(SourceRepository) ||
             string.Equals(TargetRepository, SourceRepository, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("Receipt source and target repositories must be distinct canonical identities.");
         if (SourceRevision < 1) throw new ArgumentOutOfRangeException(nameof(SourceRevision));
         if (SourceCommitSha is not { Length: 40 } || !SourceCommitSha.All(Uri.IsHexDigit))
             throw new ArgumentException("Receipt source commit must be a full SHA.");
+        if (!string.Equals(DeliveryId, CiAiDependencyRegistrationDelivery.CreateDeliveryId(
+                SourceRepository, SourceRevision, SourceCommitSha), StringComparison.Ordinal))
+            throw new ArgumentException("Receipt delivery identity does not match its source revision.");
         if (DeliveryPayloadSha256 is not { Length: 64 } || !DeliveryPayloadSha256.All(Uri.IsHexDigit))
             throw new ArgumentException("Receipt delivery digest must be a full SHA-256 value.");
         var expected = Status switch
