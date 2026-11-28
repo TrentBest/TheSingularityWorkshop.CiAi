@@ -25,9 +25,11 @@ public sealed class FileCiAiDependencyRegistrationLedgerStore
     /// verification. The supplied revision must be a trusted monotonic source sequence, not a Git SHA.
     /// </summary>
     public CiAiDependencyRegistrationApplyResult ApplyVerifiedSnapshot(
-        CiAiDependencyRegistrationSnapshot snapshot, long sourceRevision)
+        CiAiDependencyRegistrationSourceVerification verification)
     {
-        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(verification);
+        var snapshot = verification.Snapshot;
+        var sourceRevision = verification.SourceRevision;
         var path = GetPath(snapshot.SourceRepository);
         Directory.CreateDirectory(_directory);
         using var fileLock = new FileStream(path + ".lock", FileMode.OpenOrCreate,
