@@ -122,15 +122,15 @@ public sealed class FileCiAiDependencyRegistrationDispatchStateStore : ICiAiDepe
 /// </summary>
 public sealed class CiAiDependencyRegistrationDispatchCoordinator
 {
-    private readonly FileCiAiDependencyRegistrationOutbox _outbox;
-    private readonly FileCiAiDependencyRegistrationReceiptStore _receipts;
-    private readonly FileCiAiDependencyRegistrationDispatchStateStore _states;
+    private readonly ICiAiDependencyRegistrationOutboxStore _outbox;
+    private readonly ICiAiDependencyRegistrationReceiptStore _receipts;
+    private readonly ICiAiDependencyRegistrationDispatchStateStore _states;
     private readonly ICiAiDependencyRegistrationTransport _transport;
 
     public CiAiDependencyRegistrationDispatchCoordinator(
-        FileCiAiDependencyRegistrationOutbox outbox,
-        FileCiAiDependencyRegistrationReceiptStore receipts,
-        FileCiAiDependencyRegistrationDispatchStateStore states,
+        ICiAiDependencyRegistrationOutboxStore outbox,
+        ICiAiDependencyRegistrationReceiptStore receipts,
+        ICiAiDependencyRegistrationDispatchStateStore states,
         ICiAiDependencyRegistrationTransport transport)
     {
         _outbox = outbox ?? throw new ArgumentNullException(nameof(outbox));
