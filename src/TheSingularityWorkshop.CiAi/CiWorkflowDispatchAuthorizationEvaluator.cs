@@ -181,6 +181,8 @@ public static class CiWorkflowDispatchAuthorizationEvaluator
         var expiresAt = authorization.ExpiresAtUtc.ToUniversalTime();
         if (issuedAt > now)
             errors.Add("dispatch.authorization-from-future");
+        if (observedAt > issuedAt)
+            errors.Add("dispatch.observation-after-authorization-issued");
         if (expiresAt <= now)
             errors.Add("dispatch.authorization-expired");
         if (expiresAt <= issuedAt || expiresAt - issuedAt > authorizationLifetimeLimit)
