@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text;
 
 namespace TheSingularityWorkshop.CiAi;
 
@@ -128,10 +129,10 @@ public sealed class CiTestResultExecutionNoticeEnqueuer
             !string.Equals(manifest.MediaType, MediaType, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(manifest.ClientIdentity, recipientIdentity, StringComparison.Ordinal))
             throw new InvalidDataException("Published report manifest has an unexpected capability, media type, or recipient.");
-        var expectedArtifactName = $"ciai-test-results-{report.RunId}-{report.RunAttempt}";
-        if (!string.Equals(manifest.ArtifactName, expectedArtifactName, StringComparison.Ordinal) ||
+        if (string.IsNullOrWhiteSpace(manifest.ArtifactId) ||
+            !string.Equals(manifest.ArtifactVersion, "v1", StringComparison.Ordinal) ||
             !string.Equals(manifest.ImplementationRevision, report.WorkflowDefinitionSha, StringComparison.Ordinal))
-            throw new InvalidDataException("Published report manifest artifact name or implementation revision does not match the exact report.");
+            throw new InvalidDataException("Published report manifest artifact identity or implementation revision does not match the exact report.");
         if (!string.Equals(manifest.DigestAlgorithm, "SHA-256", StringComparison.Ordinal) ||
             manifest.SizeBytes != expectedSize ||
             manifest.Digest.Length != 64 ||
