@@ -22,13 +22,13 @@ public sealed record CiAiDependencyRegistrationReceiveResult(
 public sealed class CiAiDependencyRegistrationReceiver
 {
     private readonly string _targetRepository;
-    private readonly FileCiAiDependencyRegistrationLedgerStore _ledgerStore;
-    private readonly FileCiAiDependencyRegistrationReceiptStore _receiptStore;
+    private readonly ICiAiDependencyRegistrationLedgerStore _ledgerStore;
+    private readonly ICiAiDependencyRegistrationReceiptStore _receiptStore;
     private readonly ICiAiDependencyRegistrationDeliveryVerifier _verifier;
 
     public CiAiDependencyRegistrationReceiver(string targetRepository,
-        FileCiAiDependencyRegistrationLedgerStore ledgerStore,
-        FileCiAiDependencyRegistrationReceiptStore receiptStore,
+        ICiAiDependencyRegistrationLedgerStore ledgerStore,
+        ICiAiDependencyRegistrationReceiptStore receiptStore,
         ICiAiDependencyRegistrationDeliveryVerifier verifier)
     {
         if (!RepositoryIdentity.IsValid(targetRepository))
