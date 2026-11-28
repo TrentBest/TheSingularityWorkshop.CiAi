@@ -19,7 +19,7 @@ internal static class CiWorkflowEvidenceDeliveryTests
             var delivery = new CiWorkflowEvidenceDelivery(identity, packet);
             Assert(delivery.DeliveryId == identity.RequestId &&
                 delivery.OperationId == identity.OperationId &&
-                delivery.IdempotencyKey == identity.IdempotencyKey,
+                delivery.IdempotencyKey == identity.DeriveIdempotencyKey(CiWorkflowEvidenceExecutionNoticeEnqueuer.CapabilityId),
                 "v1 delivery did not preserve the host-persisted dispatch identity");
             Assert(new CiWorkflowEvidenceDelivery(
                 new CiAiArtifactDeliveryIdentity("v1-delivery-stable", "operation-1", "idempotency-1"),
