@@ -148,7 +148,7 @@ public sealed class CiAiDependencyRegistrationDelivery
             throw new JsonException("Dependency registration delivery is missing a required property.");
     }
 
-    private static string CreateDeliveryId(string repository, long revision, string sha)
+    internal static string CreateDeliveryId(string repository, long revision, string sha)
     {
         var material = string.Join("|", repository.ToUpperInvariant(),
             revision.ToString(System.Globalization.CultureInfo.InvariantCulture), sha.ToLowerInvariant());
