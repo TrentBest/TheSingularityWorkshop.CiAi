@@ -13,7 +13,16 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
         {
             var store = new FileCiAiDependencyRegistrationLedgerStore(root);
             var first = CreateSnapshot("0123456789abcdef0123456789abcdef01234567", "TrentBest/Provider");
-            var applied = store.ApplyVerifiedSnapshot(CreateVerification(first, 42));
+            var verification = CreateVerification(first, 42);
+            var applied = store.ApplyVerifiedSnapshot(verification);
+            Assert(verification.SourceRevision == 42 && verification.SourceCommitSha == first.SourceCommitSha &&
+                verification.EvidencePayloadSha256.Length == 64,
+                "verified source evidence did not retain exact run, SHA, and packet digest");
+            AssertThrows<ArgumentException>(() => CreateVerification(first, 42,
+                allowedSourceRefs: new[] { "refs/tags/v1" }));
+            AssertThrows<InvalidDataException>(() => CreateVerification(first, 42, trustedWorkflow: false));
+            AssertThrows<InvalidDataException>(() => CreateVerification(first, 42,
+                conclusion: CiRunConclusion.Failure));
             Assert(applied.Status == CiAiDependencyRegistrationApplyStatus.Applied, "initial snapshot was not applied");
             Assert(store.ApplyVerifiedSnapshot(CreateVerification(first, 42)).Status == CiAiDependencyRegistrationApplyStatus.Duplicate,
                 "identical replay was not idempotent");
@@ -55,8 +64,8 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             File.WriteAllText(corrupt, alteredDigest);
             AssertThrows<InvalidDataException>(() => reopened.ReadAll());
 
-            Console.WriteLine("PASS: 10 durable dependency ledger store and source-verification contract checks.");
-            return 10;
+            Console.WriteLine("PASS: 13 durable dependency ledger store and source-verification contract checks.");
+            return 13;
         }
         finally
         {
@@ -73,7 +82,9 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
     }
 
     private static CiAiDependencyRegistrationSourceVerification CreateVerification(
-        CiAiDependencyRegistrationSnapshot snapshot, long runId)
+        CiAiDependencyRegistrationSnapshot snapshot, long runId,
+        string[]? allowedSourceRefs = null, bool trustedWorkflow = true,
+        CiRunConclusion conclusion = CiRunConclusion.Success)
     {
         var sourceRef = "refs/heads/development";
         var provenanceJson = $$"""
@@ -104,7 +115,10 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
         var policy = new CiWorkflowDefinitionTrustPolicy(snapshot.SourceRepository,
             ".github/workflows/ci.yml", sourceRef, WorkflowSha);
         var workflowBytes = Encoding.UTF8.GetBytes("name: trusted source CI");
-        var trustDecision = policy.Evaluate(provenance, workflowBytes, workflowBytes);
+        var approvedWorkflowBytes = trustedWorkflow
+            ? workflowBytes
+            : Encoding.UTF8.GetBytes("different protected workflow content");
+        var trustDecision = policy.Evaluate(provenance, workflowBytes, approvedWorkflowBytes);
 
         var job = new CiWorkflowJobObservation(100, runId, 1, "build-and-test", "completed", "success",
             new Uri($"https://github.com/{snapshot.SourceRepository}/actions/runs/{runId}/job/100"),
@@ -118,7 +132,7 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
         };
         var observedRun = new CiWorkflowRunEvidenceObservation(snapshot.SourceRepository,
             ".github/workflows/ci.yml", runId, 1, sourceRef, snapshot.SourceCommitSha,
-            "push", "CI", CiRunStatus.Completed, CiRunConclusion.Success,
+            "push", "CI", CiRunStatus.Completed, conclusion,
             new Uri($"https://github.com/{snapshot.SourceRepository}/actions/runs/{runId}"),
             DateTimeOffset.Parse("2026-11-28T00:02:00Z"),
             Array.AsReadOnly(new[] { job }), true, true);
@@ -126,7 +140,7 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
         var packetV2 = CiWorkflowEvidencePacketV2.FromPacket(packet,
             new[] { new CiWorkflowRequiredCheckBinding("build-and-test", "build-and-test") });
         return CiAiDependencyRegistrationSourceVerification.Verify(snapshot, packetV2, trustDecision,
-            new[] { sourceRef });
+            allowedSourceRefs ?? new[] { sourceRef });
     }
 
     private static void Assert(bool condition, string message)
