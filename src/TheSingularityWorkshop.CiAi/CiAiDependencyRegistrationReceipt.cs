@@ -204,7 +204,8 @@ public sealed class FileCiAiDependencyRegistrationReceiptStore : ICiAiDependency
     {
         using var fileLock = AcquireLock();
         return Array.AsReadOnly(ReadAllCore().OrderBy(item => item.DeliveryId, StringComparer.Ordinal)
-            .ThenBy(item => item.TargetRepository, StringComparer.OrdinalIgnoreCase).ToArray());
+            .ThenBy(item => item.TargetRepository, StringComparer.OrdinalIgnoreCase)
+            .Select(item => CiAiDependencyRegistrationReceipt.FromJson(item.Payload)).ToArray());
     }
 
     private FileStream AcquireLock()
