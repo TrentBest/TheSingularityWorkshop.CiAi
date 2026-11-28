@@ -18,7 +18,7 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             Assert(verification.SourceRevision == 42 && verification.SourceCommitSha == first.SourceCommitSha &&
                 verification.EvidencePayloadSha256.Length == 64,
                 "verified source evidence did not retain exact run, SHA, and packet digest");
-            AssertThrows<ArgumentException>(() => CreateVerification(first, 42,
+            AssertThrows<InvalidDataException>(() => CreateVerification(first, 42,
                 allowedSourceRefs: new[] { "refs/heads/master" }));
             AssertThrows<InvalidDataException>(() => CreateVerification(first, 42, trustedWorkflow: false));
             AssertThrows<InvalidDataException>(() => CreateVerification(first, 42,
