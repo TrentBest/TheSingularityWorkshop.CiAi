@@ -53,3 +53,13 @@ The caller must authenticate the GitHub API response and the authority identity 
 The evaluator accepts an adapter-neutral `CiWorkflowDispatchAuthorizationSubject`. Once the durable request contract is integrated, the host adapter should map its immutable request fields into this subject without recalculating or weakening any binding.
 
 The next implementation slice is the host-owned durable replay ledger and a dry-run dispatcher adapter. The first live pilot remains opt-in and tied to the exact-SHA raWWar failure fixture. No merge, package publish, release, deployment, or branch deletion is authorized by this contract.
+
+## Durable replay ledger and dry-run plan
+
+`FileCiWorkflowDispatchAuthorizationReplayLedger` provides an append-only host-side ledger. Each record retains the authorization identity, authority, request digest, workflow/candidate refs and SHAs, source run/attempt, additional attempt number, observation digest, issue/expiry times, and consumption time. Records are linked by a SHA-256 hash chain; truncation, modification, duplicate IDs, or reordering causes reads to fail closed.
+
+The ledger uses an exclusive lock file around reads and appends. `TryConsume` atomically records a previously unused authorization ID and returns false for an ID already present. Expired entries are retained so an old authorization ID can never be recycled.
+
+The hash chain detects accidental corruption and unauthorized edits that do not also rewrite the chain. It is not a substitute for filesystem security: the host must keep the ledger in a persistent, access-controlled location and protect backups.
+
+`CiWorkflowDispatchDryRunPlanner` reads the consumed-ID set, runs the evaluator, and returns the exact workflow/candidate/source inputs that a dispatcher would use. It makes no GitHub API call and deliberately does not consume the authorization. A dry-run plan is not a reservation and may become stale; the live host must re-fetch GitHub state, re-evaluate, atomically call `TryConsume`, and only then dispatch.
