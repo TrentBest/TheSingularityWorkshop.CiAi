@@ -22,7 +22,7 @@ internal static class CiWorkflowEvidenceDeliveryTests
                 delivery.IdempotencyKey == identity.DeriveIdempotencyKey(CiWorkflowEvidenceExecutionNoticeEnqueuer.CapabilityId),
                 "v1 delivery did not preserve the host-persisted dispatch identity");
             Assert(new CiWorkflowEvidenceDelivery(
-                new CiAiArtifactDeliveryIdentity("v1-delivery-stable", "operation-1", "idempotency-1"),
+                new CiAiArtifactDeliveryIdentity("v1-delivery-1", "operation-1", "idempotency-1"),
                 packet).IdempotencyKey == delivery.IdempotencyKey,
                 "same dispatch idempotency identity was not preserved across delivery projections");
             var outboxPath = Path.Combine(root, "v1-outbox.jsonl");
