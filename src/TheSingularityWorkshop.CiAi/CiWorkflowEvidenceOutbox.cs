@@ -68,8 +68,17 @@ public sealed record CiWorkflowEvidenceDelivery : ICiWorkflowEvidenceDelivery
         string operationId,
         string idempotencyKey,
         CiWorkflowEvidencePacket packet)
-        : this(new CiAiArtifactDeliveryIdentity(deliveryId, operationId, idempotencyKey), packet)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(deliveryId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(operationId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(idempotencyKey);
+        ArgumentNullException.ThrowIfNull(packet);
+        DeliveryId = deliveryId;
+        OperationId = operationId;
+        IdempotencyKey = idempotencyKey;
+        Packet = packet;
+        Payload = packet.ToJson(indented: false);
+        PayloadSha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Payload))).ToLowerInvariant();
     }
 
     public string DeliveryId { get; }
