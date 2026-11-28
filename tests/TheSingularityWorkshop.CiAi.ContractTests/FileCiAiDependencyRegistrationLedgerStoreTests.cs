@@ -244,7 +244,8 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
                 .Disposition == CiAiDependencyRegistrationTransportDisposition.Queued,
                 "GitHub HTTP 204 was not classified as queued");
             var oversizedDelivery = CiAiDependencyRegistrationDelivery.FromVerification(verification,
-                Enumerable.Range(0, 3000).Select(index => "TrentBest/Recipient" + index.ToString("D5")));
+                new[] { "TrentBest/Provider" }.Concat(Enumerable.Range(0, 3000)
+                    .Select(index => "TrentBest/Recipient" + index.ToString("D5")));
             using var oversizedHttp = new HttpClient(new StubHttpMessageHandler(_ =>
                 throw new InvalidOperationException("oversized payload reached the HTTP transport")));
             var oversizedResult = new GitHubDependencyRegistrationDispatchTransport(oversizedHttp,
