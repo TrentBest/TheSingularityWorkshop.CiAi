@@ -14,7 +14,7 @@
     <Authors>The Singularity Workshop</Authors>
     <Description>Provider-neutral, read-only CI workflow evidence contracts and GitHub Actions observation client.</Description>
     <PackageTags>ci;github-actions;workflow;automation;contracts</PackageTags>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageProjectUrl>https://github.com/TrentBest/TheSingularityWorkshop.CiAi</PackageProjectUrl>
     <RepositoryUrl>https://github.com/TrentBest/TheSingularityWorkshop.CiAi</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
@@ -29,5 +29,6 @@
     <ProjectReference Include="../../external/ProtocolAi/TheSingularityWorkshop.ProtocolAi.csproj" />
     <PackageReference Include="NuGet.Versioning" Version="7.9.0" />
     <None Include="../../README.md" Pack="true" PackagePath="/" Link="README.md" />
+    <None Include="../../LICENSE" Pack="true" PackagePath="/" Link="LICENSE" />
   </ItemGroup>
 </Project>

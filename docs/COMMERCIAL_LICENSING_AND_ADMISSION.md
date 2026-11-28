@@ -1,0 +1,238 @@
+# CiAi commercial licensing and repository admission
+
+## Product boundary
+
+CiAi is the Workshop's commercial product. Other Singularity Workshop
+repositories remain available under their own respective licenses; this
+commercial license applies only to CiAi material owned or controlled by
+The Singularity Workshop.
+
+CiAi is source-available for inspection. The current license grants free
+internal use on up to five configured repositories to individuals,
+non-profits, educational projects, and commercial organizations alike.
+More than five configured repositories requires a paid entitlement.
+
+This is a product policy and implementation contract. The tier schedule below
+is a working commercial hypothesis for implementation and discussion, not a
+binding offer, activated billing configuration, or final price list. Prices,
+eligibility, employee-count verification, taxes, billing intervals, and
+contract terms remain subject to validation and approval.
+
+## Working subscription model (November 2026)
+
+| Plan | Organization size | Working price | Intended boundary |
+|---|---:|---:|---|
+| Free | Individual or organization | $0 | Up to five configured repositories |
+| Indie | One-person independent developer | $10/month | No CiAi usage quota; paid repository admission |
+| Small Company | 2–9 employees | $20/month | Paid organizational tier |
+| Growing Company | 10–99 employees | $40/month | Paid organizational tier |
+| Large Company | 100–999 employees | $80/month | Paid organizational tier |
+| Enterprise | 1,000+ employees | Contact for pricing | No public price; sales/contact request |
+
+The five-repository free allowance is shared across the licensee's accounts
+and organizations. The sixth distinct repository is refused before CiAi
+starts work unless a valid paid entitlement is present. Paid tiers are
+intended to remove the free-tier admission block; the authoritative
+entitlement still supplies an explicit repository allowance, so the host
+never infers permission from a plan label alone.
+
+The employee bands are pricing classifiers, not repository-count formulas.
+The meaning of employee count (for example, employees versus contractors,
+subsidiaries, and parent-company aggregation), evidence requirements, and
+treatment of non-profits, education, open-source maintainers, and multi-entity
+groups must be settled before checkout is enabled.
+
+"Unlimited CiAi usage" for Indie means no artificial product usage quota in
+the proposed plan. It does not mean bypassing security, abuse prevention,
+provider rate limits, GitHub API limits, or infrastructure safety controls.
+It also must not be silently converted into a compute or agent-turn quota.
+The other paid plans' usage policy remains to be specified explicitly rather
+than implied by their employee bands.
+
+Enterprise is deliberately contact-led. It should not appear as a numerical
+price on the public pricing board; the site should invite an enterprise
+conversation instead. All amounts above are provisional examples supplied
+for product exploration and must be labelled accordingly until approved.
+
+This schedule should be tested against empirical organization-size and
+repository-count distributions, plus real CiAi operating costs and customer
+discovery. Repository count and employee count are separate dimensions: the
+former governs admission; the latter is a proposed pricing segmentation.
+
+## Repository counting rule
+
+- Count distinct canonical `owner/repository` identities, case-insensitively.
+- Count public and private repositories equally.
+- Count a repository once per licensee, even if multiple CiAi workflows,
+  agents, teams, or users refer to it.
+- Aggregate across the licensee's GitHub organizations and user accounts.
+- Parent, subsidiary, and commonly controlled entities share one allowance
+  unless a written enterprise agreement defines a separate licensee.
+- A repository remains counted while configured, even if inactive or archived.
+- A fork is a separate repository if it is configured for CiAi.
+- Reconfiguring the same repository must not consume another slot.
+- The first five distinct repositories are eligible under the free grant.
+  The sixth and subsequent repositories require a verified paid entitlement
+  whose authoritative repository allowance covers the candidate.
+
+The count is not the number of repositories that happen to be running at one
+instant. It is the number the licensee has configured CiAi to operate on.
+
+## Admission gate
+
+The gate belongs at the central repository-enrollment/admission boundary,
+before a newly configured repository can enter discovery, scheduling, CI
+observation, ADP planning, or work queues. A UI-only warning is insufficient.
+
+Admission must be atomic with the entitlement check. Two concurrent requests
+for the fifth and sixth repositories must not both pass based on the same
+stale count. The host should reserve an entitlement slot or perform a
+transactional check-and-enroll against the authoritative license store.
+
+Required decision inputs:
+
+- authenticated licensee/account identity;
+- canonical candidate repository identity;
+- current configured repository identities;
+- entitlement tier, maximum repository count, and validity period;
+- source and version of the entitlement record.
+
+Required outcomes:
+
+- **Admitted** — the candidate is already configured, or a new distinct
+  repository fits within the current entitlement.
+- **UpgradeRequired** — a new repository would exceed the authorized limit.
+- **EntitlementUnavailable** — the entitlement cannot be verified; fail
+  closed for new enrollment without disrupting already admitted repositories.
+- **InvalidRequest** — identity or repository data is malformed.
+
+The admission gate must not delete existing configuration or interrupt
+previously admitted repositories when a new repository is rejected.
+
+## Upgrade-required report
+
+A rejection must be a normal, machine-readable CiAi report, not an exception
+that disappears into logs. It should include:
+
+- stable result code: `CIAI_LICENSE_REPOSITORY_LIMIT_EXCEEDED`;
+- outcome: `UpgradeRequired`;
+- licensee reference (opaque identifier; do not expose billing secrets);
+- candidate repository identity;
+- current configured repository count;
+- maximum authorized repository count;
+- number of additional repositories requested;
+- entitlement tier and entitlement status;
+- timestamp and correlation ID;
+- a clear explanation that no work was queued or started for the candidate;
+- a purchase/upgrade URL supplied by the host's commercial configuration.
+
+The report should state, for example:
+
+> CiAi did not enroll this repository. This account has 5 configured
+> repositories and is authorized for 5. A paid license is required to add
+> another repository. No CiAi work was started for this repository.
+> Upgrade your CiAi license: [configured purchase URL]
+
+The purchase URL must come from trusted host configuration or a verified
+billing provider response. Do not hard-code a fake checkout URL. Until a
+checkout endpoint exists, provide the official CiAi licensing/contact page
+as an informational link and label it accurately.
+
+## Security and reliability requirements
+
+- The entitlement service is authoritative; local JSON and user-supplied
+  environment variables cannot self-grant a larger limit.
+- Signed or authenticated entitlement data must bind the licensee, tier,
+  repository limit, validity interval, and issuer.
+- Cache verified entitlements with explicit expiry and bounded offline
+  behavior. Never silently turn an unavailable paid entitlement into an
+  unlimited grant.
+- Make check-and-enroll idempotent and concurrency-safe.
+- Do not send payment-card data or billing secrets into CI logs, model context,
+  repository manifests, or reports.
+- The gate controls admission, not the trustworthiness of CI evidence. It must
+  remain independent of test verdicts, human approval, and publication gates.
+- Existing admitted repositories continue according to the applicable
+  entitlement/grace policy; rejection of a new repository must not cancel
+  unrelated work already in progress.
+
+## Implementation sequence and current status
+
+**Implemented in the current development PR:** typed entitlement, admission
+request, decision, and report contracts; a deterministic evaluator for
+canonical identity, case-insensitive de-duplication, existing-repository
+idempotency, verified entitlement validity, and the five-repository free
+limit; contract tests for the first five/sixth repository, duplicates,
+case variants, forks, malformed identities, paid allowances, expired and
+unavailable entitlements, and upgrade URL validation.
+
+**Still required before the financial gate is operational:**
+
+1. Integrate the evaluator at the host's actual repository enrollment point,
+   before discovery, queue insertion, observer scheduling, or ADP planning.
+2. Add an authenticated entitlement provider and transactional or
+   reservation-based check-and-enroll operation.
+3. Add a customer/billing portal and configure its trusted upgrade URL.
+4. Add host-level concurrency tests and an end-to-end proof that the sixth
+   repository is refused before any work starts, while the first five
+   continue normally.
+
+The pure evaluator is not the security boundary by itself. It cannot
+authenticate a licensee, reserve a slot, prevent concurrent races, or stop a
+host that ignores its decision. The host must supply authenticated identity
+and enforce the decision atomically.
+
+## Pricing research
+
+Do not derive prices from a handful of famous organizations or from the
+maximum repository count GitHub permits. Estimate the empirical distribution
+of repositories per organization, then distinguish organizations that are
+individual projects, small teams, growing product companies, and very large
+enterprises.
+
+### Preliminary evidence found (not yet a full distribution analysis)
+
+A 2025 study of public GitHub profiles for 275 Forbes Global 2000 firms
+reported a median of 22 repositories and a mean of 125. Thirty-one firms had
+no public repositories. The ten largest repository holders accounted for
+50.7% of the repositories in that sample. This is a useful enterprise
+stress-test sample, not a representative sample of all companies: only 14%
+of the Forbes Global 2000 had public GitHub profiles, and the counts do not
+include their private repositories. See
+[Measuring Enterprise Software Supply Chain Security using Public Repositories
+(SCORED '25)](https://tylermoore.utulsa.edu/scored25.pdf).
+
+The [GONets dataset](https://zenodo.org/records/18472549) provides a much
+larger research base: more than 230,000 GitHub organizations and 4.37 million
+repositories, with organization metadata including company, public repository
+count, and organization-network information. Its published organization
+field description includes `public_repos`; public counts must not be
+mistaken for all private-plus-public repositories. The released database is
+539.2 MB, so its actual distribution still needs to be queried and summarized
+before using it to set commercial thresholds.
+
+These early observations already warn against assuming a normal bell curve.
+Repository counts are non-negative, discrete, and have a substantial
+upper tail. Pricing analysis should use empirical percentiles and logarithmic
+or quantile buckets rather than mean ± standard deviation. The Forbes sample's
+mean (125) being far above its median (22), together with the concentration
+among its ten largest firms, is consistent with that caution.
+
+A defensible research sample should:
+
+1. use a large, reproducible organization dataset with organization size
+   metadata and repository counts;
+2. separate public repository counts from total private-plus-public counts
+   wherever available;
+3. report median, 75th, 90th, 95th, 99th percentiles and the long tail;
+4. segment by organization size and company/industry metadata where reliable;
+5. report coverage, missingness, stale/inactive accounts, and sampling bias;
+6. avoid treating public repository count as total CiAi workload;
+7. test candidate tier boundaries against percentile bands and customer
+   interviews before publishing prices.
+
+The five-repository free allowance is a deliberate product boundary, not a
+claim that five is a statistically optimal measure of developer value. The
+employee-based tier bands are a separate commercial hypothesis. Pricing
+should be revisited after customer discovery and real opt-in CiAi usage and
+operating-cost data exist.

@@ -1,21 +1,123 @@
-MIT License
+THE SINGULARITY WORKSHOP
+CiAi COMMUNITY & COMMERCIAL SOURCE LICENSE
+Version 1.0 — 25 November 2026
 
-Copyright (c) 2026 The Singularity Workshop
+Copyright (c) 2026 The Singularity Workshop.
+All rights reserved, except for the express permissions below.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+IMPORTANT
+This is a custom source-available license. It is not an OSI-approved open-source
+license. The source may be publicly inspected on GitHub, but use of CiAi is
+subject to these terms.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. DEFINITIONS
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+"CiAi" means the software, source code, documentation, and associated materials
+in this repository that are owned or controlled by The Singularity Workshop.
+
+"Licensee" means the individual or legal entity accepting this license. If the
+Licensee is an entity, its parent entities, subsidiaries, and entities under
+common control are included when calculating the repository allowance.
+
+"Repository" means one distinct GitHub repository identified by its canonical
+owner/name identity. Public and private repositories both count. A fork counts
+as a separate Repository when CiAi is configured to operate on it.
+
+"Configured Repository" means a Repository that the Licensee has enrolled,
+configured, connected, or authorized CiAi to observe, assess, build against, or
+otherwise process. A repository remains counted while it remains configured,
+even if temporarily inactive or archived.
+
+2. FREE INTERNAL-USE GRANT
+
+Subject to compliance with this license, The Singularity Workshop grants the
+Licensee a non-exclusive, worldwide, royalty-free right to install, execute,
+reproduce, and modify CiAi for the Licensee's own internal purposes on no more
+than five (5) Configured Repositories at any one time.
+
+The five-Repository allowance is available to individuals, educational and
+non-profit projects, and commercial businesses on the same terms. The
+allowance is not limited by employee count, revenue, or organization type.
+
+3. ADDITIONAL REPOSITORIES REQUIRE A PAID LICENSE
+
+The Licensee must obtain and maintain a paid commercial license before
+configuring CiAi for a sixth Repository or any additional Repository beyond
+the maximum number authorized by its paid entitlement.
+
+Repository allowances are aggregated across the Licensee and its parent,
+subsidiary, and commonly controlled entities, including their GitHub accounts
+and organizations. Splitting repositories across accounts or organizations
+does not create additional free allowances.
+
+A paid license may specify a larger repository allowance, subscription term,
+fees, and additional rights. The applicable order, subscription, or enterprise
+agreement controls where it expressly supplements these terms.
+
+4. RESTRICTIONS
+
+Except for rights expressly granted in this license, the Licensee may not:
+
+a. use CiAi on more Repositories than its current entitlement permits;
+b. sell, sublicense, rent, lease, or redistribute CiAi or a derivative product
+   as a standalone product or hosted service;
+c. make CiAi available to third parties as a service, or use it to provide a
+   commercial CiAi-like service to third parties, without a separate written
+   agreement;
+d. remove or obscure copyright, license, or proprietary notices; or
+e. claim ownership of CiAi or of The Singularity Workshop's marks.
+
+The Licensee may make internal copies and modifications reasonably necessary
+for permitted use within its Repository allowance. This license does not
+restrict independent software that merely interoperates with CiAi.
+
+5. PUBLIC REPOSITORY AND CONTRIBUTIONS
+
+Public availability of the source code permits inspection and GitHub-hosted
+forking under GitHub's platform terms. It does not grant rights to execute,
+modify, distribute, or commercially exploit CiAi beyond the express grant in
+this license.
+
+No contribution is accepted under terms that alter this license unless
+The Singularity Workshop expressly agrees in writing. Contributors retain
+their own rights in contributions to the extent applicable, and must have
+authority to submit the contribution under the repository's contribution
+terms.
+
+6. THIRD-PARTY MATERIAL
+
+Components and dependencies identified as third-party materials remain
+governed by their respective licenses. This license does not replace or
+restrict rights granted by those third-party licenses.
+
+7. TERM AND TERMINATION
+
+This license remains in effect while the Licensee complies with its terms.
+Rights under a paid license are also subject to the applicable subscription
+or enterprise agreement. A material breach that is not cured within thirty
+(30) days after written notice terminates the rights granted under this
+license. Termination does not affect rights that cannot lawfully be
+terminated.
+
+8. DISCLAIMER AND LIMITATION
+
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, CIAI IS PROVIDED "AS IS", WITHOUT
+WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. TO THE MAXIMUM EXTENT
+PERMITTED BY LAW, THE SINGULARITY WORKSHOP AND ITS CONTRIBUTORS ARE NOT
+LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE
+DAMAGES, OR FOR LOSS OF DATA, PROFITS, REVENUE, OR BUSINESS, ARISING FROM
+THE SOFTWARE OR THIS LICENSE.
+
+9. GENERAL
+
+This license is the complete grant of rights for the version of CiAi to which
+it accompanies, except for a separate written commercial agreement. If any
+provision is unenforceable, the remaining provisions remain in effect.
+No waiver is effective unless made in writing. The governing law and venue
+will be specified in a separate written agreement or, absent one, determined
+under applicable law.
+
+For commercial licensing, contact The Singularity Workshop through the
+official repository:
+https://github.com/TrentBest/TheSingularityWorkshop.CiAi

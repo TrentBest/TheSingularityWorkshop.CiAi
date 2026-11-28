@@ -115,4 +115,10 @@ ServerSC2 is the next CODE RED evidence integration. ServerSC2 owns authoritativ
 - [Release readiness](docs/RELEASE_READINESS.md) — package and authorization boundaries.
 - [FSM_COS coordination notes](FSM_COSLLM.md) — read-only evidence pilot and cross-repository contract.
 
+## 07 — Licensing and repository allowance
+
+CiAi is source-available under [The Singularity Workshop CiAi Community & Commercial Source License](LICENSE). This license applies only to CiAi; other Workshop repositories remain under their own licenses and are not subject to this gate. The free grant permits internal use on up to **five configured repositories**. CiAi refuses admission of a sixth distinct repository until a valid paid entitlement is verified; existing admitted repositories are not interrupted by that refusal. The allowance is aggregated across the licensee's accounts and organizations. A provisional subscription model is under discussion: $10/month Indie, $20/month for 2–9 employees, $40/month for 10–99, $80/month for 100–999, and Enterprise (1,000+) by contact request. These are working assumptions, not activated billing or final offers. The proposed Indie tier has no CiAi usage quota; security, abuse-prevention, and provider safety controls still apply. See [commercial licensing and repository admission](docs/COMMERCIAL_LICENSING_AND_ADMISSION.md) for the full provisional tier model, counting rule, and fail-closed admission contract.
+
+Previously distributed MIT-licensed copies retain their original MIT permissions; see [LICENSE-MIT](LICENSE-MIT). The current source license does not retroactively revoke those grants.
+
 The visitor experience is an introduction, not a substitute for source, tests, CI runs, or the implementation status recorded by each owning repository.
