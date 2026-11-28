@@ -113,6 +113,14 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
                 new FixedInventoryRevisionProvider(79), installationId: 1234);
             AssertThrows<InvalidDataException>(() =>
                 duplicateInventoryProvider.GetCompleteInventoryAsync().AsTask().GetAwaiter().GetResult());
+            var inventoryBoundDelivery = CiAiDependencyRegistrationDelivery.FromTrustedInventory(
+                verification, inventory, new[] { delivery });
+            var inventoryBoundRoundTrip = CiAiDependencyRegistrationDelivery.FromJson(inventoryBoundDelivery.Payload);
+            Assert(inventoryBoundDelivery.InventoryProviderIdentity == inventory.ProviderIdentity &&
+                inventoryBoundDelivery.InventoryRevision == inventory.Revision &&
+                inventoryBoundDelivery.InventoryEvidencePayloadSha256 == inventory.EvidencePayloadSha256 &&
+                inventoryBoundRoundTrip.Payload == inventoryBoundDelivery.Payload,
+                "delivery envelope did not bind and preserve complete inventory provenance");
             var outbox = new FileCiAiDependencyRegistrationOutbox(Path.Combine(root, "outbox", "deliveries.jsonl"));
             Assert(outbox.Enqueue(delivery) == CiAiDependencyRegistrationOutboxEnqueueOutcome.Enqueued,
                 "first federated delivery was not enqueued");
@@ -308,8 +316,8 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             File.WriteAllText(corrupt, alteredDigest);
             AssertThrows<InvalidDataException>(() => reopened.ReadAll());
 
-            Console.WriteLine("PASS: 47 durable dependency federation, inventory, receiver, receipt authentication, retry, and GitHub transport checks.");
-            return 47;
+            Console.WriteLine("PASS: 48 durable dependency federation, inventory, receiver, receipt authentication, retry, and GitHub transport checks.");
+            return 48;
         }
         finally
         {
