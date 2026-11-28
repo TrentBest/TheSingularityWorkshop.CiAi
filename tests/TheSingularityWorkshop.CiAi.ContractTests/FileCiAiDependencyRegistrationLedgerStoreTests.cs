@@ -50,8 +50,8 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
                 Assert(request.RequestUri!.Host == "api.github.com" &&
                     request.Headers.Authorization?.Parameter == "inventory-token",
                     "inventory provider did not use the authenticated GitHub installation endpoint");
-                var page = System.Web.HttpUtility.ParseQueryString(request.RequestUri.Query).Get("page");
-                var pageRepositories = page == "1"
+                var firstPage = request.RequestUri.Query.Contains("page=1", StringComparison.Ordinal);
+                var pageRepositories = firstPage
                     ? Enumerable.Range(0, 100).Select(index => new { full_name = "TrentBest/Repo" + index.ToString("D3") }).ToArray()
                     : new[] { new { full_name = "TrentBest/Repo100" } };
                 var body = System.Text.Json.JsonSerializer.Serialize(new
