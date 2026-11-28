@@ -9,28 +9,28 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
         {
             var store = new FileCiAiDependencyRegistrationLedgerStore(root);
             var first = CreateSnapshot("0123456789abcdef0123456789abcdef01234567", "TrentBest/Provider");
-            var applied = store.ApplyVerifiedSnapshot(first, 1);
+            var applied = store.ApplyVerifiedSnapshot(first, 2);
             Assert(applied.Status == CiAiDependencyRegistrationApplyStatus.Applied, "initial snapshot was not applied");
-            Assert(store.ApplyVerifiedSnapshot(first, 1).Status == CiAiDependencyRegistrationApplyStatus.Duplicate,
+            Assert(store.ApplyVerifiedSnapshot(first, 2).Status == CiAiDependencyRegistrationApplyStatus.Duplicate,
                 "identical replay was not idempotent");
 
             var reopened = new FileCiAiDependencyRegistrationLedgerStore(root);
             var loaded = reopened.Load("TrentBest/Consumer");
-            Assert(loaded is not null && loaded.SourceRevision == 1 &&
+            Assert(loaded is not null && loaded.SourceRevision == 2 &&
                 loaded.Registrations.Single().TargetRepository == "TrentBest/Provider",
                 "ledger did not survive store reconstruction");
 
             var stale = CreateSnapshot("1123456789abcdef0123456789abcdef01234567", "TrentBest/Stale");
-            Assert(reopened.ApplyVerifiedSnapshot(stale, 0).Status == CiAiDependencyRegistrationApplyStatus.Stale,
+            Assert(reopened.ApplyVerifiedSnapshot(stale, 1).Status == CiAiDependencyRegistrationApplyStatus.Stale,
                 "older positive revision was not rejected");
             AssertThrows<ArgumentOutOfRangeException>(() => reopened.ApplyVerifiedSnapshot(stale, 0));
 
             var conflict = CreateSnapshot("2123456789abcdef0123456789abcdef01234567", "TrentBest/Conflict");
-            Assert(reopened.ApplyVerifiedSnapshot(conflict, 1).Status == CiAiDependencyRegistrationApplyStatus.Conflict,
+            Assert(reopened.ApplyVerifiedSnapshot(conflict, 2).Status == CiAiDependencyRegistrationApplyStatus.Conflict,
                 "same-revision changed snapshot was not rejected");
 
             var replacement = CreateSnapshot("3123456789abcdef0123456789abcdef01234567");
-            Assert(reopened.ApplyVerifiedSnapshot(replacement, 2).Status == CiAiDependencyRegistrationApplyStatus.Applied,
+            Assert(reopened.ApplyVerifiedSnapshot(replacement, 3).Status == CiAiDependencyRegistrationApplyStatus.Applied,
                 "newer complete empty snapshot was not applied");
             Assert(reopened.Load("TrentBest/Consumer")!.Registrations.Count == 0,
                 "newer empty snapshot did not withdraw prior registrations");
