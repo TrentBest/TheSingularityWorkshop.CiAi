@@ -250,6 +250,12 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             Assert(oversizedResult.Disposition == CiAiDependencyRegistrationTransportDisposition.PermanentFailure &&
                 oversizedResult.OutcomeCode == "github.client-payload-too-large",
                 "oversized GitHub client_payload was not rejected before transport");
+            var tokenFailureResult = new GitHubDependencyRegistrationDispatchTransport(queuedHttp,
+                new FailingInstallationTokenProvider()).DispatchAsync(delivery, "TrentBest/Provider")
+                .AsTask().GetAwaiter().GetResult();
+            Assert(tokenFailureResult.Disposition == CiAiDependencyRegistrationTransportDisposition.RetryableFailure &&
+                tokenFailureResult.OutcomeCode == "github.token-provider-transport-error",
+                "transient installation-token transport failure was not classified as retryable");
             using var throttledHttp = new HttpClient(new StubHttpMessageHandler(_ =>
                 new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.TooManyRequests)));
             Assert(new GitHubDependencyRegistrationDispatchTransport(throttledHttp,
@@ -428,6 +434,13 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
     {
         public ValueTask<string> GetInstallationTokenAsync(string targetRepository,
             CancellationToken cancellationToken = default) => ValueTask.FromResult("installation-token");
+    }
+
+    private sealed class FailingInstallationTokenProvider : ICiAiGitHubInstallationTokenProvider
+    {
+        public ValueTask<string> GetInstallationTokenAsync(string targetRepository,
+            CancellationToken cancellationToken = default) =>
+            ValueTask.FromException<string>(new HttpRequestException("simulated token endpoint outage"));
     }
 
     private sealed class StubHttpMessageHandler(
