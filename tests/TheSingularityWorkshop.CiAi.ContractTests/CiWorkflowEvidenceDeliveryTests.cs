@@ -31,13 +31,14 @@ internal static class CiWorkflowEvidenceDeliveryTests
                 "first v1 enqueue was not persisted");
             Assert(outbox.Enqueue(delivery) == CiWorkflowEvidenceEnqueueOutcome.Duplicate,
                 "identical v1 delivery retry was not deduplicated");
-            Assert(outbox.Enqueue(new CiWorkflowEvidenceDelivery(
-                new CiAiArtifactDeliveryIdentity("v1-delivery-alias", "operation-1", "idempotency-1"), packet)) ==
-                CiWorkflowEvidenceEnqueueOutcome.Duplicate,
-                "v1 run attempt was not deduplicated across delivery IDs");
+            var separateRequest = new CiWorkflowEvidenceDelivery(
+                new CiAiArtifactDeliveryIdentity("v1-delivery-alias", "operation-1", "idempotency-1"), packet);
+            Assert(separateRequest.IdempotencyKey != delivery.IdempotencyKey &&
+                outbox.Enqueue(separateRequest) == CiWorkflowEvidenceEnqueueOutcome.Enqueued,
+                "distinct persisted request identities incorrectly shared a capability idempotency key");
 
             var replay = new FileCiWorkflowEvidenceOutbox(Path.Combine(root, "v1-outbox.jsonl")).ReadPending(RequiredChecks);
-            Assert(replay.Count == 1 && replay[0].PayloadSha256 == delivery.PayloadSha256 &&
+            Assert(replay.Count == 2 && replay[0].PayloadSha256 == delivery.PayloadSha256 &&
                 replay[0].IdempotencyKey == delivery.IdempotencyKey,
                 "v1 outbox did not replay the exact payload and provenance identity");
             Assert(!replay[0].Packet.WorkflowDefinitionTrusted && !replay[0].Packet.IsSuccessful,
