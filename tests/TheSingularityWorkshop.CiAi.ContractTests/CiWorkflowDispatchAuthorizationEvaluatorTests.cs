@@ -127,6 +127,23 @@ internal static class CiWorkflowDispatchAuthorizationEvaluatorTests
             AssertDenied(decision, "dispatch.host-observation-digest-mismatch");
         });
 
+        Check("malformed null observation SHA fails closed without throwing", () =>
+        {
+            var (subject, authorization, observation) = CreateValid(now);
+            var malformed = observation with { CandidateSha = null! };
+            var updatedAuthorization = authorization with { HostObservationDigest = malformed.ComputeDigest() };
+            var decision = Evaluate(subject, updatedAuthorization, malformed, now);
+            AssertDenied(decision, "dispatch.observation-sha-invalid");
+        });
+
+        Check("missing authorization ID fails closed without replay-ledger exceptions", () =>
+        {
+            var (subject, authorization, observation) = CreateValid(now);
+            var malformed = authorization with { AuthorizationId = null! };
+            var decision = Evaluate(subject, malformed, observation, now);
+            AssertDenied(decision, "dispatch.authorization-id-invalid");
+        });
+
         Check("source run identity substitution is denied", () =>
         {
             var (subject, authorization, observation) = CreateValid(now);
