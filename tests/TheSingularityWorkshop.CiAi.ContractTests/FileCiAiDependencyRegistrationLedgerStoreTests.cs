@@ -71,6 +71,28 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             AssertThrows<System.Text.Json.JsonException>(() =>
                 CiAiDependencyRegistrationReceipt.FromJson(acceptedReceipt.Payload.Replace(
                     "\\"schema\\":", "\\"unexpected\\": 1, \\"schema\\":", StringComparison.Ordinal)));
+            var receiverLedger = new FileCiAiDependencyRegistrationLedgerStore(Path.Combine(root, "receiver-ledger"));
+            var receiverReceipts = new FileCiAiDependencyRegistrationReceiptStore(
+                Path.Combine(root, "receiver-receipts", "receipts.jsonl"));
+            var receiver = new CiAiDependencyRegistrationReceiver("TrentBest/Provider", receiverLedger,
+                receiverReceipts, new FixedDeliveryVerifier(verification));
+            var received = receiver.ReceiveAsync(delivery.Payload).AsTask().GetAwaiter().GetResult();
+            Assert(received.ApplyStatus == CiAiDependencyRegistrationApplyStatus.Applied &&
+                received.Receipt.Status == CiAiDependencyRegistrationReceiptStatus.Accepted,
+                "receiver did not independently verify, apply, and acknowledge the delivery");
+            var replayed = receiver.ReceiveAsync(delivery.Payload).AsTask().GetAwaiter().GetResult();
+            Assert(replayed.ApplyStatus == CiAiDependencyRegistrationApplyStatus.Duplicate &&
+                replayed.ReceiptStoreOutcome == CiAiDependencyRegistrationReceiptStoreOutcome.Duplicate,
+                "receiver replay did not reconcile idempotently before acknowledging");
+            var mismatchedReceiver = new CiAiDependencyRegistrationReceiver("TrentBest/NotARecipient",
+                receiverLedger, receiverReceipts, new FixedDeliveryVerifier(verification));
+            AssertThrows<InvalidDataException>(() =>
+                mismatchedReceiver.ReceiveAsync(delivery.Payload).AsTask().GetAwaiter().GetResult());
+            var mismatchedEvidence = new CiAiDependencyRegistrationReceiver("TrentBest/Provider",
+                receiverLedger, receiverReceipts, new FixedDeliveryVerifier(CreateVerification(
+                    CreateSnapshot("5123456789abcdef0123456789abcdef01234567", "TrentBest/Provider"), 44)));
+            AssertThrows<InvalidDataException>(() =>
+                mismatchedEvidence.ReceiveAsync(delivery.Payload).AsTask().GetAwaiter().GetResult());
             Assert(applied.Status == CiAiDependencyRegistrationApplyStatus.Applied, "initial snapshot was not applied");
             Assert(store.ApplyVerifiedSnapshot(CreateVerification(first, 42)).Status == CiAiDependencyRegistrationApplyStatus.Duplicate,
                 "identical replay was not idempotent");
@@ -112,8 +134,8 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             File.WriteAllText(corrupt, alteredDigest);
             AssertThrows<InvalidDataException>(() => reopened.ReadAll());
 
-            Console.WriteLine("PASS: 21 durable dependency ledger, delivery outbox, and receipt contract checks.");
-            return 21;
+            Console.WriteLine("PASS: 25 durable dependency federation, receiver, and receipt contract checks.");
+            return 25;
         }
         finally
         {
@@ -189,6 +211,15 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             new[] { new CiWorkflowRequiredCheckBinding("build-and-test", "build-and-test") });
         return CiAiDependencyRegistrationSourceVerification.Verify(snapshot, packetV2, trustDecision,
             allowedSourceRefs ?? new[] { sourceRef });
+    }
+
+    private sealed class FixedDeliveryVerifier(
+        CiAiDependencyRegistrationSourceVerification verification)
+        : ICiAiDependencyRegistrationDeliveryVerifier
+    {
+        public ValueTask<CiAiDependencyRegistrationSourceVerification> VerifyAsync(
+            CiAiDependencyRegistrationDelivery delivery, CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(verification);
     }
 
     private static void Assert(bool condition, string message)
