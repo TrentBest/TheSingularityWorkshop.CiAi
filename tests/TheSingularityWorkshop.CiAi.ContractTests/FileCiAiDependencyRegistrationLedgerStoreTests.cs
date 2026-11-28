@@ -125,6 +125,42 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
                 "TrentBest/Provider", new CiAiDependencyRegistrationTransportResult(
                     CiAiDependencyRegistrationTransportDisposition.Queued, 204, "github.event-queued"),
                 dispatchTime.AddMinutes(1)));
+            using var queuedHttp = new HttpClient(new StubHttpMessageHandler(request =>
+            {
+                Assert(request.Method == HttpMethod.Post &&
+                    request.RequestUri!.AbsoluteUri == "https://api.github.com/repos/TrentBest/Provider/dispatches",
+                    "GitHub adapter did not target the recipient repository dispatch endpoint");
+                Assert(request.Headers.Authorization?.Scheme == "Bearer" &&
+                    request.Headers.Authorization.Parameter == "installation-token",
+                    "GitHub adapter did not use the injected installation token");
+                var body = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+                Assert(body.Contains(delivery.DeliveryId, StringComparison.Ordinal) &&
+                    body.Contains(delivery.PayloadSha256, StringComparison.Ordinal) &&
+                    body.Contains(GitHubDependencyRegistrationDispatchTransport.EventType, StringComparison.Ordinal),
+                    "GitHub dispatch payload omitted delivery identity or digest");
+                return new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.NoContent);
+            }));
+            var githubTransport = new GitHubDependencyRegistrationDispatchTransport(
+                queuedHttp, new FixedInstallationTokenProvider());
+            Assert(githubTransport.DispatchAsync(delivery, "TrentBest/Provider").AsTask().GetAwaiter().GetResult()
+                .Disposition == CiAiDependencyRegistrationTransportDisposition.Queued,
+                "GitHub HTTP 204 was not classified as queued");
+            using var throttledHttp = new HttpClient(new StubHttpMessageHandler(_ =>
+                new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.TooManyRequests)));
+            Assert(new GitHubDependencyRegistrationDispatchTransport(throttledHttp,
+                new FixedInstallationTokenProvider()).DispatchAsync(delivery, "TrentBest/Provider")
+                .AsTask().GetAwaiter().GetResult().Disposition ==
+                CiAiDependencyRegistrationTransportDisposition.RetryableFailure,
+                "GitHub rate limiting was not classified as retryable");
+            using var forbiddenHttp = new HttpClient(new StubHttpMessageHandler(_ =>
+                new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.Forbidden)));
+            Assert(new GitHubDependencyRegistrationDispatchTransport(forbiddenHttp,
+                new FixedInstallationTokenProvider()).DispatchAsync(delivery, "TrentBest/Provider")
+                .AsTask().GetAwaiter().GetResult().Disposition ==
+                CiAiDependencyRegistrationTransportDisposition.PermanentFailure,
+                "GitHub permission rejection was not classified as permanent");
+            AssertThrows<ArgumentException>(() => githubTransport.DispatchAsync(delivery,
+                "TrentBest/NotARecipient").AsTask().GetAwaiter().GetResult());
             Assert(applied.Status == CiAiDependencyRegistrationApplyStatus.Applied, "initial snapshot was not applied");
             Assert(store.ApplyVerifiedSnapshot(CreateVerification(first, 42)).Status == CiAiDependencyRegistrationApplyStatus.Duplicate,
                 "identical replay was not idempotent");
@@ -166,8 +202,8 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             File.WriteAllText(corrupt, alteredDigest);
             AssertThrows<InvalidDataException>(() => reopened.ReadAll());
 
-            Console.WriteLine("PASS: 31 durable dependency federation, receiver, receipt, and retry contract checks.");
-            return 31;
+            Console.WriteLine("PASS: 35 durable dependency federation, receiver, receipt, retry, and GitHub transport checks.");
+            return 35;
         }
         finally
         {
@@ -243,6 +279,20 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             new[] { new CiWorkflowRequiredCheckBinding("build-and-test", "build-and-test") });
         return CiAiDependencyRegistrationSourceVerification.Verify(snapshot, packetV2, trustDecision,
             allowedSourceRefs ?? new[] { sourceRef });
+    }
+
+    private sealed class FixedInstallationTokenProvider : ICiAiGitHubInstallationTokenProvider
+    {
+        public ValueTask<string> GetInstallationTokenAsync(string targetRepository,
+            CancellationToken cancellationToken = default) => ValueTask.FromResult("installation-token");
+    }
+
+    private sealed class StubHttpMessageHandler(
+        Func<HttpRequestMessage, System.Net.Http.HttpResponseMessage> responseFactory) : HttpMessageHandler
+    {
+        protected override Task<System.Net.Http.HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(responseFactory(request));
     }
 
     private sealed class FixedDependencyTransport : ICiAiDependencyRegistrationTransport
