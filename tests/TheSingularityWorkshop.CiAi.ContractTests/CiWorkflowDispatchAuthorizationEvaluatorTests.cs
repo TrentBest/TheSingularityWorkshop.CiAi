@@ -20,6 +20,14 @@ internal static class CiWorkflowDispatchAuthorizationEvaluatorTests
             Assert(decision.IsAuthorized && decision.OutcomeCode == "authorized", "valid host authorization was denied");
         });
 
+        Check("unsupported authorization schema is denied", () =>
+        {
+            var (subject, authorization, observation) = CreateValid(now);
+            var unsupported = authorization with { SchemaVersion = "ciai.workflow-dispatch-authorization.v2" };
+            var decision = Evaluate(subject, unsupported, observation, now);
+            AssertDenied(decision, "dispatch.authorization-schema-unsupported");
+        });
+
         Check("untrusted or unauthenticated authority is denied", () =>
         {
             var (subject, authorization, observation) = CreateValid(now);
@@ -203,6 +211,7 @@ internal static class CiWorkflowDispatchAuthorizationEvaluatorTests
             now.AddSeconds(-3));
 
         var authorization = new CiWorkflowDispatchAuthorization(
+            CiWorkflowDispatchAuthorizationEvaluator.ExpectedAuthorizationSchema,
             "authorization-001",
             Authority,
             subject.RequestId,
