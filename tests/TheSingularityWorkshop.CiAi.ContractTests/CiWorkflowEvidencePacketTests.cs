@@ -121,7 +121,10 @@ internal static class CiWorkflowEvidencePacketTests
         try
         {
             var outbox = new FileCiWorkflowEvidenceOutbox(Path.Combine(outboxDirectory, "evidence.jsonl"));
-            var delivery = new CiWorkflowEvidenceDelivery("run-42-attempt-2", factoryPacket);
+            var delivery = new CiWorkflowEvidenceDelivery(
+                new CiAiArtifactDeliveryIdentity(
+                    "run-42-attempt-2", "operation-run-42-attempt-2", "dispatch-run-42-attempt-2"),
+                factoryPacket);
             Assert(outbox.Enqueue(delivery) == CiWorkflowEvidenceEnqueueOutcome.Enqueued &&
                 outbox.Enqueue(delivery) == CiWorkflowEvidenceEnqueueOutcome.Duplicate,
                 "v1 outbox did not durably deduplicate the exact delivery");
