@@ -18,7 +18,7 @@ public sealed record CiAiDependencyRegistrationDispatchState(
 /// File-backed retry schedule. Backoff is deterministic exponential (30 seconds to one hour).
 /// A permanent transport rejection is terminal and requires operator/configuration intervention.
 /// </summary>
-public sealed class FileCiAiDependencyRegistrationDispatchStateStore
+public sealed class FileCiAiDependencyRegistrationDispatchStateStore : ICiAiDependencyRegistrationDispatchStateStore
 {
     private readonly string _directory;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
