@@ -23,6 +23,26 @@ public sealed record CiAiArtifactDeliveryIdentity(
             throw new ArgumentException("Dispatch request, operation, and idempotency identities must be bounded and non-empty.");
         return this;
     }
+
+    /// <summary>
+    /// Derives a capability-scoped idempotency key from the host's original dispatch key.
+    /// This permits one workflow-evidence artifact and one test-results artifact for the same
+    /// dispatch without reusing an idempotency key in Execution's receipt ledger.
+    /// </summary>
+    public string DeriveIdempotencyKey(string capabilityIdentity)
+    {
+        Validate();
+        ArgumentException.ThrowIfNullOrWhiteSpace(capabilityIdentity);
+        if (capabilityIdentity.Length > 128 || capabilityIdentity.Any(character =>
+            char.IsControl(character) || char.IsWhiteSpace(character)))
+            throw new ArgumentException("Capability identity must be bounded and contain no whitespace.", nameof(capabilityIdentity));
+        var material = JsonSerializer.SerializeToUtf8Bytes(new
+        {
+            dispatchIdempotencyKey = IdempotencyKey,
+            capabilityIdentity
+        });
+        return "sha256:" + Convert.ToHexString(SHA256.HashData(material)).ToLowerInvariant();
+    }
 }
 
 /// <summary>One exact v1 packet paired with the original host-approved dispatch identity.</summary>
@@ -37,7 +57,7 @@ public sealed record CiWorkflowEvidenceDelivery : ICiWorkflowEvidenceDelivery
         identity.Validate();
         DeliveryId = identity.RequestId;
         OperationId = identity.OperationId;
-        IdempotencyKey = identity.IdempotencyKey;
+        IdempotencyKey = identity.DeriveIdempotencyKey(CiWorkflowEvidenceExecutionNoticeEnqueuer.CapabilityId);
         Packet = packet;
         Payload = packet.ToJson(indented: false);
         PayloadSha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Payload))).ToLowerInvariant();
@@ -205,7 +225,11 @@ public sealed class FileCiWorkflowEvidenceOutbox
         value is { Length: > 0 and <= 128 } &&
         !value.Any(character => char.IsControl(character) || char.IsWhiteSpace(character));
 
-    private static bool IsValidIdempotencyKey(string? value) => IsValidDispatchIdentity(value);
+    private static bool IsValidIdempotencyKey(string? value) =>
+        value is { Length: 71 } &&
+        value.StartsWith("sha256:", StringComparison.Ordinal) &&
+        value.AsSpan(7).ToString().All(character =>
+            character is >= '0' and <= '9' or >= 'a' and <= 'f');
 
     private sealed record OutboxRecord(
         string DeliveryId,
