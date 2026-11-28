@@ -93,6 +93,38 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
                     CreateSnapshot("5123456789abcdef0123456789abcdef01234567", "TrentBest/Provider"), 44)));
             AssertThrows<InvalidDataException>(() =>
                 mismatchedEvidence.ReceiveAsync(delivery.Payload).AsTask().GetAwaiter().GetResult());
+            var retryReceiptStore = new FileCiAiDependencyRegistrationReceiptStore(
+                Path.Combine(root, "retry-receipts", "receipts.jsonl"));
+            var retryStateStore = new FileCiAiDependencyRegistrationDispatchStateStore(
+                Path.Combine(root, "retry-state"));
+            var fakeTransport = new FixedDependencyTransport();
+            var coordinator = new CiAiDependencyRegistrationDispatchCoordinator(outbox,
+                retryReceiptStore, retryStateStore, fakeTransport);
+            var dispatchTime = DateTimeOffset.Parse("2026-11-28T00:10:00Z");
+            var firstDispatch = coordinator.DispatchDueAsync(dispatchTime).AsTask().GetAwaiter().GetResult();
+            Assert(firstDispatch.Count == 2 && firstDispatch.All(item => item.AttemptCount == 1),
+                "coordinator did not dispatch each unacknowledged recipient");
+            Assert(coordinator.DispatchDueAsync(dispatchTime.AddSeconds(29)).AsTask().GetAwaiter().GetResult().Count == 0,
+                "coordinator ignored the initial retry backoff");
+            var secondDispatch = coordinator.DispatchDueAsync(dispatchTime.AddSeconds(30)).AsTask().GetAwaiter().GetResult();
+            Assert(secondDispatch.Count == 2 && secondDispatch.All(item => item.AttemptCount == 2),
+                "coordinator did not retry queued events after backoff");
+            retryReceiptStore.Record(acceptedReceipt);
+            var afterReceipt = coordinator.DispatchDueAsync(dispatchTime.AddMinutes(2)).AsTask().GetAwaiter().GetResult();
+            Assert(afterReceipt.Count == 1 && afterReceipt[0].TargetRepository == "TrentBest/PriorDependent",
+                "coordinator did not stop dispatching after a receiver receipt arrived");
+            var terminalStore = new FileCiAiDependencyRegistrationDispatchStateStore(
+                Path.Combine(root, "terminal-state"));
+            var permanent = terminalStore.RecordAttempt(delivery.DeliveryId, "TrentBest/Provider",
+                new CiAiDependencyRegistrationTransportResult(
+                    CiAiDependencyRegistrationTransportDisposition.PermanentFailure, 403, "github.dispatch-rejected"),
+                dispatchTime);
+            Assert(permanent.Terminal && permanent.NextAttemptAtUtc is null,
+                "permanent dispatch rejection was not made terminal");
+            AssertThrows<InvalidOperationException>(() => terminalStore.RecordAttempt(delivery.DeliveryId,
+                "TrentBest/Provider", new CiAiDependencyRegistrationTransportResult(
+                    CiAiDependencyRegistrationTransportDisposition.Queued, 204, "github.event-queued"),
+                dispatchTime.AddMinutes(1)));
             Assert(applied.Status == CiAiDependencyRegistrationApplyStatus.Applied, "initial snapshot was not applied");
             Assert(store.ApplyVerifiedSnapshot(CreateVerification(first, 42)).Status == CiAiDependencyRegistrationApplyStatus.Duplicate,
                 "identical replay was not idempotent");
@@ -134,8 +166,8 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             File.WriteAllText(corrupt, alteredDigest);
             AssertThrows<InvalidDataException>(() => reopened.ReadAll());
 
-            Console.WriteLine("PASS: 25 durable dependency federation, receiver, and receipt contract checks.");
-            return 25;
+            Console.WriteLine("PASS: 31 durable dependency federation, receiver, receipt, and retry contract checks.");
+            return 31;
         }
         finally
         {
@@ -211,6 +243,15 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             new[] { new CiWorkflowRequiredCheckBinding("build-and-test", "build-and-test") });
         return CiAiDependencyRegistrationSourceVerification.Verify(snapshot, packetV2, trustDecision,
             allowedSourceRefs ?? new[] { sourceRef });
+    }
+
+    private sealed class FixedDependencyTransport : ICiAiDependencyRegistrationTransport
+    {
+        public ValueTask<CiAiDependencyRegistrationTransportResult> DispatchAsync(
+            CiAiDependencyRegistrationDelivery delivery, string targetRepository,
+            CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(new CiAiDependencyRegistrationTransportResult(
+                CiAiDependencyRegistrationTransportDisposition.Queued, 204, "github.event-queued"));
     }
 
     private sealed class FixedDeliveryVerifier(
