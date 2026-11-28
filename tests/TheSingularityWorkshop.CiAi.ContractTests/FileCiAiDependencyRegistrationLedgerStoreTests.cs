@@ -308,8 +308,8 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             File.WriteAllText(corrupt, alteredDigest);
             AssertThrows<InvalidDataException>(() => reopened.ReadAll());
 
-            Console.WriteLine("PASS: 46 durable dependency federation, inventory, receiver, receipt authentication, retry, and GitHub transport checks.");
-            return 46;
+            Console.WriteLine("PASS: 47 durable dependency federation, inventory, receiver, receipt authentication, retry, and GitHub transport checks.");
+            return 47;
         }
         finally
         {
