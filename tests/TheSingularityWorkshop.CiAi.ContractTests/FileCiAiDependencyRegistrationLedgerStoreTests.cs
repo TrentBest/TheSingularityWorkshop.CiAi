@@ -41,7 +41,13 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             Assert(reopened.ReadAll().Count == 2, "source ledgers were not enumerated independently");
 
             var corrupt = Directory.GetFiles(root, "*.json").OrderBy(path => path, StringComparer.Ordinal).First();
-            File.AppendAllText(corrupt, " ");
+            var corruptJson = File.ReadAllText(corrupt);
+            var alteredDigest = System.Text.RegularExpressions.Regex.Replace(corruptJson,
+                "\"SnapshotSha256\": \"[0-9a-f]{64}\"",
+                "\"SnapshotSha256\": \"" + new string('0', 64) + "\"");
+            Assert(!string.Equals(corruptJson, alteredDigest, StringComparison.Ordinal),
+                "corruption fixture did not locate the stored digest");
+            File.WriteAllText(corrupt, alteredDigest);
             AssertThrows<InvalidDataException>(() => reopened.ReadAll());
 
             Console.WriteLine("PASS: 9 durable dependency ledger store contract checks.");
