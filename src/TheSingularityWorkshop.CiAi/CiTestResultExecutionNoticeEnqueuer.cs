@@ -130,7 +130,7 @@ public sealed class CiTestResultExecutionNoticeEnqueuer
             !string.Equals(manifest.ClientIdentity, recipientIdentity, StringComparison.Ordinal))
             throw new InvalidDataException("Published report manifest has an unexpected capability, media type, or recipient.");
         if (string.IsNullOrWhiteSpace(manifest.ArtifactId) ||
-            !string.Equals(manifest.ArtifactVersion, "1", StringComparison.Ordinal) ||
+            string.IsNullOrWhiteSpace(manifest.ArtifactVersion) ||
             !string.Equals(manifest.ImplementationRevision, report.WorkflowDefinitionSha, StringComparison.Ordinal))
             throw new InvalidDataException("Published report manifest artifact identity or implementation revision does not match the exact report.");
         if (!string.Equals(manifest.DigestAlgorithm, "SHA-256", StringComparison.Ordinal) ||
