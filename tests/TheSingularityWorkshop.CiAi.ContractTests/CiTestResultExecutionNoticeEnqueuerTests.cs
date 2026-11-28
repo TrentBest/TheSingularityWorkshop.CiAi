@@ -102,7 +102,7 @@ internal static class CiTestResultExecutionNoticeEnqueuerTests
             CiTestResultExecutionNoticeEnqueuer.CapabilityVersion,
             report.WorkflowDefinitionSha,
             $"ciai-test-results-{report.RunId}-{report.RunAttempt}",
-            "1",
+            "v1",
             sourceShaOverride ?? report.CandidateSha,
             "SHA-256",
             digestOverride ?? digest,
