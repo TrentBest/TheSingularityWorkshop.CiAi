@@ -57,7 +57,7 @@ public sealed class FileCiAiDependencyRegistrationDispatchStateStore : ICiAiDepe
         var terminal = result.Disposition == CiAiDependencyRegistrationTransportDisposition.PermanentFailure;
         var exponent = Math.Min(attempt - 1, 10);
         var delaySeconds = Math.Min(3600d, 30d * Math.Pow(2d, exponent));
-        var nextAttempt = terminal ? null : attemptedAtUtc.AddSeconds(delaySeconds);
+        DateTimeOffset? nextAttempt = terminal ? null : attemptedAtUtc.AddSeconds(delaySeconds);
         var next = new CiAiDependencyRegistrationDispatchState(deliveryId, targetRepository,
             attempt, nextAttempt, result.Disposition, result.OutcomeCode, terminal);
         var temporaryPath = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
