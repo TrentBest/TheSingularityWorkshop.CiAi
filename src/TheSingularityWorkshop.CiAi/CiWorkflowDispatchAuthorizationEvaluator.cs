@@ -286,11 +286,14 @@ public static class CiWorkflowDispatchAuthorizationEvaluator
         value.StartsWith(".github/workflows/", StringComparison.Ordinal) &&
         (value.EndsWith(".yml", StringComparison.Ordinal) || value.EndsWith(".yaml", StringComparison.Ordinal)) &&
         !value.Contains("..", StringComparison.Ordinal) &&
-        !value.Contains('\\');
+        !value.Contains('\\') &&
+        !value.Contains(' ');
 
     private static bool IsCandidateRef(string? value) =>
         value is { Length: > 11 } &&
         value.StartsWith("refs/heads/", StringComparison.Ordinal) &&
+        !value.Contains('\\') &&
+        !value.Contains(' ') &&
         !string.Equals(value, "refs/heads/development", StringComparison.Ordinal) &&
         !string.Equals(value, "refs/heads/master", StringComparison.Ordinal) &&
         !value.Contains("..", StringComparison.Ordinal);
