@@ -59,7 +59,7 @@ internal static class CiFsmRuntimeBenchmarkReportEvaluatorTests
         Check("missing matched measurement lane blocks evidence acceptance", () =>
         {
             var json = ValidJson().Replace(
-                "\"stringScheduled\": {\"meanNs\": 224.798, \"standardDeviationNs\": 0.8328, \"errorNs\": 0.9394, \"medianNs\": 224.7, \"allocatedBytesPerOperation\": 320},",
+                "\"stringScheduled\": null,",
                 string.Empty,
                 StringComparison.Ordinal);
             var result = CiFsmRuntimeBenchmarkReportEvaluator.Evaluate(json);
