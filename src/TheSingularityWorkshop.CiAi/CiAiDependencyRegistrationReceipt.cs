@@ -57,9 +57,9 @@ public sealed class CiAiDependencyRegistrationReceipt
         var (status, code) = applyResult.Status switch
         {
             CiAiDependencyRegistrationApplyStatus.Applied =>
-                (CiAiDependencyRegistrationReceiptStatus.Accepted, "applied"),
+                (CiAiDependencyRegistrationReceiptStatus.Accepted, "accepted"),
             CiAiDependencyRegistrationApplyStatus.Duplicate =>
-                (CiAiDependencyRegistrationReceiptStatus.Accepted, "duplicate"),
+                (CiAiDependencyRegistrationReceiptStatus.Accepted, "accepted"),
             CiAiDependencyRegistrationApplyStatus.Stale =>
                 (CiAiDependencyRegistrationReceiptStatus.Rejected, "stale"),
             CiAiDependencyRegistrationApplyStatus.Conflict =>
@@ -113,7 +113,7 @@ public sealed class CiAiDependencyRegistrationReceipt
             throw new ArgumentException("Receipt delivery digest must be a full SHA-256 value.");
         var expected = Status switch
         {
-            CiAiDependencyRegistrationReceiptStatus.Accepted when OutcomeCode is "applied" or "duplicate" => true,
+            CiAiDependencyRegistrationReceiptStatus.Accepted when OutcomeCode is "accepted" => true,
             CiAiDependencyRegistrationReceiptStatus.Rejected when OutcomeCode is "stale" or "conflict" or "source-mismatch" => true,
             _ => false
         };
