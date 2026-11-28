@@ -23,6 +23,27 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             AssertThrows<InvalidDataException>(() => CreateVerification(first, 42, trustedWorkflow: false));
             AssertThrows<InvalidDataException>(() => CreateVerification(first, 42,
                 conclusion: CiRunConclusion.Failure));
+
+            var delivery = CiAiDependencyRegistrationDelivery.FromVerification(verification,
+                new[] { "TrentBest/Provider", "TrentBest/PriorDependent" });
+            var outbox = new FileCiAiDependencyRegistrationOutbox(Path.Combine(root, "outbox", "deliveries.jsonl"));
+            Assert(outbox.Enqueue(delivery) == CiAiDependencyRegistrationOutboxEnqueueOutcome.Enqueued,
+                "first federated delivery was not enqueued");
+            Assert(outbox.Enqueue(delivery) == CiAiDependencyRegistrationOutboxEnqueueOutcome.Duplicate,
+                "identical federated delivery replay was not deduplicated");
+            var reopenedOutbox = new FileCiAiDependencyRegistrationOutbox(Path.Combine(root, "outbox", "deliveries.jsonl"));
+            var reloadedDelivery = reopenedOutbox.ReadAll().Single();
+            Assert(reloadedDelivery.Payload == delivery.Payload &&
+                reloadedDelivery.PayloadSha256 == delivery.PayloadSha256 &&
+                reloadedDelivery.RecipientRepositories.Contains("TrentBest/PriorDependent"),
+                "delivery restart replay lost payload integrity or a withdrawal recipient");
+            var changedRecipients = CiAiDependencyRegistrationDelivery.FromVerification(verification,
+                new[] { "TrentBest/Provider" });
+            Assert(reopenedOutbox.Enqueue(changedRecipients) == CiAiDependencyRegistrationOutboxEnqueueOutcome.Conflict,
+                "delivery identity was reused with a changed recipient set");
+            AssertThrows<System.Text.Json.JsonException>(() =>
+                CiAiDependencyRegistrationDelivery.FromJson(delivery.Payload.Replace(
+                    "\"schema\":", "\"unexpected\": 1, \"schema\":", StringComparison.Ordinal)));
             Assert(applied.Status == CiAiDependencyRegistrationApplyStatus.Applied, "initial snapshot was not applied");
             Assert(store.ApplyVerifiedSnapshot(CreateVerification(first, 42)).Status == CiAiDependencyRegistrationApplyStatus.Duplicate,
                 "identical replay was not idempotent");
