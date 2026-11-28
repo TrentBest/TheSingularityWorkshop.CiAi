@@ -26,6 +26,16 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
 
             var delivery = CiAiDependencyRegistrationDelivery.FromVerification(verification,
                 new[] { "TrentBest/Provider", "TrentBest/PriorDependent" });
+            var revisionPath = Path.Combine(root, "inventory", "revision.txt");
+            var revisionProvider = new FileCiAiRepositoryInventoryRevisionProvider(revisionPath);
+            Assert(revisionProvider.GetNextRevisionAsync().GetAwaiter().GetResult() == 1 &&
+                new FileCiAiRepositoryInventoryRevisionProvider(revisionPath)
+                    .GetNextRevisionAsync().GetAwaiter().GetResult() == 2,
+                "inventory revision counter did not persist monotonic increments across instances");
+            File.WriteAllText(revisionPath, "not-a-revision", Encoding.ASCII);
+            AssertThrows<InvalidDataException>(() =>
+                new FileCiAiRepositoryInventoryRevisionProvider(revisionPath)
+                    .GetNextRevisionAsync().GetAwaiter().GetResult());
             var inventory = CiAiRepositoryInventorySnapshot.CreateFromTrustedProvider(
                 "github-app-installation:trusted-org-inventory", 9,
                 new[] { "TrentBest/Consumer", "TrentBest/Provider", "TrentBest/NewRepository" },
@@ -279,8 +289,8 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             File.WriteAllText(corrupt, alteredDigest);
             AssertThrows<InvalidDataException>(() => reopened.ReadAll());
 
-            Console.WriteLine("PASS: 41 durable dependency federation, inventory, receiver, receipt, retry, and GitHub transport checks.");
-            return 41;
+            Console.WriteLine("PASS: 43 durable dependency federation, inventory, receiver, receipt, retry, and GitHub transport checks.");
+            return 43;
         }
         finally
         {
