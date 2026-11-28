@@ -165,7 +165,7 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
                 "TrentBest/NotARecipient", applied));
             AssertThrows<System.Text.Json.JsonException>(() =>
                 CiAiDependencyRegistrationReceipt.FromJson(acceptedReceipt.Payload.Replace(
-                    "\\"schema\\":", "\\"unexpected\\": 1, \\"schema\\":", StringComparison.Ordinal)));
+                    "\"schema\":", "\"unexpected\": 1, \"schema\":", StringComparison.Ordinal)));
             var receiverLedger = new FileCiAiDependencyRegistrationLedgerStore(Path.Combine(root, "receiver-ledger"));
             var receiverReceipts = new FileCiAiDependencyRegistrationReceiptStore(
                 Path.Combine(root, "receiver-receipts", "receipts.jsonl"));
