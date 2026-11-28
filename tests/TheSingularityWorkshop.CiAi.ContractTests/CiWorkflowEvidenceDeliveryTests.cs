@@ -44,11 +44,11 @@ internal static class CiWorkflowEvidenceDeliveryTests
                 "v1 durable reload improperly restored host workflow trust");
 
             var persistedOutbox = File.ReadAllText(outboxPath);
-            var uppercaseKeyPath = Path.Combine(root, "v1-outbox-uppercase.jsonl");
-            File.WriteAllText(uppercaseKeyPath, persistedOutbox.Replace(
+            var invalidKeyPath = Path.Combine(root, "v1-outbox-uppercase.jsonl");
+            File.WriteAllText(invalidKeyPath, persistedOutbox.Replace(
                 delivery.IdempotencyKey, "invalid key", StringComparison.Ordinal));
             AssertThrows<InvalidDataException>(() =>
-                new FileCiWorkflowEvidenceOutbox(uppercaseKeyPath).ReadPending(RequiredChecks));
+                new FileCiWorkflowEvidenceOutbox(invalidKeyPath).ReadPending(RequiredChecks));
             var nullKeyPath = Path.Combine(root, "v1-outbox-null-key.jsonl");
             File.WriteAllText(nullKeyPath, persistedOutbox.Replace(
                 "\"IdempotencyKey\":\"" + delivery.IdempotencyKey + "\"",
