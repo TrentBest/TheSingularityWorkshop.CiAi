@@ -48,9 +48,9 @@ public sealed record CiWorkflowDispatchHostObservation(
             Repository,
             WorkflowPath,
             WorkflowDefinitionRef,
-            WorkflowDefinitionSha.ToLowerInvariant(),
+            (WorkflowDefinitionSha ?? string.Empty).ToLowerInvariant(),
             CandidateRef,
-            CandidateSha.ToLowerInvariant(),
+            (CandidateSha ?? string.Empty).ToLowerInvariant(),
             SourceRunId.ToString(CultureInfo.InvariantCulture),
             SourceRunAttempt.ToString(CultureInfo.InvariantCulture),
             WorkflowDispatchEnabled ? "true" : "false",
@@ -140,7 +140,7 @@ public static class CiWorkflowDispatchAuthorizationEvaluator
             !trustedAuthorityIdentities.Contains(authenticatedAuthorityIdentity))
             errors.Add("dispatch.authority-not-trusted");
 
-        if (consumedAuthorizationIds.Contains(authorization.AuthorizationId))
+        if (!string.IsNullOrWhiteSpace(authorization.AuthorizationId) && consumedAuthorizationIds.Contains(authorization.AuthorizationId))
             errors.Add("dispatch.authorization-replayed");
 
         if (!string.Equals(subject.RequestId, authorization.RequestId, StringComparison.Ordinal))
