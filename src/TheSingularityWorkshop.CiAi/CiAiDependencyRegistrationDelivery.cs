@@ -15,7 +15,8 @@ public sealed class CiAiDependencyRegistrationDelivery
 
     private CiAiDependencyRegistrationDelivery(CiAiDependencyRegistrationSnapshot snapshot,
         long sourceRevision, int sourceRunAttempt, string evidencePayloadSha256,
-        string workflowPath, string sourceRef, string? inventoryProviderIdentity,\n        long? inventoryRevision, string? inventoryEvidencePayloadSha256, IReadOnlyList<string> recipients)
+        string workflowPath, string sourceRef, string? inventoryProviderIdentity,
+        long? inventoryRevision, string? inventoryEvidencePayloadSha256, IReadOnlyList<string> recipients)
     {
         Snapshot = snapshot;
         SourceRevision = sourceRevision;
@@ -23,6 +24,9 @@ public sealed class CiAiDependencyRegistrationDelivery
         EvidencePayloadSha256 = evidencePayloadSha256;
         WorkflowPath = workflowPath;
         SourceRef = sourceRef;
+        InventoryProviderIdentity = inventoryProviderIdentity;
+        InventoryRevision = inventoryRevision;
+        InventoryEvidencePayloadSha256 = inventoryEvidencePayloadSha256;
         RecipientRepositories = Array.AsReadOnly(recipients.ToArray());
         Validate();
         Payload = Serialize();
@@ -38,6 +42,9 @@ public sealed class CiAiDependencyRegistrationDelivery
     public string EvidencePayloadSha256 { get; }
     public string WorkflowPath { get; }
     public string SourceRef { get; }
+    public string? InventoryProviderIdentity { get; }
+    public long? InventoryRevision { get; }
+    public string? InventoryEvidencePayloadSha256 { get; }
     public IReadOnlyList<string> RecipientRepositories { get; }
     public string DeliveryId { get; }
     public string Payload { get; }
@@ -85,7 +92,8 @@ public sealed class CiAiDependencyRegistrationDelivery
         var root = document.RootElement;
         ValidateProperties(root, "schema", "deliveryId", "sourceRepository", "sourceRevision",
             "sourceCommitSha", "sourceRunAttempt", "evidencePayloadSha256", "workflowPath",
-            "sourceRef", "inventoryProviderIdentity", "inventoryRevision",\n            "inventoryEvidencePayloadSha256", "snapshotJson", "recipientRepositories");
+            "sourceRef", "inventoryProviderIdentity", "inventoryRevision",
+            "inventoryEvidencePayloadSha256", "snapshotJson", "recipientRepositories");
         if (root.GetProperty("schema").GetString() != CurrentSchema)
             throw new JsonException("Dependency registration delivery schema is unsupported.");
 
@@ -103,7 +111,13 @@ public sealed class CiAiDependencyRegistrationDelivery
             root.GetProperty("sourceRunAttempt").GetInt32(),
             root.GetProperty("evidencePayloadSha256").GetString()!,
             root.GetProperty("workflowPath").GetString()!,
-            root.GetProperty("sourceRef").GetString()!, recipients);
+            root.GetProperty("sourceRef").GetString()!,
+            root.GetProperty("inventoryProviderIdentity").ValueKind == JsonValueKind.Null ? null :
+                root.GetProperty("inventoryProviderIdentity").GetString(),
+            root.GetProperty("inventoryRevision").ValueKind == JsonValueKind.Null ? null :
+                root.GetProperty("inventoryRevision").GetInt64(),
+            root.GetProperty("inventoryEvidencePayloadSha256").ValueKind == JsonValueKind.Null ? null :
+                root.GetProperty("inventoryEvidencePayloadSha256").GetString(), recipients);
         if (!string.Equals(delivery.DeliveryId, root.GetProperty("deliveryId").GetString(), StringComparison.Ordinal))
             throw new JsonException("Delivery identity does not match its source revision.");
         if (!string.Equals(delivery.SourceRepository, root.GetProperty("sourceRepository").GetString(), StringComparison.OrdinalIgnoreCase) ||
@@ -125,6 +139,9 @@ public sealed class CiAiDependencyRegistrationDelivery
             evidencePayloadSha256 = EvidencePayloadSha256,
             workflowPath = WorkflowPath,
             sourceRef = SourceRef,
+            inventoryProviderIdentity = InventoryProviderIdentity,
+            inventoryRevision = InventoryRevision,
+            inventoryEvidencePayloadSha256 = InventoryEvidencePayloadSha256,
             snapshotJson = Snapshot.ToJson(),
             recipientRepositories = RecipientRepositories
         };
