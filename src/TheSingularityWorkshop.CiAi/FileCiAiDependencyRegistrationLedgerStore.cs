@@ -8,7 +8,7 @@ namespace TheSingularityWorkshop.CiAi;
 /// Durable receiver-side store for the latest complete dependency snapshot from each source.
 /// Callers must authenticate the source and verify the exact source commit before applying.
 /// </summary>
-public sealed class FileCiAiDependencyRegistrationLedgerStore
+public sealed class FileCiAiDependencyRegistrationLedgerStore : ICiAiDependencyRegistrationLedgerStore
 {
     private const int CurrentSchemaVersion = 1;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
