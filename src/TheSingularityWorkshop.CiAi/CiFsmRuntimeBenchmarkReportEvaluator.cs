@@ -149,11 +149,11 @@ public static class CiFsmRuntimeBenchmarkReportEvaluator
                 errors.Add("benchmark.scheduled-workload-identity-invalid");
 
             var measurements = ReadObject(root, "measurements");
-            var baseline = ReadMeasurement(measurements, "applicationLogic", "benchmark.application-baseline");
-            var integerHandle = ReadMeasurement(measurements, "integerHandle", "benchmark.integer-handle");
-            var stringHandle = ReadMeasurement(measurements, "stringHandle", "benchmark.string-handle");
-            var integerScheduled = ReadMeasurement(measurements, "integerScheduled", "benchmark.integer-scheduled");
-            var stringScheduled = ReadMeasurement(measurements, "stringScheduled", "benchmark.string-scheduled");
+            var baseline = ReadMeasurement(measurements, "applicationLogic", "benchmark.application-baseline", errors);
+            var integerHandle = ReadMeasurement(measurements, "integerHandle", "benchmark.integer-handle", errors);
+            var stringHandle = ReadMeasurement(measurements, "stringHandle", "benchmark.string-handle", errors);
+            var integerScheduled = ReadMeasurement(measurements, "integerScheduled", "benchmark.integer-scheduled", errors);
+            var stringScheduled = ReadMeasurement(measurements, "stringScheduled", "benchmark.string-scheduled", errors);
 
             if (baseline is not null && baseline.MeanNanoseconds < 1.0)
                 errors.Add("benchmark.application-baseline-implausible");
@@ -187,7 +187,7 @@ public static class CiFsmRuntimeBenchmarkReportEvaluator
         }
     }
 
-    private static Measurement? ReadMeasurement(JsonElement measurements, string key, string errorPrefix, List<string>? errors = null)
+    private static Measurement? ReadMeasurement(JsonElement measurements, string key, string errorPrefix, List<string> errors)
     {
         var item = ReadObject(measurements, key);
         if (item.ValueKind != JsonValueKind.Object)
