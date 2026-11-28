@@ -65,6 +65,18 @@ public sealed class GitHubDependencyRegistrationDispatchTransport : ICiAiDepende
             throw new ArgumentException("Dispatch target must be an explicit canonical delivery recipient.",
                 nameof(targetRepository));
 
+        // GitHub requires client_payload to be strictly smaller than 64 KiB.
+        // Measure the serialized UTF-8 payload, including JSON escaping of delivery.Payload.
+        var clientPayload = JsonSerializer.Serialize(new
+        {
+            deliveryJson = delivery.Payload,
+            deliveryId = delivery.DeliveryId,
+            payloadSha256 = delivery.PayloadSha256
+        });
+        if (Encoding.UTF8.GetByteCount(clientPayload) >= 64 * 1024)
+            return new(CiAiDependencyRegistrationTransportDisposition.PermanentFailure, null,
+                "github.client-payload-too-large");
+
         var token = await _tokenProvider.GetInstallationTokenAsync(targetRepository, cancellationToken)
             .ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(token))
@@ -76,12 +88,7 @@ public sealed class GitHubDependencyRegistrationDispatchTransport : ICiAiDepende
         var payload = JsonSerializer.Serialize(new
         {
             event_type = EventType,
-            client_payload = new
-            {
-                deliveryJson = delivery.Payload,
-                deliveryId = delivery.DeliveryId,
-                payloadSha256 = delivery.PayloadSha256
-            }
+            client_payload = JsonSerializer.Deserialize<JsonElement>(clientPayload)
         });
 
         using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
