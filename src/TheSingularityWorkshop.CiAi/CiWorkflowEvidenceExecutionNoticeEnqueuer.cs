@@ -57,6 +57,22 @@ public sealed class CiWorkflowEvidenceExecutionNoticeEnqueuer
 
         var bytes = System.Text.Encoding.UTF8.GetBytes(delivery.Payload);
         var digest = SHA256.HashData(bytes);
+        var existing = _noticeOutbox.ReadPending()
+            .FirstOrDefault(item => string.Equals(item.NoticeId, noticeId, StringComparison.Ordinal));
+        if (existing is not null)
+        {
+            try
+            {
+                ValidateManifest(delivery, existing.Notice.Manifest, recipientIdentity,
+                    bytes.Length, digest, existing.Notice.NotifiedAt);
+                return ExecutionArtifactNoticeEnqueueOutcome.Duplicate;
+            }
+            catch (Exception exception) when (exception is InvalidDataException or UnauthorizedAccessException)
+            {
+                return ExecutionArtifactNoticeEnqueueOutcome.Conflict;
+            }
+        }
+
         var manifest = await _publisher.PublishAsync(
             delivery, new ReadOnlyMemory<byte>(bytes.ToArray()), cancellationToken).ConfigureAwait(false);
         ValidateManifest(delivery, manifest, recipientIdentity, bytes.Length, digest, notifiedAt);
