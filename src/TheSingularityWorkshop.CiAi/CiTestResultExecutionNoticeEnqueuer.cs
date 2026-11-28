@@ -84,7 +84,7 @@ public sealed class CiTestResultExecutionNoticeEnqueuer
         ArgumentNullException.ThrowIfNull(manifest);
         if (!string.Equals(manifest.RequestId, identity.RequestId, StringComparison.Ordinal) ||
             !string.Equals(manifest.OperationId, identity.OperationId, StringComparison.Ordinal) ||
-            !string.Equals(manifest.IdempotencyKey, identity.IdempotencyKey, StringComparison.Ordinal))
+            !string.Equals(manifest.IdempotencyKey, identity.DeriveIdempotencyKey(CapabilityId), StringComparison.Ordinal))
             throw new InvalidDataException("Published report manifest does not preserve the exact host dispatch identity.");
         if (!string.Equals(manifest.ProviderRepository, report.Repository, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(manifest.SourceSha, report.CandidateSha, StringComparison.OrdinalIgnoreCase) ||
