@@ -101,8 +101,9 @@ public sealed class CiAiDependencyRegistrationReceipt
 
     private void Validate()
     {
-        if (string.IsNullOrWhiteSpace(DeliveryId) || !DeliveryId.StartsWith("depdelivery-", StringComparison.Ordinal))
-            throw new ArgumentException("Receipt delivery identity is invalid.");
+        if (!string.Equals(DeliveryId, CiAiDependencyRegistrationDelivery.CreateDeliveryId(
+                SourceRepository, SourceRevision, SourceCommitSha), StringComparison.Ordinal))
+            throw new ArgumentException("Receipt delivery identity does not match its source revision.");
         if (!RepositoryIdentity.IsValid(TargetRepository) || !RepositoryIdentity.IsValid(SourceRepository) ||
             string.Equals(TargetRepository, SourceRepository, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("Receipt source and target repositories must be distinct canonical identities.");
