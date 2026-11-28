@@ -76,6 +76,22 @@ public sealed class CiTestResultExecutionNoticeEnqueuer
 
         var reportBytes = report.ToCanonicalUtf8Bytes();
         var reportDigest = SHA256.HashData(reportBytes);
+        var existing = _noticeOutbox.ReadPending()
+            .FirstOrDefault(item => string.Equals(item.NoticeId, noticeId, StringComparison.Ordinal));
+        if (existing is not null)
+        {
+            try
+            {
+                ValidateManifest(report, identity, existing.Notice.Manifest, recipientIdentity,
+                    reportBytes.Length, reportDigest, existing.Notice.NotifiedAt);
+                return ExecutionArtifactNoticeEnqueueOutcome.Duplicate;
+            }
+            catch (Exception exception) when (exception is InvalidDataException or UnauthorizedAccessException)
+            {
+                return ExecutionArtifactNoticeEnqueueOutcome.Conflict;
+            }
+        }
+
         var manifest = await _publisher.PublishAsync(
             report, identity, new ReadOnlyMemory<byte>(reportBytes.ToArray()), cancellationToken).ConfigureAwait(false);
         ValidateManifest(report, identity, manifest, recipientIdentity, reportBytes.Length, reportDigest, notifiedAt);
