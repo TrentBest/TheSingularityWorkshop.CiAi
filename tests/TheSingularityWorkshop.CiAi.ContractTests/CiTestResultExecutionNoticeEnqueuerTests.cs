@@ -20,7 +20,7 @@ internal static class CiTestResultExecutionNoticeEnqueuerTests
             var enqueuer = new CiTestResultExecutionNoticeEnqueuer(publisher, outbox);
 
             var first = await enqueuer.PublishAndEnqueueAsync(
-                report, identity, recipient, "notice-report-42-1", notifiedAt);
+                report, identity, recipient, notifiedAt);
             Assert(first == ExecutionArtifactNoticeEnqueueOutcome.Enqueued,
                 "canonical report was not durably enqueued for FSM_Execution");
             Assert(publisher.PublishedBytes is not null && publisher.PublishedBytes.SequenceEqual(bytes),
@@ -28,6 +28,7 @@ internal static class CiTestResultExecutionNoticeEnqueuerTests
 
             var pending = outbox.ReadPending();
             Assert(pending.Count == 1 &&
+                pending[0].Notice.NoticeId == CiTestResultExecutionNoticeEnqueuer.CreateStableNoticeId(identity) &&
                 pending[0].Notice.Manifest.Digest == report.ReportSha256 &&
                 pending[0].Notice.Manifest.SizeBytes == bytes.Length &&
                 pending[0].Notice.Manifest.RequestId == identity.RequestId &&
