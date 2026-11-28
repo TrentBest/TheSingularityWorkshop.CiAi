@@ -71,7 +71,7 @@ public sealed class GitHubInstallationRepositoryInventoryProvider : ICiAiTrusted
                 cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
-            Span<byte> lengthPrefix = stackalloc byte[sizeof(int)];
+            var lengthPrefix = new byte[sizeof(int)];
             BinaryPrimitives.WriteInt32BigEndian(lengthPrefix, bytes.Length);
             evidence.AppendData(lengthPrefix);
             evidence.AppendData(bytes);
