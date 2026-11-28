@@ -23,7 +23,7 @@ internal static class CiWorkflowEvidenceExecutionNoticeEnqueuerTests
             var notifiedAt = ObservedAt.AddMinutes(2);
 
             var outcome = await enqueuer.PublishAndEnqueueAsync(
-                delivery, Recipient, "evidence-notice-42-1", notifiedAt);
+                delivery, Recipient, "evidence-notice-42-1", notifiedAt.AddMinutes(1));
             Assert(outcome == ExecutionArtifactNoticeEnqueueOutcome.Enqueued,
                 "canonical V1 evidence did not enqueue an Execution ready notice");
             Assert(publisher.PublishedBytes is not null &&
@@ -45,8 +45,9 @@ internal static class CiWorkflowEvidenceExecutionNoticeEnqueuerTests
 
             var duplicate = await enqueuer.PublishAndEnqueueAsync(
                 delivery, Recipient, "evidence-notice-42-1", notifiedAt);
-            Assert(duplicate == ExecutionArtifactNoticeEnqueueOutcome.Duplicate,
-                "replaying the same evidence delivery did not deduplicate at the notice outbox");
+            Assert(duplicate == ExecutionArtifactNoticeEnqueueOutcome.Duplicate &&
+                publisher.PublishCount == 1,
+                "replaying the same evidence delivery did not reuse the first durable notice without republishing");
 
             var evidenceOutbox = new FileCiWorkflowEvidenceOutbox(Path.Combine(root, "evidence.jsonl"));
             Assert(evidenceOutbox.Enqueue(delivery) == CiWorkflowEvidenceEnqueueOutcome.Enqueued,
@@ -184,6 +185,7 @@ internal static class CiWorkflowEvidenceExecutionNoticeEnqueuerTests
         : ICiWorkflowEvidenceArtifactPublisher
     {
         public byte[]? PublishedBytes { get; private set; }
+        public int PublishCount { get; private set; }
 
         public Task<ArtifactManifest> PublishAsync(
             CiWorkflowEvidenceDelivery delivery,
@@ -192,6 +194,7 @@ internal static class CiWorkflowEvidenceExecutionNoticeEnqueuerTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             PublishedBytes = canonicalPacketBytes.ToArray();
+            PublishCount++;
             return Task.FromResult(createManifest(delivery, canonicalPacketBytes));
         }
     }
