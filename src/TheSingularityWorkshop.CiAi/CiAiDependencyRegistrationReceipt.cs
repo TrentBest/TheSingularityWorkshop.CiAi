@@ -167,7 +167,7 @@ public enum CiAiDependencyRegistrationReceiptStoreOutcome
 /// Durable append-only receipt journal. It records receiver statements, not proof that a receipt's
 /// author is authentic; callers must authenticate the receiving repository before trusting a receipt.
 /// </summary>
-public sealed class FileCiAiDependencyRegistrationReceiptStore
+public sealed class FileCiAiDependencyRegistrationReceiptStore : ICiAiDependencyRegistrationReceiptStore
 {
     private readonly string _path;
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
