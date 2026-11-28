@@ -78,6 +78,15 @@ internal static class CiWorkflowDispatchAuthorizationEvaluatorTests
             AssertDenied(decision, "dispatch.observation-stale");
         });
 
+        Check("observation captured after authorization issuance is denied", () =>
+        {
+            var (subject, authorization, observation) = CreateValid(now);
+            var lateObservation = observation with { ObservedAtUtc = now.AddSeconds(-1) };
+            var updatedAuthorization = authorization with { HostObservationDigest = lateObservation.ComputeDigest() };
+            var decision = Evaluate(subject, updatedAuthorization, lateObservation, now);
+            AssertDenied(decision, "dispatch.observation-after-authorization-issued");
+        });
+
         Check("future-dated host observation is denied", () =>
         {
             var (subject, authorization, observation) = CreateValid(now);
