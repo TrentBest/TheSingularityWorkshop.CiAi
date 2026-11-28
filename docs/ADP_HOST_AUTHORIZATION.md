@@ -4,7 +4,7 @@
 
 A durable rerun request is an immutable statement of intent. It is **not** permission to dispatch a workflow. This boundary separates the request ledger, human/host authorization, live GitHub state, and the eventual dispatch operation.
 
-The contract in `CiWorkflowDispatchAuthorizationEvaluator.cs` is deliberately pure. It returns a structured allow/deny decision and performs no network calls or side effects.
+The versioned contracts are `ciai.workflow-dispatch-authorization.v1` and `ciai.workflow-dispatch-observation.v1`. The contract in `CiWorkflowDispatchAuthorizationEvaluator.cs` is deliberately pure. It returns a structured allow/deny decision and performs no network calls or side effects.
 
 ## Security model
 
