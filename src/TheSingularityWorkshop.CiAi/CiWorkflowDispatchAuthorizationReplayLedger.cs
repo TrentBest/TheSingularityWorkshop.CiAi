@@ -151,17 +151,20 @@ public sealed class FileCiWorkflowDispatchAuthorizationReplayLedger : ICiWorkflo
             !authorization.WorkflowPath.StartsWith(".github/workflows/", StringComparison.Ordinal) ||
             !(authorization.WorkflowPath.EndsWith(".yml", StringComparison.Ordinal) ||
               authorization.WorkflowPath.EndsWith(".yaml", StringComparison.Ordinal)) ||
-            authorization.WorkflowPath.Contains("..", StringComparison.Ordinal))
+            authorization.WorkflowPath.Contains("..", StringComparison.Ordinal) ||
+            authorization.WorkflowPath.Contains('\\') || authorization.WorkflowPath.Contains(' '))
             throw new ArgumentException("Authorization workflow path is invalid.", nameof(authorization));
         if (!string.Equals(authorization.WorkflowDefinitionRef, "refs/heads/development", StringComparison.Ordinal))
             throw new ArgumentException("Authorization workflow definition must use development.", nameof(authorization));
         if (!IsSha(authorization.WorkflowDefinitionSha) || !IsSha(authorization.CandidateSha))
             throw new ArgumentException("Authorization workflow and candidate SHAs must be full commit identities.", nameof(authorization));
         if (string.IsNullOrWhiteSpace(authorization.CandidateRef) ||
+            authorization.CandidateRef.Length <= "refs/heads/".Length ||
             !authorization.CandidateRef.StartsWith("refs/heads/", StringComparison.Ordinal) ||
             string.Equals(authorization.CandidateRef, "refs/heads/development", StringComparison.Ordinal) ||
             string.Equals(authorization.CandidateRef, "refs/heads/master", StringComparison.Ordinal) ||
-            authorization.CandidateRef.Contains("..", StringComparison.Ordinal))
+            authorization.CandidateRef.Contains("..", StringComparison.Ordinal) ||
+            authorization.CandidateRef.Contains('\\') || authorization.CandidateRef.Contains(' '))
             throw new ArgumentException("Authorization candidate ref must be a non-protected branch.", nameof(authorization));
         if (authorization.SourceRunId < 1 || authorization.SourceRunAttempt < 1 || authorization.AdditionalAttemptNumber < 1)
             throw new ArgumentException("Authorization source run and attempt identities must be positive.", nameof(authorization));
