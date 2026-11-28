@@ -39,9 +39,10 @@ internal static class CiTestResultExecutionNoticeEnqueuerTests
                 "FSM_Execution notice did not preserve report digest, size, identity, and exact run/candidate lineage");
 
             var duplicate = await enqueuer.PublishAndEnqueueAsync(
-                report, identity, recipient, "notice-report-42-1", notifiedAt);
-            Assert(duplicate == ExecutionArtifactNoticeEnqueueOutcome.Duplicate,
-                "identical report notice retry was not idempotent");
+                report, identity, recipient, notifiedAt.AddMinutes(1));
+            Assert(duplicate == ExecutionArtifactNoticeEnqueueOutcome.Duplicate &&
+                publisher.PublishCount == 1,
+                "identical report retry did not reuse the first durable notice without republishing");
 
             var badDigestOutbox = new FileExecutionArtifactReadyNoticeOutbox(Path.Combine(root, "bad-digest.jsonl"));
             var badDigestPublisher = new FakePublisher((value, dispatch, payload) =>
@@ -120,6 +121,7 @@ internal static class CiTestResultExecutionNoticeEnqueuerTests
         : ICiTestResultArtifactPublisher
     {
         public byte[]? PublishedBytes { get; private set; }
+        public int PublishCount { get; private set; }
 
         public Task<ArtifactManifest> PublishAsync(
             CiTestResultReport report,
@@ -129,6 +131,7 @@ internal static class CiTestResultExecutionNoticeEnqueuerTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             PublishedBytes = canonicalReportBytes.ToArray();
+            PublishCount++;
             return Task.FromResult(createManifest(report, identity, canonicalReportBytes));
         }
     }
