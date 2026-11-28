@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
@@ -70,7 +71,9 @@ public sealed class GitHubInstallationRepositoryInventoryProvider : ICiAiTrusted
                 cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
-            evidence.AppendData(BitConverter.GetBytes(bytes.Length));
+            Span<byte> lengthPrefix = stackalloc byte[sizeof(int)];
+            BinaryPrimitives.WriteInt32BigEndian(lengthPrefix, bytes.Length);
+            evidence.AppendData(lengthPrefix);
             evidence.AppendData(bytes);
 
             using var document = JsonDocument.Parse(bytes);
