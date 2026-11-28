@@ -112,8 +112,8 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             File.WriteAllText(corrupt, alteredDigest);
             AssertThrows<InvalidDataException>(() => reopened.ReadAll());
 
-            Console.WriteLine("PASS: 13 durable dependency ledger store and source-verification contract checks.");
-            return 13;
+            Console.WriteLine("PASS: 21 durable dependency ledger, delivery outbox, and receipt contract checks.");
+            return 21;
         }
         finally
         {
