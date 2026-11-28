@@ -77,7 +77,7 @@ public sealed class CiTestResultExecutionNoticeEnqueuer
 
         var reportBytes = report.ToCanonicalUtf8Bytes();
         var reportDigest = SHA256.HashData(reportBytes);
-        var existing = _noticeOutbox.ReadPending()
+        var existing = _outbox.ReadPending()
             .FirstOrDefault(item => string.Equals(item.NoticeId, noticeId, StringComparison.Ordinal));
         if (existing is not null)
         {
