@@ -60,7 +60,7 @@ internal static class CiFsmRuntimeBenchmarkReportEvaluatorTests
         {
             var json = ValidJson().Replace(
                 "\"stringScheduled\": null,",
-                string.Empty,
+                "\"stringScheduled\": null,",
                 StringComparison.Ordinal);
             var result = CiFsmRuntimeBenchmarkReportEvaluator.Evaluate(json);
             Assert(!result.IsAccepted && result.Errors.Contains("benchmark.integer-scheduled-mean-invalid") == false &&
