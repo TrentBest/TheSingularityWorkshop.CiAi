@@ -39,9 +39,12 @@ public sealed record CiWorkflowDispatchHostObservation(
     bool WorkflowDispatchEnabled,
     DateTimeOffset ObservedAtUtc)
 {
+    public const string SchemaVersion = "ciai.workflow-dispatch-observation.v1";
+
     public string ComputeDigest()
     {
         var canonical = string.Join("\n",
+            SchemaVersion,
             Repository,
             WorkflowPath,
             WorkflowDefinitionRef,
@@ -61,6 +64,7 @@ public sealed record CiWorkflowDispatchHostObservation(
 /// App private key, PAT, or other credential. Authority authentication happens outside this record.
 /// </summary>
 public sealed record CiWorkflowDispatchAuthorization(
+    string SchemaVersion,
     string AuthorizationId,
     string AuthorityIdentity,
     string RequestId,
@@ -97,6 +101,7 @@ public sealed record CiWorkflowDispatchAuthorizationDecision(
 /// </summary>
 public static class CiWorkflowDispatchAuthorizationEvaluator
 {
+    public const string ExpectedAuthorizationSchema = "ciai.workflow-dispatch-authorization.v1";
     public static readonly TimeSpan DefaultMaximumObservationAge = TimeSpan.FromSeconds(60);
     public static readonly TimeSpan DefaultMaximumAuthorizationLifetime = TimeSpan.FromMinutes(15);
     public const int MaximumAdditionalAttempts = 3;
@@ -232,6 +237,8 @@ public static class CiWorkflowDispatchAuthorizationEvaluator
 
     private static void ValidateAuthorizationShape(CiWorkflowDispatchAuthorization authorization, List<string> errors)
     {
+        if (!string.Equals(authorization.SchemaVersion, ExpectedAuthorizationSchema, StringComparison.Ordinal))
+            errors.Add("dispatch.authorization-schema-unsupported");
         if (string.IsNullOrWhiteSpace(authorization.AuthorizationId) || authorization.AuthorizationId.Length > 128)
             errors.Add("dispatch.authorization-id-invalid");
         if (string.IsNullOrWhiteSpace(authorization.AuthorityIdentity))
