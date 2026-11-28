@@ -38,6 +38,8 @@ public sealed record CiAiArtifactDeliveryIdentity(
             throw new ArgumentException("Capability identity must be bounded and contain no whitespace.", nameof(capabilityIdentity));
         var material = JsonSerializer.SerializeToUtf8Bytes(new
         {
+            requestId = RequestId,
+            operationId = OperationId,
             dispatchIdempotencyKey = IdempotencyKey,
             capabilityIdentity
         });
