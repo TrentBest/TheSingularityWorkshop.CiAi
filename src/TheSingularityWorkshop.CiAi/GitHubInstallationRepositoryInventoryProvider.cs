@@ -128,3 +128,52 @@ public sealed class GitHubInstallationRepositoryInventoryProvider : ICiAiTrusted
             isComplete: true, evidencePayloadSha256: digest);
     }
 }
+
+/// <summary>
+/// Durable monotonic revision counter for one inventory scope. Use a distinct file per installation.
+/// A missing file starts at revision zero; a corrupt file fails closed rather than resetting ordering.
+/// </summary>
+public sealed class FileCiAiRepositoryInventoryRevisionProvider : ICiAiRepositoryInventoryRevisionProvider
+{
+    private readonly string _path;
+
+    public FileCiAiRepositoryInventoryRevisionProvider(string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        _path = Path.GetFullPath(path);
+    }
+
+    public ValueTask<long> GetNextRevisionAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+        using var fileLock = new FileStream(_path + ".lock", FileMode.OpenOrCreate,
+            FileAccess.ReadWrite, FileShare.None);
+        long current = 0;
+        if (File.Exists(_path))
+        {
+            var text = File.ReadAllText(_path, Encoding.ASCII);
+            if (!long.TryParse(text, System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.InvariantCulture, out current) || current < 1)
+                throw new InvalidDataException("Repository inventory revision counter is corrupt.");
+        }
+
+        var next = checked(current + 1);
+        var temporaryPath = _path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            var bytes = Encoding.ASCII.GetBytes(next.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            using (var output = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                output.Write(bytes);
+                output.Flush(flushToDisk: true);
+            }
+            File.Move(temporaryPath, _path, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+        }
+        return ValueTask.FromResult(next);
+    }
+}
