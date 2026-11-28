@@ -11,11 +11,11 @@ namespace TheSingularityWorkshop.CiAi;
 /// </summary>
 public sealed class CiAiDependencyRegistrationDelivery
 {
-    public const string CurrentSchema = "ciai.dependency-registration-delivery.v1";
+    public const string CurrentSchema = "ciai.dependency-registration-delivery.v2";
 
     private CiAiDependencyRegistrationDelivery(CiAiDependencyRegistrationSnapshot snapshot,
         long sourceRevision, int sourceRunAttempt, string evidencePayloadSha256,
-        string workflowPath, string sourceRef, IReadOnlyList<string> recipients)
+        string workflowPath, string sourceRef, string? inventoryProviderIdentity,\n        long? inventoryRevision, string? inventoryEvidencePayloadSha256, IReadOnlyList<string> recipients)
     {
         Snapshot = snapshot;
         SourceRevision = sourceRevision;
@@ -53,7 +53,29 @@ public sealed class CiAiDependencyRegistrationDelivery
         return new CiAiDependencyRegistrationDelivery(verification.Snapshot,
             verification.SourceRevision, verification.SourceRunAttempt,
             verification.EvidencePayloadSha256, verification.WorkflowPath,
-            verification.SourceRef, recipients);
+            verification.SourceRef, null, null, null, recipients);
+    }
+
+ 
+    /// <summary>
+    /// Creates a delivery whose recipient set and inventory evidence are bound to the immutable envelope.
+    /// Previous deliveries are unioned so former recipients still receive withdrawals.
+    /// </summary>
+    public static CiAiDependencyRegistrationDelivery FromTrustedInventory(
+        CiAiDependencyRegistrationSourceVerification verification,
+        CiAiRepositoryInventorySnapshot inventory,
+        IEnumerable<CiAiDependencyRegistrationDelivery> previousDeliveries)
+    {
+        ArgumentNullException.ThrowIfNull(verification);
+        ArgumentNullException.ThrowIfNull(inventory);
+        ArgumentNullException.ThrowIfNull(previousDeliveries);
+        var recipients = CiAiDependencyRegistrationFanOutPlanner.CreateRecipients(
+            verification.Snapshot.SourceRepository, inventory, previousDeliveries);
+        return new CiAiDependencyRegistrationDelivery(verification.Snapshot,
+            verification.SourceRevision, verification.SourceRunAttempt,
+            verification.EvidencePayloadSha256, verification.WorkflowPath,
+            verification.SourceRef, inventory.ProviderIdentity, inventory.Revision,
+            inventory.EvidencePayloadSha256, recipients);
     }
 
     public static CiAiDependencyRegistrationDelivery FromJson(string json)
@@ -63,7 +85,7 @@ public sealed class CiAiDependencyRegistrationDelivery
         var root = document.RootElement;
         ValidateProperties(root, "schema", "deliveryId", "sourceRepository", "sourceRevision",
             "sourceCommitSha", "sourceRunAttempt", "evidencePayloadSha256", "workflowPath",
-            "sourceRef", "snapshotJson", "recipientRepositories");
+            "sourceRef", "inventoryProviderIdentity", "inventoryRevision",\n            "inventoryEvidencePayloadSha256", "snapshotJson", "recipientRepositories");
         if (root.GetProperty("schema").GetString() != CurrentSchema)
             throw new JsonException("Dependency registration delivery schema is unsupported.");
 
@@ -127,6 +149,17 @@ public sealed class CiAiDependencyRegistrationDelivery
             throw new ArgumentException("Delivery recipients must be canonical repositories other than the source.");
         if (RecipientRepositories.Distinct(StringComparer.OrdinalIgnoreCase).Count() != RecipientRepositories.Count)
             throw new ArgumentException("Delivery recipients must be unique.");
+        var inventoryFieldsPresent = InventoryProviderIdentity is not null &&
+            InventoryRevision is not null && InventoryEvidencePayloadSha256 is not null;
+        var inventoryFieldsAbsent = InventoryProviderIdentity is null &&
+            InventoryRevision is null && InventoryEvidencePayloadSha256 is null;
+        if (!inventoryFieldsPresent && !inventoryFieldsAbsent)
+            throw new ArgumentException("Delivery inventory provenance must be either complete or absent.");
+        if (inventoryFieldsPresent &&
+            (string.IsNullOrWhiteSpace(InventoryProviderIdentity) || InventoryRevision < 1 ||
+             InventoryEvidencePayloadSha256 is not { Length: 64 } ||
+             !InventoryEvidencePayloadSha256.All(Uri.IsHexDigit)))
+            throw new ArgumentException("Delivery inventory provenance is invalid.");
         var requiredTargets = Snapshot.Registrations.Select(item => item.TargetRepository)
             .Distinct(StringComparer.OrdinalIgnoreCase);
         if (requiredTargets.Any(target => !RecipientRepositories.Contains(target, StringComparer.OrdinalIgnoreCase)))
