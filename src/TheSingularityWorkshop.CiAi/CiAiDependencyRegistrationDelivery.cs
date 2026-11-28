@@ -161,7 +161,7 @@ public sealed class CiAiDependencyRegistrationDelivery
 }
 
 /// <summary>Append-only, restart-safe outbox for federated dependency registration deliveries.</summary>
-public sealed class FileCiAiDependencyRegistrationOutbox
+public sealed class FileCiAiDependencyRegistrationOutbox : ICiAiDependencyRegistrationOutboxStore
 {
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
     private readonly string _path;
