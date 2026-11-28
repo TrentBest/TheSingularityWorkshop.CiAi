@@ -74,9 +74,11 @@ internal static class CiWorkflowEvidenceDeliveryTests
                 "identical v1 receipt retry was not idempotent");
             Assert(ledger.ReadAcknowledgedDeliveryIds().Contains(delivery.DeliveryId),
                 "accepted v1 receipt did not acknowledge the exact delivery");
-            Assert(new FileCiWorkflowEvidenceOutbox(Path.Combine(root, "v1-outbox.jsonl"))
-                .ReadPending(RequiredChecks, ledger.ReadAcknowledgedDeliveryIds()).Count == 0,
-                "accepted v1 receipt did not suppress replay");
+            var pendingAfterAcceptance = new FileCiWorkflowEvidenceOutbox(Path.Combine(root, "v1-outbox.jsonl"))
+                .ReadPending(RequiredChecks, ledger.ReadAcknowledgedDeliveryIds());
+            Assert(pendingAfterAcceptance.Count == 1 &&
+                pendingAfterAcceptance[0].DeliveryId == separateRequest.DeliveryId,
+                "accepted v1 receipt did not suppress only its exact delivery while preserving the unacknowledged request");
 
             var rejectedDelivery = new CiWorkflowEvidenceDelivery(
                 new CiAiArtifactDeliveryIdentity("v1-delivery-rejected", "operation-rejected", "idempotency-rejected"),
