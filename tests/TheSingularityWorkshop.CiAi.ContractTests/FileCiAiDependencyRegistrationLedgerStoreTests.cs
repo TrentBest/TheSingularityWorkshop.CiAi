@@ -240,6 +240,16 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             Assert(githubTransport.DispatchAsync(delivery, "TrentBest/Provider").AsTask().GetAwaiter().GetResult()
                 .Disposition == CiAiDependencyRegistrationTransportDisposition.Queued,
                 "GitHub HTTP 204 was not classified as queued");
+            var oversizedDelivery = CiAiDependencyRegistrationDelivery.FromVerification(verification,
+                Enumerable.Range(0, 3000).Select(index => "TrentBest/Recipient" + index.ToString("D5")));
+            using var oversizedHttp = new HttpClient(new StubHttpMessageHandler(_ =>
+                throw new InvalidOperationException("oversized payload reached the HTTP transport")));
+            var oversizedResult = new GitHubDependencyRegistrationDispatchTransport(oversizedHttp,
+                new FixedInstallationTokenProvider()).DispatchAsync(oversizedDelivery,
+                oversizedDelivery.RecipientRepositories[0]).AsTask().GetAwaiter().GetResult();
+            Assert(oversizedResult.Disposition == CiAiDependencyRegistrationTransportDisposition.PermanentFailure &&
+                oversizedResult.OutcomeCode == "github.client-payload-too-large",
+                "oversized GitHub client_payload was not rejected before transport");
             using var throttledHttp = new HttpClient(new StubHttpMessageHandler(_ =>
                 new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.TooManyRequests)));
             Assert(new GitHubDependencyRegistrationDispatchTransport(throttledHttp,
@@ -316,8 +326,8 @@ internal static class FileCiAiDependencyRegistrationLedgerStoreTests
             File.WriteAllText(corrupt, alteredDigest);
             AssertThrows<InvalidDataException>(() => reopened.ReadAll());
 
-            Console.WriteLine("PASS: 48 durable dependency federation, inventory, receiver, receipt authentication, retry, and GitHub transport checks.");
-            return 48;
+            Console.WriteLine("PASS: 49 durable dependency federation, inventory, receiver, receipt authentication, retry, and GitHub transport checks.");
+            return 49;
         }
         finally
         {
